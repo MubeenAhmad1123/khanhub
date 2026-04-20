@@ -107,9 +107,22 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
     const app = getAdminApp();
     const decoded = await getAuth(app).verifyIdToken(idToken);
 
-    const userSnap = await getFirestore(app).collection('hq_users').doc(decoded.uid).get();
-    if (!userSnap.exists) return { success: false, error: 'HQ user profile missing.' };
-    const data = userSnap.data() as any;
+    const db = getFirestore(app);
+    let userSnap = await db.collection('hq_users').doc(decoded.uid).get();
+    let data: any;
+
+    if (!userSnap.exists) {
+      // Fallback: Search by email if UID doesn't match document ID
+      const emailMatch = await db.collection('hq_users').where('email', '==', decoded.email).limit(1).get();
+      if (emailMatch.empty) {
+        return { success: false, error: `HQ user profile missing for ${decoded.email}` };
+      }
+      userSnap = emailMatch.docs[0];
+      data = userSnap.data();
+    } else {
+      data = userSnap.data();
+    }
+
     if (data.isActive === false) return { success: false, error: 'Account disabled.' };
 
     const role = String(data.role || '').toLowerCase();

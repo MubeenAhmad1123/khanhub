@@ -10,70 +10,70 @@ const DEPT_SESSION_RESOLVERS: {
   sessionKey: string;
   resolvePath: (session: Record<string, any>) => string;
 }[] = [
-  {
-    sessionKey: 'hq_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'superadmin') return '/hq/dashboard/superadmin';
-      if (role === 'manager') return '/hq/dashboard/manager';
-      if (role === 'cashier') return '/hq/dashboard/cashier';
-      return '/hq/dashboard';
+    {
+      sessionKey: 'hq_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        if (role === 'superadmin') return '/hq/dashboard/superadmin';
+        if (role === 'manager') return '/hq/dashboard/manager';
+        if (role === 'cashier') return '/hq/dashboard/cashier';
+        return '/hq/dashboard';
+      },
     },
-  },
-  {
-    sessionKey: 'rehab_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/rehab/dashboard/admin';
-      if (role === 'cashier') return '/departments/rehab/dashboard/cashier';
-      if (role === 'staff') return '/departments/rehab/dashboard/staff';
-      if (role === 'superadmin') return '/departments/rehab/dashboard/superadmin';
-      if (role === 'family') return s.patientId ? `/departments/rehab/dashboard/family/${s.patientId}` : '/departments/rehab/dashboard';
-      return '/departments/rehab/dashboard';
+    {
+      sessionKey: 'rehab_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        if (role === 'admin') return '/departments/rehab/dashboard/admin';
+        if (role === 'cashier') return '/departments/rehab/dashboard/cashier';
+        if (role === 'staff') return '/departments/rehab/dashboard/staff';
+        if (role === 'superadmin') return '/departments/rehab/dashboard/superadmin';
+        if (role === 'family') return s.patientId ? `/departments/rehab/dashboard/family/${s.patientId}` : '/departments/rehab/dashboard';
+        return '/departments/rehab/dashboard';
+      },
     },
-  },
-  {
-    sessionKey: 'spims_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/spims/dashboard/admin';
-      if (role === 'cashier') return '/departments/spims/dashboard/cashier';
-      if (role === 'staff') return '/departments/spims/dashboard/staff';
-      if (role === 'superadmin') return '/departments/spims/dashboard/superadmin';
-      if (role === 'student') return '/departments/spims/dashboard/student';
-      if (role === 'family') return '/departments/spims/dashboard/family';
-      return '/departments/spims/dashboard';
+    {
+      sessionKey: 'spims_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        if (role === 'admin') return '/departments/spims/dashboard/admin';
+        if (role === 'cashier') return '/departments/spims/dashboard/cashier';
+        if (role === 'staff') return '/departments/spims/dashboard/staff';
+        if (role === 'superadmin') return '/departments/spims/dashboard/superadmin';
+        if (role === 'student') return '/departments/spims/dashboard/student';
+        if (role === 'family') return '/departments/spims/dashboard/family';
+        return '/departments/spims/dashboard';
+      },
     },
-  },
-  {
-    sessionKey: 'hospital_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/hospital/dashboard${role ? `/${role}` : ''}`;
+    {
+      sessionKey: 'hospital_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        return `/departments/hospital/dashboard${role ? `/${role}` : ''}`;
+      },
     },
-  },
-  {
-    sessionKey: 'sukoon_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/sukoon/dashboard${role ? `/${role}` : ''}`;
+    {
+      sessionKey: 'sukoon_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        return `/departments/sukoon/dashboard${role ? `/${role}` : ''}`;
+      },
     },
-  },
-  {
-    sessionKey: 'welfare_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/welfare/dashboard${role ? `/${role}` : ''}`;
+    {
+      sessionKey: 'welfare_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        return `/departments/welfare/dashboard${role ? `/${role}` : ''}`;
+      },
     },
-  },
-  {
-    sessionKey: 'job_center_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/job-center/dashboard${role ? `/${role}` : ''}`;
+    {
+      sessionKey: 'job_center_session',
+      resolvePath: (s) => {
+        const role = String(s.role || '').toLowerCase();
+        return `/departments/job-center/dashboard${role ? `/${role}` : ''}`;
+      },
     },
-  },
-];
+  ];
 
 function resolveActiveDashboard(): string {
   if (typeof window === 'undefined') return '/dashboard';
@@ -112,16 +112,16 @@ export function useDashboardPath() {
         return;
       }
 
-      // 1. Client-side Whitelist check (Fast track for superadmins - HIGHEST PRIORITY)
-      if (isSuperadminEmail(user.email)) {
-        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
-        return;
-      }
-
-      // 2. Check department sessions in localStorage (Uses existing portal session)
+      // 1. Check department sessions in localStorage (Fastest)
       const deptPath = resolveActiveDashboard();
       if (deptPath !== '/dashboard') {
         if (isMounted) setDashboardPath(deptPath);
+        return;
+      }
+
+      // 2. Client-side Whitelist check (Fast track for superadmins)
+      if (isSuperadminEmail(user.email)) {
+        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
         return;
       }
 

@@ -343,7 +343,11 @@ export async function loginUniversal(customId: string, password: string, deptHin
     if (dept.id === 'hq' || finalData.role === 'superadmin') {
        console.log('[UniversalAuth] Setting HQ session cookie...');
        const idToken = await cred.user.getIdToken();
-       await setHqSessionCookieFromIdToken(idToken);
+       const cookieResult = await setHqSessionCookieFromIdToken(idToken);
+       if (!cookieResult.success) {
+         console.error('[UniversalAuth] Cookie setting failed:', cookieResult.error);
+         return { success: false, error: cookieResult.error || 'Failed to set security cookie.' };
+       }
     }
 
     // 5. Final Redirect
@@ -351,7 +355,10 @@ export async function loginUniversal(customId: string, password: string, deptHin
     console.log('[UniversalAuth] Redirecting to:', redirectPath);
     
     if (typeof window !== 'undefined') {
-      window.location.href = redirectPath;
+      // Small delay to ensure cookies are persisted by browser
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 500);
     }
 
     return { success: true, redirectUrl: redirectPath };
