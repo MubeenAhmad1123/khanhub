@@ -112,28 +112,41 @@ export function useDashboardPath() {
         return;
       }
 
-      // 1. Check department sessions in localStorage (Fastest)
+      // 1. Client-side Whitelist check (Zero cost - superadmins)
+      if (isSuperadminEmail(user.email)) {
+        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
+        return;
+      }
+
+      // 2. Check Custom Claims (Zero cost - stored in token)
+      try {
+        const idToken = await user.getIdTokenResult();
+        const claims = idToken.claims as any;
+        if (claims.dashboardPath && isMounted) {
+          setDashboardPath(claims.dashboardPath);
+          return;
+        }
+      } catch (err) {
+        console.warn('[useDashboardPath] Failed to read claims:', err);
+      }
+
+      // 3. Check department sessions in localStorage (Fastest local lookup)
       const deptPath = resolveActiveDashboard();
       if (deptPath !== '/dashboard') {
         if (isMounted) setDashboardPath(deptPath);
         return;
       }
 
-      // 2. Client-side Whitelist check (Fast track for superadmins)
-      if (isSuperadminEmail(user.email)) {
-        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
-        return;
-      }
-
-      // 3. Check Session Cache (To prevent redundant server calls on same session)
+      // 4. Check Session Cache (Prevent redundant server calls in same browser tab)
       const cached = sessionStorage.getItem(`dashboard_path_${user.uid}`);
       if (cached && isMounted) {
         setDashboardPath(cached);
         return;
       }
 
-      // 4. Deep Detection (Server Action - uses Admin SDK)
+      // 5. Deep Detection (Server Action - Only if all local methods fail)
       try {
+        // Only run if we don't have a reliable local path
         const path = await resolveDashboardPathOnServer(user.uid);
         if (path && isMounted) {
           setDashboardPath(path);
@@ -144,7 +157,7 @@ export function useDashboardPath() {
         console.error('Deep dashboard detection failed:', err);
       }
 
-      // 5. Default
+      // 6. Default
       if (isMounted) setDashboardPath('/dashboard');
     }
 

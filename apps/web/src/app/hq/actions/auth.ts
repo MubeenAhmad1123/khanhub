@@ -87,6 +87,11 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
       loginTime: Date.now(),
     };
 
+    // Set Custom Claims for zero-cost routing
+    await getAuth(app).setCustomUserClaims(decoded.uid, {
+      dashboardPath: '/hq/dashboard/superadmin'
+    });
+
     cookies().set(COOKIE_NAME, JSON.stringify(payload), {
       httpOnly: true,
       sameSite: 'lax',
@@ -138,6 +143,13 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
       loginTime: Date.now(),
     };
 
+    // Set Custom Claims for zero-cost routing (Persists in Auth Token)
+    await getAuth(app).setCustomUserClaims(decoded.uid, {
+      dashboardPath: role === 'superadmin' ? '/hq/dashboard/superadmin' : 
+                     role === 'manager' ? '/hq/dashboard/manager' : 
+                     role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/dashboard'
+    });
+
     cookies().set(COOKIE_NAME, JSON.stringify(payload), {
       httpOnly: true,
       sameSite: 'lax',
@@ -149,6 +161,20 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to set session.' };
+  }
+}
+
+/**
+ * Sets custom claims for any department user to enable zero-cost routing.
+ */
+export async function setUserDashboardClaims(uid: string, path: string) {
+  try {
+    const app = getAdminApp();
+    await getAuth(app).setCustomUserClaims(uid, { dashboardPath: path });
+    return { success: true };
+  } catch (err) {
+    console.error('[SetClaims] Error:', err);
+    return { success: false };
   }
 }
 

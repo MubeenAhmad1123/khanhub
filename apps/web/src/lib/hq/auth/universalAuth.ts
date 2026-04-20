@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
-import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
+import { setHqSessionCookieFromIdToken, setUserDashboardClaims } from '@/app/hq/actions/auth';
 import { isSuperadminEmail } from './superadminWhitelist';
 
 export interface DepartmentAuthInfo {
@@ -350,8 +350,15 @@ export async function loginUniversal(customId: string, password: string, deptHin
        }
     }
 
-    // 5. Final Redirect
+    // Set Custom Claims for ALL users to enable zero-cost routing (Free Firestore Reads)
     const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
+    try {
+      await setUserDashboardClaims(uid, redirectPath);
+    } catch (err) {
+      console.warn('[UniversalAuth] Failed to set custom claims:', err);
+    }
+
+    // 5. Final Redirect
     console.log('[UniversalAuth] Redirecting to:', redirectPath);
     
     if (typeof window !== 'undefined') {
