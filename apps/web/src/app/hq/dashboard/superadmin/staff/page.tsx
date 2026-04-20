@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { listStaffCards, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
+import { Users2 } from 'lucide-react';
 
 export default function SuperadminStaffPage() {
   const router = useRouter();
