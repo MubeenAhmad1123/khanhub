@@ -881,6 +881,41 @@ service cloud.firestore {
         );
     }
 
+    // ── Patient Support Collections (Daily Sheets, Progress, Therapy, Medications) ──
+    // Patterns: {dept}_daily_activities, {dept}_weekly_progress, {dept}_therapy_sessions, {dept}_medication_records
+    match /{collectionId}/{docId} {
+      allow read: if (
+        isHqTier1()
+        || isRehabAdminOrAbove() || isHospitalAdminOrAbove() || isSukoonAdminOrAbove() || isWelfareAdminOrAbove()
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || (isHospitalRole('patient') && hospitalPatientId() == resource.data.patientId)
+        || (isSukoonRole('client') && sukoonClientId() == resource.data.clientId)
+        || (isWelfareRole('child') && welfareChildId() == resource.data.childId)
+      ) && (
+        collectionId.matches('^[a-z0-9_-]+_daily_activities$')
+        || collectionId.matches('^[a-z0-9_-]+_weekly_progress$')
+        || collectionId.matches('^[a-z0-9_-]+_therapy_sessions$')
+        || collectionId.matches('^[a-z0-9_-]+_medication_records$')
+      );
+      allow create, update: if (
+        isRehabAdminOrAbove() || isHospitalAdminOrAbove() || isSukoonAdminOrAbove() || isWelfareAdminOrAbove()
+      ) && (
+        collectionId.matches('^[a-z0-9_-]+_daily_activities$')
+        || collectionId.matches('^[a-z0-9_-]+_weekly_progress$')
+        || collectionId.matches('^[a-z0-9_-]+_therapy_sessions$')
+        || collectionId.matches('^[a-z0-9_-]+_medication_records$')
+      );
+      allow delete: if (
+        isRehabSuperAdmin() || isHospitalSuperAdmin() || isSukoonSuperAdmin() || isWelfareSuperAdmin()
+      ) && (
+        collectionId.matches('^[a-z0-9_-]+_daily_activities$')
+        || collectionId.matches('^[a-z0-9_-]+_weekly_progress$')
+        || collectionId.matches('^[a-z0-9_-]+_therapy_sessions$')
+        || collectionId.matches('^[a-z0-9_-]+_medication_records$')
+      );
+    }
+
+
     // ═══════════════════════════════════════════════════════════
     //  HOSPITAL PORTAL HELPERS
     // ═══════════════════════════════════════════════════════════

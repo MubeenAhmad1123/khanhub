@@ -130,6 +130,7 @@ export default function PatientDetailPage() {
   // Discharge Modal State
   const [showDischargeModal, setShowDischargeModal] = useState(false);
   const [dDate, setDDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dDateInput, setDDateInput] = useState('');
   const [dAmount, setDAmount] = useState('');
   const [dNote, setDNote] = useState('Final Settlement');
   const [isDischarging, setIsDischarging] = useState(false);
@@ -610,6 +611,7 @@ export default function PatientDetailPage() {
     // Reset modal and open
     const today = new Date().toISOString().split('T')[0];
     setDDate(today);
+    setDDateInput(formatDateDMY(today));
     setDAmount('');
     setShowDischargeModal(true);
   };
@@ -621,7 +623,7 @@ export default function PatientDetailPage() {
     try {
       setIsDischarging(true);
       
-      const dischargeDateObj = new Date(dDate);
+      const dischargeDateObj = parseDateDMY(dDateInput) || new Date(dDate);
       const admissionDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
       
       const diffTimeMs = dischargeDateObj.getTime() - admissionDateObj.getTime();
@@ -2006,11 +2008,15 @@ export default function PatientDetailPage() {
                     <input
                       type="text"
                       placeholder="DD MM YYYY"
-                      value={formatDateDMY(dDate)}
-                      onChange={(e) => setDDate(e.target.value)}
+                      value={dDateInput}
+                      onChange={(e) => setDDateInput(e.target.value)}
                       onBlur={e => {
                         const parsed = parseDateDMY(e.target.value);
-                        if (parsed) setDDate(parsed.toISOString().split('T')[0]);
+                        if (parsed) {
+                          const iso = parsed.toISOString().split('T')[0];
+                          setDDate(iso);
+                          setDDateInput(formatDateDMY(iso));
+                        }
                       }}
                       required
                       className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
@@ -2031,7 +2037,8 @@ export default function PatientDetailPage() {
                 {/* Calculation Box */}
                 <div className="bg-teal-50/50 rounded-2xl p-4 border border-teal-100/50 space-y-2">
                   {(() => {
-                    const dDateObj = new Date(dDate);
+                    const parsed = parseDateDMY(dDateInput) || new Date(dDate);
+                    const dDateObj = isNaN(parsed.getTime()) ? new Date() : parsed;
                     const admDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
                     const diff = dDateObj.getTime() - admDateObj.getTime();
                     const days = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
