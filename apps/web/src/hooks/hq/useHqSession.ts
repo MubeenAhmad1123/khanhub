@@ -40,18 +40,20 @@ export function useHqSession() {
       const raw = localStorage.getItem(SESSION_KEY);
       const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
 
-      // Session is valid only when Firebase Auth exists and UID matches HQ session UID.
-      if (!user || !parsed || user.uid !== parsed.uid) {
+      // Only clear if there's a definite mismatch. 
+      // If user is null, it might just be initializing, so we don't clear immediately.
+      // The layout guard will handle redirection if the session remains null.
+      if (user && parsed && user.uid !== parsed.uid) {
+        console.warn('[useHqSession] UID mismatch, clearing session');
         localStorage.removeItem(SESSION_KEY);
         setSession(null);
-        if (user) {
-          try {
-            await signOut(auth);
-          } catch {
-            // Ignore sign-out failure; session is already cleared locally.
-          }
-        }
+        setLoading(false);
+        return;
       }
+
+      // If user is null but we have a parsed session, we might be in a transition.
+      // We'll let the session stay for now. If it's truly gone, the next check will catch it.
+      
       setLoading(false);
     });
 
@@ -61,17 +63,25 @@ export function useHqSession() {
     const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
     
     if (parsed?.uid) {
-      unsubDoc = onSnapshot(doc(db, 'hq_users', parsed.uid), (snap) => {
-        const data = snap.data();
-        if (data?.forceLogoutAt) {
-          const logoutTime = new Date(data.forceLogoutAt).getTime();
-          if (logoutTime > parsed.loginTime) {
-            localStorage.removeItem(SESSION_KEY);
-            setSession(null);
-            signOut(auth).catch(() => {});
+      unsubDoc = onSnapshot(
+        doc(db, 'hq_users', parsed.uid), 
+        (snap) => {
+          const data = snap.data();
+          if (data?.forceLogoutAt) {
+            const logoutTime = new Date(data.forceLogoutAt).getTime();
+            if (logoutTime > parsed.loginTime) {
+              console.log('[useHqSession] Remote logout triggered');
+              localStorage.removeItem(SESSION_KEY);
+              setSession(null);
+              signOut(auth).catch(() => {});
+            }
           }
+        },
+        (err) => {
+          console.error('[useHqSession] Snapshot error (likely permissions):', err);
+          // Don't logout on permission error, just stop listening.
         }
-      });
+      );
     }
 
     return () => {
