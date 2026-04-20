@@ -164,19 +164,40 @@ const ImageCarousel = memo(function ImageCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Progress Indicators - FIXED STATIC SIZE */}
-      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex gap-2">
-        {DEPARTMENT_IMAGES.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setCurrentIndex(idx)}
-            className={`h-2 w-2 rounded-full transition-colors duration-300 ${idx === currentIndex
-              ? 'bg-primary-500'
-              : 'bg-neutral-300 hover:bg-primary-300'
-              }`}
-            aria-label={`Go to slide ${idx + 1}`}
-          />
-        ))}
+      {/* Progress Indicators - Optimized for many images */}
+      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-2 items-center">
+        {DEPARTMENT_IMAGES.length > 8 ? (
+          // Limited dots view for many images (Grouped indicators)
+          [...Array(Math.min(DEPARTMENT_IMAGES.length, 8))].map((_, idx) => {
+            const isCurrent = Math.floor(currentIndex / (DEPARTMENT_IMAGES.length / 8)) === idx;
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                  isCurrent 
+                    ? "bg-primary-500 scale-125 ring-2 ring-primary-500/20" 
+                    : "bg-neutral-300/60"
+                )}
+              />
+            );
+          })
+        ) : (
+          // Standard dots for few images
+          DEPARTMENT_IMAGES.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                idx === currentIndex 
+                  ? "bg-primary-500 scale-125 ring-2 ring-primary-500/20" 
+                  : "bg-neutral-300/60 hover:bg-neutral-400"
+              )}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))
+        )}
       </div>
     </div>
   );
