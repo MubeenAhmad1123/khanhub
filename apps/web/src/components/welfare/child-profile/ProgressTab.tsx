@@ -4,6 +4,7 @@ import { WeeklyProgress } from '@/types/welfare';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/welfare/children';
 import { Loader2, Plus, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -146,7 +147,7 @@ export default function ProgressTab({ childId, session }: { childId: string, ses
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 font-bold mb-4 bg-gray-50 p-2 rounded-lg inline-flex">
-                  {p.weekStartDate} <span className="text-gray-300">→</span> {p.weekEndDate}
+                  {formatDateDMY(p.weekStartDate)} <span className="text-gray-300">→</span> {formatDateDMY(p.weekEndDate)}
                 </div>
                 {p.notes ? (
                   <p className="text-gray-600 text-sm">{p.notes}</p>
@@ -187,11 +188,33 @@ export default function ProgressTab({ childId, session }: { childId: string, ses
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Start Date *</label>
-                  <input type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    required
+                    value={formatDateDMY(startDate)}
+                    onChange={e => setStartDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setStartDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">End Date *</label>
-                  <input type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    required
+                    value={formatDateDMY(endDate)}
+                    onChange={e => setEndDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setEndDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
 

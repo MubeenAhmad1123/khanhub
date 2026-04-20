@@ -22,12 +22,32 @@ export function toDate(val: any): Date {
  * Accepts Firestore Timestamp, Date, ISO string, or epoch-like values.
  */
 export function formatDateDMY(val: any): string {
+  if (!val) return '—';
   const d = toDate(val);
   if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '—';
-  // en-GB yields 2-digit day/month and 4-digit year (DD/MM/YYYY)
-  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    .format(d)
-    .replace(/\//g, ' ');
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  
+  return `${day} ${month} ${year}`;
+}
+
+/**
+ * Parses a "DD MM YYYY" string back into a Date object.
+ * Useful for "collecting" dates from text inputs.
+ */
+export function parseDateDMY(str: string): Date | null {
+  if (!str) return null;
+  const parts = str.split(/[\s-/]/); // handles spaces, dashes, or slashes
+  if (parts.length !== 3) return null;
+  
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const year = parseInt(parts[2], 10);
+  
+  const d = new Date(year, month, day);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 

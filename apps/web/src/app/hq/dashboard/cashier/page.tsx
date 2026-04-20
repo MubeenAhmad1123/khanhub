@@ -8,7 +8,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { cn, formatDateDMY, toDate } from '@/lib/utils';
+import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
@@ -947,11 +947,31 @@ export default function CashierStationPage() {
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1">
                                   <label className="text-[10px] text-gray-500 px-1">Admit</label>
-                                  <input type="date" value={hospAdmitDate} onChange={e => setHospAdmitDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                                  <input
+                                    type="text"
+                                    placeholder="DD MM YYYY"
+                                    value={formatDateDMY(hospAdmitDate)}
+                                    onChange={e => setHospAdmitDate(e.target.value)}
+                                    onBlur={e => {
+                                      const parsed = parseDateDMY(e.target.value);
+                                      if (parsed) setHospAdmitDate(parsed.toISOString().split('T')[0]);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white"
+                                  />
                                 </div>
                                 <div className="space-y-1">
                                   <label className="text-[10px] text-gray-500 px-1">Discharge</label>
-                                  <input type="date" value={hospDischargeDate} onChange={e => setHospDischargeDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                                  <input
+                                    type="text"
+                                    placeholder="DD MM YYYY"
+                                    value={formatDateDMY(hospDischargeDate)}
+                                    onChange={e => setHospDischargeDate(e.target.value)}
+                                    onBlur={e => {
+                                      const parsed = parseDateDMY(e.target.value);
+                                      if (parsed) setHospDischargeDate(parsed.toISOString().split('T')[0]);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white"
+                                  />
                                 </div>
                               </div>
                             </>
@@ -962,7 +982,17 @@ export default function CashierStationPage() {
                   ) : null}
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transaction Date</label>
-                    <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
+                    <input
+                      type="text"
+                      placeholder="DD MM YYYY"
+                      value={formatDateDMY(txDate)}
+                      onChange={(e) => setTxDate(e.target.value)}
+                      onBlur={(e) => {
+                        const parsed = parseDateDMY(e.target.value);
+                        if (parsed) setTxDate(parsed.toISOString().split('T')[0]);
+                      }}
+                      className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600"
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Payment Method</label>
@@ -1087,11 +1117,31 @@ export default function CashierStationPage() {
           <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top-2 duration-200">
             <div className="space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">From Date</span>
-              <input type="date" value={historyFrom} onChange={(e) => setHistoryFrom(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" />
+              <input
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(historyFrom)}
+                onChange={(e) => setHistoryFrom(e.target.value)}
+                onBlur={(e) => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setHistoryFrom(parsed.toISOString().split('T')[0]);
+                }}
+                className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+              />
             </div>
             <div className="space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">To Date</span>
-              <input type="date" value={historyTo} onChange={(e) => setHistoryTo(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" />
+              <input
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(historyTo)}
+                onChange={(e) => setHistoryTo(e.target.value)}
+                onBlur={(e) => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setHistoryTo(parsed.toISOString().split('T')[0]);
+                }}
+                className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+              />
             </div>
           </div>
         )}

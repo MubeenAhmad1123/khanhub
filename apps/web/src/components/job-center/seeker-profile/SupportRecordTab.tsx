@@ -4,6 +4,7 @@ import { MedicationRecord } from '@/types/job-center';
 import { getMedicationRecords, addMedicationRecord } from '@/lib/job-center/seekers';
 import { Loader2, Plus, Calendar, ShieldCheck, UserCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function SupportRecordTab({ seekerId, session }: { seekerId: string, session: any }) {
   const [records, setRecords] = useState<MedicationRecord[]>([]);
@@ -112,7 +113,7 @@ export default function SupportRecordTab({ seekerId, session }: { seekerId: stri
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 font-bold text-gray-900 mb-1">
                       <Calendar size={14} className="text-orange-500" />
-                      {r.date}
+                      {formatDateDMY(r.date)}
                     </div>
                     <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
                       {r.timing}
@@ -158,7 +159,18 @@ export default function SupportRecordTab({ seekerId, session }: { seekerId: stri
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Date *</label>
-                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    required
+                    value={formatDateDMY(date)}
+                    onChange={e => setDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
                 </div>
                 <div>
                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Category *</label>

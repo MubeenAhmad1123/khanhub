@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { cn, formatDateDMY, toDate } from '@/lib/utils';
+import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 
 // Shared with main cashier page
 const DEPARTMENTS = [
@@ -336,9 +336,14 @@ export default function DailyReportPage() {
             <div className="relative group overflow-hidden rounded-2xl border border-slate-200 shadow-sm bg-white">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors z-10" />
               <input 
-                type="date" 
-                value={reportDate}
+                type="text" 
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(reportDate)}
                 onChange={(e) => setReportDate(e.target.value)}
+                onBlur={(e) => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setReportDate(parsed.toISOString().split('T')[0]);
+                }}
                 className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 outline-none transition-all cursor-pointer relative z-0"
               />
             </div>

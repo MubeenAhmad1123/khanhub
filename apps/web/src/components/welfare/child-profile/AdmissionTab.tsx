@@ -7,6 +7,7 @@ import { Edit3, Save, Loader2, User, Heart, Home, Phone, Shield, GraduationCap }
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function AdmissionTab({ 
   child, 
@@ -56,12 +57,17 @@ export default function AdmissionTab({
 
   const Field = ({ label, value, type = "text", fieldKey, options }: any) => {
     const isEmpty = value === null || value === undefined || value === '';
+    
     if (!isEditing) {
+      let displayValue = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : (isEmpty ? '—' : value);
+      if (type === 'date' && !isEmpty) {
+        displayValue = formatDateDMY(value);
+      }
       return (
         <div className="space-y-1">
           <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</span>
           <span className={`text-sm font-semibold text-gray-900 block ${isEmpty ? 'text-gray-300 italic' : ''}`}>
-            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : (isEmpty ? '—' : value)}
+            {displayValue}
           </span>
         </div>
       );
@@ -97,6 +103,37 @@ export default function AdmissionTab({
               <option key={opt} value={opt} className="capitalize">{opt.replace('_', ' ')}</option>
             ))}
           </select>
+        </div>
+      );
+    }
+
+    if (type === 'date') {
+      return (
+        <div className="space-y-1">
+          <label className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</label>
+          <input
+            type="text"
+            placeholder="DD MM YYYY"
+            value={value ? (value.includes('-') ? formatDateDMY(value) : value) : ''}
+            onChange={e => {
+              const val = e.target.value;
+              // If it's valid DD MM YYYY, we could parse it, but for now let's just save the string or convert to YYYY-MM-DD
+              handleChange(fieldKey, val);
+            }}
+            onBlur={e => {
+              const val = e.target.value;
+              const parsed = parseDateDMY(val);
+              if (parsed) {
+                // Convert back to YYYY-MM-DD for backend consistency if needed, 
+                // but user said "collecting format" should be DD MM YYYY.
+                // If the backend handles strings, we can just keep it as DD MM YYYY.
+                // However, many parts of the app use new Date(string), so YYYY-MM-DD is safer.
+                const iso = parsed.toISOString().split('T')[0];
+                handleChange(fieldKey, iso);
+              }
+            }}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
+          />
         </div>
       );
     }

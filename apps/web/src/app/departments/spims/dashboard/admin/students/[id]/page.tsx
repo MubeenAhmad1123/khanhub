@@ -33,12 +33,27 @@ export default function AdminStudentProfilePage() {
   }, [studentId]);
 
   useEffect(() => {
-    const raw = localStorage.getItem('spims_session');
-    if (!raw) {
+    let sessionData = localStorage.getItem('spims_session');
+    
+    if (!sessionData) {
+      const hqRaw = localStorage.getItem('hq_session');
+      if (hqRaw) {
+        const parsedHq = JSON.parse(hqRaw);
+        if (parsedHq.role === 'superadmin') {
+          sessionData = JSON.stringify({
+            ...parsedHq,
+            displayName: parsedHq.displayName || parsedHq.name,
+            role: 'superadmin'
+          });
+        }
+      }
+    }
+
+    if (!sessionData) {
       router.push('/departments/spims/login');
       return;
     }
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
       router.push('/departments/spims/login');
       return;

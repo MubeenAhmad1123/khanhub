@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { createTransaction } from '@/lib/spims/transactions';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function TransactionForm({ cashierId, onSuccess }: { cashierId: string, onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -78,10 +79,15 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         <div className="space-y-2">
           <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Date</label>
           <input
-            type="date"
+            type="text"
+            placeholder="DD MM YYYY"
             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-medium focus:ring-2 focus:ring-[#1D9E75]/20 outline-none"
-            value={formData.date}
+            value={formatDateDMY(formData.date)}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            onBlur={(e) => {
+              const parsed = parseDateDMY(e.target.value);
+              if (parsed) setFormData({ ...formData, date: parsed.toISOString().split('T')[0] });
+            }}
           />
         </div>
       </div>

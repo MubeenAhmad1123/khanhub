@@ -33,7 +33,7 @@ import {
 import { FinanceHub } from "@/components/hq/finance/FinanceHub";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDMY, parseDateDMY } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -519,10 +519,18 @@ export default function SuperadminFinancePage() {
             {/* Date Input */}
             <div className="flex items-center gap-3 flex-1">
               <input
-                type="date"
-                value={selectedDate}
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(selectedDate)}
                 onChange={handleDateChange}
-                max={todayStr}
+                onBlur={(e) => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) {
+                    const val = parsed.toISOString().split("T")[0];
+                    setSelectedDate(val);
+                    fetchDayData(val);
+                  }
+                }}
                 className={cn(
                   "flex-1 sm:max-w-xs px-5 py-3.5 rounded-2xl border border-border/50 bg-white dark:bg-black text-black dark:text-white text-sm font-bold",
                   "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all",

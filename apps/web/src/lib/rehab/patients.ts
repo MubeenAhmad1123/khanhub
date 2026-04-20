@@ -247,7 +247,7 @@ export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'creat
 
 export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinanceSummary[]> {
   // Load all active patients
-  const patientsSnap = await getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
+  const patientsSnap = await getDocs(collection(db, 'rehab_patients'));
   const patients = patientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
   
   // Load ALL fees

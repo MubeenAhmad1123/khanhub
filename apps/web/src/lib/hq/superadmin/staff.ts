@@ -2,7 +2,7 @@
 
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { toDate } from '@/lib/utils';
+import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'other';
@@ -96,7 +96,7 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
   const d = snap.docs[0].data();
   const when = toDate(d.createdAt || d.date);
   if (isNaN(when.getTime())) return 'No Date • Duty Log';
-  return `${when.toISOString().slice(0, 10)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
+  return `${formatDateDMY(when)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
 
 export async function listStaffCards({

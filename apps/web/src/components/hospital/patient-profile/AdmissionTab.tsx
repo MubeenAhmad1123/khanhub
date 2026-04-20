@@ -5,6 +5,7 @@ import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield } from 'lucide-
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function AdmissionTab({ 
   patient, 
@@ -65,12 +66,17 @@ export default function AdmissionTab({
 
   const Field = ({ label, value, type = "text", fieldKey, options }: any) => {
     const isEmpty = value === null || value === undefined || value === '';
+    
     if (!isEditing) {
+      let displayValue = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : (isEmpty ? '—' : value);
+      if (type === 'date' && !isEmpty) {
+        displayValue = formatDateDMY(value);
+      }
       return (
         <div className="space-y-1">
           <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</span>
           <span className={`text-sm font-semibold text-gray-900 block ${isEmpty ? 'text-gray-300 italic' : ''}`}>
-            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : (isEmpty ? '—' : value)}
+            {displayValue}
           </span>
         </div>
       );
@@ -106,6 +112,29 @@ export default function AdmissionTab({
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
+        </div>
+      );
+    }
+
+    if (type === 'date') {
+      return (
+        <div className="space-y-1">
+          <label className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</label>
+          <input
+            type="text"
+            placeholder="DD MM YYYY"
+            value={value ? (value.includes('-') ? formatDateDMY(value) : value) : ''}
+            onChange={e => handleChange(fieldKey, e.target.value)}
+            onBlur={e => {
+              const val = e.target.value;
+              const parsed = parseDateDMY(val);
+              if (parsed) {
+                const iso = parsed.toISOString().split('T')[0];
+                handleChange(fieldKey, iso);
+              }
+            }}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
+          />
         </div>
       );
     }

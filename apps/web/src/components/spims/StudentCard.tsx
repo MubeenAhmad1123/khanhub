@@ -1,15 +1,11 @@
 // apps/web/src/components/spims/StudentCard.tsx
 'use client';
 
-import React from 'react';
-import type { SpimsStudent } from '@/types/spims';
+import { formatDateDMY } from '@/lib/utils';
+import { SpimsStudent } from '@/types/spims';
 
 export default function StudentCard({ student }: { student: SpimsStudent }) {
-  const admission = student.admissionDate;
-  const admStr =
-    admission && typeof (admission as Date).toLocaleDateString === 'function'
-      ? (admission as Date).toLocaleDateString()
-      : String(admission || '');
+  const admStr = formatDateDMY(student.admissionDate);
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-6">

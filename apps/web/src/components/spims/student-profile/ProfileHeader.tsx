@@ -4,6 +4,7 @@
 import React from 'react';
 import { User, Wallet, Calendar, GraduationCap, Phone } from 'lucide-react';
 import type { SpimsStudent } from '@/types/spims';
+import { formatDateDMY } from '@/lib/utils';
 
 interface ProfileHeaderProps {
   student: SpimsStudent;
@@ -85,12 +86,7 @@ export default function ProfileHeader({ student }: ProfileHeaderProps) {
                   <span className="text-[10px] font-black uppercase tracking-tighter">Joined On</span>
                 </div>
                 <p className="text-lg md:text-xl font-black text-gray-900">
-                  {student.admissionDate 
-                    ? (typeof (student.admissionDate as any).toDate === 'function' 
-                        ? (student.admissionDate as any).toDate() 
-                        : new Date(student.admissionDate as any)
-                      ).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
-                    : 'N/A'}
+                  {formatDateDMY(student.admissionDate)}
                 </p>
               </div>
 

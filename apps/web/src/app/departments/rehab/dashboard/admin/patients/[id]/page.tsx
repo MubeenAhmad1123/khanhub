@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -135,7 +135,22 @@ export default function PatientDetailPage() {
   const [isDischarging, setIsDischarging] = useState(false);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    let sessionData = localStorage.getItem('rehab_session');
+    
+    if (!sessionData) {
+      const hqRaw = localStorage.getItem('hq_session');
+      if (hqRaw) {
+        const parsedHq = JSON.parse(hqRaw);
+        if (parsedHq.role === 'superadmin') {
+          sessionData = JSON.stringify({
+            ...parsedHq,
+            displayName: parsedHq.displayName || parsedHq.name,
+            role: 'superadmin'
+          });
+        }
+      }
+    }
+
     if (!sessionData) {
       router.push('/departments/rehab/login');
       return;
@@ -1094,9 +1109,14 @@ export default function PatientDetailPage() {
                   <div className="md:col-span-2">
                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
                      <input 
-                       type="date" 
-                       value={editForm.admissionDate} 
+                       type="text" 
+                       placeholder="DD MM YYYY"
+                       value={formatDateDMY(editForm.admissionDate)} 
                        onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
+                       onBlur={e => {
+                         const parsed = parseDateDMY(e.target.value);
+                         if (parsed) setEditForm({...editForm, admissionDate: parsed.toISOString().split('T')[0]});
+                       }}
                        className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
                      />
                   </div>
@@ -1661,7 +1681,17 @@ export default function PatientDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(paymentDate)}
+                    onChange={e => setPaymentDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1694,7 +1724,18 @@ export default function PatientDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    required
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(payDate)}
+                    onChange={e => setPayDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1737,7 +1778,18 @@ export default function PatientDetailPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(canteenDate)}
+                  onChange={e => setCanteenDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <button 
                 type="submit" 
@@ -1787,7 +1839,15 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+ className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1837,7 +1897,15 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+ className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1936,9 +2004,14 @@ export default function PatientDetailPage() {
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Discharge Date</label>
                     <input
-                      type="date"
-                      value={dDate}
+                      type="text"
+                      placeholder="DD MM YYYY"
+                      value={formatDateDMY(dDate)}
                       onChange={(e) => setDDate(e.target.value)}
+                      onBlur={e => {
+                        const parsed = parseDateDMY(e.target.value);
+                        if (parsed) setDDate(parsed.toISOString().split('T')[0]);
+                      }}
                       required
                       className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
                     />

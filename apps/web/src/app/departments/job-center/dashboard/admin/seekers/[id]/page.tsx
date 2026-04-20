@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import RegistrationTab from '@/components/job-center/seeker-profile/RegistrationTab';
 import ActivityLogTab from '@/components/job-center/seeker-profile/ActivityLogTab';
@@ -1265,7 +1265,17 @@ export default function SeekerDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                <input
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(paymentDate)}
+                  onChange={e => setPaymentDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                />
                 </div>
               </div>
               <div>
@@ -1298,7 +1308,18 @@ export default function SeekerDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input
+                    required
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(payDate)}
+                    onChange={e => setPayDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1347,7 +1368,18 @@ export default function SeekerDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Meeting Date *</label>
-                <input required type="date" value={mDate} onChange={e => setMDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(mDate)}
+                  onChange={e => setMDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setMDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1397,7 +1429,18 @@ export default function SeekerDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Meeting Date *</label>
-                <input required type="date" value={mDate} onChange={e => setMDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(mDate)}
+                  onChange={e => setMDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setMDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>

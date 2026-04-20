@@ -31,7 +31,22 @@ export default function AdminDashboardPage() {
   const [activePatients, setActivePatients] = useState<any[]>([]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    let sessionData = localStorage.getItem('rehab_session');
+    
+    if (!sessionData) {
+      const hqRaw = localStorage.getItem('hq_session');
+      if (hqRaw) {
+        const parsedHq = JSON.parse(hqRaw);
+        if (parsedHq.role === 'superadmin') {
+          sessionData = JSON.stringify({
+            ...parsedHq,
+            displayName: parsedHq.displayName || parsedHq.name,
+            role: 'superadmin'
+          });
+        }
+      }
+    }
+
     if (!sessionData) { router.push('/departments/rehab/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {

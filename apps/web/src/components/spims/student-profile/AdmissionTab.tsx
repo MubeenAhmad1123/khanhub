@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Save, Loader2, GraduationCap, User, IndianRupee, Share2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import type { SpimsStudent } from '@/types/spims';
 import { SPIMS_COURSES } from '@/types/spims';
 import { updateStudent } from '@/lib/spims/students';
@@ -198,11 +199,16 @@ export default function AdmissionTab({
           {fld(
             'Date of birth',
             <input
-              type="date"
+              type="text"
+              placeholder="DD MM YYYY"
               disabled={!canEdit}
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={isoFromField(form.dateOfBirth)}
+              value={formatDateDMY(form.dateOfBirth)}
               onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
+              onBlur={(e) => {
+                const parsed = parseDateDMY(e.target.value);
+                if (parsed) setForm({ ...form, dateOfBirth: parsed.toISOString().split('T')[0] });
+              }}
             />
           )}
           {fld(
@@ -337,16 +343,16 @@ export default function AdmissionTab({
           {fld(
             'Admission date',
             <input
-              type="date"
+              type="text"
+              placeholder="DD MM YYYY"
               disabled={!canEdit}
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={isoFromField(form.admissionDate)}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  admissionDate: Timestamp.fromDate(new Date(`${e.target.value}T00:00:00`)),
-                })
-              }
+              value={formatDateDMY(form.admissionDate)}
+              onChange={(e) => setForm({ ...form, admissionDate: e.target.value as any })}
+              onBlur={(e) => {
+                const parsed = parseDateDMY(e.target.value);
+                if (parsed) setForm({ ...form, admissionDate: Timestamp.fromDate(parsed) });
+              }}
             />
           )}
           {fld(

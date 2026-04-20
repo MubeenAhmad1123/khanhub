@@ -29,7 +29,22 @@ export default function AdminDashboardPage() {
   const [activeStudents, setActiveStudents] = useState<any[]>([]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('spims_session');
+    let sessionData = localStorage.getItem('spims_session');
+    
+    if (!sessionData) {
+      const hqRaw = localStorage.getItem('hq_session');
+      if (hqRaw) {
+        const parsedHq = JSON.parse(hqRaw);
+        if (parsedHq.role === 'superadmin') {
+          sessionData = JSON.stringify({
+            ...parsedHq,
+            displayName: parsedHq.displayName || parsedHq.name,
+            role: 'superadmin'
+          });
+        }
+      }
+    }
+
     if (!sessionData) {
       router.push('/departments/spims/login');
       return;
