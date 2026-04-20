@@ -21,6 +21,7 @@ import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
 import { Menu, X, ChevronDown, Facebook, Instagram, Youtube } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
+import { CgLogIn } from 'react-icons/cg';
 import { SITE } from '@/data/site';
 
 import { useDashboardPath } from '@/hooks/useDashboardPath';
@@ -352,6 +353,21 @@ export default function Navbar() {
                   </a>
                 );
               })}
+
+              {/* Login / Dashboard Mobile Icon */}
+              <Link
+                href={dashboardHref}
+                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px] group"
+                aria-label={user ? "My Dashboard" : "Login to Portal"}
+              >
+                <div className="animate-bounce transition-transform group-hover:scale-110">
+                  <CgLogIn className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+                </div>
+                <span className="text-[7px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">
+                  {user ? "Dashboard" : "Login"}
+                </span>
+              </Link>
+
               {/* Download App - Compact Icon only Animates */}
               <a
                 href="/download-app"
