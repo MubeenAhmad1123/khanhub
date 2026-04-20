@@ -23,104 +23,7 @@ import { Menu, X, ChevronDown, Facebook, Instagram, Youtube } from 'lucide-react
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { SITE } from '@/data/site';
 
-// ─── Department session registry ──────────────────────────────────────────────
-// Every entry maps a localStorage key → a function that builds the dashboard path
-// from the stored session data (role, uid, etc.).
-const DEPT_SESSION_RESOLVERS: {
-  sessionKey: string;
-  resolvePath: (session: Record<string, any>) => string;
-}[] = [
-  {
-    sessionKey: 'hq_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'superadmin') return '/hq/dashboard/superadmin';
-      if (role === 'manager') return '/hq/dashboard/manager';
-      if (role === 'cashier') return '/hq/dashboard/cashier';
-      return '/hq/dashboard';
-    },
-  },
-  {
-    sessionKey: 'rehab_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/rehab/dashboard/admin';
-      if (role === 'cashier') return '/departments/rehab/dashboard/cashier';
-      if (role === 'staff') return '/departments/rehab/dashboard/staff';
-      if (role === 'superadmin') return '/departments/rehab/dashboard/superadmin';
-      if (role === 'family') return s.patientId ? `/departments/rehab/dashboard/family/${s.patientId}` : '/departments/rehab/dashboard';
-      return '/departments/rehab/dashboard';
-    },
-  },
-  {
-    sessionKey: 'spims_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/spims/dashboard/admin';
-      if (role === 'cashier') return '/departments/spims/dashboard/cashier';
-      if (role === 'staff') return '/departments/spims/dashboard/staff';
-      if (role === 'superadmin') return '/departments/spims/dashboard/superadmin';
-      return '/departments/spims/dashboard';
-    },
-  },
-  {
-    sessionKey: 'hospital_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/hospital/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-  {
-    sessionKey: 'sukoon_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/sukoon/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-  {
-    sessionKey: 'welfare_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/welfare/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-  {
-    sessionKey: 'job_center_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/job-center/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-];
-
-/**
- * Reads all known department sessions from localStorage and returns the
- * dashboard path for the most recently active one.
- * Falls back to '/dashboard' when no department session is found (Google-only users).
- */
-function resolveActiveDashboard(): string {
-  if (typeof window === 'undefined') return '/dashboard';
-
-  let latestTime = -1;
-  let latestPath = '/dashboard';
-
-  for (const resolver of DEPT_SESSION_RESOLVERS) {
-    try {
-      const raw = localStorage.getItem(resolver.sessionKey);
-      if (!raw) continue;
-      const session = JSON.parse(raw) as Record<string, any>;
-      const loginTime = Number(session.loginTime || 0);
-      if (loginTime >= latestTime) {
-        latestTime = loginTime;
-        latestPath = resolver.resolvePath(session);
-      }
-    } catch {
-      // malformed JSON — ignore
-    }
-  }
-
-  return latestPath;
-}
+import { useDashboardPath } from '@/hooks/useDashboardPath';
 
 // Navigation links - memoized constant
 const NAV_LINKS = [
@@ -212,28 +115,8 @@ export default function Navbar() {
   const pathname = usePathname();
 
   // ── Smart dashboard redirect ──────────────────────────────────────────────
-  // Priority: department session (localStorage) → HQ email allowlist → /dashboard (Google-only)
-  const [dashboardHref, setDashboardHref] = useState('/dashboard');
+  const dashboardHref = useDashboardPath();
 
-  useEffect(() => {
-    if (!user) {
-      setDashboardHref('/dashboard');
-      return;
-    }
-    // Read department sessions first
-    const deptPath = resolveActiveDashboard();
-    if (deptPath !== '/dashboard') {
-      setDashboardHref(deptPath);
-      return;
-    }
-    // Fallback: HQ email allowlist (for users who haven't re-logged yet)
-    if (canAccessHqPortal(user.email)) {
-      setDashboardHref('/hq/dashboard/superadmin');
-      return;
-    }
-    // Default: generic dashboard for Google-only users
-    setDashboardHref('/dashboard');
-  }, [user]);
 
   // Optimized scroll listener with RAF throttling
   useEffect(() => {
