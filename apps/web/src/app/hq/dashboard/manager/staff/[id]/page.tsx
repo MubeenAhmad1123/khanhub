@@ -209,8 +209,12 @@ export default function StaffProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const daysInMonth = useCallback(() => {
+    if (!selectedMonth || !selectedMonth.includes('-')) return [];
     const [year, month] = selectedMonth.split('-').map(Number);
+    if (isNaN(year) || isNaN(month)) return [];
     const date = new Date(year, month - 1, 1);
+    if (isNaN(date.getTime())) return [];
+    
     const days = [];
     while (date.getMonth() === month - 1) {
       days.push(new Date(date).toISOString().slice(0, 10));
@@ -1145,7 +1149,7 @@ export default function StaffProfilePage() {
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Joining Date</p>
-                      <p className="text-sm font-black uppercase">{staff?.joiningDate ? (typeof staff.joiningDate === 'string' ? staff.joiningDate.slice(0, 10) : new Date(staff.joiningDate).toISOString().slice(0, 10)) : '—'}</p>
+                      <p className="text-sm font-black uppercase">{formatDateDMY(staff?.joiningDate)}</p>
                     </div>
                   </div>
 
