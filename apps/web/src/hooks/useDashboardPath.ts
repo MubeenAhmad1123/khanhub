@@ -1,8 +1,9 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
+import { canAccessHqPortal } from '@/lib/hqPortalAccess';
 import { useEffect, useState } from 'react';
+import { resolveDashboardPathOnServer } from '@/app/actions/resolveDashboard';
 
 // ─── Department session registry ──────────────────────────────────────────────
 const DEPT_SESSION_RESOLVERS: {
@@ -103,26 +104,46 @@ export function useDashboardPath() {
   const [dashboardPath, setDashboardPath] = useState('/dashboard');
 
   useEffect(() => {
-    if (!user) {
-      setDashboardPath('/dashboard');
-      return;
+    let isMounted = true;
+
+    async function detect() {
+      if (!user) {
+        if (isMounted) setDashboardPath('/dashboard');
+        return;
+      }
+
+      // 1. Check department sessions in localStorage (Fastest - uses existing session)
+      const deptPath = resolveActiveDashboard();
+      if (deptPath !== '/dashboard') {
+        if (isMounted) setDashboardPath(deptPath);
+        return;
+      }
+
+      // 2. Check HQ portal access by email (Allowlist fallback - very fast)
+      if (canAccessHqPortal(user.email)) {
+        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
+        return;
+      }
+
+      // 3. Deep Detection - Check common user collections (Server-side to bypass permission issues)
+      // This is slow but thorough, only runs if no local session or email match is found.
+      try {
+        const path = await resolveDashboardPathOnServer(user.uid);
+        if (path && isMounted) {
+          setDashboardPath(path);
+          return;
+        }
+      } catch (err) {
+        console.error('Deep dashboard detection failed:', err);
+      }
+
+      // 4. Default: generic dashboard for Google-only users
+      if (isMounted) setDashboardPath('/dashboard');
     }
 
-    // 1. Check department sessions in localStorage (Fastest & most reliable for current active session)
-    const deptPath = resolveActiveDashboard();
-    if (deptPath !== '/dashboard') {
-      setDashboardPath(deptPath);
-      return;
-    }
+    detect();
 
-    // 2. Fallback: Check Superadmin whitelist (For users who haven't portal-logged-in yet)
-    if (isSuperadminEmail(user.email)) {
-      setDashboardPath('/hq/dashboard/superadmin');
-      return;
-    }
-
-    // 3. Default: generic dashboard for Google-only users
-    setDashboardPath('/dashboard');
+    return () => { isMounted = false; };
   }, [user]);
 
   return dashboardPath;

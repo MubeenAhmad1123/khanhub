@@ -309,8 +309,8 @@ export default function Navbar() {
                   href={dashboardHref}
                   className="flex items-center gap-1.5 px-3 sm:px-3.5 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs sm:text-sm lg:text-sm font-bold text-primary-600 bg-primary-50/70 border-2 border-primary-200/60 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 transition-all duration-300 whitespace-nowrap group shadow-sm shadow-primary-200/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
-                   <span className="animate-pulse" aria-hidden="true">🎯</span>
-                   Dashboard
+                  <span className="animate-pulse" aria-hidden="true">🎯</span>
+                  Dashboard
                 </Link>
               )}
               <Link
@@ -354,17 +354,17 @@ export default function Navbar() {
                 );
               })}
 
-              {/* Login / Portal Mobile Icon */}
+              {/* Login / Dashboard Mobile Icon */}
               <Link
-                href="/login"
+                href={dashboardHref}
                 className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px] group"
-                aria-label="Login to Portal"
+                aria-label={user ? "My Dashboard" : "Login to Portal"}
               >
-                <div className="animate-pulse transition-transform group-hover:scale-110">
+                <div className="animate-bounce transition-transform group-hover:scale-110">
                   <CgLogIn className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-[7px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">
-                  Login
+                  {user ? "Dashboard" : "Login"}
                 </span>
               </Link>
 
