@@ -2,17 +2,14 @@
 
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 function getAdminApp(): App {
   const existing = getApps().find((a) => a.name === 'dashboard-resolver');
   if (existing) return existing;
 
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) {
-     // If env is missing, we can't do server-side detection
-     // but we shouldn't crash here.
-     throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-  }
+  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
 
   const sa = JSON.parse(json);
   return initializeApp(
@@ -27,14 +24,44 @@ function getAdminApp(): App {
   );
 }
 
+const DEPT_CONFIGS = [
+  { domain: '@rehab.khanhub', collection: 'rehab_users', pathBase: '/departments/rehab/dashboard' },
+  { domain: '@jobcenter.khanhub', collection: 'jobcenter_users', pathBase: '/departments/job-center/dashboard' },
+  { domain: '@spims.khanhub', collection: 'spims_users', pathBase: '/departments/spims/dashboard' },
+  { domain: '@hospital.khanhub', collection: 'hospital_users', pathBase: '/departments/hospital/dashboard' },
+  { domain: '@sukoon.khanhub', collection: 'sukoon_users', pathBase: '/departments/sukoon/dashboard' },
+  { domain: '@welfare.khanhub', collection: 'welfare_users', pathBase: '/departments/welfare/dashboard' },
+];
+
 export async function resolveDashboardPathOnServer(uid: string): Promise<string | null> {
   if (!uid) return null;
 
   try {
     const app = getAdminApp();
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    // 1. Check HQ Users
+    const user = await auth.getUser(uid);
+    const email = user.email || '';
+
+    // 1. Fast Track by Email Domain
+    for (const config of DEPT_CONFIGS) {
+      if (email.endsWith(config.domain)) {
+        // Confirm in collection
+        const doc = await db.collection(config.collection).doc(uid).get();
+        if (doc.exists) {
+          const data = doc.data() || {};
+          const role = String(data.role || '').toLowerCase();
+          
+          if (role === 'family' && data.patientId) return `${config.pathBase}/family/${data.patientId}`;
+          if (role === 'family') return `${config.pathBase}/family`;
+          
+          return role ? `${config.pathBase}/${role}` : config.pathBase;
+        }
+      }
+    }
+
+    // 2. Check HQ Users (for @gmail.com admins or others)
     const hqDoc = await db.collection('hq_users').doc(uid).get();
     if (hqDoc.exists) {
       const data = hqDoc.data() || {};
@@ -42,44 +69,20 @@ export async function resolveDashboardPathOnServer(uid: string): Promise<string 
       if (role === 'superadmin') return '/hq/dashboard/superadmin';
       if (role === 'manager') return '/hq/dashboard/manager';
       if (role === 'cashier') return '/hq/dashboard/cashier';
+      return '/hq/dashboard';
     }
 
-    // 2. Check Rehab Users
-    const rehabDoc = await db.collection('rehab_users').doc(uid).get();
-    if (rehabDoc.exists) {
-      const data = rehabDoc.data() || {};
-      const role = String(data.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/rehab/dashboard/admin';
-      if (role === 'cashier') return '/departments/rehab/dashboard/cashier';
-      if (role === 'staff') return '/departments/rehab/dashboard/staff';
-      if (role === 'superadmin') return '/departments/rehab/dashboard/superadmin';
-      if (role === 'family') {
-        return data.patientId ? `/departments/rehab/dashboard/family/${data.patientId}` : '/departments/rehab/dashboard';
+    // 3. Brute Force Scan (Last resort for cross-domain or misconfigured users)
+    for (const config of DEPT_CONFIGS) {
+      const doc = await db.collection(config.collection).doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data() || {};
+        const role = String(data.role || '').toLowerCase();
+        if (role === 'family' && data.patientId) return `${config.pathBase}/family/${data.patientId}`;
+        return role ? `${config.pathBase}/${role}` : config.pathBase;
       }
     }
 
-    // 3. Check SPIMS Users
-    const spimsDoc = await db.collection('spims_users').doc(uid).get();
-    if (spimsDoc.exists) {
-      const data = spimsDoc.data() || {};
-      const role = String(data.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/spims/dashboard/admin';
-      if (role === 'student') return '/departments/spims/dashboard/student';
-      if (role === 'staff') return '/departments/spims/dashboard/staff';
-      if (role === 'cashier') return '/departments/spims/dashboard/cashier';
-      if (role === 'superadmin') return '/departments/spims/dashboard/superadmin';
-    }
-
-    // 4. Check Job Center
-    const jobDoc = await db.collection('job_center_users').doc(uid).get();
-    if (jobDoc.exists) {
-        const data = jobDoc.data() || {};
-        const role = String(data.role || '').toLowerCase();
-        return `/departments/job-center/dashboard${role ? `/${role}` : ''}`;
-    }
-
-    // 5. Check other departments if needed...
-    
     return null;
   } catch (error) {
     console.error('[DashboardResolver] Server error:', error);
