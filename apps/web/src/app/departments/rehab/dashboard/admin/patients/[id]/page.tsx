@@ -193,26 +193,30 @@ export default function PatientDetailPage() {
       const durationFormatted = `${daysAdmitted} Days (${monthsAdmitted > 0 ? `${monthsAdmitted} months ` : ''}${extraAdmittedDays} days)`;
 
       // Fetch all fees to calculate total received
-      const allFeesQ = query(
-        collection(db, 'rehab_fees'),
-        where('patientId', '==', patientId)
-      );
-      const allFeesSnap = await getDocs(allFeesQ);
       let overallReceived = 0;
       const aggregatedPayments: any[] = [];
-      
-      allFeesSnap.docs.forEach(doc => {
-        const feeData = doc.data();
-        const docPayments = feeData.payments || [];
-        docPayments.forEach((p: any) => {
-          if (p.status === 'approved') overallReceived += Number(p.amount || 0);
-          aggregatedPayments.push({
-            id: `${doc.id}_${p.date}`,
-            ...p,
-            month: feeData.month // preserve month context if needed
+      try {
+        const allFeesQ = query(
+          collection(db, 'rehab_fees'),
+          where('patientId', '==', patientId)
+        );
+        const allFeesSnap = await getDocs(allFeesQ);
+        
+        allFeesSnap.docs.forEach(doc => {
+          const feeData = doc.data();
+          const docPayments = feeData.payments || [];
+          docPayments.forEach((p: any) => {
+            if (p.status === 'approved') overallReceived += Number(p.amount || 0);
+            aggregatedPayments.push({
+              id: `${doc.id}_${p.date}`,
+              ...p,
+              month: feeData.month // preserve month context if needed
+            });
           });
         });
-      });
+      } catch (err) {
+        console.warn("Error fetching aggregated fees", err);
+      }
       setAllPayments(aggregatedPayments);
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
@@ -237,10 +241,10 @@ export default function PatientDetailPage() {
         photoUrl: data.photoUrl || '',
         admissionDate: data.admissionDate?.toDate?.() 
           ? data.admissionDate.toDate().toISOString().split('T')[0] 
-          : (typeof data.admissionDate === 'string' ? data.admissionDate : new Date().toISOString().split('T')[0]),
+          : (typeof data.admissionDate === 'string' && data.admissionDate.includes('-') ? data.admissionDate : new Date().toISOString().split('T')[0]),
         dischargeDate: data.dischargeDate?.toDate?.()
           ? data.dischargeDate.toDate().toISOString().split('T')[0]
-          : (typeof data.dischargeDate === 'string' ? data.dischargeDate : '')
+          : (typeof data.dischargeDate === 'string' && data.dischargeDate.includes('-') ? data.dischargeDate : '')
       });
       setPhotoPreview(data.photoUrl || '');
 
@@ -248,52 +252,68 @@ export default function PatientDetailPage() {
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       // 2. Fees (Initial current month)
-      const feesQ = query(
-        collection(db, 'rehab_fees'),
-        where('patientId', '==', patientId),
-        where('month', '==', monthStr)
-      );
-      const feeSnap = await getDocs(feesQ);
-      if (!feeSnap.empty) {
-        setFeeRecord({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() });
-      } else {
-        setFeeRecord(null);
+      try {
+        const feesQ = query(
+          collection(db, 'rehab_fees'),
+          where('patientId', '==', patientId),
+          where('month', '==', monthStr)
+        );
+        const feeSnap = await getDocs(feesQ);
+        if (!feeSnap.empty) {
+          setFeeRecord({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() });
+        } else {
+          setFeeRecord(null);
+        }
+      } catch (err) {
+        console.warn("Fees fetch error (Permissions?)", err);
       }
 
       // 3. Canteen (Initial current month)
-      const canteenQ = query(
-        collection(db, 'rehab_canteen'),
-        where('patientId', '==', patientId),
-        where('month', '==', monthStr)
-      );
-      const canteenSnap = await getDocs(canteenQ);
-      if (!canteenSnap.empty) {
-        setCanteenRecord({ id: canteenSnap.docs[0].id, ...canteenSnap.docs[0].data() });
-      } else {
-        setCanteenRecord(null);
+      try {
+        const canteenQ = query(
+          collection(db, 'rehab_canteen'),
+          where('patientId', '==', patientId),
+          where('month', '==', monthStr)
+        );
+        const canteenSnap = await getDocs(canteenQ);
+        if (!canteenSnap.empty) {
+          setCanteenRecord({ id: canteenSnap.docs[0].id, ...canteenSnap.docs[0].data() });
+        } else {
+          setCanteenRecord(null);
+        }
+      } catch (err) {
+        console.warn("Canteen fetch error (Permissions?)", err);
       }
 
       // 4. Videos
-      const videosQ = query(
-        collection(db, 'rehab_videos'),
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc')
-      );
-      const vidSnap = await getDocs(videosQ);
-      setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      try {
+        const videosQ = query(
+          collection(db, 'rehab_videos'),
+          where('patientId', '==', patientId),
+          orderBy('createdAt', 'desc')
+        );
+        const vidSnap = await getDocs(videosQ);
+        setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      } catch (err) {
+        console.warn("Videos permission/fetch error", err);
+      }
 
       // 5. Visits
-      const visitsQ = query(
-        collection(db, 'rehab_visits'),
-        where('patientId', '==', patientId),
-        orderBy('date', 'desc')
-      );
-      const visitSnap = await getDocs(visitsQ);
-      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      try {
+        const visitsQ = query(
+          collection(db, 'rehab_visits'),
+          where('patientId', '==', patientId),
+          orderBy('date', 'desc')
+        );
+        const visitSnap = await getDocs(visitsQ);
+        setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      } catch (err) {
+        console.warn("Visits permission/fetch error", err);
+      }
 
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error('Failed to load patient data');
+      console.error("Error fetching patient profile:", error);
+      toast.error('Permission denied or network error loading profile');
     } finally {
       setLoading(false);
     }
@@ -1117,14 +1137,9 @@ export default function PatientDetailPage() {
                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
                       <input 
-                        type="text" 
-                        placeholder="DD MM YYYY"
-                        value={formatDateDMY(editForm.admissionDate)} 
+                        type="date" 
+                        value={editForm.admissionDate} 
                         onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
-                        onBlur={e => {
-                          const parsed = parseDateDMY(e.target.value);
-                          if (parsed) setEditForm({...editForm, admissionDate: parsed.toISOString().split('T')[0]});
-                        }}
                         className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
                       />
                    </div>
@@ -1133,14 +1148,9 @@ export default function PatientDetailPage() {
                      <div className="md:col-span-2">
                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discharge Date</label>
                        <input 
-                         type="text" 
-                         placeholder="DD MM YYYY"
-                         value={formatDateDMY(editForm.dischargeDate)} 
+                         type="date" 
+                         value={editForm.dischargeDate} 
                          onChange={e => setEditForm({...editForm, dischargeDate: e.target.value})} 
-                         onBlur={e => {
-                           const parsed = parseDateDMY(e.target.value);
-                           if (parsed) setEditForm({...editForm, dischargeDate: parsed.toISOString().split('T')[0]});
-                         }}
                          className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
                        />
                      </div>
