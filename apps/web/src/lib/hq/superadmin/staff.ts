@@ -195,6 +195,7 @@ export type StaffProfile = StaffCardRow & {
   dutyEndTime?: string;
   secondaryDepts?: StaffDept[];
   basicInfoExtras?: Record<string, string>;
+  seniority?: string;
 };
 
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
@@ -258,6 +259,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     dutyEndTime: data.dutyEndTime || '17:00',
     secondaryDepts: data.secondaryDepts || [],
     basicInfoExtras: data.basicInfoExtras || {},
+    seniority: data.seniority,
   };
 }
 
