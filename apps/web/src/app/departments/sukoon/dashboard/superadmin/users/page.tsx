@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createSukoonUser';
+import { useSukoonSession } from '@/hooks/sukoon/useSukoonSession';
+import { createSukoonUserServer, deactivateSukoonUser, resetSukoonPassword } from '../../../actions/createSukoonUser';
 import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -11,7 +11,7 @@ import type { RehabUser } from '@/types/rehab';
 
 export default function SuperAdminUserManagement() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useSukoonSession();
   const [admins, setAdmins] = useState<RehabUser[]>([]);
   const [cashier, setCashier] = useState<RehabUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,13 +19,13 @@ export default function SuperAdminUserManagement() {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Form states
-  const [adminForm, setAdminForm] = useState({ name: '', id: 'REHAB-ADM-001', pass: '' });
-  const [cashierForm, setCashierForm] = useState({ id: 'REHAB-CSH-001', pass: '' });
+  const [adminForm, setAdminForm] = useState({ name: '', id: 'SUK-ADM-001', pass: '' });
+  const [cashierForm, setCashierForm] = useState({ id: 'SUK-CSH-001', pass: '' });
 
   const fetchData = async () => {
     try {
-      const qAdmins = query(collection(db, 'rehab_users'), where('role', '==', 'admin'));
-      const qCashier = query(collection(db, 'rehab_users'), where('role', '==', 'cashier'), where('isActive', '==', true));
+      const qAdmins = query(collection(db, 'sukoon_users'), where('role', '==', 'admin'));
+      const qCashier = query(collection(db, 'sukoon_users'), where('role', '==', 'cashier'), where('isActive', '==', true));
       
       const [snapAdmins, snapCashier] = await Promise.all([getDocs(qAdmins), getDocs(qCashier)]);
       
@@ -41,7 +41,7 @@ export default function SuperAdminUserManagement() {
   useEffect(() => {
     if (!sessionLoading) {
       if (!user || user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
+        router.push('/departments/sukoon/login');
       } else {
         fetchData();
       }
@@ -51,10 +51,10 @@ export default function SuperAdminUserManagement() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
-    const res = await createRehabUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
+    const res = await createSukoonUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
     if (res.success) {
       setMessage({ type: 'success', text: `Admin ${adminForm.id} created!` });
-      setAdminForm({ name: '', id: 'REHAB-ADM-001', pass: '' });
+      setAdminForm({ name: '', id: 'SUK-ADM-001', pass: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create admin' });
@@ -66,10 +66,10 @@ export default function SuperAdminUserManagement() {
     e.preventDefault();
     if (cashier) return;
     setActionLoading(true);
-    const res = await createRehabUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
+    const res = await createSukoonUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
     if (res.success) {
       setMessage({ type: 'success', text: 'Cashier created successfully!' });
-      setCashierForm({ id: 'REHAB-CSH-001', pass: '' });
+      setCashierForm({ id: 'SUK-CSH-001', pass: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create cashier' });
@@ -80,7 +80,7 @@ export default function SuperAdminUserManagement() {
   const handleDeactivate = async (uid: string) => {
     if (!confirm('Are you sure? This user will lose all access.')) return;
     setActionLoading(true);
-    const res = await deactivateRehabUser(uid);
+    const res = await deactivateSukoonUser(uid);
     if (res.success) {
       setMessage({ type: 'success', text: 'User deactivated successfully' });
       fetchData();
@@ -92,7 +92,7 @@ export default function SuperAdminUserManagement() {
     const newPass = prompt('Enter new password (min 6 chars):');
     if (!newPass || newPass.length < 6) return;
     setActionLoading(true);
-    const res = await resetRehabPassword(uid, newPass);
+    const res = await resetSukoonPassword(uid, newPass);
     if (res.success) setMessage({ type: 'success', text: 'Password reset successful' });
     setActionLoading(false);
   };

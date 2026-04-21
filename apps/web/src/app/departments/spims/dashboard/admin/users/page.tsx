@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createSpimsStudentUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createSpimsUserServer } from '@/app/departments/spims/actions/createSpimsUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
-import { 
-  Users, UserPlus, User, Heart, UserCog, 
-  Shield, CreditCard, Eye, EyeOff, Loader2, 
-  CheckCircle, XCircle, Search 
+import {
+  Users, UserPlus, Heart, UserCog,
+  Shield, CreditCard, Eye, EyeOff, Loader2,
+  CheckCircle, XCircle, Search, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -83,9 +83,10 @@ export default function UserManagementPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await createSpimsStudentUserServer(
+      const result = await createSpimsUserServer(
         customId.toUpperCase(),
         password,
+        'student',
         fullName,
         studentId.trim()
       );
@@ -121,12 +122,12 @@ export default function UserManagementPage() {
 
   // Filter users by tab and search
   const filteredUsers = users.filter(u => {
-    const matchesSearch = 
+    const matchesSearch =
       (u.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.customId || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesTab = activeTab === 'all' ? true : u.role === activeTab;
-    
+
     return matchesSearch && matchesTab;
   });
 
@@ -135,12 +136,12 @@ export default function UserManagementPage() {
   const adminCount = users.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
 
   const getRoleBadge = (role: string) => {
-    switch(role) {
-      case 'student': return <span className="flex items-center gap-1 bg-green-50 text-green-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-green-200"><Heart className="w-3 h-3"/> Student</span>;
-      case 'staff': return <span className="flex items-center gap-1 bg-teal-50 text-teal-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-teal-200"><UserCog className="w-3 h-3"/> Staff</span>;
-      case 'admin': return <span className="flex items-center gap-1 bg-blue-50 text-blue-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-blue-200"><Shield className="w-3 h-3"/> Admin</span>;
-      case 'cashier': return <span className="flex items-center gap-1 bg-amber-50 text-amber-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-amber-200"><CreditCard className="w-3 h-3"/> Cashier</span>;
-      case 'superadmin': return <span className="flex items-center gap-1 bg-purple-50 text-purple-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-purple-200"><Shield className="w-3 h-3"/> Super Admin</span>;
+    switch (role) {
+      case 'student': return <span className="flex items-center gap-1 bg-green-50 text-green-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-green-200"><Heart className="w-3 h-3" /> Student</span>;
+      case 'staff': return <span className="flex items-center gap-1 bg-teal-50 text-teal-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-teal-200"><UserCog className="w-3 h-3" /> Staff</span>;
+      case 'admin': return <span className="flex items-center gap-1 bg-blue-50 text-blue-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-blue-200"><Shield className="w-3 h-3" /> Admin</span>;
+      case 'cashier': return <span className="flex items-center gap-1 bg-amber-50 text-amber-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-amber-200"><CreditCard className="w-3 h-3" /> Cashier</span>;
+      case 'superadmin': return <span className="flex items-center gap-1 bg-purple-50 text-purple-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-purple-200"><Shield className="w-3 h-3" /> Super Admin</span>;
       default: return <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded text-xs uppercase">{role}</span>;
     }
   };
@@ -148,7 +149,7 @@ export default function UserManagementPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -158,7 +159,7 @@ export default function UserManagementPage() {
             </h1>
             <p className="text-sm text-gray-500 mt-1">Manage portal access for students and staff</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center justify-center gap-2"
           >
@@ -170,15 +171,15 @@ export default function UserManagementPage() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><Heart className="w-5 h-5"/></div>
+            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><Heart className="w-5 h-5" /></div>
             <div><div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Students</div><div className="text-xl font-black text-gray-900">{studentCount}</div></div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><UserCog className="w-5 h-5"/></div>
+            <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><UserCog className="w-5 h-5" /></div>
             <div><div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Staff</div><div className="text-xl font-black text-gray-900">{staffCount}</div></div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 sm:col-span-2 lg:col-span-1">
-            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><Shield className="w-5 h-5"/></div>
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><Shield className="w-5 h-5" /></div>
             <div><div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Admins</div><div className="text-xl font-black text-gray-900">{adminCount}</div></div>
           </div>
         </div>
@@ -199,11 +200,11 @@ export default function UserManagementPage() {
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'all' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
             >All Users</button>
           </div>
-          
+
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search name or ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -232,18 +233,18 @@ export default function UserManagementPage() {
                         {user.displayName}
                         {user.isActive ? (
                           <span className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] uppercase font-black tracking-widest border border-green-100 shadow-sm animate-pulse-slow">
-                            <CheckCircle className="w-3 h-3"/> Active
+                            <CheckCircle className="w-3 h-3" /> Active
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] uppercase font-black tracking-widest border border-red-100 shadow-sm">
-                            <XCircle className="w-3 h-3"/> Inactive
+                            <XCircle className="w-3 h-3" /> Inactive
                           </span>
                         )}
                       </h4>
                       <div className="text-[10px] sm:text-xs font-black text-gray-400 mt-0.5 sm:mt-1 uppercase tracking-widest truncate">{user.customId}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[150px] border-t sm:border-t-0 pt-3 sm:pt-0 mt-1 sm:mt-0">
                     <div className="font-black">
                       {getRoleBadge(user.role)}
@@ -299,7 +300,7 @@ export default function UserManagementPage() {
                     value={customId}
                     onChange={e => setCustomId(e.target.value.toUpperCase())}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white font-mono uppercase"
-                    placeholder="e.g. REHAB-FAM-001"
+                    placeholder="e.g. SPIMS-STU-001"
                     required
                   />
                 </div>
@@ -315,8 +316,8 @@ export default function UserManagementPage() {
                       placeholder="Min 6 characters"
                       required
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
@@ -365,5 +366,4 @@ export default function UserManagementPage() {
   );
 }
 
-// Added this strictly for error usage above
-import { AlertCircle } from 'lucide-react';
+

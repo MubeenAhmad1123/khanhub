@@ -19,7 +19,7 @@ export interface DepartmentAuthInfo {
   domain: string;
   dashboardPath: string;
   sessionKey: string;
-  legacyDomain?: string;
+  legacyDomains?: string[];
   prefixes?: string[];
 }
 
@@ -29,7 +29,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com.pk',
-    legacyDomain: '@khanhub.io',
+    legacyDomains: ['@hq.khanhub.com', '@hq.Khan Hub.com', '@khanhub.io'],
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -39,6 +39,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Rehab',
     collection: 'rehab_users',
     domain: '@rehab.khanhub.com.pk',
+    legacyDomains: ['@rehab.khanhub.com', '@rehab.Khan Hub'],
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -48,9 +49,9 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'SPIMS',
     collection: 'spims_users',
     domain: '@spims.khanhub.com.pk',
+    legacyDomains: ['@spims.khanhub.com', '@spims.Khan Hub', '@spims.edu.pk'],
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
-    legacyDomain: '@spims.edu.pk',
     prefixes: ['SPIMS', 'STU', 'STUDENT']
   },
   hospital: {
@@ -58,6 +59,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Hospital',
     collection: 'hospital_users',
     domain: '@hospital.khanhub.com.pk',
+    legacyDomains: ['@hospital.khanhub.com', '@hospital.Khan Hub'],
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -67,6 +69,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Sukoon',
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub.com.pk',
+    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.Khan Hub'],
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -76,6 +79,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Welfare',
     collection: 'welfare_users',
     domain: '@welfare.khanhub.com.pk',
+    legacyDomains: ['@welfare.khanhub.com', '@welfare.Khan Hub'],
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -85,7 +89,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub.com.pk',
-    legacyDomain: '@job-center.khanhub.com.pk',
+    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.Khan Hub', '@job-center.khanhub.com.pk'],
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -95,6 +99,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Social Media',
     collection: 'media_users',
     domain: '@media.khanhub.com.pk',
+    legacyDomains: ['@media.Khan Hub'],
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -104,6 +109,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'IT',
     collection: 'it_users',
     domain: '@it.khanhub.com.pk',
+    legacyDomains: ['@it.Khan Hub'],
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']
@@ -224,7 +230,11 @@ export async function loginUniversal(customId: string, password: string, deptHin
       // If not found by customId, maybe it's already a full email
       if (customId.includes('@')) {
         const domain = '@' + customId.split('@')[1];
-        const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => d.domain === domain || d.legacyDomain === domain || domain.includes(d.id));
+        const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => 
+          d.domain === domain || 
+          (d.legacyDomains || []).includes(domain) || 
+          domain.includes(d.id)
+        );
         if (foundDept) {
           try {
             console.log('[UniversalAuth] Attempting login with full email:', customId);
@@ -258,7 +268,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
         finalData.employeeId?.toLowerCase()
       ].filter(Boolean) as string[]));
       
-      const domains = [dept.domain, dept.legacyDomain].filter(Boolean) as string[];
+      const domains = Array.from(new Set([dept.domain, ...(dept.legacyDomains || [])])).filter(Boolean) as string[];
       
       let lastError: any;
       console.log('[UniversalAuth] Attempting robust auth for discovered user');

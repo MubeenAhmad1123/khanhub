@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createSukoonUserServer } from '@/app/departments/sukoon/actions/createSukoonUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
-  Users, UserPlus, User, Heart, UserCog, 
+  Users, UserPlus, Heart, UserCog, 
   Shield, CreditCard, Eye, EyeOff, Loader2, 
-  CheckCircle, XCircle, Search 
+  CheckCircle, XCircle, Search, AlertCircle 
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -36,14 +36,14 @@ export default function UserManagementPage() {
   const [modalError, setModalError] = useState('');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('sukoon_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/sukoon/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/sukoon/login');
       return;
     }
     setSession(parsed);
@@ -58,7 +58,7 @@ export default function UserManagementPage() {
     try {
       setLoading(true);
       const q = query(
-        collection(db, 'rehab_users'),
+        collection(db, 'sukoon_users'),
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);
@@ -83,7 +83,7 @@ export default function UserManagementPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await createRehabUserServer(
+      const result = await createSukoonUserServer(
         customId.toUpperCase(),
         password,
         'family',
@@ -263,7 +263,7 @@ export default function UserManagementPage() {
         {/* Modal: Create Family User */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-teal-600" />
@@ -301,7 +301,7 @@ export default function UserManagementPage() {
                     value={customId}
                     onChange={e => setCustomId(e.target.value.toUpperCase())}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white font-mono uppercase"
-                    placeholder="e.g. REHAB-FAM-001"
+                    placeholder="e.g. SUK-FAM-001"
                     required
                   />
                 </div>
@@ -366,6 +366,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
-// Added this strictly for error usage above
-import { AlertCircle } from 'lucide-react';

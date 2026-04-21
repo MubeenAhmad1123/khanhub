@@ -1,28 +1,10 @@
 'use server'
 
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAdminApp } from '@/lib/hq/auth/adminAuth';
 
 const DOMAIN = '@rehab.Khan Hub';
-
-function getAdminApp(): App {
-  const existing = getApps().find(a => a.name === 'rehab-admin');
-  if (existing) return existing;
-
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-
-  const sa = JSON.parse(json);
-
-  return initializeApp({
-    credential: cert({
-      projectId: sa.project_id,
-      clientEmail: sa.client_email,
-      privateKey: sa.private_key,
-    }),
-  }, 'rehab-admin');
-}
 
 export async function createRehabUserServer(
   customId: string,
@@ -37,7 +19,7 @@ export async function createRehabUserServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
 
@@ -173,7 +155,7 @@ export async function createSpimsStudentUserServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
 
@@ -267,7 +249,7 @@ export async function deactivateRehabUser(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     await getAuth(app).updateUser(uid, { disabled: true });
     await getFirestore(app).collection('rehab_users').doc(uid).update({ isActive: false });
     // Fire-and-forget audit log
@@ -292,7 +274,7 @@ export async function resetRehabPassword(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     await getAuth(app).updateUser(uid, { password: newPassword });
     await getFirestore(app).collection('rehab_users').doc(uid).update({
       password: newPassword,
@@ -310,7 +292,7 @@ export async function resetSpimsPassword(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     await getAuth(app).updateUser(uid, { password: newPassword });
     await getFirestore(app).collection('spims_users').doc(uid).update({
       password: newPassword,
@@ -365,7 +347,7 @@ export async function markSetupComplete(
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     await getFirestore(app).collection('rehab_meta').doc('setup').set({
       completed: true,
       completedAt: new Date(),
@@ -389,7 +371,7 @@ export async function createStaffMemberServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('rehab');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
     const email = `${customId.toLowerCase()}${emailDomain}`;
