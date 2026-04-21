@@ -8,8 +8,9 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
-  ArrowRight, Loader2, AlertTriangle
+  ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 function timeAgo(dateInput: any): string {
@@ -53,7 +54,10 @@ export default function ManagerOverviewPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDark, setIsDark] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const isDark = mounted && resolvedTheme === 'dark';
+
   const [allStaff, setAllStaff] = useState<any[]>([]);
   const [attMap, setAttMap] = useState<Map<string, string>>(new Map());
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
@@ -68,8 +72,7 @@ export default function ManagerOverviewPage() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('hq_dark_mode') === 'true';
-    setIsDark(saved);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -117,9 +120,9 @@ export default function ManagerOverviewPage() {
               if (!seenStaffIds.has(id)) {
                 seenStaffIds.add(id);
                 allStaffDocs.push({ 
+                  ...data,
                   id, 
-                  department: dept,
-                  ...data
+                  department: dept
                 });
               }
             }
@@ -177,12 +180,8 @@ export default function ManagerOverviewPage() {
 
         let allContribs: any[] = [];
         contribSnaps.forEach((snap, i) => {
-          const dept = depts[i];
-          const docs = snap.docs.map(docSnap => ({ 
-            id: docSnap.id, 
-            ...docSnap.data(), 
-            dept 
-          }));
+          const d = depts[i];
+          const docs = snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
           allContribs = [...allContribs, ...docs];
         });
 
@@ -244,29 +243,39 @@ export default function ManagerOverviewPage() {
     fetchData();
   }, [session]);
 
-  if (sessionLoading || loading) {
+  if (sessionLoading || loading || !mounted) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
-        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
+      <div className={`min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950`}>
+        <Loader2 className={`w-8 h-8 animate-spin text-gray-400 dark:text-zinc-500`} />
       </div>
     );
   }
 
   return (
-    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
+    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white`}>
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent">Manager Overview</h1>
           <p className="text-gray-500 text-sm font-medium mt-1">Global Departmental Oversight & Real-time Metrics</p>
         </div>
-        <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link 
+            href="/hq/dashboard/manager/reports/daily"
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-lg hover:-translate-y-1 ${
+              isDark ? 'bg-zinc-100 text-black hover:bg-white' : 'bg-gray-900 text-white hover:bg-black shadow-gray-200'
+            }`}
+          >
+            <TrendingUp size={18} /> Generate Today's Report
+          </Link>
+          <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
+            </div>
+            <div className="w-px h-4 bg-gray-200" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
           </div>
-          <div className="w-px h-4 bg-gray-200" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
         </div>
       </div>
 
@@ -317,7 +326,7 @@ export default function ManagerOverviewPage() {
             }).map(s => (
               <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
                 <Link 
-                  href={`/hq/dashboard/manager/staff/${s.id}?dept=${s.department}`} 
+                  href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} 
                   className="flex items-center gap-3 hover:opacity-75 transition-opacity"
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
@@ -397,7 +406,7 @@ export default function ManagerOverviewPage() {
                       {attMap.get(s.id)}
                     </span>
                   )}
-                  <Link href={`/hq/dashboard/manager/staff/${s.id}?dept=${s.department}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+                  <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
                     <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -566,8 +575,8 @@ export default function ManagerOverviewPage() {
                   </div>
                 )}
               </div>
-              <div className={`p-4 bg-gray-50 dark:bg-zinc-800/50 border-t ${isDark ? 'border-zinc-800' : 'border-gray-100'}`}>
-                 <Link href="/hq/dashboard/audit" className="block text-center text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-blue-500 transition-colors">
+              <div className={`p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800`}>
+                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest hover:text-blue-500 transition-colors">
                     View Full Audit Trail
                  </Link>
               </div>

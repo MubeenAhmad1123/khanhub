@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
@@ -1462,7 +1462,17 @@ export default function PatientDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(paymentDate)}
+                    onChange={e => setPaymentDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1495,7 +1505,18 @@ export default function PatientDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    required
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(payDate)}
+                    onChange={e => setPayDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1538,7 +1559,18 @@ export default function PatientDetailPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(canteenDate)}
+                  onChange={e => setCanteenDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <button 
                 type="submit" 
@@ -1588,7 +1620,18 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1638,7 +1681,18 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>

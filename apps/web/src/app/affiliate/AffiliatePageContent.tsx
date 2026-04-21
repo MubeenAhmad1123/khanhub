@@ -32,18 +32,18 @@ const CONTENT = {
         hero: {
             badge: "Partner With Us",
             title: "Turn Your Network Into Impact — And Earn While You Help",
-            subtitle: "KhanHub's Affiliate Program rewards you every time you connect someone in need with our services. Help your community and grow your income.",
+            subtitle: "Khan Hub's Affiliate Program rewards you every time you connect someone in need with our services. Help your community and grow your income.",
             cta: "Join the Program",
             franchiseCta: "Franchise Opportunities"
         },
         franchisePromo: {
             title: "Ready to Level Up?",
-            subtitle: "Become a KhanHub Franchise owner and lead your own department with our proven success model.",
+            subtitle: "Become a Khan Hub Franchise owner and lead your own department with our proven success model.",
             cta: "Explore Franchises"
         },
         whatIsIt: {
             title: "What is the Affiliate Program?",
-            p1: "KhanHub runs 6 active departments serving the community of Vehari and beyond. We believe in the power of referral and community building.",
+            p1: "Khan Hub runs 6 active departments serving the community of Vehari and beyond. We believe in the power of referral and community building.",
             p2: "If you know someone who needs our medical, educational, or professional services, you can refer them to us through your unique affiliate identity.",
             p3: "When that person registers and receives our service, we pay you a small commission as a thank-you — except for Welfare, which is purely charitable work."
         },
@@ -52,12 +52,12 @@ const CONTENT = {
             steps: [
                 {
                     title: "You Refer",
-                    text: "You know someone who needs KhanHub's help — a patient, a student, a job seeker. You bring them to us or share their contact with us.",
+                    text: "You know someone who needs Khan Hub's help — a patient, a student, a job seeker. You bring them to us or share their contact with us.",
                     icon: Users
                 },
                 {
                     title: "They Register",
-                    text: "The person you referred comes to KhanHub, registers at the relevant department, and starts receiving our services.",
+                    text: "The person you referred comes to Khan Hub, registers at the relevant department, and starts receiving our services.",
                     icon: ClipboardCheck
                 },
                 {
@@ -72,10 +72,10 @@ const CONTENT = {
             subtitle: "Every department has a fixed affiliate commission — agreed upfront.",
             cards: [
                 {
-                    name: "KhanHub Hospital",
+                    name: "Khan Hub Hospital",
                     image: "/images/medical-center.webp",
                     commission: "2% per registered patient",
-                    desc: "Refer patients needing medical, surgical, or emergency care to KhanHub Hospital and earn a commission on their registration fee.",
+                    desc: "Refer patients needing medical, surgical, or emergency care to Khan Hub Hospital and earn a commission on their registration fee.",
                     color: "blue"
                 },
                 {
@@ -89,7 +89,7 @@ const CONTENT = {
                     name: "Job Center",
                     image: "/images/job.webp",
                     commission: "2% per placed candidate",
-                    desc: "Help someone find employment through KhanHub Job Center and earn a commission when they are successfully placed.",
+                    desc: "Help someone find employment through Khan Hub Job Center and earn a commission when they are successfully placed.",
                     color: "orange"
                 },
                 {
@@ -120,9 +120,9 @@ const CONTENT = {
             title: "A Story That Shows How It Works",
             items: [
                 "Ahmad lives in a village near Vehari. His neighbor's son has been struggling with drug addiction for years.",
-                "Ahmad tells the family about KhanHub Rehab Center. He contacts KhanHub, shares the patient's details, and helps arrange the visit.",
-                "The patient is admitted to the Rehab Center. KhanHub registers Ahmad as the referring affiliate.",
-                "Once the patient's admission fee is confirmed, KhanHub calculates 3% and transfers Ahmad's commission within the agreed timeframe."
+                "Ahmad tells the family about Khan Hub Rehab Center. He contacts Khan Hub, shares the patient's details, and helps arrange the visit.",
+                "The patient is admitted to the Rehab Center. Khan Hub registers Ahmad as the referring affiliate.",
+                "Once the patient's admission fee is confirmed, Khan Hub calculates 3% and transfers Ahmad's commission within the agreed timeframe."
             ],
             closing: "Ahmad didn't just earn money. He saved a life."
         },
@@ -131,9 +131,9 @@ const CONTENT = {
             points: [
                 "Commission is calculated on the base registration or admission fee only.",
                 "Payments are processed within 7–14 business days after service confirmation.",
-                "The referrer must be registered as an affiliate with KhanHub before referring.",
+                "The referrer must be registered as an affiliate with Khan Hub before referring.",
                 "Commission rates may be updated; affiliates will be notified in advance.",
-                "KhanHub reserves the right to verify all referrals.",
+                "Khan Hub reserves the right to verify all referrals.",
                 "Welfare referrals do not qualify for any commission under any circumstance.",
                 "Fraudulent referrals will result in immediate disqualification."
             ]
@@ -414,7 +414,7 @@ export default function AffiliatePageContent() {
                                 <div className="relative aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white">
                                     <Image
                                         src="/logo.webp"
-                                        alt="KhanHub Impact"
+                                        alt="Khan Hub Impact"
                                         fill
                                         className="object-contain p-20 bg-emerald-50 group-hover:scale-105 transition-transform duration-700"
                                     />

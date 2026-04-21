@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { createTransaction } from '@/lib/job-center/transactions';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function TransactionForm({ cashierId, onSuccess }: { cashierId: string, onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -87,10 +88,15 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         <div className="space-y-2">
           <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
           <input
-            type="date"
+            type="text"
+            placeholder="DD MM YYYY"
             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-orange-500 outline-none"
-            value={formData.date}
+            value={formatDateDMY(formData.date)}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            onBlur={(e) => {
+              const parsed = parseDateDMY(e.target.value);
+              if (parsed) setFormData({ ...formData, date: parsed.toISOString().split('T')[0] });
+            }}
           />
         </div>
       </div>

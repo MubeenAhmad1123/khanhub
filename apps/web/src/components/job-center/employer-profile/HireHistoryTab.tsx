@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\employer-profile\HireHistoryTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\employer-profile\HireHistoryTab.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -62,7 +62,7 @@ export default function HireHistoryTab({ employerId }: HireHistoryTabProps) {
             <Building2 className="w-8 h-8 text-gray-300" />
           </div>
           <h3 className="text-gray-900 font-black">No hires recorded</h3>
-          <p className="text-gray-500 text-xs mt-1">No seekers have been placed with this employer through KhanHub yet.</p>
+          <p className="text-gray-500 text-xs mt-1">No seekers have been placed with this employer through Khan Hub yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

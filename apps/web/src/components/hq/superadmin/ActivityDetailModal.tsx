@@ -22,7 +22,7 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const DEPT_LABELS: Record<string, string> = {
-  hq: 'KhanHub HQ',
+  hq: 'Khan Hub HQ',
   rehab: 'Rehab Center',
   spims: 'SPIMS Academy',
   hospital: 'Khan Hospital',

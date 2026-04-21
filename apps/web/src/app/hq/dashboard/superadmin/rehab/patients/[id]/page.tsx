@@ -111,7 +111,7 @@ export default function HqRehabPatientProfilePage() {
     return '—';
   };
 
-  const explicitKeys = ['id', 'name', 'fatherName', 'guardianName', 'cnic', 'cnicNo', 'dob', 'age', 'gender', 'phone', 'contactNumber', 'contact', 'emergencyContact', 'address', 'admissionDate', 'createdAt', 'inpatientNumber', 'outpatientNumber', 'status', 'isActive', 'assignedTo', 'doctor', 'staffName', 'diagnosis', 'addictionType', 'notes', 'remarks'];
+  const explicitKeys = ['id', 'name', 'fatherName', 'guardianName', 'cnic', 'cnicNo', 'dob', 'age', 'gender', 'phone', 'contactNumber', 'contact', 'emergencyContact', 'address', 'admissionDate', 'dischargeDate', 'createdAt', 'inpatientNumber', 'outpatientNumber', 'status', 'isActive', 'assignedTo', 'doctor', 'staffName', 'diagnosis', 'addictionType', 'notes', 'remarks'];
   
   const additionalFields = patient ? Object.entries(patient).filter(([k]) => !explicitKeys.includes(k)) : [];
 
@@ -214,6 +214,17 @@ export default function HqRehabPatientProfilePage() {
                       <span className="font-black text-black dark:text-white uppercase">{getVal(['admissionDate', 'createdAt'])}</span>
                     </div>
                   </div>
+                  {patient.isActive === false && (
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
+                        <Calendar size={18} className="text-rose-400" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Termination Sequence (Discharge)</span>
+                        <span className="font-black text-black dark:text-white uppercase">{getVal(['dischargeDate'])}</span>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
                       <Phone size={18} className="text-gray-400" />

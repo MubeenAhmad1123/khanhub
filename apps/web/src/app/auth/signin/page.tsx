@@ -7,21 +7,23 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
-import { Info, Lock, User as UserIcon, Loader2, ArrowRight } from 'lucide-react';
+import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
+import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
+import { Info, Lock, User as UserIcon, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function SignInPage() {
     const { user, loading, signInWithGoogle } = useAuth();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [authType, setAuthType] = useState<'google' | 'id'>('google');
-    
+
     // Universal Login States
     const [customId, setCustomId] = useState('');
     const [password, setPassword] = useState('');
 
-    // Redirect if already signed in
+    // Redirect if already signed in (as regular user, not superadmin)
     useEffect(() => {
-        if (user) {
+        if (user && !isSuperadminEmail(user.email)) {
             console.log('[SignInPage] Firebase user detected, redirecting to /');
             router.push('/');
         }
@@ -38,12 +40,47 @@ export default function SignInPage() {
         );
     }
 
-    if (user) return null;
+    if (user && !isSuperadminEmail(user.email)) return null;
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
         try {
-            await signInWithGoogle();
+            const firebaseUser = await signInWithGoogle();
+            if (!firebaseUser) {
+                toast.error('Sign-in was cancelled.');
+                return;
+            }
+
+            // ── Superadmin whitelist check ──────────────────────────────
+            if (isSuperadminEmail(firebaseUser.email)) {
+                // Get ID token and provision via Server Action (bypasses Firestore rules)
+                const idToken = await firebaseUser.getIdToken();
+                const result = await provisionSuperadminAndSetSession(idToken);
+
+                if (!result.success) {
+                    toast.error(result.error || 'Failed to set up admin session.');
+                    return;
+                }
+
+                // Set local HQ session from what the server returned
+                const session = {
+                    uid: firebaseUser.uid,
+                    customId: result.session?.customId || 'SUPER-ADMIN',
+                    name: result.session?.name || firebaseUser.displayName || 'Super Admin',
+                    role: 'superadmin',
+                    loginTime: Date.now(),
+                    email: firebaseUser.email,
+                    photoUrl: firebaseUser.photoURL,
+                };
+                localStorage.setItem('hq_session', JSON.stringify(session));
+                localStorage.setItem('hq_login_time', Date.now().toString());
+
+                toast.success('Welcome, Super Admin!');
+                window.location.href = '/hq/dashboard/superadmin';
+                return;
+            }
+
+            // Regular Google user — send to main site
             router.push('/');
         } catch (error) {
             console.error('Sign-in error:', error);
@@ -98,7 +135,7 @@ export default function SignInPage() {
                             <div className="w-20 h-20 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-blue-500/20 transition-transform group-hover:scale-105 duration-500">
                                 <Image
                                     src="/logo.webp"
-                                    alt="KhanHub"
+                                    alt="Khan Hub"
                                     width={80}
                                     height={80}
                                     className="w-16 h-16 object-contain rounded-2xl"
@@ -114,18 +151,18 @@ export default function SignInPage() {
 
                 {/* Main Auth Card */}
                 <div className="bg-white/70 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-white/80 p-8 md:p-12 transition-all duration-500">
-                    
+
                     {/* Method Toggle */}
                     <div className="flex p-1 bg-gray-100 rounded-2xl mb-8">
-                        <button 
+                        <button
                             onClick={() => setAuthType('google')}
                             className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${authType === 'google' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
                             Google Sign-in
                         </button>
-                        <button 
+                        <button
                             onClick={() => setAuthType('id')}
                             className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${authType === 'id' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-                            User ID & Pass
+                            User ID &amp; Pass
                         </button>
                     </div>
 
@@ -134,6 +171,14 @@ export default function SignInPage() {
                             <div className="text-center">
                                 <h3 className="text-xl font-black text-gray-900">Secure Access</h3>
                                 <p className="text-gray-500 text-sm mt-2">Continue with your official Google account</p>
+                            </div>
+
+                            {/* Superadmin notice */}
+                            <div className="flex items-start gap-3 bg-indigo-50 border border-indigo-100 p-4 rounded-2xl">
+                                <ShieldCheck size={16} className="text-indigo-500 mt-0.5 shrink-0" />
+                                <p className="text-[11px] font-medium text-indigo-700 leading-relaxed">
+                                    HQ Superadmin access is granted via Google only. Only authorized accounts will be directed to the admin portal.
+                                </p>
                             </div>
 
                             <button

@@ -73,8 +73,8 @@ export default function DownloadAppPage() {
                             className="pt-4 flex justify-center md:justify-start"
                         >
                             <a
-                                href="/KhanHub.apk"
-                                download="KhanHub.apk"
+                                href="/Khan Hub.apk"
+                                download="Khan Hub.apk"
                                 className="group inline-flex items-center gap-3 px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-primary-500/30 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
                             >
                                 <Download className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />

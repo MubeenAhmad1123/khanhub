@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, orderBy, startAfter, getCountFromServer, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
-  Phone, DollarSign, CheckCircle, AlertCircle, X
+  Phone, DollarSign, CheckCircle, AlertCircle, X, Filter
 } from 'lucide-react';
 import { Patient } from '@/types/rehab';
 
@@ -29,9 +29,35 @@ export default function PatientsListPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [allPatients, setAllPatients] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [sortMethod, setSortMethod] = useState<string>('newest'); 
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalActiveCount, setTotalActiveCount] = useState(0);
+  const [totalDischargedCount, setTotalDischargedCount] = useState(0);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    let sessionData = localStorage.getItem('rehab_session');
+    
+    if (!sessionData) {
+      const hqRaw = localStorage.getItem('hq_session');
+      if (hqRaw) {
+        const parsedHq = JSON.parse(hqRaw);
+        if (parsedHq.role === 'superadmin') {
+          sessionData = JSON.stringify({
+            ...parsedHq,
+            displayName: parsedHq.displayName || parsedHq.name,
+            role: 'superadmin'
+          });
+        }
+      }
+    }
+
     if (!sessionData) {
       router.push('/departments/rehab/login');
       return;
@@ -45,13 +71,49 @@ export default function PatientsListPage() {
     fetchPatients();
   }, [router]);
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (isNext = false, isPrev = false) => {
     try {
       setLoading(true);
-      const [snap, feesSnap, canteenSnap] = await Promise.all([
-        getDocs(collection(db, 'rehab_patients')),
-        getDocs(collection(db, 'rehab_fees')),
-        getDocs(collection(db, 'rehab_canteen')),
+      
+      // 1. Get counts using zero-cost getCountFromServer (1 read per 1000 docs)
+      const activeCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
+      const dischargedCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', false)));
+      setTotalActiveCount(activeCountSnap.data().count);
+      setTotalDischargedCount(dischargedCountSnap.data().count);
+
+      // 2. Build Paginated Query
+      let q = query(
+        collection(db, 'rehab_patients'),
+        orderBy('createdAt', sortMethod.includes('asc') ? 'asc' : 'desc'),
+        limit(PAGE_SIZE)
+      );
+
+      if (statusFilter !== 'all') {
+        q = query(q, where('isActive', '==', statusFilter === 'active'));
+      }
+
+      if (isNext && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setHasMore(false);
+        setPatients([]);
+        return;
+      }
+
+      setLastVisible(snap.docs[snap.docs.length - 1]);
+      setFirstVisible(snap.docs[0]);
+      setHasMore(snap.docs.length === PAGE_SIZE);
+
+      const patientDocs = snap.docs;
+      const patientIds = patientDocs.map(d => d.id);
+
+      // 3. Only fetch fees and canteen for THESE 20 patients (Save hundreds of reads!)
+      const [feesSnap, canteenSnap] = await Promise.all([
+        getDocs(query(collection(db, 'rehab_fees'), where('patientId', 'in', patientIds))),
+        getDocs(query(collection(db, 'rehab_canteen'), where('patientId', 'in', patientIds))),
       ]);
       
       const feesMap: Record<string, any[]> = {};
@@ -68,15 +130,20 @@ export default function PatientsListPage() {
         canteenMap[data.patientId].push(data);
       });
 
-      const all = snap.docs.map(d => {
+      const paginatedData = patientDocs.map(d => {
         const data = d.data() as Patient;
         const admissionDate = toDate(data.admissionDate);
         const pFees = feesMap[d.id] || [];
         const pCanteen = canteenMap[d.id] || [];
         
-        // Dynamic calculation based on days since admission
-        const dailyRate = Math.round(Number(data.monthlyPackage || data.packageAmount || 0) / 30);
-        const daysSinceAdmission = Math.max(0, Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const pkgAmount = Number(data.monthlyPackage) || Number(data.packageAmount) || 0;
+        const dailyRate = Math.round(pkgAmount / 30);
+        
+        const endDate = data.isActive === false && data.dischargeDate 
+          ? toDate(data.dischargeDate) 
+          : new Date();
+          
+        const daysSinceAdmission = Math.max(0, Math.floor((endDate.getTime() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
         const totalDueTillDate = dailyRate * daysSinceAdmission;
         
         let totalReceived = 0;
@@ -88,15 +155,13 @@ export default function PatientsListPage() {
 
         const remaining = totalDueTillDate - totalReceived;
 
-        const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (c.totalDeposited || 0), 0);
-        const totalCanteenSpent = pCanteen.reduce((a, c) => a + (c.totalSpent || 0), 0);
+        const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (Number(c.totalDeposited) || 0), 0);
+        const totalCanteenSpent = pCanteen.reduce((a, c) => a + (Number(c.totalSpent) || 0), 0);
         const canteenBalance = totalCanteenDeposited - totalCanteenSpent;
 
         const months = Math.floor(daysSinceAdmission / 30);
         const days = daysSinceAdmission % 30;
-        const durationFormatted = months > 0 
-          ? `${months}M ${days}D`
-          : `${days} Days`;
+        const durationFormatted = months > 0 ? `${months}M ${days}D` : `${days} Days`;
 
         return {
           id: d.id,
@@ -104,31 +169,34 @@ export default function PatientsListPage() {
           fatherName: data.fatherName || '',
           photoUrl: data.photoUrl || null,
           admissionDate,
-          monthlyPackage: Number(data.monthlyPackage || data.packageAmount) || 0,
+          monthlyPackage: pkgAmount,
           inpatientNumber: data.inpatientNumber || '',
-          serialNumber: data.serialNumber || 0,
+          serialNumber: Number(data.serialNumber) || 0,
           substanceOfAddiction: data.substanceOfAddiction || '',
           isActive: data.isActive !== false,
           contactNumber: data.contactNumber || '',
-          remaining,
-          canteenBalance,
+          remaining: Number.isNaN(remaining) ? 0 : remaining,
+          canteenBalance: Number.isNaN(canteenBalance) ? 0 : canteenBalance,
           totalPkg: totalDueTillDate,
           totalReceived,
           daysSinceAdmission,
           durationFormatted,
           createdAt: toDate(data.createdAt),
         };
-      })
-      .sort((a, b) => b.serialNumber - (a.serialNumber || 0));
+      });
 
-      setPatients(all);
-      setAllPatients(all);
+      setPatients(paginatedData);
+      // We don't update allPatients here because it's only for the current page
     } catch (err: any) {
       console.error('Fetch patients error:', err?.message);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPatients();
+  }, [statusFilter, sortMethod]);
 
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -153,21 +221,36 @@ export default function PatientsListPage() {
     );
   }
 
-  const filteredPatients = patients.filter(p => {
+  const availableYears = Array.from(new Set(patients.map(p => p.admissionDate.getFullYear()))).sort((a, b) => b - a);
+
+  let filteredPatients = patients.filter(p => {
     if (statusFilter === 'active' && !p.isActive) return false;
     if (statusFilter === 'discharged' && p.isActive) return false;
-    const s = searchQuery.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(s) ||
-      p.inpatientNumber.toLowerCase().includes(s) ||
-      p.substanceOfAddiction.toLowerCase().includes(s) ||
-      p.fatherName.toLowerCase().includes(s)
-    );
+    if (yearFilter !== 'all' && p.admissionDate.getFullYear().toString() !== yearFilter) return false;
+    
+    if (searchQuery) {
+      const s = searchQuery.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(s) ||
+        p.inpatientNumber.toLowerCase().includes(s) ||
+        p.substanceOfAddiction.toLowerCase().includes(s) ||
+        p.fatherName.toLowerCase().includes(s)
+      );
+    }
+    return true;
   });
 
-  const totalActive = patients.filter(p => p.isActive).length;
-  const totalDischarged = patients.filter(p => !p.isActive).length;
-  const totalOutstanding = patients.filter(p => p.isActive && p.remaining > 0).reduce((s, p) => s + p.remaining, 0);
+  filteredPatients.sort((a, b) => {
+    if (sortMethod === 'newest') return b.createdAt.getTime() - a.createdAt.getTime();
+    if (sortMethod === 'oldest') return a.createdAt.getTime() - b.createdAt.getTime();
+    if (sortMethod === 'admission_desc') return b.admissionDate.getTime() - a.admissionDate.getTime();
+    if (sortMethod === 'admission_asc') return a.admissionDate.getTime() - b.admissionDate.getTime();
+    return b.serialNumber - a.serialNumber;
+  });
+
+  const totalActive = totalActiveCount;
+  const totalDischarged = totalDischargedCount;
+  const totalOutstanding = 0; // Disabled global sum to save reads. Total outstanding is now viewed per-patient.
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 w-full overflow-x-hidden">
@@ -217,69 +300,104 @@ export default function PatientsListPage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-teal-600 transition-colors" size={18} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onFocus={() => searchQuery && setSearchOpen(true)}
-                placeholder="Search by name or ID..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
+                placeholder="Search by name, inpatient #, or father's name..."
+                className="w-full bg-white border border-gray-100 rounded-[1.5rem] pl-12 pr-12 py-4 text-gray-900 text-sm font-bold outline-none focus:border-teal-500/50 focus:ring-4 focus:ring-teal-500/5 transition-all shadow-sm placeholder:text-gray-400"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-900 transition-colors"
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               )}
             </div>
+            
             {searchOpen && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                {searchResults.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery(p.name || p.inpatientNumber || p.id);
-                      setSearchOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-black text-xs flex-shrink-0">
-                      {String(p.name || '?')[0]?.toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-white text-sm font-bold">{p.name}</p>
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                        {p.inpatientNumber || p.patientId || p.id}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+              <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-gray-100 rounded-[2rem] shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                <div className="p-2">
+                  {searchResults.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(p.name || p.inpatientNumber || p.id);
+                        setSearchOpen(false);
+                      }}
+                      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-teal-50/50 rounded-2xl transition-all text-left group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 font-black text-sm flex-shrink-0 group-hover:scale-110 transition-transform">
+                        {String(p.name || '?')[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-gray-900 text-sm font-black">{p.name}</p>
+                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">
+                          {p.inpatientNumber || `#${p.serialNumber}`}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {searchOpen && (
               <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
             )}
           </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-none">
-            {['all', 'active', 'discharged'].map(f => (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
-                className={`px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                  statusFilter === f ? 'bg-gray-800 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
-                }`}
+
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-center">
+            <div className="flex gap-2 p-1.5 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm">
+              {['all', 'active', 'discharged'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                    statusFilter === f 
+                      ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/10' 
+                      : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 flex-1 sm:flex-none">
+              <select 
+                value={yearFilter}
+                onChange={e => setYearFilter(e.target.value)}
+                className="bg-white border border-gray-100 rounded-xl px-4 py-2 text-xs font-black text-gray-600 uppercase tracking-widest shadow-sm outline-none focus:border-teal-500 cursor-pointer"
               >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
+                <option value="all">All Years</option>
+                {availableYears.map(y => (
+                  <option key={y} value={y.toString()}>{y}</option>
+                ))}
+              </select>
+
+              <div className="relative flex-1 sm:flex-none flex items-center bg-white border border-gray-100 rounded-xl shadow-sm px-2">
+                <Filter className="w-3 h-3 text-gray-400 ml-2 absolute pointer-events-none" />
+                <select 
+                  value={sortMethod}
+                  onChange={e => setSortMethod(e.target.value)}
+                  className="w-full bg-transparent border-none rounded-xl pl-8 pr-4 py-2 text-xs font-black text-gray-600 uppercase tracking-widest outline-none cursor-pointer appearance-none"
+                >
+                  <option value="newest">Added: Newest</option>
+                  <option value="oldest">Added: Oldest</option>
+                  <option value="admission_desc">Admission: Latest</option>
+                  <option value="admission_asc">Admission: Oldest</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -291,7 +409,7 @@ export default function PatientsListPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredPatients.map(patient => (
+            {patients.map(patient => (
               <Link 
                 href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
                 key={patient.id}
@@ -360,6 +478,30 @@ export default function PatientsListPage() {
           </div>
         )}
 
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mt-8 pb-10">
+          <button
+            onClick={() => {
+               setPage(1);
+               fetchPatients();
+            }}
+            disabled={page === 1}
+            className="px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-500 disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+          >
+            Reset to Start
+          </button>
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Page {page}</span>
+          <button
+            onClick={() => {
+              setPage(p => p + 1);
+              fetchPatients(true);
+            }}
+            disabled={!hasMore}
+            className="px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-500 disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+          >
+            Next Page
+          </button>
+        </div>
       </div>
     </div>
   );

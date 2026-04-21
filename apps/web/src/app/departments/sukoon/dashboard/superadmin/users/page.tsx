@@ -197,74 +197,74 @@ export default function SuperAdminUserManagement() {
       </div>
 
       {/* SECTION C: Admin Roster */}
-      <section className="bg-white rounded-[2rem] sm:rounded-[4rem] border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-6 sm:p-10 border-b border-gray-50">
-           <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight uppercase">Administrative Roster</h2>
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-4">
+          <div>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Administrative Roster</h2>
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">Manage system administrators and their security status</p>
+          </div>
+          <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-gray-100 dark:border-white/5">
+             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{admins.length} Total Admins</span>
+          </div>
         </div>
 
-        {/* Mobile View: Cards */}
-        <div className="lg:hidden divide-y divide-gray-50">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {admins.map((adm) => (
-            <div key={adm.uid} className="p-6 space-y-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-black text-lg text-gray-900 uppercase leading-tight">{adm.displayName}</p>
-                  <p className="text-[10px] font-black text-gray-400 tracking-widest mt-0.5">{adm.customId}</p>
+            <div key={adm.uid} className="group relative bg-white dark:bg-black border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
+              {/* Background Accent */}
+              <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${adm.isActive ? 'bg-blue-500' : 'bg-red-500'}`} />
+              
+              <div className="relative z-10 space-y-6">
+                <div className="flex justify-between items-start">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${
+                    adm.isActive ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600' : 'bg-red-50 dark:bg-red-500/10 text-red-600'
+                  }`}>
+                    {adm.displayName?.[0]?.toUpperCase() || 'A'}
+                  </div>
+                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                    adm.isActive 
+                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 border-blue-100 dark:border-blue-500/20' 
+                      : 'bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100 dark:border-red-500/20'
+                  }`}>
+                    {adm.isActive ? '• Active' : '• Inactive'}
+                  </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                  adm.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                }`}>
-                  {adm.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleResetPass(adm.uid)} className="flex-1 bg-gray-50 text-gray-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Reset</button>
-                {adm.isActive && (
-                  <button onClick={() => handleDeactivate(adm.uid)} className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Deactivate</button>
-                )}
+
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors truncate">
+                    {adm.displayName}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">System ID:</span>
+                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-md">{adm.customId}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-50 dark:border-white/5 flex gap-3">
+                  <button 
+                    onClick={() => handleResetPass(adm.uid)}
+                    className="flex-1 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                  >
+                    Reset Secret
+                  </button>
+                  {adm.isActive && (
+                    <button 
+                      onClick={() => handleDeactivate(adm.uid)}
+                      className="flex-1 bg-red-50 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm hover:shadow-lg hover:shadow-red-500/20"
+                    >
+                      Deactivate
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
-          {admins.length === 0 && <p className="text-center py-10 text-gray-300 font-bold uppercase tracking-widest text-[10px]">No administrative staff found</p>}
-        </div>
-
-        {/* Desktop View: Table */}
-        <div className="hidden lg:block">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Identity</th>
-                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">System ID</th>
-                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
-                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {admins.map((adm) => (
-                <tr key={adm.uid} className="hover:bg-gray-50/50 transition-all group">
-                  <td className="px-10 py-8">
-                    <p className="font-black text-lg text-gray-900 group-hover:text-blue-600 transition-colors uppercase">{adm.displayName}</p>
-                  </td>
-                  <td className="px-10 py-8 font-black text-xs text-gray-400 tracking-widest">{adm.customId}</td>
-                  <td className="px-10 py-8">
-                    <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                      adm.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                    }`}>
-                      {adm.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-10 py-8 text-right">
-                    <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleResetPass(adm.uid)} className="px-5 py-2.5 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Reset</button>
-                      {adm.isActive && (
-                        <button onClick={() => handleDeactivate(adm.uid)} className="px-5 py-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Deactivate</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {admins.length === 0 && (
+            <div className="col-span-full py-20 text-center bg-gray-50 dark:bg-white/5 rounded-[3rem] border border-dashed border-gray-200 dark:border-white/10">
+              <p className="text-gray-300 dark:text-gray-600 font-black uppercase tracking-widest">No Administrative Accounts Discovered</p>
+            </div>
+          )}
         </div>
       </section>
     </div>

@@ -67,7 +67,7 @@ export function StatCard({
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{title}</div>
-        <div className="mt-2 text-3xl font-black text-black dark:text-white break-words tracking-tight">{displayValue}</div>
+        <div className="mt-1 text-xl sm:text-2xl font-black text-black dark:text-white break-words tracking-tight leading-none">{displayValue}</div>
         {trend && (
           <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
             {trend.isUp ? <TrendingUp size={12} strokeWidth={3} /> : <TrendingDown size={12} strokeWidth={3} />}

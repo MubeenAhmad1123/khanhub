@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { CanteenRecord } from '@/types/spims';
+import { formatDateDMY } from '@/lib/utils';
 
 export default function CanteenWallet({ canteenRecord }: { canteenRecord: CanteenRecord | null }) {
   if (!canteenRecord) return (
@@ -37,7 +38,7 @@ export default function CanteenWallet({ canteenRecord }: { canteenRecord: Cantee
               <div key={idx} className="flex justify-between items-center text-sm p-4 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
                 <div>
                   <p className="font-bold text-gray-800 normal-case">{t.description}</p>
-                  <p className="text-[10px] text-gray-400">{t.date?.toLocaleDateString()}</p>
+                  <p className="text-[10px] text-gray-400">{formatDateDMY(t.date)}</p>
                 </div>
                 <span className="font-black text-red-500">-{t.amount?.toLocaleString()}</span>
               </div>

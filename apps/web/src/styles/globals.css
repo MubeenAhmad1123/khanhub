@@ -98,6 +98,10 @@
   --shadow-primary-sm: 0 2px 8px rgba(0, 94, 184, 0.08);
   --shadow-primary-md: 0 4px 16px rgba(0, 94, 184, 0.12);
   --shadow-primary-lg: 0 8px 32px rgba(0, 94, 184, 0.16);
+
+  /* Dark Mode Configuration for v4 - Class-based */
+  --variant-dark: .dark &;
+
   --shadow-success-sm: 0 2px 8px rgba(40, 167, 69, 0.08);
   --shadow-success-md: 0 4px 16px rgba(40, 167, 69, 0.12);
   --shadow-success-lg: 0 8px 32px rgba(40, 167, 69, 0.16);
@@ -178,7 +182,8 @@
   --tooltip-bg: #ffffff;
 }
 
-:dark {
+.dark {
+  color-scheme: dark;
   --surface-default: #000000;
   --surface-subtle: rgba(255, 255, 255, 0.05);
   --surface-overlay: rgba(0, 0, 0, 0.9);
@@ -194,15 +199,56 @@
   background-size: 1000px 100%;
 }
 
+/* ─── Custom Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-200);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-neutral-300);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 /* ─── Base Reset ─── */
 @layer base {
   html {
     scroll-behavior: smooth;
+    transition: color 0.3s, background-color 0.3s;
   }
 
   body {
-    @apply font-body bg-white text-neutral-900 dark:bg-gray-950 dark:text-gray-100 antialiased transition-colors duration-300;
+    font-family: var(--font-body);
+    background-color: var(--color-white);
+    color: var(--color-neutral-900);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: color 0.3s, background-color 0.3s;
     font-feature-settings: 'kern' 1, 'liga' 1;
+  }
+
+  .dark body {
+    background-color: var(--color-black);
+    color: var(--color-gray-100);
   }
 
   h1,
@@ -211,18 +257,47 @@
   h4,
   h5,
   h6 {
-    @apply font-display text-neutral-900 dark:text-white;
+    font-family: var(--font-display);
+    color: var(--color-neutral-900);
+  }
+
+  .dark :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--color-white);
   }
 
   * {
     box-sizing: border-box;
-    @apply border-neutral-200 dark:border-white/10;
+    border-color: var(--color-neutral-200);
+  }
+
+  .dark * {
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   input,
   textarea,
   select {
-    @apply font-body text-neutral-900 bg-white dark:bg-gray-800 dark:text-white;
+    @apply bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm transition-all;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-neutral-200);
+    border-radius: 20px;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-neutral-800);
   }
 }
 

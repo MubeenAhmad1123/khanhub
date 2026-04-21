@@ -1,4 +1,4 @@
-// src/app/departments/rehab/dashboard/admin/page.tsx
+// src/app/departments/sukoon/dashboard/admin/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -31,11 +31,11 @@ export default function AdminDashboardPage() {
   const [activePatients, setActivePatients] = useState<any[]>([]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('sukoon_session');
+    if (!sessionData) { router.push('/departments/sukoon/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
-      router.push('/departments/rehab/login'); return;
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/sukoon/login'); return;
     }
     setSession(parsed);
   }, [router]);
@@ -48,7 +48,7 @@ export default function AdminDashboardPage() {
   const loadDashboard = async () => {
     try {
       const patientsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'), 
+        collection(db, 'sukoon_guests'), 
         where('isActive', '==', true),
         orderBy('name', 'asc')
       ));
@@ -80,91 +80,91 @@ export default function AdminDashboardPage() {
       {/* Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-3xl font-black text-gray-900">
+          <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white">
             {getGreeting()}, {session?.displayName?.split(' ')[0]} 👋
           </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
             {formatDateDMY(new Date())}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Link 
-            href="/departments/rehab/dashboard/admin/patients/new"
-            className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-black hover:bg-teal-700 transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
+            href="/departments/sukoon/dashboard/admin/guests/new"
+            className="flex items-center gap-2 px-5 py-3 bg-purple-600 text-white rounded-xl text-sm font-black hover:bg-purple-700 transition-all shadow-lg shadow-purple-100 whitespace-nowrap"
           >
-            <Plus size={16} /> Add Patient
+            <Plus size={16} /> Add Guest
           </Link>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm p-4 md:p-8 flex items-center gap-4 md:gap-6 group hover:border-teal-100 transition-colors">
-          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+        <div className="bg-white dark:bg-white/5 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-4 md:p-8 flex items-center gap-4 md:gap-6 group hover:border-purple-100 dark:hover:border-purple-500/30 transition-colors">
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
             <Heart className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-2xl md:text-4xl font-black text-gray-900">{totalPatients}</div>
-            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active Patients</div>
+            <div className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white">{totalPatients}</div>
+            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Active Guests</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm p-4 md:p-8 flex items-center gap-4 md:gap-6 group hover:border-blue-100 transition-colors">
-          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+        <div className="bg-white dark:bg-white/5 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-4 md:p-8 flex items-center gap-4 md:gap-6 group hover:border-blue-100 dark:hover:border-blue-500/30 transition-colors">
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
             <Users className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-xl md:text-4xl font-black text-gray-900">Patient Focus</div>
-            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Management Mode</div>
+            <div className="text-xl md:text-4xl font-black text-gray-900 dark:text-white">Guest Focus</div>
+            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Management Mode</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm p-4 md:p-8 flex items-center gap-4 md:gap-6 group hover:border-purple-100 transition-colors sm:col-span-2 lg:col-span-1">
-          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+        <div className="bg-white dark:bg-white/5 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-4 md:p-8 flex items-center gap-4 md:gap-6 group hover:border-indigo-100 dark:hover:border-indigo-500/30 transition-colors sm:col-span-2 lg:col-span-1">
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
             <Activity className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-xl md:text-4xl font-black text-gray-900">Real-time</div>
-            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Data Insights</div>
+            <div className="text-xl md:text-4xl font-black text-gray-900 dark:text-white">Real-time</div>
+            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Data Insights</div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Recent Patients */}
-        <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-4 md:p-8 border-b border-gray-50 flex items-center justify-between">
-            <h2 className="font-black text-gray-900 flex items-center gap-3 text-sm md:text-base">
-              <Activity className="w-5 h-5 text-teal-500" /> Recent Patients
+        {/* Recent Guests */}
+        <div className="lg:col-span-2 bg-white dark:bg-white/5 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
+          <div className="p-4 md:p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
+            <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3 text-sm md:text-base">
+              <Activity className="w-5 h-5 text-purple-500" /> Recent Guests
             </h2>
-            <Link href="/departments/rehab/dashboard/admin/patients" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
+            <Link href="/departments/sukoon/dashboard/admin/guests" className="text-[9px] md:text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
               View All <ChevronRight size={12} />
             </Link>
           </div>
           <div className="p-3 md:p-4">
             {activePatients.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-gray-400 text-sm font-medium">No active patients found.</p>
-                <Link href="/departments/rehab/dashboard/admin/patients/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">Add your first patient</Link>
+                <p className="text-gray-400 text-sm font-medium">No active guests found.</p>
+                <Link href="/departments/sukoon/dashboard/admin/guests/new" className="text-purple-600 text-sm font-bold mt-2 inline-block">Add your first guest</Link>
               </div>
             ) : (
                 <div className="grid grid-cols-1 gap-2">
                   {activePatients.map(patient => (
                     <Link 
                       key={patient.id} 
-                      href={`/departments/rehab/dashboard/admin/patients/${patient.id}`}
-                      className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 transition-colors group active:bg-gray-100"
+                      href={`/departments/sukoon/dashboard/admin/guests/${patient.id}`}
+                      className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group active:bg-gray-100 dark:active:bg-white/10"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 font-black text-sm group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 font-black text-sm group-hover:bg-purple-50 dark:group-hover:bg-purple-500/20 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex-shrink-0">
                           {patient.name?.[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-sm">{patient.name}</p>
-                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{patient.customId || patient.id}</p>
+                          <p className="font-bold text-gray-900 dark:text-white text-sm">{patient.name}</p>
+                          <p className="text-[9px] font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest">{patient.customId || patient.id}</p>
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                      <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-purple-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                     </Link>
                   ))}
                 </div>
@@ -173,36 +173,36 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Shortcuts */}
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm p-4 md:p-8">
-          <h2 className="font-black text-gray-900 mb-4 md:mb-6 flex items-center gap-3 text-sm md:text-base">
-            <TrendingUp className="w-5 h-5 text-teal-500" /> Quick Tasks
+        <div className="bg-white dark:bg-white/5 rounded-2xl md:rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-4 md:p-8">
+          <h2 className="font-black text-gray-900 dark:text-white mb-4 md:mb-6 flex items-center gap-3 text-sm md:text-base">
+            <TrendingUp className="w-5 h-5 text-purple-500" /> Quick Tasks
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
             <Link 
-              href="/departments/rehab/dashboard/admin/patients/new"
-              className="flex items-center gap-3 p-4 rounded-2xl bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors group active:scale-95"
+              href="/departments/sukoon/dashboard/admin/guests/new"
+              className="flex items-center gap-3 p-4 rounded-2xl bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
                 <Plus size={18} />
               </div>
               <span className="font-bold text-sm">New Admission</span>
             </Link>
             
             <Link 
-              href="/departments/rehab/dashboard/admin/patients"
-              className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors group active:scale-95"
+              href="/departments/sukoon/dashboard/admin/guests"
+              className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
                 <Users size={18} />
               </div>
-              <span className="font-bold text-sm">Patient Registry</span>
+              <span className="font-bold text-sm">Guest Registry</span>
             </Link>
 
             <Link 
-              href="/departments/rehab/dashboard/profile"
-              className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors group active:scale-95"
+              href="/departments/sukoon/dashboard/profile"
+              className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/20 transition-colors group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
                 <UserCog size={18} />
               </div>
               <span className="font-bold text-sm">My Staff Profile</span>

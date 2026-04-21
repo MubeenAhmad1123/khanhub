@@ -50,6 +50,14 @@ export async function resetPortalUserPassword(
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { password: newPassword });
 
+    // Also update plaintext password in Firestore for display in Credential Hub
+    const col = COLLECTION_BY_PORTAL[portal];
+    if (col) {
+      await getFirestore(app).collection(col).doc(uid).update({
+        password: newPassword
+      });
+    }
+
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to reset password.' };

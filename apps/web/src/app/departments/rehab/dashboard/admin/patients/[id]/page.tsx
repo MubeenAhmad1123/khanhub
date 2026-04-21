@@ -11,11 +11,11 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, CheckCircle2
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -70,11 +70,12 @@ export default function PatientDetailPage() {
   const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '', 
-    diagnosis: '', 
-    packageAmount: 0, 
+    name: '',
+    diagnosis: '',
+    packageAmount: 0,
     photoUrl: '',
-    admissionDate: new Date().toISOString().split('T')[0]
+    admissionDate: new Date().toISOString().split('T')[0],
+    dischargeDate: ''
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -127,8 +128,31 @@ export default function PatientDetailPage() {
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
 
+  // Discharge Modal State
+  const [showDischargeModal, setShowDischargeModal] = useState(false);
+  const [dDate, setDDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dDateInput, setDDateInput] = useState('');
+  const [dAmount, setDAmount] = useState('');
+  const [dNote, setDNote] = useState('Final Settlement');
+  const [isDischarging, setIsDischarging] = useState(false);
+
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    let sessionData = localStorage.getItem('rehab_session');
+    
+    if (!sessionData) {
+      const hqRaw = localStorage.getItem('hq_session');
+      if (hqRaw) {
+        const parsedHq = JSON.parse(hqRaw);
+        if (parsedHq.role === 'superadmin') {
+          sessionData = JSON.stringify({
+            ...parsedHq,
+            displayName: parsedHq.displayName || parsedHq.name,
+            role: 'superadmin'
+          });
+        }
+      }
+    }
+
     if (!sessionData) {
       router.push('/departments/rehab/login');
       return;
@@ -157,7 +181,11 @@ export default function PatientDetailPage() {
       
       // Calculate Financial Stats & Remaining Days
       const admission = data.admissionDate?.toDate() || new Date();
-      const diffTimeMs = new Date().getTime() - admission.getTime();
+      const endDate = data.isActive === false && data.dischargeDate 
+        ? (data.dischargeDate?.toDate?.() || new Date(data.dischargeDate)) 
+        : new Date();
+      
+      const diffTimeMs = endDate.getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
       
       const monthsAdmitted = Math.floor(daysAdmitted / 30);
@@ -165,26 +193,30 @@ export default function PatientDetailPage() {
       const durationFormatted = `${daysAdmitted} Days (${monthsAdmitted > 0 ? `${monthsAdmitted} months ` : ''}${extraAdmittedDays} days)`;
 
       // Fetch all fees to calculate total received
-      const allFeesQ = query(
-        collection(db, 'rehab_fees'),
-        where('patientId', '==', patientId)
-      );
-      const allFeesSnap = await getDocs(allFeesQ);
       let overallReceived = 0;
       const aggregatedPayments: any[] = [];
-      
-      allFeesSnap.docs.forEach(doc => {
-        const feeData = doc.data();
-        const docPayments = feeData.payments || [];
-        docPayments.forEach((p: any) => {
-          if (p.status === 'approved') overallReceived += Number(p.amount || 0);
-          aggregatedPayments.push({
-            id: `${doc.id}_${p.date}`,
-            ...p,
-            month: feeData.month // preserve month context if needed
+      try {
+        const allFeesQ = query(
+          collection(db, 'rehab_fees'),
+          where('patientId', '==', patientId)
+        );
+        const allFeesSnap = await getDocs(allFeesQ);
+        
+        allFeesSnap.docs.forEach(doc => {
+          const feeData = doc.data();
+          const docPayments = feeData.payments || [];
+          docPayments.forEach((p: any) => {
+            if (p.status === 'approved') overallReceived += Number(p.amount || 0);
+            aggregatedPayments.push({
+              id: `${doc.id}_${p.date}`,
+              ...p,
+              month: feeData.month // preserve month context if needed
+            });
           });
         });
-      });
+      } catch (err) {
+        console.warn("Error fetching aggregated fees", err);
+      }
       setAllPayments(aggregatedPayments);
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
@@ -209,7 +241,10 @@ export default function PatientDetailPage() {
         photoUrl: data.photoUrl || '',
         admissionDate: data.admissionDate?.toDate?.() 
           ? data.admissionDate.toDate().toISOString().split('T')[0] 
-          : (typeof data.admissionDate === 'string' ? data.admissionDate : new Date().toISOString().split('T')[0])
+          : (typeof data.admissionDate === 'string' && data.admissionDate.includes('-') ? data.admissionDate : new Date().toISOString().split('T')[0]),
+        dischargeDate: data.dischargeDate?.toDate?.()
+          ? data.dischargeDate.toDate().toISOString().split('T')[0]
+          : (typeof data.dischargeDate === 'string' && data.dischargeDate.includes('-') ? data.dischargeDate : '')
       });
       setPhotoPreview(data.photoUrl || '');
 
@@ -217,52 +252,68 @@ export default function PatientDetailPage() {
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       // 2. Fees (Initial current month)
-      const feesQ = query(
-        collection(db, 'rehab_fees'),
-        where('patientId', '==', patientId),
-        where('month', '==', monthStr)
-      );
-      const feeSnap = await getDocs(feesQ);
-      if (!feeSnap.empty) {
-        setFeeRecord({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() });
-      } else {
-        setFeeRecord(null);
+      try {
+        const feesQ = query(
+          collection(db, 'rehab_fees'),
+          where('patientId', '==', patientId),
+          where('month', '==', monthStr)
+        );
+        const feeSnap = await getDocs(feesQ);
+        if (!feeSnap.empty) {
+          setFeeRecord({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() });
+        } else {
+          setFeeRecord(null);
+        }
+      } catch (err) {
+        console.warn("Fees fetch error (Permissions?)", err);
       }
 
       // 3. Canteen (Initial current month)
-      const canteenQ = query(
-        collection(db, 'rehab_canteen'),
-        where('patientId', '==', patientId),
-        where('month', '==', monthStr)
-      );
-      const canteenSnap = await getDocs(canteenQ);
-      if (!canteenSnap.empty) {
-        setCanteenRecord({ id: canteenSnap.docs[0].id, ...canteenSnap.docs[0].data() });
-      } else {
-        setCanteenRecord(null);
+      try {
+        const canteenQ = query(
+          collection(db, 'rehab_canteen'),
+          where('patientId', '==', patientId),
+          where('month', '==', monthStr)
+        );
+        const canteenSnap = await getDocs(canteenQ);
+        if (!canteenSnap.empty) {
+          setCanteenRecord({ id: canteenSnap.docs[0].id, ...canteenSnap.docs[0].data() });
+        } else {
+          setCanteenRecord(null);
+        }
+      } catch (err) {
+        console.warn("Canteen fetch error (Permissions?)", err);
       }
 
       // 4. Videos
-      const videosQ = query(
-        collection(db, 'rehab_videos'),
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc')
-      );
-      const vidSnap = await getDocs(videosQ);
-      setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      try {
+        const videosQ = query(
+          collection(db, 'rehab_videos'),
+          where('patientId', '==', patientId),
+          orderBy('createdAt', 'desc')
+        );
+        const vidSnap = await getDocs(videosQ);
+        setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      } catch (err) {
+        console.warn("Videos permission/fetch error", err);
+      }
 
       // 5. Visits
-      const visitsQ = query(
-        collection(db, 'rehab_visits'),
-        where('patientId', '==', patientId),
-        orderBy('date', 'desc')
-      );
-      const visitSnap = await getDocs(visitsQ);
-      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      try {
+        const visitsQ = query(
+          collection(db, 'rehab_visits'),
+          where('patientId', '==', patientId),
+          orderBy('date', 'desc')
+        );
+        const visitSnap = await getDocs(visitsQ);
+        setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      } catch (err) {
+        console.warn("Visits permission/fetch error", err);
+      }
 
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error('Failed to load patient data');
+      console.error("Error fetching patient profile:", error);
+      toast.error('Permission denied or network error loading profile');
     } finally {
       setLoading(false);
     }
@@ -523,12 +574,17 @@ export default function PatientDetailPage() {
         packageAmount: monthlyPkg,
         monthlyPackage: monthlyPkg,
         admissionDate: Timestamp.fromDate(new Date(editForm.admissionDate)),
+        dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null,
         photoUrl: photoUrl || null
       });
 
       setPatient((prev: any) => {
         const admission = new Date(editForm.admissionDate);
-        const diffTimeMs = new Date().getTime() - admission.getTime();
+        const endDate = prev.isActive === false && prev.dischargeDate 
+          ? (prev.dischargeDate?.toDate?.() || new Date(prev.dischargeDate)) 
+          : new Date();
+          
+        const diffTimeMs = endDate.getTime() - admission.getTime();
         const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
         const monthsAdmitted = Math.floor(daysAdmitted / 30);
         const extraAdmittedDays = daysAdmitted % 30;
@@ -547,7 +603,8 @@ export default function PatientDetailPage() {
           dailyRate,
           dueTillDate,
           overallRemaining: dueTillDate - (prev.overallReceived || 0),
-          photoUrl: photoUrl 
+          photoUrl: photoUrl,
+          dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null
         };
       });
       setEditForm(prev => ({ ...prev, photoUrl }));
@@ -576,21 +633,72 @@ export default function PatientDetailPage() {
     }
   };
 
-  const handleDischarge = async () => {
-    if (!window.confirm("Are you sure you want to discharge this patient?")) return;
+  const handleDischarge = () => {
+    // Reset modal and open
+    const today = new Date().toISOString().split('T')[0];
+    setDDate(today);
+    setDDateInput(formatDateDMY(today));
+    setDAmount('');
+    setShowDischargeModal(true);
+  };
+
+  const handleDischargeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!window.confirm("Confirm discharge? This will mark the patient as inactive.")) return;
+
     try {
-      setDeactivating(true);
+      setIsDischarging(true);
+      
+      const dischargeDateObj = parseDateDMY(dDateInput) || new Date(dDate);
+      const admissionDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
+      
+      const diffTimeMs = dischargeDateObj.getTime() - admissionDateObj.getTime();
+      const actualDays = diffTimeMs > 0 ? Math.ceil(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+      
+      // 1. If there's an amount, record it as a transaction
+      const amount = Number(dAmount) || 0;
+      if (amount > 0) {
+        const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+        const setupData = setupSnap.data() as any;
+        const cashierId = String(setupData?.cashierCustomId || '').toUpperCase() || 'CASHIER';
+
+        await addDoc(collection(db, 'rehab_transactions'), {
+          type: 'income',
+          amount,
+          category: 'fee',
+          categoryName: 'Discharge Settlement',
+          departmentCode: 'rehab',
+          departmentName: 'Rehab Center',
+          patientId: patientId,
+          patientName: patient?.name || '',
+          status: 'approved', // Auto-approve discharge payments since it's a final step
+          cashierId: cashierId,
+          description: dNote || 'Final Settlement',
+          date: Timestamp.fromDate(dischargeDateObj),
+          transactionDate: Timestamp.now(),
+          createdBy: session.uid,
+          createdByName: session?.displayName || session?.name || 'Rehab Admin',
+          createdAt: Timestamp.now()
+        });
+      }
+
+      // 2. Update patient record
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         isActive: false,
-        dischargeDate: Timestamp.now(),
-        dischargeReason: null
+        dischargeDate: Timestamp.fromDate(dischargeDateObj),
+        dischargeAmount: amount,
+        dischargeNote: dNote || null,
+        totalStayDays: actualDays
       });
-      toast.success('Patient discharged');
+
+      toast.success('Patient discharged successfully ✓');
+      setShowDischargeModal(false);
       router.push('/departments/rehab/dashboard/admin/patients');
     } catch (error) {
       console.error("Discharge error", error);
       toast.error('Discharge failed');
-      setDeactivating(false);
+    } finally {
+      setIsDischarging(false);
     }
   };
 
@@ -1026,15 +1134,27 @@ export default function PatientDetailPage() {
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
-                     <input 
-                       type="date" 
-                       value={editForm.admissionDate} 
-                       onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
-                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
-                     />
-                  </div>
+                   <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
+                      <input 
+                        type="date" 
+                        value={editForm.admissionDate} 
+                        onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
+                        className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                      />
+                   </div>
+
+                   {!patient.isActive && (
+                     <div className="md:col-span-2">
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discharge Date</label>
+                       <input 
+                         type="date" 
+                         value={editForm.dischargeDate} 
+                         onChange={e => setEditForm({...editForm, dischargeDate: e.target.value})} 
+                         className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                       />
+                     </div>
+                   )}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
                     <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" />
@@ -1050,6 +1170,14 @@ export default function PatientDetailPage() {
                     <p className="text-xs font-bold text-teal-500 dark:text-teal-400/80 mt-1 italic">
                       {patient.durationFormatted}
                     </p>
+                    {!patient.isActive && patient.dischargeDate && (
+                      <div className="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-teal-200/30 dark:border-teal-800/30">
+                        <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Discharged On</p>
+                        <p className="text-xl font-black text-teal-700 dark:text-teal-300">
+                          {formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate)}
+                        </p>
+                      </div>
+                    )}
                     {patient.isActive && (
                       <button
                         type="button"
@@ -1596,7 +1724,17 @@ export default function PatientDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(paymentDate)}
+                    onChange={e => setPaymentDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1629,7 +1767,18 @@ export default function PatientDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    required
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(payDate)}
+                    onChange={e => setPayDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1672,7 +1821,18 @@ export default function PatientDetailPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(canteenDate)}
+                  onChange={e => setCanteenDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <button 
                 type="submit" 
@@ -1722,7 +1882,15 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+ className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1772,7 +1940,15 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+ className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1843,6 +2019,117 @@ export default function PatientDetailPage() {
                   >
                     {isDeletingTransaction ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 size={18} />}
                     Confirm Delete
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discharge Modal */}
+      {showDischargeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Discharge Patient</h2>
+                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Final Settlement & Checkout</p>
+                </div>
+                <button onClick={() => setShowDischargeModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleDischargeSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Discharge Date</label>
+                    <input
+                      type="date"
+                      value={dDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDDate(val);
+                        setDDateInput(formatDateDMY(val));
+                      }}
+                      required
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Settlement Amount (₨)</label>
+                    <input
+                      type="number"
+                      value={dAmount}
+                      onChange={(e) => setDAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Calculation Box */}
+                <div className="bg-teal-50/50 rounded-2xl p-4 border border-teal-100/50 space-y-2">
+                  {(() => {
+                    const parsed = parseDateDMY(dDateInput) || new Date(dDate);
+                    const dDateObj = isNaN(parsed.getTime()) ? new Date() : parsed;
+                    const admDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
+                    const diff = dDateObj.getTime() - admDateObj.getTime();
+                    const days = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+                    const due = days * (patient.dailyRate || 0);
+                    const remainingBefore = due - (patient.overallReceived || 0);
+                    const remainingAfter = remainingBefore - (Number(dAmount) || 0);
+
+                    return (
+                      <>
+                        <div className="flex justify-between text-[10px] font-bold text-teal-700/60 uppercase tracking-wider">
+                          <span>Total Stay:</span>
+                          <span className="font-black text-teal-700">{days} Days</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold text-teal-700/60 uppercase tracking-wider">
+                          <span>Dues till {dDate}:</span>
+                          <span className="font-black text-teal-700">₨{due.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold text-teal-700/60 uppercase tracking-wider pt-2 border-t border-teal-100">
+                          <span>Remaining Balance:</span>
+                          <span className={`font-black ${remainingBefore > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{remainingBefore.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-black text-teal-900 pt-1">
+                          <span>Balance After Payment:</span>
+                          <span className={remainingAfter > 0 ? 'text-red-600' : 'text-green-600'}>₨{remainingAfter.toLocaleString()}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Notes / Reason</label>
+                  <textarea
+                    value={dNote}
+                    onChange={(e) => setDNote(e.target.value)}
+                    placeholder="E.g. Full recovery, Discharged on request..."
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all min-h-[80px] resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDischargeModal(false)}
+                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-100 text-gray-400 font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isDischarging}
+                    className="flex-[2] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/20"
+                  >
+                    {isDischarging ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                    Final Discharge
                   </button>
                 </div>
               </form>

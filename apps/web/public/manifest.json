@@ -1,6 +1,6 @@
 {
-  "name": "KhanHub",
-  "short_name": "KhanHub",
+  "name": "Khan Hub",
+  "short_name": "Khan Hub",
   "description": "Pakistan's Leading Welfare Organization - Healthcare, Education & Community Development",
   "start_url": "/",
   "id": "/",
@@ -29,6 +29,7 @@
   "share_target": {
     "action": "/share",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "title": "title",
       "text": "text",
@@ -107,14 +108,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "KhanHub Desktop"
+      "label": "Khan Hub Desktop"
     },
     {
       "src": "/screenshots/mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "KhanHub Mobile"
+      "label": "Khan Hub Mobile"
     }
   ],
   "shortcuts": [
@@ -128,7 +129,7 @@
     {
       "name": "Contact",
       "short_name": "Contact",
-      "description": "Contact KhanHub",
+      "description": "Contact Khan Hub",
       "url": "/contact",
       "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }

@@ -68,60 +68,25 @@ import { createRehabUserServer, createStaffMemberServer } from '@/app/department
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import toast from 'react-hot-toast';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS, UNIFORM_RULES } from '@/data/hqConfig';
 
 type TabType = 'admin' | 'staff' | 'client';
 
 const DEPARTMENTS = [
-  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', prefix: 'HQ' },
-  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
-  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
-  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
-  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
-  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
-  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.khanhub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
-  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', prefix: 'MED' },
-  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', prefix: 'IT' },
-];
-
-const COMMON_DUTIES = [
-  "Morning Prayer Supervision", "Fajar Wake-up Round", "Medication Distribution (Morning)",
-  "Medication Distribution (Night)", "Meal Supervision (Breakfast)", "Meal Supervision (Lunch)",
-  "Meal Supervision (Dinner)", "Patient Activity Monitoring", "Counselling Session Support",
-  "Vital Signs Check", "Night Security Round", "Gate/Entry Management",
-  "Cleaning Supervision", "Visitor Management"
+  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@Khan Hub.io', prefix: 'HQ' },
+  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.Khan Hub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
+  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.Khan Hub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
+  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.Khan Hub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
+  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.Khan Hub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
+  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.Khan Hub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
+  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.Khan Hub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
+  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.Khan Hub', prefix: 'MED' },
+  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.Khan Hub', prefix: 'IT' },
 ];
 
 const DOCUMENT_TYPES = [
   "CNIC Copy (Front)", "CNIC Copy (Back)", "Educational Certificate",
   "Medical Certificate", "Police Clearance", "Contract/Agreement", "Other"
-];
-
-const UNIFORM_RULES: Record<string, string[]> = {
-  'hospital_male_doctor': ['ID Card'],
-  'hospital_female_doctor': ['ID Card'],
-  'hospital_male_staff': ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card'],
-  'hospital_female_staff': ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card', 'Hijab'],
-  'spims_male_teacher': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'White Overall', 'ID Card'],
-  'spims_female_teacher': ['White Overall', 'ID Card'],
-  'rehab_male_admin': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'rehab_female_doctor': ['White Overall', 'ID Card', 'Shoes'],
-  'rehab_male_reception': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'rehab_female_reception': ['Black OT Kit', 'Hijab', 'White Overall', 'Shoes', 'ID Card'],
-  'rehab_male_security': ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap'],
-  'rehab_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'sukoon-center_female_admin': ['ID Card'],
-  'sukoon-center_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'social-media_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'it_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'welfare_male_admin': ['ID Card'],
-  'hq_male_cashier': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'security_male_default': ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap', 'Torch', 'Whistle'],
-  'security_female_default': ['ID Card'],
-};
-
-const ALL_DRESS_ITEMS = [
-  'Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes', 'White Overall',
-  'Black OT Kit', 'Hijab', 'Lab Coat', 'Security Uniform', 'Security Cap', 'Torch', 'Whistle'
 ];
 
 const DEFAULT_DUTY_TIMES: Record<string, { start: string; end: string }> = {
@@ -158,6 +123,7 @@ export default function ManagerUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [processingConfig, setProcessingConfig] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -184,8 +150,8 @@ export default function ManagerUsersPage() {
     salary: '',
     dutyStartTime: '08:00',
     dutyEndTime: '20:00',
-    duties: [] as string[],
-    dressCode: [] as string[],
+    dutyConfig: [] as { key: string; label: string }[],
+    dressCodeConfig: [] as { key: string; label: string }[],
     documents: [] as { type: string, url: string, name: string }[],
     createAccount: true,
     patientId: '',
@@ -250,35 +216,32 @@ export default function ManagerUsersPage() {
     fetchCounts();
   }, [session, formData.department, activeTab]);
 
-  // Fetch departmental meta config
+  // Fetch global HQ meta config
   useEffect(() => {
     const fetchMeta = async () => {
-      const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-      if (!deptDetails) return;
-      
-      const slug = getDeptPrefix(deptDetails.id);
       try {
-        const metaDoc = await getDoc(doc(db, `${slug}_meta`, 'config'));
+        const metaDoc = await getDoc(doc(db, `hq_meta`, 'config'));
         const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
         
         setAvailableDuties([
-          ...COMMON_DUTIES.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
+          ...GLOBAL_DUTIES.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
           ...(metaData.customDuties || [])
         ]);
         
         setAvailableDress([
-          ...ALL_DRESS_ITEMS.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
+          ...GLOBAL_DRESS_ITEMS.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
           ...(metaData.customDress || [])
         ]);
       } catch (err) {
-        console.error("Error fetching meta config:", err);
+        console.error("Error fetching global meta config:", err);
       }
     };
     fetchMeta();
-  }, [formData.department]);
+  }, []);
 
   const handleAddConfig = async () => {
-    if (!addingConfig) return;
+    if (!addingConfig || processingConfig) return;
+    setProcessingConfig(true);
     const { type, mode } = addingConfig;
     let newItem: {key: string, label: string} | null = null;
 
@@ -290,36 +253,38 @@ export default function ManagerUsersPage() {
        const key = label.toLowerCase().replace(/\s+/g, '_');
        newItem = { key, label };
 
-       // Save to DB globally
+       // Save to DB globally (hq_meta)
        try {
-         const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-         if (deptDetails) {
-           const slug = getDeptPrefix(deptDetails.id);
-           const metaRef = doc(db, `${slug}_meta`, 'config');
-           const metaDoc = await getDoc(metaRef);
-           const field = type === 'duty' ? 'customDuties' : 'customDress';
-           const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
-           if (!existing.find((e: any) => e.key === key)) {
-              await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
-           }
+         const metaRef = doc(db, `hq_meta`, 'config');
+         const metaDoc = await getDoc(metaRef);
+         const field = type === 'duty' ? 'customDuties' : 'customDress';
+         const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
+         if (!existing.find((e: any) => e.key === key)) {
+            await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
+            toast.success(`${type === 'duty' ? 'Duty' : 'Dress Item'} stored globally!`);
+            
+            // Update local available list immediately
+            if (type === 'duty') setAvailableDuties(prev => [...prev, newItem!]);
+            else setAvailableDress(prev => [...prev, newItem!]);
          }
        } catch (err) { console.error(err); }
     }
 
     if (newItem) {
       if (type === 'duty') {
-        if (!formData.duties.includes(newItem.label)) {
-          setFormData(prev => ({ ...prev, duties: [...prev.duties, newItem!.label] }));
+        if (!formData.dutyConfig.find(d => d.key === newItem!.key)) {
+          setFormData(prev => ({ ...prev, dutyConfig: [...prev.dutyConfig, newItem!] }));
         }
       } else {
-        if (!formData.dressCode.includes(newItem.label)) {
-          setFormData(prev => ({ ...prev, dressCode: [...prev.dressCode, newItem!.label] }));
+        if (!formData.dressCodeConfig.find(d => d.key === newItem!.key)) {
+          setFormData(prev => ({ ...prev, dressCodeConfig: [...prev.dressCodeConfig, newItem!] }));
         }
       }
     }
     setAddingConfig(null);
     setAddingConfigSelection('');
     setAddingConfigCustom('');
+    setProcessingConfig(false);
   };
 
   const generateEmployeeId = () => {
@@ -333,7 +298,7 @@ export default function ManagerUsersPage() {
     const fieldId = type === 'profile' ? 'photoUrl' : 'document';
     setUploading(fieldId);
     try {
-      const url = await uploadToCloudinary(file, `khanhub/staff/${type}`);
+      const url = await uploadToCloudinary(file, `Khan Hub/staff/${type}`);
       if (type === 'profile') {
         setFormData(prev => ({ ...prev, photoUrl: url }));
       } else {
@@ -354,7 +319,7 @@ export default function ManagerUsersPage() {
     const fullName = `${formData.firstName} ${formData.lastName}`.trim();
     const empId = generateEmployeeId();
     const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-    const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
+    const domain = deptDetails ? deptDetails.emailDomain : '@rehab.Khan Hub';
     const autoEmail = `${empId.toLowerCase()}${domain}`;
 
     setFormData(prev => ({
@@ -376,10 +341,19 @@ export default function ManagerUsersPage() {
     const key = getDressCodeKey(formData.department, formData.gender, formData.designation);
     const suggested = UNIFORM_RULES[key] ||
       (formData.gender === 'male'
-        ? ['Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes']
-        : ['ID Card', 'Shoes']);
+        ? [
+            { key: 'dress_pant', label: 'Dress Pant' },
+            { key: 'dress_shirt', label: 'Dress Shirt' },
+            { key: 'tie', label: 'Tie' },
+            { key: 'id_card', label: 'ID Card' },
+            { key: 'shoes', label: 'Shoes' }
+          ]
+        : [
+            { key: 'id_card', label: 'ID Card' },
+            { key: 'shoes', label: 'Shoes' }
+          ]);
 
-    setFormData(prev => ({ ...prev, dressCode: suggested }));
+    setFormData(prev => ({ ...prev, dressCodeConfig: suggested }));
   }, [formData.department, formData.gender, formData.designation]);
 
   const validateCustomId = (id: string) => /^[a-zA-Z0-9_-]{3,15}$/.test(id);
@@ -521,8 +495,8 @@ export default function ManagerUsersPage() {
         salary: Number(formData.salary) || 0,
         dutyStartTime: formData.dutyStartTime,
         dutyEndTime: formData.dutyEndTime,
-        duties: formData.duties,
-        dressCode: formData.dressCode,
+        dutyConfig: formData.dutyConfig,
+        dressCodeConfig: formData.dressCodeConfig,
         documents: formData.documents,
         loginUserId: loginUserId,
         isActive: true,
@@ -545,7 +519,7 @@ export default function ManagerUsersPage() {
       setFormData(prev => ({
         ...prev,
         firstName: '', lastName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
-        designation: '', salary: '', duties: [], documents: [], patientId: '',
+        designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], documents: [], patientId: '',
         userId: '', employeeId: ''
       }));
 
@@ -1077,6 +1051,10 @@ export default function ManagerUsersPage() {
                               className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
                             >
                               <option value="Worker">Worker / Junior</option>
+                              <option value="Internee Staff">Internee Staff</option>
+                              <option value="Trial Base Staff">Trial Base Staff</option>
+                              <option value="Contract Staff">Contract Staff</option>
+                              <option value="Volunteer">Volunteer</option>
                               <option value="Doctor">Doctor / Clinical</option>
                               <option value="Nurse">Medical Staff / Nurse</option>
                               <option value="Supervisor">Supervisor</option>
@@ -1169,7 +1147,10 @@ export default function ManagerUsersPage() {
                                        }}
                                      >
                                        <option value="" disabled>Select from presets...</option>
-                                       {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                       {availableDuties
+                                         .filter(o => !formData.dutyConfig.find(existing => existing.key === o.key))
+                                         .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
+                                       }
                                        <option value="__custom__">+ Create New Item...</option>
                                      </select>
                                    ) : (
@@ -1183,25 +1164,31 @@ export default function ManagerUsersPage() {
                                      />
                                    )}
                                    <div className="flex gap-2">
-                                     <button onClick={handleAddConfig} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-purple-500 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                                     <button 
+                                       onClick={handleAddConfig} 
+                                       disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
+                                       className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-purple-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
+                                     >
+                                       {processingConfig ? 'Processing...' : 'Save & Add'}
+                                     </button>
                                      <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
                                    </div>
                                  </div>
                                </div>
                              )}
 
-                            {formData.duties.map(duty => (
+                            {formData.dutyConfig.map(duty => (
                               <button
-                                key={duty}
+                                key={duty.key}
                                 onClick={() => {
                                   setFormData({
                                     ...formData,
-                                    duties: formData.duties.filter(d => d !== duty)
+                                    dutyConfig: formData.dutyConfig.filter(d => d.key !== duty.key)
                                   });
                                 }}
                                 className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30"
                               >
-                                {duty}
+                                {duty.label}
                               </button>
                             ))}
                           </div>
@@ -1242,7 +1229,10 @@ export default function ManagerUsersPage() {
                                    }}
                                  >
                                    <option value="" disabled>Select from presets...</option>
-                                   {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                   {availableDress
+                                     .filter(o => !formData.dressCodeConfig.find(existing => existing.key === o.key))
+                                     .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
+                                   }
                                    <option value="__custom__">+ Create New Item...</option>
                                  </select>
                                ) : (
@@ -1256,20 +1246,26 @@ export default function ManagerUsersPage() {
                                  />
                                )}
                                <div className="flex gap-2">
-                                 <button onClick={handleAddConfig} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                                 <button 
+                                   onClick={handleAddConfig} 
+                                   disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
+                                   className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
+                                 >
+                                   {processingConfig ? 'Processing...' : 'Save & Add'}
+                                 </button>
                                  <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
                                </div>
                              </div>
                            </div>
                          )}
 
-                        {formData.dressCode.map((item) => (
+                        {formData.dressCodeConfig.map((item) => (
                             <button
-                              key={item}
+                              key={item.key}
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  dressCode: prev.dressCode.filter(i => i !== item)
+                                  dressCodeConfig: prev.dressCodeConfig.filter(i => i.key !== item.key)
                                 }));
                               }}
                               className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-600 transition-all"
@@ -1277,7 +1273,7 @@ export default function ManagerUsersPage() {
                               <div className="w-5 h-5 rounded-lg flex items-center justify-center bg-orange-500 text-white">
                                 <CheckCircle size={12} />
                               </div>
-                              <span className="text-[10px] font-black uppercase tracking-widest">{item}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
                             </button>
                         ))}
                       </div>
@@ -1296,7 +1292,7 @@ export default function ManagerUsersPage() {
                             {formData.createAccount ? <Unlock size={28} /> : <Lock size={28} />}
                           </div>
                           <div>
-                            <h3 className="text-xl font-black tracking-tight">KHANHUB LOGIN ACCESS</h3>
+                            <h3 className="text-xl font-black tracking-tight">Khan Hub LOGIN ACCESS</h3>
                             <p className="text-sm opacity-50 font-medium">Enable mobile app & centralized dashboard access</p>
                           </div>
                         </div>
@@ -1332,7 +1328,7 @@ export default function ManagerUsersPage() {
                                 onChange={e => {
                                   const val = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
                                   const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-                                  const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
+                                  const domain = deptDetails ? deptDetails.emailDomain : '@rehab.Khan Hub';
                                   setFormData({
                                     ...formData,
                                     userId: val,
@@ -1347,7 +1343,7 @@ export default function ManagerUsersPage() {
                               />
                             </div>
                             <p className="text-[9px] text-indigo-400/60 font-bold ml-1 uppercase tracking-widest">
-                              Login email will be: <span className="text-indigo-300">{formData.userId || '...'}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}</span>
+                              Login email will be: <span className="text-indigo-300">{formData.userId || '...'}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}</span>
                             </p>
                           </div>
 
@@ -1493,7 +1489,7 @@ export default function ManagerUsersPage() {
                 {[
                   {
                     label: 'Authentication ID',
-                    value: formData.firstName ? `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase() || 'stf'}@rehab.khanhub` : 'Awaiting Details',
+                    value: formData.firstName ? `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase() || 'stf'}@rehab.Khan Hub` : 'Awaiting Details',
                     icon: Fingerprint,
                     color: 'text-indigo-500',
                     bg: 'bg-indigo-500/10'
@@ -1597,7 +1593,7 @@ export default function ManagerUsersPage() {
                       <div className="min-w-0">
                         <p className="text-sm font-black truncate">{u.displayName}</p>
                         <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                          {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}
                         </p>
                       </div>
                     </div>
@@ -1668,7 +1664,7 @@ export default function ManagerUsersPage() {
                                 <div className="min-w-0">
                                   <p className="text-sm font-black truncate">{u.displayName}</p>
                                   <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                                    {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}
                                   </p>
                                 </div>
                               </div>

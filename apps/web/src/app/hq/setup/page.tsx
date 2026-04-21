@@ -119,7 +119,7 @@ export default function HqSetupPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gray-50">
         <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl p-10 border border-gray-100">
-          <h1 className="text-4xl font-black text-center text-gray-900 mb-2 tracking-tight">KhanHub HQ</h1>
+          <h1 className="text-4xl font-black text-center text-gray-900 mb-2 tracking-tight">Khan Hub HQ</h1>
           <p className="text-xs text-center tracking-[0.3em] text-gray-400 font-black uppercase mb-10">
             System Setup
           </p>

@@ -6,7 +6,7 @@ import { collection, getDocs, limit, query, where, orderBy, Timestamp, QueryCons
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Printer, Filter, History, TrendingUp, TrendingDown, Clock, Wallet, ArrowLeft, Search, RefreshCw, Calendar } from 'lucide-react';
-import { formatDateDMY, toDate, cn } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate, cn } from '@/lib/utils';
 
 const DEPARTMENTS = [
   { code: 'rehab', label: 'Rehab Center', txCollection: 'rehab_transactions' },
@@ -294,12 +294,32 @@ export default function CashierHistoryPage() {
                 <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ml-auto">
                    <div className="relative group">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-within:text-amber-500 transition-colors" />
-                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]" />
+                      <input
+                        type="text"
+                        placeholder="DD MM YYYY"
+                        value={formatDateDMY(dateFrom)}
+                        onChange={e => setDateFrom(e.target.value)}
+                        onBlur={e => {
+                          const parsed = parseDateDMY(e.target.value);
+                          if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
+                        }}
+                        className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]"
+                      />
                    </div>
                    <span className="text-slate-700 font-black uppercase text-[10px]">to</span>
                    <div className="relative group">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-within:text-amber-500 transition-colors" />
-                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]" />
+                      <input
+                        type="text"
+                        placeholder="DD MM YYYY"
+                        value={formatDateDMY(dateTo)}
+                        onChange={e => setDateTo(e.target.value)}
+                        onBlur={e => {
+                          const parsed = parseDateDMY(e.target.value);
+                          if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
+                        }}
+                        className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]"
+                      />
                    </div>
                 </div>
               )}

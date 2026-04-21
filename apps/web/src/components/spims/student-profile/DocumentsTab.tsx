@@ -74,7 +74,7 @@ export default function DocumentsTab({
     }
     setUploading(true);
     try {
-      const url = await uploadToCloudinary(file, `khanhub/spims/students/${studentId}`);
+      const url = await uploadToCloudinary(file, `Khan Hub/spims/students/${studentId}`);
       await addDoc(collection(db, 'spims_student_documents'), {
         studentId,
         title: title.trim(),

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Printer, Award, Clock, XCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Printer, Award, Clock, XCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
@@ -116,7 +117,7 @@ export default function ManagerReportsPage() {
       .filter(g => g.staffId === staffId && (
         (typeof g.month === 'string' && g.month.startsWith(selectedMonth)) || 
         (g.date ? isSameMonth(g.date) : false) ||
-        (g.month && typeof g.month.toDate === 'function' && g.month.toDate().toISOString().startsWith(String(selectedMonth || "")))
+        (g.month && typeof g.month.toDate === 'function' && !isNaN(g.month.toDate().getTime()) && g.month.toDate().toISOString().startsWith(String(selectedMonth || "")))
       ))
       .reduce((s, g) => s + (g.points || 0), 0);
 
@@ -140,7 +141,13 @@ export default function ManagerReportsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Staff Reports</h1>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Monthly performance overview</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Monthly performance overview</p>
+              <div className="w-1 h-1 rounded-full bg-gray-700" />
+              <Link href="/hq/dashboard/manager/reports/daily" className="text-blue-500 text-xs font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                View Daily Audit <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <input 
@@ -285,7 +292,7 @@ export default function ManagerReportsPage() {
                   <Printer size={16} /> Generate Performance Report
                 </button>
                 <button 
-                  onClick={() => router.push(`/hq/dashboard/manager/staff/${viewingStaff.id}?dept=${viewingStaff.department}`)}
+                  onClick={() => router.push(`/hq/dashboard/manager/staff/${viewingStaff.department}_${viewingStaff.id}`)}
                   className="px-6 bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all border border-white/10"
                 >
                   Visit Profile

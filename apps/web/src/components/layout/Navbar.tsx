@@ -21,106 +21,10 @@ import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
 import { Menu, X, ChevronDown, Facebook, Instagram, Youtube } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
+import { CgLogIn } from 'react-icons/cg';
 import { SITE } from '@/data/site';
 
-// ─── Department session registry ──────────────────────────────────────────────
-// Every entry maps a localStorage key → a function that builds the dashboard path
-// from the stored session data (role, uid, etc.).
-const DEPT_SESSION_RESOLVERS: {
-  sessionKey: string;
-  resolvePath: (session: Record<string, any>) => string;
-}[] = [
-  {
-    sessionKey: 'hq_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'superadmin') return '/hq/dashboard/superadmin';
-      if (role === 'manager') return '/hq/dashboard/manager';
-      if (role === 'cashier') return '/hq/dashboard/cashier';
-      return '/hq/dashboard';
-    },
-  },
-  {
-    sessionKey: 'rehab_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/rehab/dashboard/admin';
-      if (role === 'cashier') return '/departments/rehab/dashboard/cashier';
-      if (role === 'staff') return '/departments/rehab/dashboard/staff';
-      if (role === 'superadmin') return '/departments/rehab/dashboard/superadmin';
-      if (role === 'family') return s.patientId ? `/departments/rehab/dashboard/family/${s.patientId}` : '/departments/rehab/dashboard';
-      return '/departments/rehab/dashboard';
-    },
-  },
-  {
-    sessionKey: 'spims_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      if (role === 'admin') return '/departments/spims/dashboard/admin';
-      if (role === 'cashier') return '/departments/spims/dashboard/cashier';
-      if (role === 'staff') return '/departments/spims/dashboard/staff';
-      if (role === 'superadmin') return '/departments/spims/dashboard/superadmin';
-      return '/departments/spims/dashboard';
-    },
-  },
-  {
-    sessionKey: 'hospital_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/hospital/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-  {
-    sessionKey: 'sukoon_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/sukoon/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-  {
-    sessionKey: 'welfare_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/welfare/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-  {
-    sessionKey: 'job_center_session',
-    resolvePath: (s) => {
-      const role = String(s.role || '').toLowerCase();
-      return `/departments/job-center/dashboard${role ? `/${role}` : ''}`;
-    },
-  },
-];
-
-/**
- * Reads all known department sessions from localStorage and returns the
- * dashboard path for the most recently active one.
- * Falls back to '/dashboard' when no department session is found (Google-only users).
- */
-function resolveActiveDashboard(): string {
-  if (typeof window === 'undefined') return '/dashboard';
-
-  let latestTime = -1;
-  let latestPath = '/dashboard';
-
-  for (const resolver of DEPT_SESSION_RESOLVERS) {
-    try {
-      const raw = localStorage.getItem(resolver.sessionKey);
-      if (!raw) continue;
-      const session = JSON.parse(raw) as Record<string, any>;
-      const loginTime = Number(session.loginTime || 0);
-      if (loginTime >= latestTime) {
-        latestTime = loginTime;
-        latestPath = resolver.resolvePath(session);
-      }
-    } catch {
-      // malformed JSON — ignore
-    }
-  }
-
-  return latestPath;
-}
+import { useDashboardPath } from '@/hooks/useDashboardPath';
 
 // Navigation links - memoized constant
 const NAV_LINKS = [
@@ -212,28 +116,8 @@ export default function Navbar() {
   const pathname = usePathname();
 
   // ── Smart dashboard redirect ──────────────────────────────────────────────
-  // Priority: department session (localStorage) → HQ email allowlist → /dashboard (Google-only)
-  const [dashboardHref, setDashboardHref] = useState('/dashboard');
+  const dashboardHref = useDashboardPath();
 
-  useEffect(() => {
-    if (!user) {
-      setDashboardHref('/dashboard');
-      return;
-    }
-    // Read department sessions first
-    const deptPath = resolveActiveDashboard();
-    if (deptPath !== '/dashboard') {
-      setDashboardHref(deptPath);
-      return;
-    }
-    // Fallback: HQ email allowlist (for users who haven't re-logged yet)
-    if (canAccessHqPortal(user.email)) {
-      setDashboardHref('/hq/dashboard/superadmin');
-      return;
-    }
-    // Default: generic dashboard for Google-only users
-    setDashboardHref('/dashboard');
-  }, [user]);
 
   // Optimized scroll listener with RAF throttling
   useEffect(() => {
@@ -425,8 +309,8 @@ export default function Navbar() {
                   href={dashboardHref}
                   className="flex items-center gap-1.5 px-3 sm:px-3.5 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs sm:text-sm lg:text-sm font-bold text-primary-600 bg-primary-50/70 border-2 border-primary-200/60 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 transition-all duration-300 whitespace-nowrap group shadow-sm shadow-primary-200/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
-                   <span className="animate-pulse" aria-hidden="true">🎯</span>
-                   Dashboard
+                  <span className="animate-pulse" aria-hidden="true">🎯</span>
+                  Dashboard
                 </Link>
               )}
               <Link
@@ -436,6 +320,16 @@ export default function Navbar() {
               >
                 <span className="animate-pulse-slow" aria-hidden="true">🚨</span>
                 <span className="hidden lg:inline group-hover:text-red-700 transition-colors">Emergency</span>
+              </Link>
+              <Link
+                href="/download-app"
+                className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-bold text-primary-600 bg-primary-50/70 border-2 border-primary-200/60 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 transition-all duration-300 whitespace-nowrap group shadow-sm shadow-primary-200/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                aria-label="Download Mobile App"
+              >
+                <div className="animate-flip">
+                  <Image src="/app-download.webp" alt="App" width={18} height={18} className="rounded-md" />
+                </div>
+                <span>Download App</span>
               </Link>
               <Link
                 href="/donate"
@@ -469,6 +363,21 @@ export default function Navbar() {
                   </a>
                 );
               })}
+
+              {/* Login / Dashboard Mobile Icon */}
+              <Link
+                href={dashboardHref}
+                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px] group"
+                aria-label={user ? "My Dashboard" : "Login to Portal"}
+              >
+                <div className="animate-bounce transition-transform group-hover:scale-110">
+                  <CgLogIn className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+                </div>
+                <span className="text-[7px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">
+                  {user ? "Dashboard" : "Login"}
+                </span>
+              </Link>
+
               {/* Download App - Compact Icon only Animates */}
               <a
                 href="/download-app"
@@ -642,6 +551,16 @@ export default function Navbar() {
                 className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700 shadow-lg shadow-success-500/30 hover:shadow-success-500/50 hover:scale-105 transition-all duration-300 touch-manipulation min-h-[44px]"
               >
                 <span aria-hidden="true">💝</span> Donate Now
+              </Link>
+              <Link
+                href="/download-app"
+                onClick={closeMobileMenu}
+                className="flex items-center justify-center gap-2.5 px-4 py-4 rounded-xl bg-primary-50/70 border-2 border-primary-200/60 text-primary-600 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 text-sm font-bold transition-all duration-300 group shadow-sm shadow-primary-200/30 touch-manipulation min-h-[44px]"
+              >
+                <div className="animate-flip">
+                  <Image src="/app-download.webp" alt="App" width={20} height={20} className="rounded-md" />
+                </div>
+                Download Mobile App
               </Link>
 
               <div className="flex flex-col items-center gap-4 pt-4 border-t border-neutral-100">

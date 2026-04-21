@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\employer-profile\OverviewTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\employer-profile\OverviewTab.tsx
 'use client';
 
 import React from 'react';
@@ -67,7 +67,7 @@ export default function OverviewTab({ employer }: OverviewTabProps) {
   );
 }
 
-function DetailItem({ icon: Icon, label, value, isLink }: { icon: any, label: string, value?: string, isLink?: boolean }) {
+function DetailItem({ icon: Icon, label, value, isLink }: { icon: any, label: string, value?: string | null, isLink?: boolean }) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-4 group">

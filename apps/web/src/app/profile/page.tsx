@@ -5,8 +5,11 @@ import ProtectedRoute from '@/components/layout/auth/ProtectedRoute';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { useDashboardPath } from '@/hooks/useDashboardPath';
+
 export default function ProfilePage() {
     const { user } = useAuth();
+    const dashboardPath = useDashboardPath();
 
     return (
         <ProtectedRoute>
@@ -48,8 +51,6 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     </div>
-
-                    {/* Profile Details */}
                     <div className="grid md:grid-cols-2 gap-6">
                         {/* Account Information */}
                         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border-2 border-white/50 p-6">
@@ -85,7 +86,7 @@ export default function ProfilePage() {
                             </h2>
                             <div className="space-y-3">
                                 <Link
-                                    href="/dashboard"
+                                    href={dashboardPath}
                                     className="flex items-center gap-3 px-4 py-3 bg-primary-50 hover:bg-primary-100 rounded-xl transition-all duration-300 group"
                                 >
                                     <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,6 +94,7 @@ export default function ProfilePage() {
                                     </svg>
                                     <span className="font-semibold text-neutral-700 group-hover:text-neutral-900">Go to Dashboard</span>
                                 </Link>
+
                                 <Link
                                     href="/donate"
                                     className="flex items-center gap-3 px-4 py-3 bg-success-50 hover:bg-success-100 rounded-xl transition-all duration-300 group"

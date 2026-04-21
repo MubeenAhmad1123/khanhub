@@ -2,7 +2,7 @@
 
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { toDate } from '@/lib/utils';
+import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'other';
@@ -81,7 +81,7 @@ async function loadFinesTotal(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_fines`;
-  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(() => ({ docs: [] } as any));
+  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), where('status', '==', 'unpaid'))).catch(() => ({ docs: [] } as any));
   return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.amount) || 0), 0);
 }
 
@@ -94,8 +94,9 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
   );
   if (!snap.docs.length) return undefined;
   const d = snap.docs[0].data();
-  const when = toDate(d.createdAt);
-  return `${when.toISOString().slice(0, 10)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
+  const when = toDate(d.createdAt || d.date);
+  if (isNaN(when.getTime())) return 'No Date • Duty Log';
+  return `${formatDateDMY(when)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
 
 export async function listStaffCards({
@@ -117,7 +118,7 @@ export async function listStaffCards({
     targetDepts.map(async (d) => {
       const col = getDeptCollection(d);
       const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any));
-      return snap.docs.map((docSnap: any) => ({ _dept: d, id: docSnap.id, ...docSnap.data() }));
+      return snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
     })
   );
 
@@ -194,6 +195,7 @@ export type StaffProfile = StaffCardRow & {
   dutyEndTime?: string;
   secondaryDepts?: StaffDept[];
   basicInfoExtras?: Record<string, string>;
+  seniority?: string;
 };
 
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
@@ -257,6 +259,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     dutyEndTime: data.dutyEndTime || '17:00',
     secondaryDepts: data.secondaryDepts || [],
     basicInfoExtras: data.basicInfoExtras || {},
+    seniority: data.seniority,
   };
 }
 

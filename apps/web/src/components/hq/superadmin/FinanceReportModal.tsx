@@ -6,7 +6,7 @@ import { X, Printer, Filter, TrendingUp, TrendingDown, Package, User, CalendarDa
 import { toast } from 'react-hot-toast';
 import { FinanceReport, fetchFinanceReport, FinanceTab } from '@/lib/hq/superadmin/finance';
 import { formatPKR } from '@/lib/hq/superadmin/format';
-import { toDate, cn } from '@/lib/utils';
+import { toDate, cn, formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FinanceReportModalProps {
@@ -14,23 +14,6 @@ interface FinanceReportModalProps {
   onClose: () => void;
 }
 
-/**
- * Helper to convert local date string (YYYY-MM-DD) to a Date object at start of day local time
- */
-function localDate(val: string) {
-  const [y, m, d] = val.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-/**
- * Helper to format a Date object for the <input type="date" /> value (YYYY-MM-DD) correctly
- */
-function toInputDate(d: Date) {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
   const [loading, setLoading] = useState(true);
@@ -124,17 +107,33 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
               <CalendarDays size={16} className="text-gray-400" />
               <div className="flex items-center gap-2">
                 <input 
-                  type="date" 
+                  type="text" 
+                  placeholder="DD MM YYYY"
                   className="bg-transparent border-none outline-none text-[11px] font-black uppercase tracking-wider dark:text-white"
-                  value={toInputDate(dateRange.start)}
-                  onChange={e => setDateRange(prev => ({ ...prev, start: localDate(e.target.value) }))}
+                  value={formatDateDMY(dateRange.start)}
+                  onChange={e => {
+                    // Update state with typed value for visual feedback
+                    // Real parsing happens onBlur
+                  }}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setDateRange(prev => ({ ...prev, start: parsed }));
+                  }}
                 />
                 <span className="text-[10px] font-black text-gray-300 uppercase">to</span>
                 <input 
-                  type="date" 
+                  type="text" 
+                  placeholder="DD MM YYYY"
                   className="bg-transparent border-none outline-none text-[11px] font-black uppercase tracking-wider dark:text-white"
-                  value={toInputDate(dateRange.end)}
-                  onChange={e => setDateRange(prev => ({ ...prev, end: localDate(e.target.value) }))}
+                  value={formatDateDMY(dateRange.end)}
+                  onChange={e => {
+                    // Visual feedback handled by state normally, 
+                    // but since we rely on onBlur for real update, we just keep current val
+                  }}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setDateRange(prev => ({ ...prev, end: parsed }));
+                  }}
                 />
               </div>
             </div>
@@ -163,10 +162,10 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
         <div className="flex-1 overflow-y-auto p-12 space-y-12 print:p-0 print:overflow-visible custom-scrollbar">
           {/* Report Header for Print */}
           <div className="hidden print:block text-center border-b-[3px] border-black pb-10">
-            <h1 className="text-5xl font-black text-black tracking-tighter">KHANHUB FINANCIAL AUDIT</h1>
+            <h1 className="text-5xl font-black text-black tracking-tighter">Khan Hub FINANCIAL AUDIT</h1>
             <div className="mt-4 flex items-center justify-center gap-8 border-y border-black/10 py-4">
               <p className="text-xs font-black uppercase tracking-widest text-gray-600">DEPT: {tab.toUpperCase()}</p>
-              <p className="text-xs font-black uppercase tracking-widest text-gray-600">PERIOD: {dateRange.start.toLocaleDateString('en-PK')} — {dateRange.end.toLocaleDateString('en-PK')}</p>
+              <p className="text-xs font-black uppercase tracking-widest text-gray-600">PERIOD: {formatDateDMY(dateRange.start)} — {formatDateDMY(dateRange.end)}</p>
             </div>
           </div>
 
@@ -247,7 +246,7 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
                           <tr key={tx.id || idx} className="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all">
                             <td className="px-6 py-5">
                               <p className="text-[11px] font-black text-black dark:text-white leading-none">
-                                {toDate(tx.transactionDate || tx.createdAt).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                {formatDateDMY(tx.transactionDate || tx.createdAt)}
                               </p>
                               <p className="mt-1 text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
                                 {toDate(tx.transactionDate || tx.createdAt).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
@@ -352,7 +351,7 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
 
                 {/* Print Footer */}
                 <div className="hidden print:flex items-center justify-between border-t-2 border-black pt-12 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                  <p>© KhanHub Intelligent Management Systems — Financial Division</p>
+                  <p>© Khan Hub Intelligent Management Systems — Financial Division</p>
                   <p>Authenticated Snapshot: {new Date().toLocaleString('en-PK', { dateStyle: 'full', timeStyle: 'short' })}</p>
                 </div>
               </div>

@@ -13,6 +13,7 @@ import {
   ChevronDown, Plus, X, Eye, EyeOff, Shield
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function AdmitPatientPage() {
   const router = useRouter();
@@ -114,7 +115,7 @@ export default function AdmitPatientPage() {
       let photoUrl = null;
       if (photoFile) {
         setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+        photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/rehab/patients');
       }
 
       // 2. Create patient document in Firestore
@@ -303,7 +304,18 @@ export default function AdmitPatientPage() {
 
               <div className="space-y-1.5 mt-2">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  className={inputStyle}
+                  value={formatDateDMY(dateOfBirth)}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  onBlur={(e) => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setDateOfBirth(parsed.toISOString().split('T')[0]);
+                  }}
+                />
               </div>
 
               {maritalStatus === 'Married' && (
@@ -398,7 +410,18 @@ export default function AdmitPatientPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
-                  <input required type="date" className={inputStyle} value={admissionDate} onChange={e => setAdmissionDate(e.target.value)} />
+                  <input
+                    required
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    className={inputStyle}
+                    value={formatDateDMY(admissionDate)}
+                    onChange={(e) => setAdmissionDate(e.target.value)}
+                    onBlur={(e) => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setAdmissionDate(parsed.toISOString().split('T')[0]);
+                    }}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Planned Duration</label>

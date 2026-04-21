@@ -1,4 +1,4 @@
-# KhanHub Web App — AI Context
+# Khan Hub Web App — AI Context
 
 > **Path:** `apps/web/` — Monorepo: `khanhub`
 > **Last Updated:** March 2026

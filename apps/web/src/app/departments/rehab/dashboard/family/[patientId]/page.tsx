@@ -44,7 +44,11 @@ export default function FamilyPatientViewPage() {
       const data = pDoc.data() as Patient;
       
       const admissionDate = toDate(data.admissionDate);
-      const diffMs = new Date().getTime() - admissionDate.getTime();
+      const endDate = data.isActive === false && data.dischargeDate 
+        ? toDate(data.dischargeDate) 
+        : new Date();
+        
+      const diffMs = endDate.getTime() - admissionDate.getTime();
       const daysSince = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       const months = Math.floor(daysSince / 30);
       const days = daysSince % 30;
@@ -174,6 +178,9 @@ export default function FamilyPatientViewPage() {
             <div className="flex-1 min-w-0">
               <h1 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">{patient.name}</h1>
               <p className="text-gray-500 text-[10px] sm:text-sm font-bold uppercase tracking-widest">S/o {patient.fatherName}</p>
+              {!patient.isActive && patient.dischargeDate && (
+                <p className="text-rose-600 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1">Discharged on: {formatDateDMY(patient.dischargeDate)}</p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest ${patient.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

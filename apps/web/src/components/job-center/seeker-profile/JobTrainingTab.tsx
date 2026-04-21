@@ -1,9 +1,10 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\JobTrainingTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\JobTrainingTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { TherapySession } from '@/types/job-center'; // Reusing type for consistency
 import { getTherapySessions, addTherapySession } from '@/lib/job-center/seekers';
 import { Loader2, Plus, Star, Calendar, User, FileText, GraduationCap } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function JobTrainingTab({ seekerId, session }: { seekerId: string, session: any }) {
   const [sessions, setSessions] = useState<TherapySession[]>([]);
@@ -119,7 +120,7 @@ export default function JobTrainingTab({ seekerId, session }: { seekerId: string
                   <div>
                     <div className="flex items-center gap-2 text-gray-500 text-sm font-bold mb-1">
                       <Calendar size={14} className="text-orange-500" />
-                      {s.date}
+                      {formatDateDMY(s.date)}
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-400 font-black uppercase mr-2 tracking-widest leading-none">Learning:</span>
@@ -152,7 +153,18 @@ export default function JobTrainingTab({ seekerId, session }: { seekerId: string
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Date *</label>
-                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    required
+                    value={formatDateDMY(date)}
+                    onChange={e => setDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
                 </div>
                 <div>
                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Skill Rating</label>

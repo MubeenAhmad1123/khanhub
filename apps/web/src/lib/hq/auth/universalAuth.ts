@@ -9,7 +9,8 @@ import {
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
-import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
+import { setHqSessionCookieFromIdToken, setUserDashboardClaims } from '@/app/hq/actions/auth';
+import { isSuperadminEmail } from './superadminWhitelist';
 
 export interface DepartmentAuthInfo {
   id: string;
@@ -27,7 +28,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'hq',
     name: 'HQ',
     collection: 'hq_users',
-    domain: '@hq.khanhub.com',
+    domain: '@hq.khanhub.com.pk',
     legacyDomain: '@khanhub.io',
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
@@ -37,7 +38,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'rehab',
     name: 'Rehab',
     collection: 'rehab_users',
-    domain: '@rehab.khanhub',
+    domain: '@rehab.khanhub.com.pk',
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -46,7 +47,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'spims',
     name: 'SPIMS',
     collection: 'spims_users',
-    domain: '@spims.khanhub',
+    domain: '@spims.khanhub.com.pk',
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
     legacyDomain: '@spims.edu.pk',
@@ -56,7 +57,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'hospital',
     name: 'Hospital',
     collection: 'hospital_users',
-    domain: '@hospital.khanhub',
+    domain: '@hospital.khanhub.com.pk',
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -65,7 +66,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'sukoon',
     name: 'Sukoon',
     collection: 'sukoon_users',
-    domain: '@sukoon.khanhub',
+    domain: '@sukoon.khanhub.com.pk',
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -74,7 +75,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'welfare',
     name: 'Welfare',
     collection: 'welfare_users',
-    domain: '@welfare.khanhub',
+    domain: '@welfare.khanhub.com.pk',
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -83,8 +84,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'job-center',
     name: 'Job Center',
     collection: 'jobcenter_users',
-    domain: '@jobcenter.khanhub',
-    legacyDomain: '@job-center.khanhub',
+    domain: '@jobcenter.khanhub.com.pk',
+    legacyDomain: '@job-center.khanhub.com.pk',
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -93,7 +94,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'social-media',
     name: 'Social Media',
     collection: 'media_users',
-    domain: '@media.khanhub',
+    domain: '@media.khanhub.com.pk',
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -102,7 +103,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'it',
     name: 'IT',
     collection: 'it_users',
-    domain: '@it.khanhub',
+    domain: '@it.khanhub.com.pk',
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']
@@ -306,6 +307,22 @@ export async function loginUniversal(customId: string, password: string, deptHin
     // 2. Security checks
     if (finalData.isActive === false) return { success: false, error: 'Your account is currently inactive.' };
 
+    // Block superadmin login via ID/Password — only Google (whitelist) is allowed
+    if (dept.id === 'hq' && finalData.role === 'superadmin') {
+      return {
+        success: false,
+        error: 'HQ Superadmin access requires Google Sign-in. Please use the "Continue with Google" button at khanhub.com.pk/auth/signin',
+      };
+    }
+
+    // Block any non-whitelisted email from claiming superadmin role via ID/pass
+    if (finalData.role === 'superadmin' && finalData.email && !isSuperadminEmail(finalData.email)) {
+      return {
+        success: false,
+        error: 'Unauthorized superadmin access attempt.',
+      };
+    }
+
     // 3. Set Local Session
     const session = {
       uid,
@@ -326,15 +343,29 @@ export async function loginUniversal(customId: string, password: string, deptHin
     if (dept.id === 'hq' || finalData.role === 'superadmin') {
        console.log('[UniversalAuth] Setting HQ session cookie...');
        const idToken = await cred.user.getIdToken();
-       await setHqSessionCookieFromIdToken(idToken);
+       const cookieResult = await setHqSessionCookieFromIdToken(idToken);
+       if (!cookieResult.success) {
+         console.error('[UniversalAuth] Cookie setting failed:', cookieResult.error);
+         return { success: false, error: cookieResult.error || 'Failed to set security cookie.' };
+       }
+    }
+
+    // Set Custom Claims for ALL users to enable zero-cost routing (Free Firestore Reads)
+    const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
+    try {
+      await setUserDashboardClaims(uid, redirectPath);
+    } catch (err) {
+      console.warn('[UniversalAuth] Failed to set custom claims:', err);
     }
 
     // 5. Final Redirect
-    const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
     console.log('[UniversalAuth] Redirecting to:', redirectPath);
     
     if (typeof window !== 'undefined') {
-      window.location.href = redirectPath;
+      // Small delay to ensure cookies are persisted by browser
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 500);
     }
 
     return { success: true, redirectUrl: redirectPath };

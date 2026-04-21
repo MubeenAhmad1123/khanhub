@@ -30,13 +30,13 @@ const CONTENT = {
     en: {
         hero: {
             badge: "Invest in the Future",
-            title: "Build Your Own Legacy with KhanHub Franchising",
-            subtitle: "Get exclusive rights to operate KhanHub departments in your region. High ROI, proven systems, and massive community impact.",
+            title: "Build Your Own Legacy with Khan Hub Franchising",
+            subtitle: "Get exclusive rights to operate Khan Hub departments in your region. High ROI, proven systems, and massive community impact.",
             cta: "Apply for Franchise"
         },
         whyFranchise: {
-            title: "Why Partner with KhanHub?",
-            p1: "KhanHub is more than a brand; it's a symbol of trust and quality across Pakistan. By getting a franchise, you step into a pre-built ecosystem of success.",
+            title: "Why Partner with Khan Hub?",
+            p1: "Khan Hub is more than a brand; it's a symbol of trust and quality across Pakistan. By getting a franchise, you step into a pre-built ecosystem of success.",
             p2: "We offer competitive rates and full operational support to ensure your department thrives. From healthcare to education, our models are designed for scalability.",
             features: [
                 { title: "Proven Brand", text: "Leverage years of trust and a solid reputation.", icon: Building2 },
@@ -50,7 +50,7 @@ const CONTENT = {
             subtitle: "Choose the department that aligns with your vision and investment.",
             cards: [
                 {
-                    name: "KhanHub Hospital",
+                    name: "Khan Hub Hospital",
                     image: "/images/medical-center.webp",
                     benefit: "Essential Healthcare",
                     desc: "State-of-the-art medical facilities with a focus on affordability and quality care.",

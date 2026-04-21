@@ -22,6 +22,7 @@ export const SITE = {
     facebook: 'https://facebook.com/khanhub.com.pk/',
     instagram: 'https://instagram.com/khanhub.com.pk/',
     youtube: 'https://youtube.com/channel/UC43UJw8xOdkp9y_iJIznINg',
+    twitter: '', 
     tiktok: 'https://www.tiktok.com/@khanhub.com.pk',
     linkedin: '', // Icon added below, link left empty as requested
   },

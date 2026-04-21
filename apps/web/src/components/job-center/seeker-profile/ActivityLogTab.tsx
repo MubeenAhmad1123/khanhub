@@ -1,9 +1,10 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\ActivityLogTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\ActivityLogTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/job-center';
 import { getDailyActivities, saveDailyActivity } from '@/lib/job-center/seekers';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X, ClipboardCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { toDate, formatDateDMY } from '@/lib/utils';
 
 export default function ActivityLogTab({ seekerId, session, readOnly = false }: { seekerId: string, session: any, readOnly?: boolean }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -231,7 +232,7 @@ export default function ActivityLogTab({ seekerId, session, readOnly = false }: 
             <div className="flex-1 text-center">
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Selected Date</p>
               <p className="text-sm font-black text-gray-900">
-                {new Date(`${selectedDateStr}T00:00:00`).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                {formatDateDMY(`${selectedDateStr}T00:00:00`)}
               </p>
             </div>
             <button
@@ -370,7 +371,7 @@ export default function ActivityLogTab({ seekerId, session, readOnly = false }: 
             <div className="p-6 space-y-4">
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400 font-black">
                 <span>Notes for seeker</span>
-                <span>{noteModal.date}</span>
+                <span>{formatDateDMY(noteModal.date)}</span>
               </div>
               <textarea
                 value={noteModal.value}

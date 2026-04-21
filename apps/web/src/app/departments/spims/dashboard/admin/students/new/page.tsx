@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight, Loader2, Save, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createStudent, firestoreDate } from '@/lib/spims/students';
@@ -358,6 +359,25 @@ function Field({
   type?: string;
   placeholder?: string;
 }) {
+  if (type === 'date') {
+    return (
+      <div>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{label}</label>
+        <input
+          type="text"
+          placeholder="DD MM YYYY"
+          className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+          value={formatDateDMY(value)}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={(e) => {
+            const parsed = parseDateDMY(e.target.value);
+            if (parsed) onChange(parsed.toISOString().split('T')[0]);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{label}</label>

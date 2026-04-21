@@ -15,6 +15,7 @@ import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2, Sparkles
 } from 'lucide-react';
+import { awardStaffPoint } from '@/app/hq/actions/points';
 
 // Helper for robust timestamp handling
 const toDate = (ts: any): Date | null => {
@@ -171,6 +172,9 @@ export default function StaffSelfPage() {
           autoFineApplied: isLate,
         });
 
+        // Award Growth Point for Attendance
+        await awardStaffPoint(staffProfile.id, 'rehab', 'attendance', today);
+
         showMsg('success', 'Checked in! ✓');
         // optimistic update
         setTodayRecord({
@@ -274,9 +278,17 @@ export default function StaffSelfPage() {
           <h1 className="text-2xl md:text-3xl font-black text-white">
             {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, {user?.displayName?.split(' ')[0]}
           </h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            {formatDateDMY(new Date())}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-slate-400 text-sm font-medium">
+              {formatDateDMY(new Date())}
+            </p>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+               <Star size={12} className="text-indigo-400 fill-indigo-400" />
+               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                 {staffProfile?.totalGrowthPoints || 0} Growth Points
+               </span>
+            </div>
+          </div>
         </div>
 
         {/* Message */}

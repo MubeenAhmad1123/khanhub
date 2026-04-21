@@ -1,5 +1,5 @@
 // src/data/scoreRules.ts
-// Official KhanHub Performance Scoring System (April 2026)
+// Official Khan Hub Performance Scoring System (April 2026)
 
 export const SCORE_CATEGORIES = {
   attendance: {

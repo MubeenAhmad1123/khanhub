@@ -153,13 +153,19 @@ const DEPT_CONFIG: Record<
   },
 };
 
-// ─── API ─────────────────────────────────────────────────────────────────────
+let cachedCounts: { data: TodayClientsResult; timestamp: number } | null = null;
+const CACHE_TTL = 60000; // 1 minute
 
 /**
  * Fetches today's (PKT) new clients from all three departments.
  * Returns summary counts by dept for the dashboard card / breakdown modal.
  */
 export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
+  const now = Date.now();
+  if (cachedCounts && now - cachedCounts.timestamp < CACHE_TTL) {
+    return cachedCounts.data;
+  }
+
   const from = Timestamp.fromDate(pktStartOfToday());
   const to = Timestamp.fromDate(pktEndOfToday());
 
@@ -198,10 +204,13 @@ export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
     })
   );
 
-  return {
+  const data = {
     total: counts.reduce((s, c) => s + c.count, 0),
     byDept: counts,
   };
+
+  cachedCounts = { data, timestamp: now };
+  return data;
 }
 
 /**

@@ -8,9 +8,11 @@ import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { cn, formatDateDMY, toDate } from '@/lib/utils';
+import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
+import { useTheme } from 'next-themes';
+import { toast } from 'react-hot-toast';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 
 type TxnType = 'income' | 'expense';
@@ -55,6 +57,9 @@ function getLocalDateString(val: any): string {
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
   const [incomingLoading, setIncomingLoading] = useState(false);
@@ -219,6 +224,7 @@ export default function CashierStationPage() {
   }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
 
   useEffect(() => {
+    setMounted(true);
     if (sessionLoading) return;
     if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
       router.push('/hq/login');
@@ -364,7 +370,7 @@ export default function CashierStationPage() {
     try {
       let proofUrl: string | undefined;
       if (forwardProofFile) {
-        proofUrl = await uploadToCloudinary(forwardProofFile, 'khanhub/hq/receipts');
+        proofUrl = await uploadToCloudinary(forwardProofFile, 'Khan Hub/hq/receipts');
       }
 
       const updatePayload: Record<string, any> = {
@@ -513,7 +519,7 @@ export default function CashierStationPage() {
     try {
       let proofUrl: string | undefined;
       if (proofFile) {
-        proofUrl = await uploadToCloudinary(proofFile, 'khanhub/hq/receipts');
+        proofUrl = await uploadToCloudinary(proofFile, 'Khan Hub/hq/receipts');
       }
 
       const createPayload: Record<string, any> = {
@@ -600,6 +606,38 @@ export default function CashierStationPage() {
 
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
 
+      // Handle Fine Reset for Staff Salary
+      if (isStaffMode && selectedCategoryId === 'staff_salary' && selectedEntity) {
+        const prefix = departmentCode.replace('-', '_');
+        const entityCollection = prefix === 'hq' ? 'hq_users' : `${prefix}_staff`;
+        
+        // Reset staff cycle
+        await updateDoc(doc(db, entityCollection, selectedEntity.id), {
+          totalFines: 0,
+          presentDays: 0, // Reset days as per user request
+          lastSalaryPaidAt: Timestamp.now()
+        }).catch(err => console.error("Failed to reset staff cycle:", err));
+
+        // Mark individual fines as paid
+        try {
+          const finesSnap = await getDocs(query(
+            collection(db, `${prefix}_fines`),
+            where('staffId', '==', selectedEntity.id),
+            where('status', '==', 'unpaid')
+          ));
+          
+          for (const fineDoc of finesSnap.docs) {
+            await updateDoc(fineDoc.ref, { 
+              status: 'paid', 
+              paidAt: Timestamp.now(),
+              paymentTxId: txRef.id 
+            });
+          }
+        } catch (err) {
+          console.error("Failed to mark fines as paid:", err);
+        }
+      }
+
       // Notify superadmin of new transaction pending approval
       void sendHqPushNotification({
         recipientId: superadminRecipient.customId,
@@ -612,12 +650,35 @@ export default function CashierStationPage() {
         actionUrl: '/hq/dashboard/superadmin/approvals',
       });
 
-      setMessage({ type: 'success', text: 'Transaction sent for superadmin approval.' });
+      setMessage({ type: 'success', text: 'Amount Submitted Successfully!' });
+      toast.success('Amount Submitted Successfully!');
+      
+      // Clear all fields
+      setSelectedEntity(null);
       setAmount('');
       setDescription('');
       setReferenceNo('');
       setProofFile(null);
       setProofReason('');
+      setCategorySearch('');
+      setSearchQuery('');
+      setEntityResults([]);
+      
+      // Clear Hospital fields if any
+      setHospPatientName('');
+      setHospGuardian('');
+      setHospAge('');
+      setHospContact('');
+      setHospAddress('');
+      setHospReferredBy('');
+      setHospTestName('');
+      setHospTestReport('');
+      setHospTestExpense('');
+      setHospOpType('');
+      setHospAdmitDate('');
+      setHospDischargeDate('');
+      setHospVisitPurpose('');
+
       setProofUploading(false);
       await fetchHistory();
     } catch (err: any) {
@@ -650,44 +711,44 @@ export default function CashierStationPage() {
     return { income, expense, net: income - expense };
   }, [historyFiltered]);
 
-  if (sessionLoading) {
+  if (sessionLoading || !mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <Loader2 className="w-10 h-10 animate-spin text-teal-400" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-100 pb-24 md:pb-8">
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/5 px-4 py-4 md:px-8 md:py-6">
+    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 pb-24 md:pb-8">
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-white/10 px-4 py-4 md:px-8 md:py-6">
         <div className="max-w-7xl mx-auto flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-white shrink-0">
+          <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center text-white shrink-0">
             <CreditCard size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Cashier Station</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight truncate">Cashier Station</h1>
             <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Link 
               href="/hq/dashboard/cashier/history"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
             >
-              <History size={14} className="text-teal-400" />
+              <History size={14} className="text-purple-500" />
               <span className="hidden md:inline">History</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/daily-report"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
             >
               <LayoutDashboard size={14} className="text-indigo-400" />
               <span className="hidden md:inline">Report</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/reconciliation"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
             >
               <ShieldCheck size={14} className="text-emerald-400" />
               <span className="hidden md:inline">Audit</span>
@@ -705,7 +766,7 @@ export default function CashierStationPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-4 space-y-4 min-w-0">
-          <div className="bg-white/5 border border-white/8 rounded-3xl p-5 md:p-7">
+          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-sm">
             <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
               <Plus size={14} /> Admin Fee Requests
@@ -717,24 +778,24 @@ export default function CashierStationPage() {
               </div>
             ) : null}
             {incomingLoading ? (
-              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 flex items-center justify-center">
-                <Loader2 size={18} className="animate-spin text-teal-400" />
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center">
+                <Loader2 size={18} className="animate-spin text-purple-500" />
               </div>
             ) : incomingFeeReqs.length === 0 ? (
-              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 text-xs font-bold text-gray-400">
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs font-bold text-gray-400">
                 No incoming fee requests.
               </div>
             ) : (
               <div className="space-y-3 max-h-[320px] overflow-y-auto">
                 {incomingFeeReqs.map((tx, index) => (
-                  <div key={tx.id} style={{ animationDelay: `${index * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 duration-300 group bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 hover:bg-white/8 hover:border-amber-500/20 transition-all duration-300">
+                  <div key={tx.id} style={{ animationDelay: `${index * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 duration-300 group bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-4 md:p-5 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-purple-500/20 transition-all duration-300">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-black text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-black text-gray-900 dark:text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
                         <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
-                        <div className="text-xs font-bold text-teal-300 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-semibold text-gray-300 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
-                        <span className={cn('mt-2 inline-flex px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/15 text-amber-400 border-amber-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20')}>
+                        <div className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                        <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
+                        <span className={cn('mt-2 inline-flex px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/15 text-amber-500 border-amber-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20')}>
                           {tx.status || 'pending_cashier'}
                         </span>
                       </div>
@@ -743,7 +804,7 @@ export default function CashierStationPage() {
                           type="button"
                           disabled={incomingActionId === tx.id}
                           onClick={() => openForwardModal(tx)}
-                          className="min-h-[44px] px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                          className="min-h-[44px] px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
                         >
                           {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
                         </button>
@@ -766,13 +827,13 @@ export default function CashierStationPage() {
             </p>
           </div>
 
-          <div className="bg-white/5 border border-white/8 rounded-3xl p-5 md:p-7">
+          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-sm">
             <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
               <Search size={14} /> {isStaffMode ? 'Search Staff' : 'Search Account'}
             </h2>
             <div className="space-y-3">
-              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600">
-                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-gray-900 dark:text-white text-sm font-medium outline-none focus:border-purple-500/60 focus:bg-white dark:focus:bg-white/8 transition-all duration-200">
+                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code} className="bg-white dark:bg-gray-800">{d.label}</option>)}
               </select>
               {departmentCode !== 'hospital' && (
                 <div className="relative w-full">
@@ -803,11 +864,34 @@ export default function CashierStationPage() {
                       <button
                         key={p.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedEntity(p);
-                          setEntityResults([p]);
-                          setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
-                          setSearchOpen(false);
+                        onClick={async () => {
+                           // Auto-set amount for salary if in staff mode
+                           if (isStaffMode) {
+                             // Fetch current fines for this specific staff member
+                             const prefix = departmentCode.replace('-', '_');
+                             const finesSnap = await getDocs(query(
+                               collection(db, `${prefix}_fines`),
+                               where('staffId', '==', p.id),
+                               where('status', '==', 'unpaid')
+                             ));
+                             const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
+                             
+                             const baseSalary = Number(p.monthlySalary || 0);
+                             const daysPresent = Number(p.presentDays || 0);
+                             const perDay = baseSalary / 30;
+                             const calculatedSalary = Math.round(perDay * daysPresent);
+                             const net = Math.max(0, calculatedSalary - totalFines);
+                             
+                             setSelectedEntity({ ...p, totalFines, calculatedSalary, daysPresent });
+                             setAmount(String(net));
+                             setDescription(`Salary payment for ${p.name || p.employeeId}. Days Present: ${daysPresent}, Base: Rs ${baseSalary.toLocaleString()}, Calculated: Rs ${calculatedSalary.toLocaleString()}, Fines Deducted: Rs ${totalFines.toLocaleString()}`);
+                           } else {
+                             setSelectedEntity(p);
+                           }
+                           
+                           setEntityResults([p]);
+                           setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
+                           setSearchOpen(false);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
                       >
@@ -848,11 +932,32 @@ export default function CashierStationPage() {
               <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
                 <div className="flex items-center justify-between gap-4">
-                  <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? selectedEntity.name : departmentCode === 'hospital' ? 'General Hospital Account (Auto-selected)' : 'Search and select account from left panel'}</p>
+                  <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account (Auto-selected)' : 'Search and select account from left panel'}</p>
                   {selectedEntity && (
-                    <button type="button" onClick={() => setSelectedEntity(null)} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-300">Clear</button>
+                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-300 transition-colors">Clear</button>
                   )}
                 </div>
+                
+                {selectedEntity && isStaffMode && (
+                  <div className="mt-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 animate-in zoom-in-95 duration-500">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Days Present</span>
+                      <span className="text-xs font-black text-white">{selectedEntity.daysPresent || 0} Days</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Pro-rated Salary</span>
+                      <span className="text-xs font-black text-white">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[9px] font-black uppercase text-rose-400 tracking-widest">Unpaid Fines</span>
+                      <span className="text-xs font-black text-rose-500">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="pt-2 border-t border-indigo-500/20 flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Net Payable</span>
+                      <span className="text-lg font-[1000] text-emerald-400">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -947,11 +1052,31 @@ export default function CashierStationPage() {
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1">
                                   <label className="text-[10px] text-gray-500 px-1">Admit</label>
-                                  <input type="date" value={hospAdmitDate} onChange={e => setHospAdmitDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                                  <input
+                                    type="text"
+                                    placeholder="DD MM YYYY"
+                                    value={formatDateDMY(hospAdmitDate)}
+                                    onChange={e => setHospAdmitDate(e.target.value)}
+                                    onBlur={e => {
+                                      const parsed = parseDateDMY(e.target.value);
+                                      if (parsed) setHospAdmitDate(parsed.toISOString().split('T')[0]);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white"
+                                  />
                                 </div>
                                 <div className="space-y-1">
                                   <label className="text-[10px] text-gray-500 px-1">Discharge</label>
-                                  <input type="date" value={hospDischargeDate} onChange={e => setHospDischargeDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                                  <input
+                                    type="text"
+                                    placeholder="DD MM YYYY"
+                                    value={formatDateDMY(hospDischargeDate)}
+                                    onChange={e => setHospDischargeDate(e.target.value)}
+                                    onBlur={e => {
+                                      const parsed = parseDateDMY(e.target.value);
+                                      if (parsed) setHospDischargeDate(parsed.toISOString().split('T')[0]);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white"
+                                  />
                                 </div>
                               </div>
                             </>
@@ -962,7 +1087,17 @@ export default function CashierStationPage() {
                   ) : null}
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transaction Date</label>
-                    <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
+                    <input
+                      type="text"
+                      placeholder="DD MM YYYY"
+                      value={formatDateDMY(txDate)}
+                      onChange={(e) => setTxDate(e.target.value)}
+                      onBlur={(e) => {
+                        const parsed = parseDateDMY(e.target.value);
+                        if (parsed) setTxDate(parsed.toISOString().split('T')[0]);
+                      }}
+                      className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600"
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Payment Method</label>
@@ -1024,8 +1159,21 @@ export default function CashierStationPage() {
                 </div>
               )}
 
-              <button type="submit" disabled={processing} className="min-h-[44px] w-full md:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black text-xs uppercase tracking-widest px-8 py-3.5 rounded-2xl transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
-                {processing ? <Loader2 size={18} className="animate-spin" /> : <>Submit Transaction <ArrowRight size={18} /></>}
+              <button 
+                type="submit" 
+                disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
+                className="min-h-[44px] w-full md:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black text-xs uppercase tracking-widest px-8 py-3.5 rounded-2xl transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    Submit Amount <ArrowRight size={18} />
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -1087,11 +1235,31 @@ export default function CashierStationPage() {
           <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top-2 duration-200">
             <div className="space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">From Date</span>
-              <input type="date" value={historyFrom} onChange={(e) => setHistoryFrom(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" />
+              <input
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(historyFrom)}
+                onChange={(e) => setHistoryFrom(e.target.value)}
+                onBlur={(e) => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setHistoryFrom(parsed.toISOString().split('T')[0]);
+                }}
+                className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+              />
             </div>
             <div className="space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">To Date</span>
-              <input type="date" value={historyTo} onChange={(e) => setHistoryTo(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" />
+              <input
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(historyTo)}
+                onChange={(e) => setHistoryTo(e.target.value)}
+                onBlur={(e) => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setHistoryTo(parsed.toISOString().split('T')[0]);
+                }}
+                className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+              />
             </div>
           </div>
         )}

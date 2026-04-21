@@ -9,6 +9,7 @@ import { Loader2, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SPIMS_COURSES } from '@/types/spims';
 import { upsertAttendance, type SpimsStudentAttendanceStatus } from '@/lib/spims/studentAttendance';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 type StudentRow = { id: string; name: string; rollNo: string; course: string; session: string };
 
@@ -112,10 +113,15 @@ export default function SpimsAdminAttendancePage() {
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Date</label>
             <input
-              type="date"
+              type="text"
+              placeholder="DD MM YYYY"
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
-              value={date}
+              value={formatDateDMY(date)}
               onChange={(e) => setDate(e.target.value)}
+              onBlur={(e) => {
+                const parsed = parseDateDMY(e.target.value);
+                if (parsed) setDate(parsed.toISOString().split('T')[0]);
+              }}
             />
           </div>
           <div>

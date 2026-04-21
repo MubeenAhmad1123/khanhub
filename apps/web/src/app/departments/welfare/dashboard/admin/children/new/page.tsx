@@ -12,6 +12,7 @@ import {
   Phone, MapPin, Briefcase, CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function NewChildAdmissionPage() {
   const router = useRouter();
@@ -201,10 +202,15 @@ export default function NewChildAdmissionPage() {
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                 <input 
-                  type="date"
+                  type="text"
+                  placeholder="DD MM YYYY"
                   name="dob" 
-                  value={formData.dob} 
+                  value={formatDateDMY(formData.dob)} 
                   onChange={handleChange} 
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setFormData(prev => ({ ...prev, dob: parsed.toISOString().split('T')[0] }));
+                  }}
                   className={`${inputClass} pl-11`}
                 />
               </div>
@@ -444,7 +450,18 @@ export default function NewChildAdmissionPage() {
             <div className="space-y-6">
               <div>
                 <label className={labelClass}>Admission Date</label>
-                <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleChange} className={inputClass} />
+                <input
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  name="admissionDate"
+                  value={formatDateDMY(formData.admissionDate)}
+                  onChange={handleChange}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setFormData(prev => ({ ...prev, admissionDate: parsed.toISOString().split('T')[0] }));
+                  }}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className={labelClass}>Remarks / Case History</label>

@@ -10,7 +10,7 @@ import {
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin';
@@ -134,6 +134,24 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
 
     performAuthCheck();
   }, [router]);
+
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    if (user.role === 'superadmin') return;
+
+    const unsub = onSnapshot(doc(db, 'welfare_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        const loginTimeStr = localStorage.getItem('welfare_login_time');
+        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+        if (logoutTime > loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleSignOut = () => {
     localStorage.removeItem('welfare_session');
@@ -346,7 +364,7 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
         </header>
 
         <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">KhanHub Welfare Portal</div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Khan Hub Welfare Portal</div>
           <div className="flex items-center gap-3">
              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
              <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>

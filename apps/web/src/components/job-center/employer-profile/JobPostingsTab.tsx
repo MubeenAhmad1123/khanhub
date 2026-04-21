@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\employer-profile\JobPostingsTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\employer-profile\JobPostingsTab.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';

@@ -23,15 +23,15 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://khanhub.com.pk'),
 
   title: {
-    default: "KhanHub - Empowering Lives Through Care | Pakistan's Leading Welfare Organization",
-    template: '%s | KhanHub',
+    default: "Khan Hub - Empowering Lives Through Care | Pakistan's Leading Welfare Organization",
+    template: '%s | Khan Hub',
   },
 
   description:
     "Leading Pakistan's social welfare transformation with 16+ specialized departments dedicated to healthcare, education, and community development. Serving 50,000+ lives across Pakistan.",
 
   keywords: [
-    'KhanHub',
+    'Khan Hub',
     'Khan Hub',
     'Pakistan welfare',
     'healthcare Pakistan',
@@ -44,9 +44,9 @@ export const metadata: Metadata = {
     'medical assistance Pakistan',
   ],
 
-  authors: [{ name: 'KhanHub', url: 'https://khanhub.com.pk' }],
-  creator: 'KhanHub',
-  publisher: 'KhanHub',
+  authors: [{ name: 'Khan Hub', url: 'https://khanhub.com.pk' }],
+  creator: 'Khan Hub',
+  publisher: 'Khan Hub',
 
   formatDetection: {
     email: false,
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   // ✅ App Icons — PNG files you generate from your logo-circle.webp
   icons: {
     icon: [
-      { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-48x48.png', sizes: '48x48', type: 'image/png' },
       { url: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -76,25 +76,25 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_PK',
     url: 'https://khanhub.com.pk',
-    siteName: 'KhanHub',
-    title: 'KhanHub - Empowering Lives Through Care',
+    siteName: 'Khan Hub',
+    title: 'Khan Hub - Empowering Lives Through Care',
     description: "Leading Pakistan's social welfare transformation with 16+ specialized departments",
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: "KhanHub - Pakistan's Leading Welfare Organization",
+        alt: "Khan Hub - Pakistan's Leading Welfare Organization",
       },
     ],
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'KhanHub - Empowering Lives Through Care',
+    title: 'Khan Hub - Empowering Lives Through Care',
     description: "Leading Pakistan's social welfare transformation",
     images: ['/twitter-image.jpg'],
-    creator: '@khanhub',
+    creator: '@Khan Hub',
   },
 
   robots: {
@@ -130,9 +130,9 @@ export const metadata: Metadata = {
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-title': 'KhanHub',
+    'apple-mobile-web-app-title': 'Khan Hub',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
-    'application-name': 'KhanHub',
+    'application-name': 'Khan Hub',
     'msapplication-TileColor': '#005EB8',
     'msapplication-TileImage': '/icons/icon-144x144.png',
   },

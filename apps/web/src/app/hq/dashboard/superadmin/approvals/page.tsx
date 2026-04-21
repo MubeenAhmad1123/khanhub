@@ -14,6 +14,7 @@ import {
   Filter,
   Image as ImageIcon,
   Loader2,
+  Minus,
   Search,
   X,
   XCircle,
@@ -41,8 +42,8 @@ import {
 } from '@/lib/hq/superadmin/approvals';
 import { ErrorState } from '@/components/hq/superadmin/DataState';
 import { debounce, toDate } from '@/lib/utils';
-import { decideTransaction, bulkDecideTransactions } from '@/app/hq/actions/approvals';
-import type { UnifiedTx } from '@/lib/hq/superadmin/types';
+import { decideTransaction, bulkDecideTransactions, type Dept } from '@/app/hq/actions/approvals';
+import type { UnifiedTx, DeptFilter } from '@/lib/hq/superadmin/types';
 import { db } from '@/lib/firebase';
 import { typeLabel, mapTxToTypeOption } from '@/lib/hq/superadmin/approvals';
 
@@ -439,6 +440,7 @@ function TxCard({
   onCheckedChange,
   onApprove,
   onReject,
+  onRemove,
   busyId,
   hidden,
   phase,
@@ -451,6 +453,7 @@ function TxCard({
   onCheckedChange: (v: boolean) => void;
   onApprove?: (tx: UnifiedTx) => void;
   onReject?: (tx: UnifiedTx) => void;
+  onRemove?: (tx: UnifiedTx) => void;
   busyId: string | null;
   hidden: boolean;
   phase: CardPhase;
@@ -718,12 +721,21 @@ function TxCard({
             </button>
             <button
               type="button"
+              onClick={() => onRemove?.(tx)}
+              disabled={isDisabled}
+              className="w-full h-14 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-500 hover:text-white transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95 border border-rose-500/20"
+            >
+              <Minus size={16} />
+              Remove Transaction
+            </button>
+            <button
+              type="button"
               onClick={() => onReject?.(tx)}
               disabled={isDisabled}
-              className="w-full h-16 rounded-2xl bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95"
+              className="w-full h-14 rounded-2xl bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95"
             >
               <XCircle className="w-5 h-5" />
-              Terminate Node
+              Terminate with Reason
             </button>
           </div>
         ) : null}
@@ -881,7 +893,7 @@ export default function HqApprovalsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const need = new Map<string, { dept: 'rehab' | 'spims' | 'job-center'; id: string }>();
+    const need = new Map<string, { dept: DeptFilter; id: string }>();
     const source = selectedEntity ? entityRows : rows;
     source.forEach((tx) => {
       const id = entityId(tx);
@@ -892,8 +904,18 @@ export default function HqApprovalsPage() {
     void (async () => {
       for (const [, v] of need) {
         const k = `${v.dept}_${v.id}`;
+        if (enriched[k]) continue;
         try {
-          const coll = v.dept === 'rehab' ? 'rehab_patients' : v.dept === 'spims' ? 'spims_students' : 'job_center_seekers';
+          let coll = '';
+          if (v.dept === 'rehab') coll = 'rehab_patients';
+          else if (v.dept === 'spims') coll = 'spims_students';
+          else if (v.dept === 'job-center') coll = 'job_center_seekers';
+          else if (v.dept === 'hospital') coll = 'hospital_patients';
+          else if (v.dept === 'sukoon-center') coll = 'sukoon_clients';
+          else if (v.dept === 'welfare') coll = 'welfare_donors';
+          
+          if (!coll) continue;
+          
           const ref = doc(db, coll, v.id);
           const snap = await getDoc(ref);
           if (!snap.exists() || cancelled) continue;
@@ -1028,29 +1050,41 @@ export default function HqApprovalsPage() {
     setEntityQueryDebounced('');
   };
 
-  const runApprove = async (tx: UnifiedTx) => {
+  const handleApprove = async (tx: UnifiedTx) => {
     setBusyId(tx.id);
-    try {
-      const dept = tx.dept;
-      const [res] = await Promise.all([
-        decideTransaction({ dept, txId: tx.id, decision: 'approved' }),
-        new Promise<void>((r) => setTimeout(r, 500)),
-      ]);
-      if (!res.success) throw new Error(res.error ?? 'Failed');
-      setCardPhase((p) => ({ ...p, [tx.id]: 'success' }));
-      addToast(`✓ Approved — ${fmtPKR(tx.amount)} for ${entityName(tx)}`, 'green');
-      setTimeout(() => {
-        setDismissed((prev) => new Set([...prev, tx.id]));
-        setCardPhase((p) => {
-          const n = { ...p };
-          delete n[tx.id];
-          return n;
-        });
-      }, 700);
-    } catch (e: unknown) {
-      addToast(`Error: ${(e as Error)?.message ?? 'Failed to approve'}`, 'red');
-    } finally {
-      setBusyId(null);
+    const res = await decideTransaction({ dept: tx.dept as Dept, txId: tx.id, decision: 'approved' });
+    setBusyId(null);
+    if (res.success) {
+      setCardPhase({ ...cardPhase, [tx.id]: 'success' });
+      addToast(`Node authorized: ${fmtPKR(tx.amount)}`, 'green');
+      setTimeout(() => setDismissed((prev) => new Set([...prev, tx.id])), 800);
+    } else {
+      setCardPhase({ ...cardPhase, [tx.id]: 'fail' });
+      addToast(res.error || 'Authorization failed', 'red');
+      setTimeout(() => setCardPhase((prev) => {
+        const next = { ...prev };
+        delete next[tx.id];
+        return next;
+      }), 2000);
+    }
+  };
+
+  const handleRemove = async (tx: UnifiedTx) => {
+    if (busyId) return;
+    setBusyId(tx.id);
+    const res = await decideTransaction({ 
+      dept: tx.dept as Dept, 
+      txId: tx.id, 
+      decision: 'rejected', 
+      rejectReason: 'Removed by Superadmin (Quick Action)' 
+    });
+    setBusyId(null);
+    if (res.success) {
+      setCardPhase({ ...cardPhase, [tx.id]: 'fail' });
+      addToast(`Transaction Removed`, 'green');
+      setTimeout(() => setDismissed((prev) => new Set([...prev, tx.id])), 800);
+    } else {
+      addToast(res.error || 'Removal failed', 'red');
     }
   };
 
@@ -1058,7 +1092,7 @@ export default function HqApprovalsPage() {
     setRejectBusy(true);
     try {
       const dept = tx.dept;
-      const res = await decideTransaction({ dept, txId: tx.id, decision: 'rejected', rejectReason: reason });
+      const res = await decideTransaction({ dept: dept as Dept, txId: tx.id, decision: 'rejected', rejectReason: reason });
       if (!res.success) throw new Error(res.error ?? 'Failed');
       setRejectTx(null);
       setCardPhase((p) => ({ ...p, [tx.id]: 'fail' }));
@@ -1337,7 +1371,7 @@ export default function HqApprovalsPage() {
                               <button
                                 type="button"
                                 className="text-xs font-black text-green-600"
-                                onClick={() => runApprove(tx)}
+                                onClick={() => handleApprove(tx)}
                               >
                                 Approve
                               </button>
@@ -1645,8 +1679,9 @@ export default function HqApprovalsPage() {
                           return n;
                         })
                       }
-                      onApprove={canActOnTx ? runApprove : undefined}
+                      onApprove={canActOnTx ? handleApprove : undefined}
                       onReject={canActOnTx ? (t) => setRejectTx(t) : undefined}
+                      onRemove={canActOnTx ? handleRemove : undefined}
                       busyId={busyId}
                       hidden={dismissed.has(tx.id)}
                       phase={cardPhase[tx.id] ?? 'idle'}

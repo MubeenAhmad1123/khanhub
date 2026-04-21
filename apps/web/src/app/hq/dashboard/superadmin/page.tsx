@@ -7,16 +7,19 @@ import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2, Use
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
 import { fetchTodayClientCounts, formatPKTDate, type TodayClientsResult } from '@/lib/hq/superadmin/clients';
-import { subscribeUnifiedAuditFeed } from '@/lib/hq/superadmin/audit';
+import { fetchUnifiedAuditFeed } from '@/lib/hq/superadmin/audit';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { InlineLoading } from '@/components/hq/superadmin/DataState';
 import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailModal';
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
+import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEPT_LABELS: Record<string, string> = {
-  hq: 'KhanHub HQ',
+  hq: 'Khan Hub HQ',
   rehab: 'Rehab Center',
   spims: 'SPIMS Academy',
   hospital: 'Khan Hospital',
@@ -69,7 +72,21 @@ export default function HqSuperadminPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'superadmin') router.push('/hq/login');
+    if (!session || session.role !== 'superadmin') {
+      router.push('/hq/login');
+      return;
+    }
+    // Wait for Firebase Auth to fully initialize before checking the email whitelist.
+    // auth.currentUser can be null right after mount (async restore from storage).
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser || !isSuperadminEmail(firebaseUser.email)) {
+        console.warn('[Superadmin] Email not in whitelist, redirecting.');
+        router.push('/hq/login');
+      }
+      // Once resolved, we don't need to keep listening
+      unsub();
+    });
+    return () => unsub();
   }, [sessionLoading, session, router]);
 
   useEffect(() => {
@@ -94,12 +111,18 @@ export default function HqSuperadminPage() {
     return () => { alive = false; };
   }, [session]);
 
-  useEffect(() => {
+  const loadActivity = async () => {
     if (!session || session.role !== 'superadmin') return;
-    return subscribeUnifiedAuditFeed({
-      limitCount: 15,
-      onData: (rows) => { setActivity(rows); },
-    });
+    try {
+      const rows = await fetchUnifiedAuditFeed(15);
+      setActivity(rows);
+    } catch (err) {
+      console.error('Failed to fetch activity:', err);
+    }
+  };
+
+  useEffect(() => {
+    void loadActivity();
   }, [session]);
 
   const cards = useMemo(
@@ -253,9 +276,17 @@ export default function HqSuperadminPage() {
         <div className="h-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6 px-2">
             <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest">Intelligence Feed</h2>
-            <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-              View All
-            </Link>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => loadActivity()}
+                className="text-[9px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-800 transition-colors"
+              >
+                Refresh
+              </button>
+              <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                View All
+              </Link>
+            </div>
           </div>
           {!activity.length ? (
             <div className="flex-grow flex items-center justify-center py-10">

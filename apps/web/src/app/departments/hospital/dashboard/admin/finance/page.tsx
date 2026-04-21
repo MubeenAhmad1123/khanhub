@@ -8,7 +8,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Filter, 
   Search, Calendar, Loader2, BarChart3, AlertCircle, CheckCircle
 } from 'lucide-react';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function FinanceLogPage() {
   const router = useRouter();
@@ -176,11 +176,31 @@ export default function FinanceLogPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">From</label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm" />
+              <input
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(dateFrom)}
+                onChange={e => setDateFrom(e.target.value)}
+                onBlur={e => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
+                }}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
+              />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">To</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm" />
+              <input
+                type="text"
+                placeholder="DD MM YYYY"
+                value={formatDateDMY(dateTo)}
+                onChange={e => setDateTo(e.target.value)}
+                onBlur={e => {
+                  const parsed = parseDateDMY(e.target.value);
+                  if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
+                }}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
+              />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Type</label>

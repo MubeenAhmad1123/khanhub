@@ -4,7 +4,7 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const DOMAIN = '@welfare.khanhub';
+const DOMAIN = '@welfare.Khan Hub';
 const ADMIN_APP_NAME = 'welfare-admin';
 
 function getAdminApp(): App {

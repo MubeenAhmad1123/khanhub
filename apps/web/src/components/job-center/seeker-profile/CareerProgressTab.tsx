@@ -1,9 +1,10 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\CareerProgressTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\CareerProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/job-center';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/job-center/seekers';
 import { Loader2, Plus, TrendingUp, Target } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -147,7 +148,7 @@ export default function CareerProgressTab({ seekerId, session }: { seekerId: str
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 font-bold mb-4 bg-gray-50 p-2 rounded-lg inline-flex">
-                  {p.weekStartDate} <span className="text-gray-300">→</span> {p.weekEndDate}
+                  {formatDateDMY(p.weekStartDate)} <span className="text-gray-300">→</span> {formatDateDMY(p.weekEndDate)}
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed">{p.notes || 'No review notes provided'}</p>
               </div>
@@ -183,11 +184,33 @@ export default function CareerProgressTab({ seekerId, session }: { seekerId: str
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">From Date</label>
-                  <input type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    required
+                    value={formatDateDMY(startDate)}
+                    onChange={e => setStartDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setStartDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">To Date</label>
-                  <input type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    required
+                    value={formatDateDMY(endDate)}
+                    onChange={e => setEndDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setEndDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
                 </div>
               </div>
 

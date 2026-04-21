@@ -1,5 +1,5 @@
 /**
- * Utility to resolve the correct profile path for different entities within KhanHub
+ * Utility to resolve the correct profile path for different entities within Khan Hub
  */
 export function resolveProfilePath(source: string, role: string, id: string): string {
   const s = source.toLowerCase();

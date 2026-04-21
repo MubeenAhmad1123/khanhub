@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 
 import DailySheetTab from '@/components/welfare/child-profile/DailySheetTab';
 import ProgressTab from '@/components/welfare/child-profile/ProgressTab';
@@ -135,7 +135,7 @@ export default function ChildDetailPage() {
       let remainingDays = 0;
       let daysAdmitted = 0;
       if (data.admissionDate) {
-        const admission = data.admissionDate.toDate();
+        const admission = toDate(data.admissionDate);
         const diffTimeMs = new Date().getTime() - admission.getTime();
         // Days admitted should count from admission date until "today"
         daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
@@ -616,7 +616,7 @@ export default function ChildDetailPage() {
     setVCnic(visit.cnic || '');
     setVNotes(visit.notes || '');
     try {
-      const d = visit.date?.toDate?.() ? visit.date.toDate() : new Date(visit.date);
+      const d = toDate(visit.date);
       setVDate(d.toISOString().slice(0, 10));
     } catch {
       setVDate(new Date().toISOString().slice(0, 10));
@@ -688,7 +688,7 @@ export default function ChildDetailPage() {
               <img src={child.photoUrl} alt={child.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
             ) : (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {child.name.charAt(0).toUpperCase()}
+                {child.name?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
           </div>
@@ -698,7 +698,7 @@ export default function ChildDetailPage() {
             <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
               <span className="flex items-center justify-center gap-1">
                 <Calendar className="w-4 h-4" /> 
-                Admitted: {formatDateDMY(child.admissionDate?.toDate?.() || child.admissionDate)}
+                Admitted: {formatDateDMY(child.admissionDate)}
               </span>
               <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
                 PKR {child.packageAmount?.toLocaleString()} / m
@@ -1090,8 +1090,8 @@ export default function ChildDetailPage() {
                       <div className="grid grid-cols-1 gap-3">
                         {feeRecord.payments
                           ?.sort((a: any, b: any) => {
-                            const aT = a.date?.toDate?.()?.getTime() || new Date(a.date).getTime();
-                            const bT = b.date?.toDate?.()?.getTime() || new Date(b.date).getTime();
+                            const aT = toDate(a.date).getTime();
+                            const bT = toDate(b.date).getTime();
                             return bT - aT;
                           })
                           .map((p: any) => (
@@ -1107,7 +1107,7 @@ export default function ChildDetailPage() {
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-700 font-bold">
-                                {formatDateDMY(p.date?.toDate?.() ? p.date.toDate() : p.date)}
+                                {formatDateDMY(p.date)}
                               </p>
                               <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
                                 APPROVED
@@ -1197,8 +1197,8 @@ export default function ChildDetailPage() {
                       <div className="grid grid-cols-1 gap-3">
                         {canteenRecord.transactions
                           ?.sort((a: any, b: any) => {
-                            const aT = a.date?.toDate?.()?.getTime() || 0;
-                            const bT = b.date?.toDate?.()?.getTime() || 0;
+                            const aT = toDate(a.date).getTime();
+                            const bT = toDate(b.date).getTime();
                             return bT - aT;
                           })
                           .map((t: any) => (
@@ -1210,7 +1210,7 @@ export default function ChildDetailPage() {
                               <div>
                                 <p className="text-sm font-black text-gray-900">{t.description}</p>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                                  {formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}
+                                  {formatDateDMY(t.date)}
                                   <span className="mx-2">•</span>
                                   Verifier: {t.cashierId}
                                 </p>
@@ -1333,7 +1333,7 @@ export default function ChildDetailPage() {
                     <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4">
                          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
-                            <span>{formatDateDMY(visit.date?.toDate?.() ? visit.date.toDate() : visit.date)}</span>
+                            <span>{formatDateDMY(visit.date)}</span>
                          </div>
                       </div>
 
@@ -1462,7 +1462,17 @@ export default function ChildDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(paymentDate)}
+                    onChange={e => setPaymentDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1495,7 +1505,18 @@ export default function ChildDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input
+                    required
+                    type="text"
+                    placeholder="DD MM YYYY"
+                    value={formatDateDMY(payDate)}
+                    onChange={e => setPayDate(e.target.value)}
+                    onBlur={e => {
+                      const parsed = parseDateDMY(e.target.value);
+                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
                 </div>
               </div>
               <div>
@@ -1538,7 +1559,18 @@ export default function ChildDetailPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(canteenDate)}
+                  onChange={e => setCanteenDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <button 
                 type="submit" 
@@ -1588,7 +1620,18 @@ export default function ChildDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
@@ -1638,7 +1681,18 @@ export default function ChildDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(vDate)}
+                  onChange={e => setVDate(e.target.value)}
+                  onBlur={e => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                  }}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>

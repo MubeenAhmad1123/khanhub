@@ -12,7 +12,7 @@ import {
   ArrowLeft, Download, CheckCircle, AlertCircle, X, 
   ArrowUpRight, ArrowDownRight, Clock
 } from 'lucide-react';
-import { formatDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 
 const CATEGORY_OPTIONS = [
   { value: 'all', label: 'All Categories' },
@@ -162,9 +162,14 @@ export default function TransactionRecordsPage() {
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
-                  type="date" 
-                  value={dateFrom}
+                  type="text" 
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(dateFrom)}
                   onChange={(e) => setDateFrom(e.target.value)}
+                  onBlur={(e) => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
+                  }}
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 outline-none transition-all"
                 />
               </div>
@@ -176,9 +181,14 @@ export default function TransactionRecordsPage() {
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
-                  type="date" 
-                  value={dateTo}
+                  type="text" 
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(dateTo)}
                   onChange={(e) => setDateTo(e.target.value)}
+                  onBlur={(e) => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
+                  }}
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 outline-none transition-all"
                 />
               </div>

@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 export type CheckState = 'yes' | 'no' | 'na';
 export type DutyState = 'done' | 'not_done' | 'na';
-export type AttendanceState = 'present' | 'absent' | 'leave' | 'paid_leave' | 'unpaid_leave' | 'unmarked';
+export type AttendanceState = 'present' | 'absent' | 'late' | 'leave' | 'paid_leave' | 'unpaid_leave' | 'unmarked';
 
 interface HqCheckCellProps {
   value: CheckState | DutyState | AttendanceState;
@@ -21,7 +21,7 @@ interface HqCheckCellProps {
 
 const DRESSCODE_CYCLE: CheckState[] = ['yes', 'no', 'na'];
 const DUTY_CYCLE: DutyState[] = ['done', 'not_done', 'na'];
-const ATTENDANCE_CYCLE: AttendanceState[] = ['present', 'absent', 'leave', 'paid_leave', 'unpaid_leave', 'unmarked'];
+const ATTENDANCE_CYCLE: AttendanceState[] = ['present', 'absent', 'late', 'leave', 'paid_leave', 'unpaid_leave', 'unmarked'];
 
 const CONFIG = {
   dresscode: {
@@ -75,6 +75,12 @@ const CONFIG = {
       bg: 'bg-red-500',
       border: 'border-red-500',
       icon: 'A',
+      textColor: 'text-white',
+    },
+    late: {
+      bg: 'bg-amber-500',
+      border: 'border-amber-500',
+      icon: 'T', // T for Tardy/Late
       textColor: 'text-white',
     },
     leave: {

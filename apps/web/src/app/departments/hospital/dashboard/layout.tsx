@@ -19,10 +19,13 @@ import {
   ClipboardList,
   FileText,
   CreditCard,
-  ShoppingBag
+  ShoppingBag,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { useTheme } from 'next-themes';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { HospitalRole } from '@/types/hospital';
 
 interface NavItem {
@@ -56,9 +59,18 @@ export default function HospitalDashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const darkMode = mounted && resolvedTheme === 'dark';
+  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -109,6 +121,24 @@ export default function HospitalDashboardLayout({
     checkSession();
   }, [router]);
 
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    if (user.role === 'superadmin') return;
+
+    const unsub = onSnapshot(doc(db, 'hospital_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        const loginTimeStr = localStorage.getItem('hospital_login_time');
+        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+        if (logoutTime > loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
+
   const handleSignOut = async () => {
     try {
       await auth.signOut();
@@ -126,28 +156,28 @@ export default function HospitalDashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium animate-pulse">Syncing Hospital Portal...</p>
+          <p className="text-slate-500 dark:text-gray-400 font-medium animate-pulse">Syncing Hospital Portal...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-black text-slate-900 dark:text-white transition-colors duration-300">
       {/* Mobile Header */}
-      <header className="lg:hidden bg-white border-b border-slate-200 px-4 h-16 flex items-center justify-between sticky top-0 z-50">
+      <header className="lg:hidden bg-white dark:bg-black border-b border-slate-200 dark:border-white/5 px-4 h-16 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-slate-900">Hospital Portal</span>
+          <span className="font-bold text-slate-900 dark:text-white">Hospital Portal</span>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-2 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
         >
           {isSidebarOpen ? <X /> : <Menu />}
         </button>
@@ -165,20 +195,20 @@ export default function HospitalDashboardLayout({
         {/* Sidebar */}
         <aside className={`
           fixed lg:sticky top-0 left-0 z-50
-          w-72 h-screen bg-white border-r border-slate-200
+          w-72 h-screen bg-white dark:bg-black border-r border-slate-200 dark:border-white/5
           transition-transform duration-300 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           <div className="flex flex-col h-full">
             {/* Logo Section */}
             <div className="p-6 hidden lg:block">
-              <div className="flex items-center gap-3 bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
-                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+              <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
+                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-none">
                   <Activity className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-slate-900 leading-none">Hospital</h1>
-                  <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mt-1">KhanHub Ecosystem</p>
+                  <h1 className="font-bold text-slate-900 dark:text-white leading-none">Hospital</h1>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-1">Khan Hub Ecosystem</p>
                 </div>
               </div>
             </div>
@@ -197,8 +227,8 @@ export default function HospitalDashboardLayout({
                       className={`
                         flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                         ${isActive 
-                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' 
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-600'}
+                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-none' 
+                          : 'text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-emerald-400'}
                       `}
                     >
                       <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'group-hover:text-emerald-600'}`} />
@@ -210,20 +240,20 @@ export default function HospitalDashboardLayout({
               </div>
 
               {/* Quick Actions / Status */}
-              <div className="pt-4 border-t border-slate-100">
+              <div className="pt-4 border-t border-slate-100 dark:border-white/5">
                 <p className="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">Account Status</p>
-                <div className="mx-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="mx-2 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
                   <div className="flex items-center gap-3 mb-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
                       {(user?.role?.[0] || 'U').toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{user?.displayName}</p>
-                      <p className="text-[10px] text-slate-500 font-medium capitalize">{user?.role} Portal</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.displayName}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-gray-400 font-medium capitalize">{user?.role} Portal</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-200 rounded-full overflow-hidden">
+                    <div className="h-1.5 flex-1 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 w-full" />
                     </div>
                     <span className="text-[10px] font-bold text-emerald-600">Active</span>
@@ -233,17 +263,24 @@ export default function HospitalDashboardLayout({
             </nav>
 
             {/* Bottom Actions */}
-            <div className="p-4 border-t border-slate-100 space-y-2">
+            <div className="p-4 border-t border-slate-100 dark:border-white/5 space-y-2">
               <Link 
                 href="/departments/hospital/dashboard/settings"
-                className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 hover:text-emerald-600 rounded-xl transition-all"
+                className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl transition-all"
               >
                 <Settings className="w-5 h-5 text-slate-400" />
                 <span className="font-medium">Settings</span>
               </Link>
               <button
+                onClick={toggleDark}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${darkMode ? 'text-yellow-400 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+              <button
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                className="w-full flex items-center gap-3 px-4 py-3 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium">Sign Out</span>
@@ -255,30 +292,30 @@ export default function HospitalDashboardLayout({
         {/* Main Content Area */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           {/* Top Bar for Desktop */}
-          <div className="hidden lg:flex items-center justify-between px-8 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60">
-            <div className="flex items-center gap-4 bg-slate-100/50 px-4 py-2 rounded-2xl border border-slate-200/50 w-96">
+          <div className="hidden lg:flex items-center justify-between px-8 py-4 bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-4 bg-slate-100/50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-white/5 w-96">
               <Search className="w-4 h-4 text-slate-400" />
               <input 
                 type="text" 
                 placeholder="Search anything..." 
-                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium"
+                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium text-slate-900 dark:text-white"
               />
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="relative p-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-200">
+              <button className="relative p-2.5 text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-black" />
               </button>
               
-              <div className="h-8 w-[1px] bg-slate-200 mx-2" />
+              <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
               
               <div className="flex items-center gap-3 pl-2">
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900">{user?.displayName}</p>
-                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">{user?.role}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.displayName}</p>
+                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{user?.role}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg dark:shadow-none ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
                   {(user?.displayName?.[0] || 'U').toUpperCase()}
                 </div>
               </div>

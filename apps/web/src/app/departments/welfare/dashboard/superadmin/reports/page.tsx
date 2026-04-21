@@ -200,7 +200,7 @@ export default function SuperAdminReportsPage() {
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">KhanHub Welfare Foundation — Super Admin Report</h2>
+              <h2 className="text-2xl font-black text-gray-900">Khan Hub Welfare Foundation — Super Admin Report</h2>
               <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>

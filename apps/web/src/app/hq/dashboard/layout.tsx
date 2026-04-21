@@ -10,7 +10,9 @@ import {
   Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { HqRole, HqSession } from '@/types/hq';
+import { db } from '@/lib/firebase';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
@@ -170,25 +172,38 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     }
   }, [router]);
 
+  useEffect(() => {
+    if (!user || !user.uid) return;
 
+    const unsub = onSnapshot(doc(db, 'hq_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        if (logoutTime > user.loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-teal-500/20 border-t-teal-500 rounded-full animate-spin" />
+          <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <Shield size={24} className="text-teal-500 animate-pulse" />
+            <Shield size={24} className="text-purple-500 animate-pulse" />
           </div>
         </div>
         <div className="mt-6 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-400">
-            KhanHub HQ
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
+            Khan Hub HQ
           </p>
           <div className="mt-2 flex items-center gap-1 justify-center">
-            <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce" />
+            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" />
           </div>
         </div>
       </div>
@@ -211,16 +226,16 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
     
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-black text-black dark:text-white border-r border-gray-100 dark:border-white/5">
+      <div className="flex flex-col h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-800">
         {/* Header / Branding */}
-        <div className="px-6 pt-7 pb-6 border-b border-gray-800">
+        <div className="px-6 pt-7 pb-6 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-3 transition-transform hover:rotate-0 bg-gradient-to-br from-indigo-500 dark:to-purple-600 shadow-indigo-500/20">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-3 transition-transform hover:rotate-0 bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20">
               <Shield size={22} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="font-black tracking-tight text-base leading-none text-black dark:text-white">
-                {viewMode === 'hq' ? 'KhanHub HQ' : DEPT_INFO[viewMode]?.label}
+              <p className="font-black tracking-tight text-base leading-none">
+                {viewMode === 'hq' ? 'Khan Hub HQ' : DEPT_INFO[viewMode]?.label}
               </p>
               <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-gray-400 dark:text-gray-500">
                 {viewMode === 'hq' ? 'Central Console' : 'Management'}
@@ -233,17 +248,17 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="relative">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
               >
                 <div className="flex items-center gap-2">
-                  <ExternalLink size={14} className="text-teal-500" />
+                  <ExternalLink size={14} className="text-purple-500" />
                   <span>Jump to Portal</span>
                 </div>
                 <ChevronLeft size={14} className={`transition-transform duration-200 ${portalOpen ? '-rotate-90' : 'rotate-0'}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-2xl border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-gray-800 border-gray-700 shadow-black/40">
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-2xl border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-white dark:bg-gray-800 border-gray-100 dark:border-white/10 shadow-black/10 dark:shadow-black/40">
                   {Object.keys(DEPT_INFO).map(dept => {
                     const info = DEPT_INFO[dept];
                     return (
@@ -251,9 +266,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                         key={dept}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-gray-700 text-gray-300"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300"
                       >
-                        <div className="p-1.5 rounded-lg bg-gray-900 shadow-sm">
+                        <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 shadow-sm">
                           {React.cloneElement(info.icon as React.ReactElement, { size: 12, className: info.color })}
                         </div>
                         <span>{info.label} Dashboard</span>
@@ -269,13 +284,13 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         {/* Navigation Mode Switcher - Modernized Pill */}
         {role === 'superadmin' && activeDepts.length > 0 && (
           <div className="px-4 pt-5 pb-2">
-            <div className="p-1 rounded-2xl flex items-center gap-1 bg-gray-800/50">
+            <div className="p-1 rounded-2xl flex items-center gap-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
               <button
                 onClick={() => setViewMode('hq')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
                   viewMode === 'hq'
-                    ? 'bg-gray-700 text-white shadow-lg'
-                    : 'text-gray-500 hover:text-gray-300'
+                    ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-white shadow-sm dark:shadow-lg'
+                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}
               >
                 HQ Navigator
@@ -286,8 +301,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                   onClick={() => setViewMode(dept)}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
                     viewMode === dept
-                      ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/20'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-white shadow-sm dark:shadow-lg'
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                   }`}
                 >
                   {DEPT_INFO[dept]?.label} View
@@ -315,11 +330,11 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group ${
                   isActive
-                    ? 'bg-gradient-to-r from-gray-800 to-gray-800/50 text-white shadow-lg'
-                    : 'text-gray-500 hover:bg-gray-800/80 hover:text-gray-200'
+                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-purple-600 dark:hover:text-white'
                 }`}
               >
-                <div className={`p-1 rounded-lg transition-colors ${isActive ? 'text-teal-400' : 'text-gray-500 group-hover:text-teal-500'}`}>
+                <div className={`p-1 rounded-lg transition-colors ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-purple-500'}`}>
                   {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 2.5 : 2 })}
                 </div>
                 <span className="flex-1">{item.label}</span>
@@ -327,7 +342,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                   <HqSuperadminApprovalsNavBadge />
                 )}
                 {isActive && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-500 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 )}
               </Link>
             );
@@ -335,18 +350,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         </nav>
 
         {/* Bottom Section: Profile & Logout */}
-        <div className="px-4 py-6 mt-auto border-t border-gray-800">
-          <div className="mb-4 p-3 rounded-2xl flex items-center gap-3 bg-gray-800/30">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm bg-gray-700 text-gray-300">
+        <div className="px-4 py-6 mt-auto border-t border-gray-100 dark:border-gray-800">
+          <div className="mb-4 p-3 rounded-2xl flex items-center gap-3 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/5">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold truncate text-gray-200">{user?.name}</p>
-              <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">{ROLE_LABELS[role]}</p>
+              <p className="text-xs font-bold truncate text-gray-900 dark:text-gray-100">{user?.name}</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">{ROLE_LABELS[role]}</p>
             </div>
             <button 
               onClick={handleSignOut}
-              className="p-2 rounded-lg transition-all text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+              className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
               title="Sign Out"
             >
               <LogOut size={16} />
@@ -356,7 +371,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           <div className="flex gap-2">
             <Link 
               href="/"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-gray-800 border border-transparent text-gray-400 hover:bg-gray-700 shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-gray-800 border border-gray-100 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
             >
               <ArrowLeft size={14} />
               Back to Main Portal
@@ -369,8 +384,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-white dark:bg-black">
-      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-white dark:bg-black border-gray-100 dark:border-white/10">
+    <div className="min-h-screen flex overflow-x-hidden bg-gray-50 dark:bg-gray-950">
+      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800">
         <SidebarContent />
       </aside>
 
@@ -383,10 +398,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } bg-gray-900`}>
+      } bg-white dark:bg-gray-900`}>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-800 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <X size={16} />
         </button>
@@ -394,27 +409,27 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between bg-gray-900/80 border-gray-800">
+        <header className="lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between bg-white/80 dark:bg-gray-900/80 border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-800"
+              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <Menu size={20} />
             </button>
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-800"
+              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               title="Go back"
             >
               <ChevronLeft size={20} />
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-gray-800 rounded-lg flex items-center justify-center text-white">
+            <div className="w-7 h-7 bg-purple-600 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
             </div>
-            <span className="font-black text-sm text-white">KhanHub HQ</span>
+            <span className="font-black text-sm text-gray-900 dark:text-white">Khan Hub HQ</span>
           </div>
           <div className="flex items-center gap-2">
             {user ? <HqNotificationBell session={user} /> : null}
@@ -424,7 +439,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-black/80 border-gray-100 dark:border-white/5">
+        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-gray-900/80 border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -435,7 +450,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               Back
             </button>
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
-              KhanHub HQ Portal
+              Khan Hub HQ Portal
             </span>
           </div>
           <div className="flex items-center gap-3">

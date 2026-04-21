@@ -4,6 +4,7 @@ import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/s
 import { getDailyActivities, saveDailyActivity } from '@/lib/sukoon/clients';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { toDate, formatDateDMY } from '@/lib/utils';
 
 export default function DailySheetTab({ clientId, session, readOnly = false }: { clientId: string, session: any, readOnly?: boolean }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -224,7 +225,7 @@ export default function DailySheetTab({ clientId, session, readOnly = false }: {
             <div className="flex-1 text-center">
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Selected Date</p>
               <p className="text-sm font-black text-gray-900">
-                {new Date(`${selectedDateStr}T00:00:00`).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                {formatDateDMY(`${selectedDateStr}T00:00:00`)}
               </p>
             </div>
             <button
@@ -360,7 +361,7 @@ export default function DailySheetTab({ clientId, session, readOnly = false }: {
               <button onClick={() => setNoteModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-xs text-gray-400 font-bold">{noteModal.date}</p>
+              <p className="text-xs text-gray-400 font-bold">{formatDateDMY(noteModal.date)}</p>
               <textarea
                 value={noteModal.value}
                 onChange={e => setNoteModal({ ...noteModal, value: e.target.value })}

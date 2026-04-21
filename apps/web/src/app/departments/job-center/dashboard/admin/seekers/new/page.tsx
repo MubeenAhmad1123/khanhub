@@ -1,19 +1,20 @@
-// d:\khanhub\apps\web\src\app\departments\job-center\dashboard\admin\seekers\new\page.tsx
+// d:\Khan Hub\apps\web\src\app\departments\job-center\dashboard\admin\seekers\new\page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, deleteDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createJobCenterUserServer } from '@/app/departments/job-center/actions/createJobCenterUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import {
   ArrowLeft, Heart, Save, Loader2, User, Upload,
   Camera, Phone, MapPin, Calendar, FileText, Users,
-  ChevronDown, Plus, X, Eye, EyeOff, Shield, Mail, Briefcase, DollarSign
+  ChevronDown, Plus, X, Eye, EyeOff, Shield, Mail, Briefcase, DollarSign, Check
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { JobSeeker } from '@/types/job-center';
 
 export default function RegisterSeekerPage() {
@@ -119,15 +120,23 @@ export default function RegisterSeekerPage() {
       let photoUrl = '';
       if (photoFile) {
         setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/jobcenter/seekers');
+        photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/jobcenter/seekers');
       }
 
-      // 2. Create seeker document in Firestore
+      // 2. Generate Seeker Number
+      setSubmitStatus('Generating Seeker ID...');
+      const seekersQuery = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(1));
+      const seekersSnap = await getDocs(seekersQuery);
+      const lastSeeker = seekersSnap.docs[0]?.data();
+      const nextSerial = (lastSeeker?.serialNumber || 0) + 1;
+      const seekerNumber = `JC-S-${String(nextSerial).padStart(3, '0')}`;
+
+      // 3. Create seeker document in Firestore
       setSubmitStatus('Creating Job Seeker record...');
       const seekerData: Omit<JobSeeker, 'id'> = {
         name,
         fatherName,
-        email: email || undefined,
+        email: email || null,
         age: Number(age),
         dateOfBirth,
         gender: gender as any,
@@ -135,15 +144,17 @@ export default function RegisterSeekerPage() {
         experience: experience || '',
         maritalStatus: maritalStatus as any,
         address,
-        photoUrl: photoUrl || undefined,
+        photoUrl: photoUrl || null,
         phone,
         cnic,
         skills,
-        expectedSalary: expectedSalary,
+        expectedSalary: expectedSalary || null,
         preferredJobTypes,
-        notes: notes || undefined,
+        notes: notes || null,
         isActive: true,
         loginId: loginId.toUpperCase(),
+        seekerNumber,
+        serialNumber: nextSerial,
         createdAt: Timestamp.now(),
       } as unknown as JobSeeker;
 
@@ -318,7 +329,18 @@ return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+                <input
+                  required
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  className={inputStyle}
+                  value={formatDateDMY(dateOfBirth)}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  onBlur={(e) => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) setDateOfBirth(parsed.toISOString().split('T')[0]);
+                  }}
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">CNIC Number *</label>

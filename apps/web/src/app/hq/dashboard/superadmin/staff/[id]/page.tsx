@@ -24,7 +24,7 @@ import {
   Lock,
   LogIn
 } from 'lucide-react';
-import { toDate } from '@/lib/utils';
+import { toDate, formatDateDMY } from '@/lib/utils';
 import { EditStaffModal } from '@/components/hq/superadmin/EditStaffModal';
 import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
 
@@ -268,7 +268,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
               <div className="flex justify-between">
                 <span className="text-gray-500">Last Login</span>
                 <span className="font-bold text-gray-900 dark:text-white">
-                  {lastLogin ? lastLogin.toLocaleString() : 'Never'}
+                  {lastLogin ? formatDateDMY(lastLogin) : 'Never'}
                 </span>
               </div>
             </div>
@@ -322,7 +322,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Join Date</p>
                   <p className="font-bold text-gray-900 dark:text-white">
-                    {joinDate ? joinDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Unknown'}
+                    {formatDateDMY(joinDate)}
                   </p>
                 </div>
                 <div className="space-y-1">
