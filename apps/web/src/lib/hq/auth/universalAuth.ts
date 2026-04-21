@@ -29,7 +29,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com.pk',
-    legacyDomains: ['@hq.khanhub.com', '@khanhub.io'],
+    legacyDomains: ['@hq.khanhub.com', '@khanhub.io', '@hq.KhanHub'],
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -39,7 +39,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Rehab',
     collection: 'rehab_users',
     domain: '@rehab.khanhub.com.pk',
-    legacyDomains: ['@rehab.khanhub.com'],
+    legacyDomains: ['@rehab.khanhub.com', '@rehab.KhanHub'],
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -49,7 +49,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'SPIMS',
     collection: 'spims_users',
     domain: '@spims.khanhub.com.pk',
-    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk'],
+    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk', '@spims.KhanHub'],
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
     prefixes: ['SPIMS', 'STU', 'STUDENT']
@@ -59,7 +59,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Hospital',
     collection: 'hospital_users',
     domain: '@hospital.khanhub.com.pk',
-    legacyDomains: ['@hospital.khanhub.com'],
+    legacyDomains: ['@hospital.khanhub.com', '@hospital.KhanHub'],
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -69,7 +69,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Sukoon',
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub.com.pk',
-    legacyDomains: ['@sukoon.khanhub.com'],
+    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.KhanHub'],
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -79,7 +79,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Welfare',
     collection: 'welfare_users',
     domain: '@welfare.khanhub.com.pk',
-    legacyDomains: ['@welfare.khanhub.com'],
+    legacyDomains: ['@welfare.khanhub.com', '@welfare.KhanHub'],
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -89,7 +89,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub.com.pk',
-    legacyDomains: ['@jobcenter.khanhub.com', '@job-center.khanhub.com.pk'],
+    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.KhanHub', '@job-center.khanhub.com.pk'],
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -220,6 +220,14 @@ export async function loginUniversal(customId: string, password: string, deptHin
     console.log('[UniversalAuth] Starting login for:', customId, deptHint ? `(Hint: ${deptHint})` : '');
     const discovery = await discoverUser(customId, deptHint);
     console.log('[UniversalAuth] Discovery result:', discovery ? discovery.dept.id : 'NOT FOUND');
+    if (discovery) {
+      console.log('[UniversalAuth] Discovered Data:', {
+        uid: discovery.uid,
+        customId: discovery.data.customId,
+        email: discovery.data.email,
+        role: discovery.data.role
+      });
+    }
     
     let dept: DepartmentAuthInfo;
     let finalData: any;
