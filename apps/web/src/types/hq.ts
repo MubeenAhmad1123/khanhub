@@ -220,7 +220,7 @@ export interface SalarySlipSummary {
 export interface HqDailyAttendanceRecord {
   staffId: string;
   date: string; // 'YYYY-MM-DD'
-  status: 'present' | 'absent' | 'leave' | 'unmarked' | 'paid_leave' | 'unpaid_leave';
+  status: 'present' | 'absent' | 'leave' | 'late' | 'unmarked' | 'paid_leave' | 'unpaid_leave';
   arrivalTime?: string;   // 'HH:MM'
   departureTime?: string; // 'HH:MM'
   isLate?: boolean;

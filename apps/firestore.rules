@@ -260,12 +260,7 @@ service cloud.firestore {
     // Cashier creates. Superadmin approves/rejects (update).
     // Admin and superadmin can read all. Cashier reads own entries.
     // Nobody deletes transactions — full audit trail.
-    match /rehab_transactions/{docId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier');
-      allow create: if isRehabRole('cashier') || isRehabSuperAdmin();
-      allow update: if isRehabSuperAdmin();
-      allow delete: if false;
-    }
+
 
     // ── Staff profiles ─────────────────────────────────
     // Staff can read their own profile only.
@@ -344,21 +339,20 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isHqAuth() {
-      return request.auth != null;
+      return request.auth != null && exists(/databases/$(database)/documents/hq_users/$(request.auth.uid));
     }
-    
-    // HQ portal uses custom auth session in localStorage, but for Firestore rules 
-    // we still rely on Firebase Auth UID if they signed in via Google or if 
-    // we mirrored their custom ID to a Firebase Auth user.
-    // For now, let's allow HQ managers/superadmins to read/write based on a role check.
-    
     function hqUserDoc() {
       return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data;
     }
-    
+    function isHqRole(role) {
+      return isHqAuth() && hqUserDoc().role == role;
+    }
     function isHqAdmin() {
       return isHqAuth() && (hqUserDoc().role == 'manager' || hqUserDoc().role == 'superadmin');
     }
+    function isHqSuperadmin() { return isHqRole('superadmin'); }
+    function isHqManager() { return isHqRole('manager'); }
+    function isHqCashier() { return isHqRole('cashier'); }
 
     // ═══════════════════════════════════════════════════════════
     //  HQ PORTAL COLLECTIONS
@@ -366,7 +360,7 @@ service cloud.firestore {
 
     match /hq_users/{uid} {
       allow read: if isHqAuth() && (request.auth.uid == uid || isHqAdmin());
-      allow write: if isHqAdmin();
+      allow write: if isHqSuperadmin();
       
       // Allow users to manage their own FCM tokens
       match /fcmTokens/{tokenId} {
@@ -404,14 +398,33 @@ service cloud.firestore {
       allow write: if isHqAdmin();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  DEPARTMENTAL TRANSACTIONS (Unified Access)
+    //  Includes: rehab, spims, hospital, sukoon, welfare, job_center
+    // ═══════════════════════════════════════════════════════════
+
+    match /{dept}_transactions/{docId} {
+      allow read: if isHqAuth() || isRehabAuth() || isSpimsAuth() || isJobCenterAuth();
+      
+      allow create: if isHqManager() || isHqCashier() || isHqSuperadmin() 
+                    || isRehabAdminOrAbove() || isSpimsAdminOrAbove();
+      
+      allow update: if isHqSuperadmin() 
+                    || (isHqCashier() && resource.data.status == 'pending_cashier')
+                    || (isRehabAdminOrAbove() && resource.data.status == 'pending_cashier');
+      
+      allow delete: if isHqSuperadmin();
+    }
+
     match /hq_audit/{docId} {
       allow read: if isHqAdmin();
       allow create: if isHqAuth();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  JOB CENTER PORTAL HELPERS
-    // ═══════════════════════════════════════════════════════════
+    match /hq_settings/{docId} {
+      allow read: if isHqAuth();
+      allow write: if isHqSuperadmin();
+    }
 
     function isJobCenterAuth() {
       return request.auth != null;
@@ -457,9 +470,8 @@ service cloud.firestore {
     }
 
     match /jobcenter_transactions/{docId} {
-      allow read: if isJobCenterAuth();
-      allow create: if isJobCenterStaff();
-      allow update: if isJobCenterAdmin();
+      allow read: if isHqAuth() || isJobCenterAuth();
+      allow write: if isHqAdmin() || isJobCenterAuth();
     }
 
     match /jobcenter_attendance/{docId} {

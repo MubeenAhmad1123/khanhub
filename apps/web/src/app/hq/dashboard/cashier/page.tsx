@@ -876,12 +876,15 @@ export default function CashierStationPage() {
                              ));
                              const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
                              
-                             const base = Number(p.monthlySalary || 0);
-                             const net = Math.max(0, base - totalFines);
+                             const baseSalary = Number(p.monthlySalary || 0);
+                             const daysPresent = Number(p.presentDays || 0);
+                             const perDay = baseSalary / 30;
+                             const calculatedSalary = Math.round(perDay * daysPresent);
+                             const net = Math.max(0, calculatedSalary - totalFines);
                              
-                             setSelectedEntity({ ...p, totalFines });
+                             setSelectedEntity({ ...p, totalFines, calculatedSalary, daysPresent });
                              setAmount(String(net));
-                             setDescription(`Salary payment for ${p.name || p.employeeId} (Base: Rs ${base.toLocaleString()}, Fines: Rs ${totalFines.toLocaleString()})`);
+                             setDescription(`Salary payment for ${p.name || p.employeeId}. Days Present: ${daysPresent}, Base: Rs ${baseSalary.toLocaleString()}, Calculated: Rs ${calculatedSalary.toLocaleString()}, Fines Deducted: Rs ${totalFines.toLocaleString()}`);
                            } else {
                              setSelectedEntity(p);
                            }
@@ -938,8 +941,12 @@ export default function CashierStationPage() {
                 {selectedEntity && isStaffMode && (
                   <div className="mt-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 animate-in zoom-in-95 duration-500">
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Base Salary</span>
-                      <span className="text-xs font-black text-white">Rs {Number(selectedEntity.monthlySalary || 0).toLocaleString()}</span>
+                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Days Present</span>
+                      <span className="text-xs font-black text-white">{selectedEntity.daysPresent || 0} Days</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Pro-rated Salary</span>
+                      <span className="text-xs font-black text-white">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[9px] font-black uppercase text-rose-400 tracking-widest">Unpaid Fines</span>
@@ -947,7 +954,7 @@ export default function CashierStationPage() {
                     </div>
                     <div className="pt-2 border-t border-indigo-500/20 flex justify-between items-center">
                       <span className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Net Payable</span>
-                      <span className="text-lg font-[1000] text-emerald-400">Rs {(Number(selectedEntity.monthlySalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                      <span className="text-lg font-[1000] text-emerald-400">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
                     </div>
                   </div>
                 )}

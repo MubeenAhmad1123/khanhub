@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
@@ -21,18 +21,20 @@ interface DailyReportRow {
   name: string;
   department: string;
   designation: string;
-  attendance: string;
-  uniformScore: number;
-  dutyScore: number;
-  contributionScore: number;
-  totalScore: number;
-  totalGrowthPoints: number;
+  attendance: 'present' | 'absent' | 'late' | 'leave' | 'unmarked';
+  uniformStatus: 'yes' | 'no' | 'incomplete' | 'na';
+  dutyStatus: 'yes' | 'no' | 'incomplete' | 'na';
+  gpStatus: 'yes' | 'no' | 'invalid' | 'na';
+  dailyScore: number;
+  totalScore?: number;
   fines: number;
+  fineReason?: string;
   details: {
     uniformMissing: string[];
     dutiesPending: string[];
     finesReason: string[];
   };
+  isDirty?: boolean;
 }
 
 export default function DailyReportPage() {
@@ -151,20 +153,34 @@ export default function DailyReportPage() {
         // Contribution Score (1 if at least one approved contribution today)
         const contribScore = contribCount > 0 ? 1 : 0;
 
-        const totalFine = finesList.reduce((acc: number, f: any) => acc + (Number(f.amount) || 0), 0);
+        const fineTotal = finesList.reduce((acc: number, f: any) => acc + (Number(f.amount) || 0), 0);
+
+        // Determine statuses based on data
+        let attendanceStatus: DailyReportRow['attendance'] = att?.status || 'unmarked';
+        if (att?.isLate && attendanceStatus === 'present') attendanceStatus = 'late';
+
+        const uniformStatus: DailyReportRow['uniformStatus'] = uniformConfig.length === 0 ? 'na' : 
+                            (uniformMissing.length === 0 ? 'yes' : 
+                            (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
+
+        const dutyStatus: DailyReportRow['dutyStatus'] = dutyConfig.length === 0 ? 'na' :
+                          (dutiesPending.length === 0 ? 'yes' :
+                          (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
+
+        const gpStatus: DailyReportRow['gpStatus'] = attendanceStatus === 'present' ? 'yes' :
+                        (attendanceStatus === 'late' ? 'invalid' : 'no');
 
         return {
           id: sid,
           name: s.name || s.displayName || 'Staff',
           department: s.department,
           designation: s.designation || 'Staff Member',
-          attendance: att?.status || 'unmarked',
-          uniformScore,
-          dutyScore,
-          contributionScore: contribScore,
-          totalScore: attScore + uniformScore + dutyScore + contribScore,
-          totalGrowthPoints: totalGP,
-          fines: totalFine,
+          attendance: attendanceStatus,
+          uniformStatus,
+          dutyStatus,
+          gpStatus,
+          dailyScore: (attScore + (uniformStatus === 'yes' ? 1 : 0) + (dutyStatus === 'yes' ? 1 : 0) + contribScore) * 25,
+          fines: fineTotal,
           details: {
             uniformMissing,
             dutiesPending,
@@ -173,7 +189,7 @@ export default function DailyReportPage() {
         };
       });
 
-      setReportData(rows.sort((a, b) => b.totalScore - a.totalScore));
+      setReportData(rows.sort((a, b) => b.dailyScore - a.dailyScore));
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate daily report");
@@ -233,10 +249,101 @@ export default function DailyReportPage() {
     }
   };
 
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [saving, setSaving] = useState(false);
+
+  const getAutoValues = (status: DailyReportRow['attendance']) => {
+    switch(status) {
+      case 'present': 
+        return { uniform: 'yes', duties: 'yes', gp: 'yes', score: 100, fine: 0 };
+      case 'absent': 
+        return { uniform: 'no', duties: 'no', gp: 'no', score: 0, fine: 500 };
+      case 'late': 
+        return { uniform: 'incomplete', duties: 'incomplete', gp: 'invalid', score: 50, fine: 0 };
+      case 'leave': 
+        return { uniform: 'na', duties: 'na', gp: 'na', score: 0, fine: 0 };
+      default: 
+        return null;
+    }
+  };
+
+  const handleUpdateStatus = (id: string, status: DailyReportRow['attendance']) => {
+    const auto = getAutoValues(status);
+    if (!auto) return;
+
+    setReportData(prev => prev.map(row => {
+      if (row.id === id) {
+        return {
+          ...row,
+          attendance: status,
+          uniformStatus: auto.uniform as any,
+          dutyStatus: auto.duties as any,
+          gpStatus: auto.gp as any,
+          dailyScore: auto.score,
+          fines: auto.fine,
+          isDirty: true
+        };
+      }
+      return row;
+    }));
+  };
+
+  const saveAssessment = async () => {
+    const dirtyRows = reportData.filter(r => r.isDirty);
+    if (dirtyRows.length === 0) {
+      toast.error("No changes to save");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      toast.loading("Saving daily assessment...", { id: 'save-assessment' });
+
+      for (const row of dirtyRows) {
+        const prefix = getDeptPrefix(row.department as StaffDept);
+        const attId = `${reportDate}_${row.id}`;
+        
+        // 1. Save Attendance
+        await setDoc(doc(db, `${prefix}_attendance`, attId), {
+          staffId: row.id,
+          date: reportDate,
+          status: row.attendance === 'late' ? 'present' : row.attendance,
+          isLate: row.attendance === 'late',
+          updatedAt: Timestamp.now(),
+          markedBy: session?.uid
+        }, { merge: true });
+
+        // 2. Save Fine if any
+        if (row.fines > 0) {
+          await addDoc(collection(db, `${prefix}_fines`), {
+            staffId: row.id,
+            amount: row.fines,
+            reason: row.attendance === 'absent' ? 'Absent without leave' : 'Penalty',
+            status: 'unpaid',
+            date: reportDate,
+            createdAt: Timestamp.now(),
+            markedBy: session?.uid
+          });
+        }
+      }
+
+      setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
+      toast.success("Assessment saved successfully!", { id: 'save-assessment' });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save changes", { id: 'save-assessment' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
-        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className={`w-10 h-10 animate-spin ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 animate-pulse">Syncing Matrix</p>
+        </div>
       </div>
     );
   }
@@ -245,7 +352,7 @@ export default function DailyReportPage() {
     <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
       <div id="daily-performance-report-content" className={`max-w-7xl mx-auto space-y-8 p-8 rounded-[3rem] ${isDark ? 'bg-zinc-950' : 'bg-white shadow-2xl shadow-blue-900/5'} print:p-0 print:shadow-none`}>
         
-        {/* Header (Premium for Export) */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
             <Link 
@@ -255,41 +362,39 @@ export default function DailyReportPage() {
               <ArrowLeft size={20} />
             </Link>
             <div>
-              <div className="flex items-center gap-2">
-                <Shield size={24} className="text-indigo-600" />
-                <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">Daily Performance Report</h1>
-              </div>
-              <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em] mt-1">Unified HQ Analytics • Operational Excellence</p>
+              <h1 className="text-3xl font-[1000] tracking-tight text-gray-900 dark:text-white">Staff Performance</h1>
+              <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                <Shield size={12} className="text-indigo-500" /> Operational Assessment & Audit
+              </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-gray-50 border-gray-100'}`}>
+            <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-100 shadow-sm'}`}>
                <Calendar size={18} className="text-indigo-500" />
                <input 
                  type="date" 
                  value={reportDate} 
                  onChange={(e) => setReportDate(e.target.value)}
-                 className="bg-transparent border-none outline-none font-black text-sm uppercase tracking-widest text-indigo-600"
+                 className="bg-transparent border-none outline-none font-black text-xs uppercase tracking-widest text-indigo-600"
                />
             </div>
             <button 
-              onClick={handleDownloadImage}
-              disabled={downloading}
-              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-sm font-black transition-all shadow-xl hover:scale-[1.02] active:scale-95 ${
-                isDark 
-                  ? 'bg-white text-black hover:bg-zinc-200' 
-                  : 'bg-gray-900 text-white hover:bg-black shadow-gray-900/20'
-              }`}
+              onClick={saveAssessment}
+              disabled={saving || !reportData.some(r => r.isDirty)}
+              className="flex items-center gap-3 px-6 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-50 hover:scale-[1.02] active:scale-95"
             >
-              {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-              Save as Image
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+              Save Assessment
             </button>
             <button 
-              onClick={handlePrint}
-              className="flex items-center gap-3 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl text-sm font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20 hover:scale-[1.02] active:scale-95"
+              onClick={handleDownloadImage}
+              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-xs font-black transition-all shadow-xl hover:scale-[1.02] active:scale-95 ${
+                isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
+              }`}
             >
-              <Printer size={18} /> Print
+              <Download size={18} />
+              Export Image
             </button>
           </div>
         </div>
@@ -309,155 +414,189 @@ export default function DailyReportPage() {
            </div>
         </div>
 
-        {/* Summary Stats Cards */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className={`p-8 rounded-[2.5rem] border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl' : 'bg-gradient-to-br from-white to-indigo-50/30 border-indigo-100 shadow-xl shadow-indigo-900/5'}`}>
-             <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Excellence Aggregate</h4>
-                <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-500">
-                  <TrendingUp size={16} />
-                </div>
-             </div>
-             <div className="flex items-end gap-3">
-                <div className="text-5xl font-[1000] tracking-tighter text-indigo-600">
-                  {reportData.reduce((acc, curr) => acc + curr.totalScore, 0)}
-                </div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 pb-1">Points Earned</p>
-             </div>
+          <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Total Points Earned</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-[1000] text-gray-900 dark:text-white">
+                {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
+              </span>
+              <TrendingUp size={16} className="text-emerald-500" />
+            </div>
           </div>
 
-          <div className={`p-8 rounded-[2.5rem] border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl' : 'bg-gradient-to-br from-white to-rose-50/30 border-rose-100 shadow-xl shadow-rose-900/5'}`}>
-             <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Total Deductions</h4>
-                <div className="p-2 bg-rose-500/10 rounded-xl text-rose-500">
-                  <AlertTriangle size={16} />
-                </div>
-             </div>
-             <div className="flex items-end gap-3">
-                <div className="text-5xl font-[1000] tracking-tighter text-rose-600">
-                  ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
-                </div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 pb-1">Fines Issued</p>
-             </div>
+          <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Total Deductions (Fine)</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-[1000] text-rose-600">
+                ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
+              </span>
+              <AlertTriangle size={16} className="text-rose-500" />
+            </div>
           </div>
 
-          <div className={`p-8 rounded-[2.5rem] border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl' : 'bg-gradient-to-br from-white to-emerald-50/30 border-emerald-100 shadow-xl shadow-emerald-900/5'}`}>
-             <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Performance Index</h4>
-                <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
-                  <FileText size={16} />
-                </div>
-             </div>
-             <div className="flex items-center gap-4">
-                <div className="text-5xl font-[1000] tracking-tighter text-emerald-600">
-                  {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.totalScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
-                </div>
-                <div className="flex-1">
-                  <div className="h-2 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                     <div 
-                       style={{ width: `${reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.totalScore, 0) / (reportData.length * 4) * 100) : 0}%` }} 
-                       className="h-full bg-emerald-500 rounded-full"
-                     />
-                  </div>
-                </div>
-             </div>
+          <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Performance Index</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-[1000] text-indigo-600">
+                {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 100) * 100).toFixed(0) : 0}%
+              </span>
+              <CheckCircle size={16} className="text-indigo-500" />
+            </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className={`p-4 rounded-[2.5rem] border flex flex-col sm:flex-row gap-4 print:hidden ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex-1 relative group">
-            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} size={18} />
-            <input 
-              type="text" 
-              placeholder="Search staff by name or role..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={`w-full pl-12 pr-4 py-3 rounded-2xl border-none outline-none font-bold text-sm ${isDark ? 'bg-white/5 text-white' : 'bg-gray-50 text-gray-900'}`}
-            />
+        {/* Controls & Filter Tabs */}
+        <div className="space-y-6 print:hidden">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative group">
+              <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} size={18} />
+              <input 
+                type="text" 
+                placeholder="Search staff by name or role..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className={`w-full pl-12 pr-4 py-4 rounded-2xl border-none outline-none font-bold text-sm shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900'}`}
+              />
+            </div>
+            <select 
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              className={`px-6 py-4 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-sm ${isDark ? 'bg-white/5 text-zinc-400' : 'bg-white text-gray-500'}`}
+            >
+              <option value="all">Global Matrix</option>
+              {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].map(d => (
+                <option key={d} value={d}>{d.toUpperCase()}</option>
+              ))}
+            </select>
           </div>
-          <div className="flex gap-3">
-             <select 
-               value={deptFilter}
-               onChange={(e) => setDeptFilter(e.target.value)}
-               className={`px-6 py-3 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer ${isDark ? 'bg-white/5 text-zinc-400' : 'bg-gray-50 text-gray-500'}`}
-             >
-               <option value="all">Global Roster</option>
-               <option value="hq">HQ Office</option>
-               <option value="rehab">Rehab Center</option>
-               <option value="spims">SPIMS Academy</option>
-               <option value="hospital">Hospital</option>
-               <option value="sukoon">Sukoon Center</option>
-               <option value="welfare">Welfare</option>
-               <option value="job-center">Job Center</option>
-             </select>
+
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {['all', 'present', 'absent', 'late', 'leave'].map(f => (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  activeFilter === f 
+                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-black dark:border-white' 
+                    : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 dark:bg-white/5 dark:border-zinc-800'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Report Table */}
-        <div className={`rounded-[2.5rem] border overflow-hidden ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'}`}>
+        <div className={`rounded-[2.5rem] border overflow-hidden shadow-sm ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'}`}>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className={`${isDark ? 'bg-white/5' : 'bg-gray-50/50'}`}>
-                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Staff Identity</th>
-                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Duty Pts</th>
-                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Uniform</th>
-                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Contribution</th>
-                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Total Score</th>
-                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Deductions</th>
+            <table className="w-full text-left border-separate border-spacing-0">
+              <thead className="sticky top-0 z-10">
+                <tr className={`${isDark ? 'bg-zinc-900' : 'bg-gray-50'} border-b border-gray-100 dark:border-zinc-800`}>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Staff Identity</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Attendance</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Uniform</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Duties</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">GP</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Score</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Fine</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-right print:hidden">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                {filteredData.map((row) => (
-                  <tr key={row.id} className="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border-2 ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-gray-50 border-white text-gray-400 shadow-sm'}`}>
+                {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
+                  <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-amber-500/5' : 'hover:bg-gray-50/50 dark:hover:bg-white/5'}`}>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500 group-hover:border-indigo-500' : 'bg-gray-50 border-white text-gray-400 shadow-sm group-hover:border-indigo-200'}`}>
                           {row.name[0]}
                         </div>
                         <div>
-                          <p className="font-black text-sm text-gray-900 dark:text-white">{row.name}</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{row.designation} • {row.department}</p>
+                          <p className="font-black text-xs text-gray-900 dark:text-white truncate max-w-[120px]">{row.name}</p>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{row.designation}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-6 text-center">
-                       <span className={`text-md font-black ${row.dutyScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
-                         {row.dutyScore > 0 ? '+10' : '0'}
-                       </span>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                       <span className={`text-md font-black ${row.uniformScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
-                         {row.uniformScore > 0 ? '+5' : '0'}
-                       </span>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                       <span className={`text-md font-black ${row.contributionScore > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
-                         {row.contributionScore > 0 ? `+${row.contributionScore * 10}` : '0'}
-                       </span>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                       <div className="inline-flex flex-col items-center px-4 py-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-white dark:border-zinc-800 shadow-sm">
-                         <span className="text-lg font-black text-gray-900 dark:text-white">{row.totalScore}</span>
-                         <span className="text-[7px] font-black uppercase tracking-widest text-gray-400">Points</span>
-                       </div>
-                    </td>
-                    <td className="px-6 py-6 text-right">
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-black ${row.fines > 0 ? 'text-rose-600' : 'text-gray-300'}`}>
-                          {row.fines > 0 ? `-₨${row.fines.toLocaleString()}` : 'None'}
-                        </span>
-                        {row.details.finesReason.length > 0 && (
-                          <div className="flex flex-wrap justify-end gap-1 mt-1.5">
-                            {row.details.finesReason.map((r, i) => (
-                              <span key={i} className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase tracking-tighter">
-                                {r.split(' (')[0]}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                    
+                    <td className="px-6 py-5 text-center">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        row.attendance === 'present' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                        row.attendance === 'absent' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                        row.attendance === 'late' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                        'bg-gray-100 text-gray-400 border-gray-200'
+                      }`}>
+                        {row.attendance === 'present' ? <CheckCircle size={10} /> : 
+                         row.attendance === 'absent' ? <XCircle size={10} /> :
+                         row.attendance === 'late' ? <Clock size={10} /> : <Info size={10} />}
+                        {row.attendance}
                       </div>
+                    </td>
+
+                    <td className="px-6 py-5 text-center">
+                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${
+                        row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                        row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                        row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                        'bg-gray-100 text-gray-400 border-gray-200'
+                      }`}>
+                        {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
+                        {row.uniformStatus}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-5 text-center">
+                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${
+                        row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                        row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                        row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                        'bg-gray-100 text-gray-400 border-gray-200'
+                      }`}>
+                        {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
+                        {row.dutyStatus}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-5 text-center">
+                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${
+                        row.gpStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                        row.gpStatus === 'invalid' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                        'bg-gray-100 text-gray-400 border-gray-200'
+                      }`}>
+                        {row.gpStatus}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-5 text-center">
+                       <span className={`text-xs font-black ${row.dailyScore >= 75 ? 'text-emerald-500' : row.dailyScore >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                         {row.dailyScore}
+                       </span>
+                    </td>
+
+                    <td className="px-6 py-5 text-center">
+                       <span className={`text-xs font-black ${row.fines > 0 ? 'text-rose-600' : 'text-gray-300'}`}>
+                         {row.fines > 0 ? `₨${row.fines}` : '0'}
+                       </span>
+                       {row.fines > 0 && row.fineReason && (
+                         <p className="text-[8px] font-bold text-rose-500/60 uppercase mt-1 leading-none italic">{row.fineReason}</p>
+                       )}
+                    </td>
+
+                    <td className="px-6 py-5 text-right print:hidden">
+                       <select 
+                         value={row.attendance}
+                         onChange={(e) => handleUpdateStatus(row.id, e.target.value as any)}
+                         className={`px-3 py-1.5 rounded-xl border-none outline-none text-[9px] font-black uppercase tracking-widest cursor-pointer transition-all ${
+                           isDark ? 'bg-white/5 text-indigo-400 hover:bg-white/10' : 'bg-gray-50 text-indigo-600 hover:bg-indigo-50'
+                         }`}
+                       >
+                         <option value="unmarked">Unmarked</option>
+                         <option value="present">Present</option>
+                         <option value="late">Late</option>
+                         <option value="absent">Absent</option>
+                         <option value="leave">Leave</option>
+                       </select>
                     </td>
                   </tr>
                 ))}

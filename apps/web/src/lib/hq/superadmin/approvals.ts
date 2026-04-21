@@ -60,38 +60,25 @@ export type EntityPick = {
   name: string;
 };
 
-const PENDING_STATUSES = ['pending', 'pending_cashier'] as const;
-const REJECT_STATUSES = ['rejected', 'rejected_cashier'] as const;
+const ALL_DEPTS: DeptFilter[] = ['rehab', 'spims', 'job-center', 'hospital', 'sukoon-center', 'welfare'];
 
-function getAmountBucketPredicate(bucket: AmountBucket) {
-  return (amt: number) => {
-    if (bucket === 'all') return true;
-    if (bucket === 'under_1000') return amt < 1000;
-    if (bucket === '1000_5000') return amt >= 1000 && amt <= 5000;
-    if (bucket === '5000_20000') return amt > 5000 && amt <= 20000;
-    return amt > 20000;
-  };
-}
+const DEPT_TX_MAP: Record<string, string> = {
+  rehab: 'rehab_transactions',
+  spims: 'spims_transactions',
+  'job-center': 'job_center_transactions',
+  hospital: 'hospital_transactions',
+  'sukoon-center': 'sukoon_transactions',
+  welfare: 'welfare_transactions'
+};
 
-function sortComparator(sort: SortOrder) {
-  return (a: UnifiedTx, b: UnifiedTx) => {
-    const aAmt = Number(a.amount || 0);
-    const bAmt = Number(b.amount || 0);
-    const aTime = toDate(a.createdAt || a.date || a.transactionDate).getTime();
-    const bTime = toDate(b.createdAt || b.date || b.transactionDate).getTime();
-    if (sort === 'highest') return bAmt - aAmt;
-    if (sort === 'lowest') return aAmt - bAmt;
-    if (sort === 'oldest') return aTime - bTime;
-    return bTime - aTime; // 'newest' or 'all'
-  };
-}
-
-function normalizeTx(dept: 'rehab' | 'spims' | 'job-center', id: string, data: Record<string, unknown>): UnifiedTx {
+function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>): UnifiedTx {
   const patientId = data.patientId != null ? String(data.patientId) : undefined;
   const studentId = data.studentId != null ? String(data.studentId) : undefined;
   const seekerId = data.seekerId != null ? String(data.seekerId) : undefined;
+  const donorId = data.donorId != null ? String(data.donorId) : undefined;
   const rejectionReason =
     (data.rejectionReason as string | undefined) || (data.rejectedReason as string | undefined);
+  
   return {
     id,
     dept,
@@ -109,11 +96,11 @@ function normalizeTx(dept: 'rehab' | 'spims' | 'job-center', id: string, data: R
     proofMissingReason: data.proofMissingReason as string | undefined,
     description: data.description as string | undefined,
     patientId,
-    patientName: data.patientName as string | undefined,
+    patientName: (data.patientName || data.fullName || data.name) as string | undefined,
     studentId,
-    studentName: data.studentName as string | undefined,
+    studentName: (data.studentName || data.fullName || data.name) as string | undefined,
     seekerId,
-    seekerName: data.seekerName as string | undefined,
+    seekerName: (data.seekerName || data.fullName || data.name) as string | undefined,
     staffId: data.staffId as string | undefined,
     staffName: data.staffName as string | undefined,
     cashierId: data.cashierId as string | undefined,
@@ -129,6 +116,33 @@ function normalizeTx(dept: 'rehab' | 'spims' | 'job-center', id: string, data: R
     rejectedAt: data.rejectedAt,
     rejectedReason: rejectionReason,
     rejectionReason,
+  };
+}
+
+export const PENDING_STATUSES = ['pending'];
+export const REJECT_STATUSES = ['rejected'];
+
+function getAmountBucketPredicate(bucket: AmountBucket) {
+  return (tx: UnifiedTx) => {
+    if (bucket === 'all') return true;
+    const a = tx.amount || 0;
+    if (bucket === 'under_1000') return a >= 0 && a <= 1000;
+    if (bucket === '1000_5000') return a > 1000 && a <= 5000;
+    if (bucket === '5000_20000') return a > 5000 && a <= 20000;
+    if (bucket === 'over_20000') return a > 20000;
+    return true;
+  };
+}
+
+function sortComparator(order: SortOrder) {
+  return (a: UnifiedTx, b: UnifiedTx) => {
+    const tA = toDate(a.createdAt || a.date || a.transactionDate).getTime();
+    const tB = toDate(b.createdAt || b.date || b.transactionDate).getTime();
+    if (order === 'newest') return tB - tA;
+    if (order === 'oldest') return tA - tB;
+    if (order === 'highest') return (b.amount || 0) - (a.amount || 0);
+    if (order === 'lowest') return (a.amount || 0) - (b.amount || 0);
+    return 0;
   };
 }
 
@@ -282,8 +296,7 @@ function tabFilterClient(
 }
 
 /**
- * Main feed: real-time merged rehab + spims + job-center transactions.
- * Server-side: status (+ orderBy) only; everything else is client-side.
+ * Main feed: real-time merged transactions across all enabled departments.
  */
 export function subscribeApprovalsFeed(
   filters: ApprovalsFilters,
@@ -293,12 +306,16 @@ export function subscribeApprovalsFeed(
   tabTimePreset: TabTimePreset = 'all'
 ) {
   const unsub: Array<() => void> = [];
-  const buffers: Record<'rehab' | 'spims' | 'job-center', UnifiedTx[]> = { rehab: [], spims: [], 'job-center': [] };
+  const buffers: Record<string, UnifiedTx[]> = {};
+  ALL_DEPTS.forEach(d => buffers[d] = []);
 
   const { from, to } = pickRange(filters);
 
   const apply = () => {
-    const all = ([] as UnifiedTx[]).concat(buffers.rehab, buffers.spims, buffers['job-center']);
+    let all: UnifiedTx[] = [];
+    ALL_DEPTS.forEach(d => {
+      if (buffers[d]) all = all.concat(buffers[d]);
+    });
 
     const amtOk = getAmountBucketPredicate(filters.amountBucket);
     const proofOk = (tx: UnifiedTx) => {
@@ -322,13 +339,12 @@ export function subscribeApprovalsFeed(
 
     const dateOk = (tx: UnifiedTx) => {
       if (tab === 'pending') {
-        if (filters.datePreset === 'all') return true; // no date filter unless user picks one
+        if (filters.datePreset === 'all') return true;
         return inDateRange(tx, from, to);
       }
       if (tab === 'approved_today' || tab === 'rejected_today') {
         return tabFilterClient(tab, tabTimePreset, tx);
       }
-      // history — respect date preset from tab dropdown
       if (tabTimePreset !== 'all') {
         const ttr = getTabTimeRange(tabTimePreset);
         return inDateRange(tx, ttr.from, ttr.to);
@@ -338,7 +354,7 @@ export function subscribeApprovalsFeed(
 
     const filtered = all
       .filter((tx) => dateOk(tx))
-      .filter((tx) => amtOk(Number(tx.amount || 0)))
+      .filter(amtOk)
       .filter(proofOk)
       .filter(entityOk)
       .filter(txTypeOk)
@@ -351,16 +367,18 @@ export function subscribeApprovalsFeed(
     onData(filtered);
   };
 
-  const wantsDept = (dept: 'rehab' | 'spims' | 'job-center') => filters.dept === 'all' || filters.dept === dept;
+  const wantsDept = (dept: DeptFilter) => filters.dept === 'all' || filters.dept === dept;
 
-  (['rehab', 'spims', 'job-center'] as const).forEach((dept) => {
+  ALL_DEPTS.forEach((dept) => {
     if (!wantsDept(dept)) {
       buffers[dept] = [];
       apply();
       return;
     }
 
-    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'job_center_transactions';
+    const col = DEPT_TX_MAP[dept];
+    if (!col) return;
+
     const queries = buildQueriesForTab(tab, col);
 
     queries.forEach((q) => {
@@ -368,8 +386,6 @@ export function subscribeApprovalsFeed(
         q,
         (snap: QuerySnapshot<DocumentData>) => {
           const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
-          // Merge: replace dept slice from this query result is wrong if multiple queries.
-          // We only ever attach one listener per dept per tab (single query).
           buffers[dept] = chunk;
           apply();
         },
@@ -382,7 +398,7 @@ export function subscribeApprovalsFeed(
   return () => unsub.forEach((u) => u());
 }
 
-/** All transactions for one entity (both statuses). Merges patientId + studentId + seekerId listeners. */
+/** All transactions for one entity (both statuses). */
 export function subscribeEntityTransactions({
   entity,
   onData,
@@ -393,30 +409,24 @@ export function subscribeEntityTransactions({
   onError?: (err: unknown) => void;
 }) {
   const unsub: Array<() => void> = [];
-  /** SPIMS may subscribe twice (patientId + studentId); merge latest snapshot per listener */
-  const buffers: { rehab: UnifiedTx[]; spimsA: UnifiedTx[]; spimsB: UnifiedTx[]; jobCenter: UnifiedTx[] } = {
-    rehab: [],
-    spimsA: [],
-    spimsB: [],
-    jobCenter: [],
-  };
+  const buffers: Record<string, UnifiedTx[]> = {};
 
   const bump = () => {
     const map = new Map<string, UnifiedTx>();
-    buffers.rehab.forEach((tx) => map.set(`r_${tx.id}`, tx));
-    buffers.spimsA.forEach((tx) => map.set(`s_${tx.id}`, tx));
-    buffers.spimsB.forEach((tx) => map.set(`s_${tx.id}`, tx));
-    buffers.jobCenter.forEach((tx) => map.set(`j_${tx.id}`, tx));
+    Object.values(buffers).forEach(list => {
+      list.forEach(tx => map.set(`${tx.dept}_${tx.id}`, tx));
+    });
     onData(Array.from(map.values()).sort(sortComparator('newest')));
   };
 
   const attach = (
-    slot: 'rehab' | 'spimsA' | 'spimsB' | 'jobCenter',
-    dept: 'rehab' | 'spims' | 'job-center',
-    field: 'patientId' | 'studentId' | 'seekerId',
+    dept: DeptFilter,
+    field: string,
     id: string
   ) => {
-    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'job_center_transactions';
+    const col = DEPT_TX_MAP[dept];
+    if (!col) return;
+
     const q = query(
       collection(db, col),
       where(field, '==', id),
@@ -427,7 +437,7 @@ export function subscribeEntityTransactions({
       q,
       (snap) => {
         const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
-        buffers[slot] = chunk;
+        buffers[`${dept}_${field}`] = chunk;
         bump();
       },
       (e) => onError?.(e)
@@ -436,12 +446,17 @@ export function subscribeEntityTransactions({
   };
 
   if (entity.dept === 'rehab') {
-    attach('rehab', 'rehab', 'patientId', entity.id);
+    attach('rehab', 'patientId', entity.id);
   } else if (entity.dept === 'spims') {
-    attach('spimsA', 'spims', 'patientId', entity.id);
-    attach('spimsB', 'spims', 'studentId', entity.id);
-  } else {
-    attach('jobCenter', 'job-center', 'seekerId', entity.id);
+    attach('spims', 'studentId', entity.id);
+    attach('spims', 'patientId', entity.id);
+  } else if (entity.dept === 'job-center') {
+    attach('job-center', 'seekerId', entity.id);
+  } else if (DEPT_TX_MAP[entity.dept]) {
+    // Generic fallback for hospital, welfare, sukoon
+    attach(entity.dept, 'patientId', entity.id);
+    attach(entity.dept, 'donorId', entity.id);
+    attach(entity.dept, 'entityId', entity.id);
   }
 
   return () => unsub.forEach((x) => x());
@@ -454,60 +469,34 @@ export function subscribePendingApprovalsCount({
   onCount: (n: number) => void;
   onError?: (err: unknown) => void;
 }) {
-  let r = 0;
-  let s = 0;
-  let j = 0;
-  const push = () => onCount(r + s + j);
-
-  const qR = query(
-    collection(db, 'rehab_transactions'),
-    where('status', 'in', [...PENDING_STATUSES]),
-    orderBy('createdAt', 'desc'),
-    limit(500)
-  );
-  const qS = query(
-    collection(db, 'spims_transactions'),
-    where('status', 'in', [...PENDING_STATUSES]),
-    orderBy('createdAt', 'desc'),
-    limit(500)
-  );
-  const qJ = query(
-    collection(db, 'job_center_transactions'),
-    where('status', 'in', [...PENDING_STATUSES]),
-    orderBy('createdAt', 'desc'),
-    limit(500)
-  );
-
-  const u1 = onSnapshot(
-    qR,
-    (snap) => {
-      r = snap.size;
-      push();
-    },
-    (e) => onError?.(e)
-  );
-  const u2 = onSnapshot(
-    qS,
-    (snap) => {
-      s = snap.size;
-      push();
-    },
-    (e) => onError?.(e)
-  );
-  const u3 = onSnapshot(
-    qJ,
-    (snap) => {
-      j = snap.size;
-      push();
-    },
-    (e) => onError?.(e)
-  );
-
-  return () => {
-    u1();
-    u2();
-    u3();
+  const counts: Record<string, number> = {};
+  const push = () => {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    onCount(total);
   };
+
+  const unsubs = ALL_DEPTS.map(dept => {
+    const col = DEPT_TX_MAP[dept];
+    if (!col) return () => {};
+    
+    const q = query(
+      collection(db, col),
+      where('status', 'in', [...PENDING_STATUSES]),
+      orderBy('createdAt', 'desc'),
+      limit(500)
+    );
+    
+    return onSnapshot(
+      q,
+      (snap) => {
+        counts[dept] = snap.size;
+        push();
+      },
+      (e) => onError?.(e)
+    );
+  });
+
+  return () => unsubs.forEach(u => u());
 }
 
 export async function searchEntitiesByNamePrefix({
@@ -538,12 +527,14 @@ export async function searchEntitiesByNamePrefix({
 
 export async function searchEntitiesCombined(
   prefix: string,
-  deptFilter: 'all' | 'rehab' | 'spims' | 'job-center'
+  deptFilter: 'all' | DeptFilter
 ): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }>> {
   const parts: Promise<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }[]>[] = [];
   if (deptFilter === 'all' || deptFilter === 'rehab') parts.push(searchEntitiesByNamePrefix({ dept: 'rehab', namePrefix: prefix }));
   if (deptFilter === 'all' || deptFilter === 'spims') parts.push(searchEntitiesByNamePrefix({ dept: 'spims', namePrefix: prefix }));
   if (deptFilter === 'all' || deptFilter === 'job-center') parts.push(searchEntitiesByNamePrefix({ dept: 'job-center', namePrefix: prefix }));
-  const rows = (await Promise.all(parts)).flat();
+  
+  // We can add search for hospital/welfare etc later if those entity collections follow name prefixing
+  const rows = (await Promise.all(parts)).flat() as any[];
   return rows.slice(0, 16);
 }

@@ -6,7 +6,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireHqSuperadmin } from './auth';
 import { sendHqPushServer } from '@/lib/hqNotificationsServer';
 
-type Dept = 'rehab' | 'spims' | 'job-center';
+export type Dept = 'rehab' | 'spims' | 'job-center' | 'hospital' | 'sukoon-center' | 'welfare';
 type Decision = 'approved' | 'rejected';
 
 function getAdminApp(): App {
@@ -30,7 +30,10 @@ function getAdminApp(): App {
 function txCollection(dept: Dept) {
   if (dept === 'rehab') return 'rehab_transactions';
   if (dept === 'spims') return 'spims_transactions';
-  return 'job_center_transactions';
+  if (dept === 'job-center') return 'job_center_transactions';
+  if (dept === 'hospital') return 'hospital_transactions';
+  if (dept === 'sukoon-center') return 'sukoon_transactions';
+  return 'welfare_transactions';
 }
 
 async function updateEntityTotals(
@@ -38,13 +41,17 @@ async function updateEntityTotals(
   dept: Dept,
   txData: any
 ) {
-  const entityId = txData.patientId || txData.studentId || txData.seekerId;
+  const entityId = txData.patientId || txData.studentId || txData.seekerId || txData.donorId;
   if (!entityId) return;
   
   let col = '';
   if (dept === 'rehab') col = 'rehab_patients';
   else if (dept === 'spims') col = 'spims_students';
-  else col = 'job_center_seekers';
+  else if (dept === 'job-center') col = 'job_center_seekers';
+  else if (dept === 'hospital') col = 'hospital_patients';
+  else if (dept === 'sukoon-center') col = 'sukoon_clients';
+  else if (dept === 'welfare') col = 'welfare_donors';
+  else return; // unknown department or no auto-update logic
 
   const ref = adminDb.collection(col).doc(entityId);
   const snap = await ref.get();

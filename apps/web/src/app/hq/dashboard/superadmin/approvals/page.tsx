@@ -42,8 +42,8 @@ import {
 } from '@/lib/hq/superadmin/approvals';
 import { ErrorState } from '@/components/hq/superadmin/DataState';
 import { debounce, toDate } from '@/lib/utils';
-import { decideTransaction, bulkDecideTransactions } from '@/app/hq/actions/approvals';
-import type { UnifiedTx } from '@/lib/hq/superadmin/types';
+import { decideTransaction, bulkDecideTransactions, type Dept } from '@/app/hq/actions/approvals';
+import type { UnifiedTx, DeptFilter } from '@/lib/hq/superadmin/types';
 import { db } from '@/lib/firebase';
 import { typeLabel, mapTxToTypeOption } from '@/lib/hq/superadmin/approvals';
 
@@ -893,7 +893,7 @@ export default function HqApprovalsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const need = new Map<string, { dept: 'rehab' | 'spims' | 'job-center'; id: string }>();
+    const need = new Map<string, { dept: DeptFilter; id: string }>();
     const source = selectedEntity ? entityRows : rows;
     source.forEach((tx) => {
       const id = entityId(tx);
@@ -904,8 +904,18 @@ export default function HqApprovalsPage() {
     void (async () => {
       for (const [, v] of need) {
         const k = `${v.dept}_${v.id}`;
+        if (enriched[k]) continue;
         try {
-          const coll = v.dept === 'rehab' ? 'rehab_patients' : v.dept === 'spims' ? 'spims_students' : 'job_center_seekers';
+          let coll = '';
+          if (v.dept === 'rehab') coll = 'rehab_patients';
+          else if (v.dept === 'spims') coll = 'spims_students';
+          else if (v.dept === 'job-center') coll = 'job_center_seekers';
+          else if (v.dept === 'hospital') coll = 'hospital_patients';
+          else if (v.dept === 'sukoon-center') coll = 'sukoon_clients';
+          else if (v.dept === 'welfare') coll = 'welfare_donors';
+          
+          if (!coll) continue;
+          
           const ref = doc(db, coll, v.id);
           const snap = await getDoc(ref);
           if (!snap.exists() || cancelled) continue;
@@ -1042,7 +1052,7 @@ export default function HqApprovalsPage() {
 
   const handleApprove = async (tx: UnifiedTx) => {
     setBusyId(tx.id);
-    const res = await decideTransaction({ dept: tx.dept, txId: tx.id, decision: 'approved' });
+    const res = await decideTransaction({ dept: tx.dept as Dept, txId: tx.id, decision: 'approved' });
     setBusyId(null);
     if (res.success) {
       setCardPhase({ ...cardPhase, [tx.id]: 'success' });
@@ -1063,7 +1073,7 @@ export default function HqApprovalsPage() {
     if (busyId) return;
     setBusyId(tx.id);
     const res = await decideTransaction({ 
-      dept: tx.dept, 
+      dept: tx.dept as Dept, 
       txId: tx.id, 
       decision: 'rejected', 
       rejectReason: 'Removed by Superadmin (Quick Action)' 
@@ -1082,7 +1092,7 @@ export default function HqApprovalsPage() {
     setRejectBusy(true);
     try {
       const dept = tx.dept;
-      const res = await decideTransaction({ dept, txId: tx.id, decision: 'rejected', rejectReason: reason });
+      const res = await decideTransaction({ dept: dept as Dept, txId: tx.id, decision: 'rejected', rejectReason: reason });
       if (!res.success) throw new Error(res.error ?? 'Failed');
       setRejectTx(null);
       setCardPhase((p) => ({ ...p, [tx.id]: 'fail' }));
