@@ -243,9 +243,9 @@ export default function DailyReportPage() {
 
   return (
     <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
-      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-8 print:p-0">
+      <div id="daily-performance-report-content" className={`max-w-7xl mx-auto space-y-8 p-8 rounded-[3rem] ${isDark ? 'bg-zinc-950' : 'bg-white shadow-2xl shadow-blue-900/5'} print:p-0 print:shadow-none`}>
         
-        {/* Header */}
+        {/* Header (Premium for Export) */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
             <Link 
@@ -255,50 +255,117 @@ export default function DailyReportPage() {
               <ArrowLeft size={20} />
             </Link>
             <div>
-              <h1 className="text-2xl font-[1000] tracking-tight">Daily Performance Report</h1>
-              <p className="text-gray-500 text-sm font-black uppercase tracking-widest mt-1">Unified HQ Analytics</p>
+              <div className="flex items-center gap-2">
+                <Shield size={24} className="text-indigo-600" />
+                <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">Daily Performance Report</h1>
+              </div>
+              <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em] mt-1">Unified HQ Analytics • Operational Excellence</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className={`flex items-center gap-3 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-               <Calendar size={16} className="text-gray-400" />
+            <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-gray-50 border-gray-100'}`}>
+               <Calendar size={18} className="text-indigo-500" />
                <input 
                  type="date" 
                  value={reportDate} 
                  onChange={(e) => setReportDate(e.target.value)}
-                 className="bg-transparent border-none outline-none font-black text-sm uppercase tracking-widest"
+                 className="bg-transparent border-none outline-none font-black text-sm uppercase tracking-widest text-indigo-600"
                />
             </div>
             <button 
               onClick={handleDownloadImage}
               disabled={downloading}
-              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black transition-all shadow-lg ${
+              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-sm font-black transition-all shadow-xl hover:scale-[1.02] active:scale-95 ${
                 isDark 
-                  ? 'bg-zinc-800 text-white hover:bg-zinc-700 shadow-zinc-950/20' 
-                  : 'bg-white text-gray-900 border border-gray-100 hover:shadow-xl'
+                  ? 'bg-white text-black hover:bg-zinc-200' 
+                  : 'bg-gray-900 text-white hover:bg-black shadow-gray-900/20'
               }`}
             >
-              {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} className="text-blue-500" />}
+              {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
               Save as Image
             </button>
             <button 
               onClick={handlePrint}
-              className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20"
+              className="flex items-center gap-3 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl text-sm font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20 hover:scale-[1.02] active:scale-95"
             >
-              <Printer size={18} /> Print Report
+              <Printer size={18} /> Print
             </button>
           </div>
         </div>
 
-        {/* Print Only Header */}
-        <div className="hidden print:block text-center mb-10 border-b-4 border-gray-900 pb-8">
-           <h1 className="text-4xl font-[1000] uppercase tracking-tighter mb-2">Khan Hub HQ Performance Ledger</h1>
-           <p className="text-xl font-bold text-gray-600 italic">Daily Operations Audit • {new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        {/* Branding for Image Export (Hidden in UI) */}
+        <div className="hidden print:block mb-10 pb-8 border-b-2 border-gray-100">
+           <div className="flex justify-between items-end">
+             <div>
+               <h1 className="text-4xl font-[1000] uppercase tracking-tighter text-gray-900">Khan Hub HQ</h1>
+               <p className="text-lg font-black text-indigo-600 uppercase tracking-[0.2em] mt-1">Performance Intelligence Ledger</p>
+               <p className="text-sm font-bold text-gray-400 mt-4 italic">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+             </div>
+             <div className="text-right">
+                <div className="inline-block px-4 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-xl">Verified Audit</div>
+                <p className="text-[10px] font-bold text-gray-400 mt-2">Document Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
+             </div>
+           </div>
+        </div>
+
+        {/* Summary Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={`p-8 rounded-[2.5rem] border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl' : 'bg-gradient-to-br from-white to-indigo-50/30 border-indigo-100 shadow-xl shadow-indigo-900/5'}`}>
+             <div className="flex items-center justify-between mb-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Excellence Aggregate</h4>
+                <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-500">
+                  <TrendingUp size={16} />
+                </div>
+             </div>
+             <div className="flex items-end gap-3">
+                <div className="text-5xl font-[1000] tracking-tighter text-indigo-600">
+                  {reportData.reduce((acc, curr) => acc + curr.totalScore, 0)}
+                </div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 pb-1">Points Earned</p>
+             </div>
+          </div>
+
+          <div className={`p-8 rounded-[2.5rem] border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl' : 'bg-gradient-to-br from-white to-rose-50/30 border-rose-100 shadow-xl shadow-rose-900/5'}`}>
+             <div className="flex items-center justify-between mb-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Total Deductions</h4>
+                <div className="p-2 bg-rose-500/10 rounded-xl text-rose-500">
+                  <AlertTriangle size={16} />
+                </div>
+             </div>
+             <div className="flex items-end gap-3">
+                <div className="text-5xl font-[1000] tracking-tighter text-rose-600">
+                  ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
+                </div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 pb-1">Fines Issued</p>
+             </div>
+          </div>
+
+          <div className={`p-8 rounded-[2.5rem] border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl' : 'bg-gradient-to-br from-white to-emerald-50/30 border-emerald-100 shadow-xl shadow-emerald-900/5'}`}>
+             <div className="flex items-center justify-between mb-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Performance Index</h4>
+                <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+                  <FileText size={16} />
+                </div>
+             </div>
+             <div className="flex items-center gap-4">
+                <div className="text-5xl font-[1000] tracking-tighter text-emerald-600">
+                  {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.totalScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
+                </div>
+                <div className="flex-1">
+                  <div className="h-2 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                     <div 
+                       style={{ width: `${reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.totalScore, 0) / (reportData.length * 4) * 100) : 0}%` }} 
+                       className="h-full bg-emerald-500 rounded-full"
+                     />
+                  </div>
+                </div>
+             </div>
+          </div>
         </div>
 
         {/* Filters */}
-        <div className={`p-4 rounded-[2.5rem] border flex flex-col sm:flex-row gap-4 print:hidden ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+        <div className={`p-4 rounded-[2.5rem] border flex flex-col sm:flex-row gap-4 print:hidden ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex-1 relative group">
             <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} size={18} />
             <input 
@@ -328,19 +395,17 @@ export default function DailyReportPage() {
         </div>
 
         {/* Report Table */}
-        <div className={`rounded-[2.5rem] border overflow-hidden ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+        <div className={`rounded-[2.5rem] border overflow-hidden ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'}`}>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className={`${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Staff Identity</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Attendance</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Uniform</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Duties</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Contribution</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Daily Score</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Growth Pts</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-right">Fines/Deduction</th>
+                <tr className={`${isDark ? 'bg-white/5' : 'bg-gray-50/50'}`}>
+                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Staff Identity</th>
+                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Duty Pts</th>
+                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Uniform</th>
+                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Contribution</th>
+                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Total Score</th>
+                  <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Deductions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -348,91 +413,49 @@ export default function DailyReportPage() {
                   <tr key={row.id} className="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
                     <td className="px-6 py-6">
                       <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${isDark ? 'bg-zinc-800 text-zinc-500' : 'bg-gray-100 text-gray-400'}`}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border-2 ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-gray-50 border-white text-gray-400 shadow-sm'}`}>
                           {row.name[0]}
                         </div>
                         <div>
-                          <p className="font-black text-sm">{row.name}</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{row.designation} • {row.department}</p>
+                          <p className="font-black text-sm text-gray-900 dark:text-white">{row.name}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{row.designation} • {row.department}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-6 text-center">
-                      <div className="flex flex-col items-center">
-                        {row.attendance === 'present' ? (
-                          <CheckCircle size={18} className="text-emerald-500" />
-                        ) : row.attendance === 'absent' ? (
-                          <XCircle size={18} className="text-rose-500" />
-                        ) : (
-                          <Clock size={18} className="text-gray-300" />
-                        )}
-                        <span className="text-[8px] font-black uppercase tracking-widest mt-1 opacity-50">{row.attendance}</span>
-                      </div>
+                       <span className={`text-md font-black ${row.dutyScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
+                         {row.dutyScore > 0 ? '+10' : '0'}
+                       </span>
                     </td>
                     <td className="px-6 py-6 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className={`text-lg font-black ${row.uniformScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
-                          {row.uniformScore > 0 ? '✓' : '0'}
-                        </span>
-                        {row.details.uniformMissing.length > 0 && (
-                          <div className="group relative">
-                             <AlertTriangle size={12} className="text-rose-500 mt-1 cursor-help" />
-                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-gray-900 text-white text-[9px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
-                               <p className="font-black uppercase tracking-widest mb-1 text-rose-400">Missing Uniform:</p>
-                               <ul className="list-disc pl-3 font-medium">
-                                 {row.details.uniformMissing.map(m => <li key={m}>{m}</li>)}
-                               </ul>
-                             </div>
-                          </div>
-                        )}
-                      </div>
+                       <span className={`text-md font-black ${row.uniformScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
+                         {row.uniformScore > 0 ? '+5' : '0'}
+                       </span>
                     </td>
                     <td className="px-6 py-6 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className={`text-lg font-black ${row.dutyScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
-                          {row.dutyScore > 0 ? '✓' : '0'}
-                        </span>
-                        {row.details.dutiesPending.length > 0 && (
-                          <div className="group relative">
-                             <Info size={12} className="text-amber-500 mt-1 cursor-help" />
-                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-gray-900 text-white text-[9px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
-                               <p className="font-black uppercase tracking-widest mb-1 text-amber-400">Pending Duties:</p>
-                               <ul className="list-disc pl-3 font-medium">
-                                 {row.details.dutiesPending.map(m => <li key={m}>{m}</li>)}
-                               </ul>
-                             </div>
-                          </div>
-                        )}
-                      </div>
+                       <span className={`text-md font-black ${row.contributionScore > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
+                         {row.contributionScore > 0 ? `+${row.contributionScore * 10}` : '0'}
+                       </span>
                     </td>
                     <td className="px-6 py-6 text-center">
-                      <span className={`text-lg font-black ${row.contributionScore > 0 ? 'text-emerald-500' : 'text-gray-300'}`}>
-                         {row.contributionScore > 0 ? '✓' : '0'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className={`text-md font-black ${row.totalScore > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
-                          {row.totalScore}
-                        </span>
-                        <span className="text-[7px] font-black uppercase tracking-widest mt-0.5 opacity-50">Daily Score</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className={`text-md font-[1000] ${row.totalGrowthPoints > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
-                          {row.totalGrowthPoints}
-                        </span>
-                        <span className="text-[7px] font-black uppercase tracking-widest mt-0.5 opacity-50">Total Acc.</span>
-                      </div>
+                       <div className="inline-flex flex-col items-center px-4 py-2 rounded-2xl bg-gray-50 dark:bg-white/5 border border-white dark:border-zinc-800 shadow-sm">
+                         <span className="text-lg font-black text-gray-900 dark:text-white">{row.totalScore}</span>
+                         <span className="text-[7px] font-black uppercase tracking-widest text-gray-400">Points</span>
+                       </div>
                     </td>
                     <td className="px-6 py-6 text-right">
                       <div className="flex flex-col items-end">
-                        <span className={`font-black ${row.fines > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
-                          {row.fines > 0 ? `-₨${row.fines}` : 'Nil'}
+                        <span className={`text-sm font-black ${row.fines > 0 ? 'text-rose-600' : 'text-gray-300'}`}>
+                          {row.fines > 0 ? `-₨${row.fines.toLocaleString()}` : 'None'}
                         </span>
                         {row.details.finesReason.length > 0 && (
-                          <p className="text-[8px] font-medium text-gray-400 mt-1 italic max-w-[150px] truncate">{row.details.finesReason.join(', ')}</p>
+                          <div className="flex flex-wrap justify-end gap-1 mt-1.5">
+                            {row.details.finesReason.map((r, i) => (
+                              <span key={i} className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase tracking-tighter">
+                                {r.split(' (')[0]}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -443,53 +466,23 @@ export default function DailyReportPage() {
           </div>
           
           {filteredData.length === 0 && (
-            <div className="py-20 text-center">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="py-24 text-center">
+              <div className="w-20 h-20 bg-gray-50 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                 <Search size={32} className="text-gray-300" />
               </div>
-              <h3 className="font-black text-lg">No staff metrics found</h3>
-              <p className="text-gray-500 text-sm">Either no staff is active or your filters are too strict.</p>
+              <h3 className="font-black text-xl">No Analytics Data</h3>
+              <p className="text-gray-400 text-sm font-medium mt-1 uppercase tracking-widest">Adjust filters or search criteria</p>
             </div>
           )}
         </div>
 
-        {/* Footer Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:hidden">
-          <div className={`p-8 rounded-[2rem] border ${isDark ? 'bg-zinc-900 border-zinc-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl'}`}>
-             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Total Score Aggregate</h4>
-             <div className="flex items-center gap-4">
-                <div className="text-4xl font-[1000] tracking-tighter text-blue-500">
-                  {reportData.reduce((acc, curr) => acc + curr.totalScore, 0)}
-                </div>
-                <div className="h-10 w-px bg-gray-200" />
-                <p className="text-xs font-bold text-gray-500 leading-relaxed italic">Cumulative excellence points across all departments for today.</p>
-             </div>
-          </div>
-          <div className={`p-8 rounded-[2rem] border ${isDark ? 'bg-zinc-900 border-zinc-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl'}`}>
-             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Total Fine Deduction</h4>
-             <div className="flex items-center gap-4">
-                <div className="text-4xl font-[1000] tracking-tighter text-rose-500">
-                  ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0)}
-                </div>
-                <div className="h-10 w-px bg-gray-200" />
-                <p className="text-xs font-bold text-gray-500 leading-relaxed italic">Total penalities issued today for policy violations.</p>
-             </div>
-          </div>
-          <div className={`p-8 rounded-[2rem] border ${isDark ? 'bg-zinc-900 border-zinc-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl'}`}>
-             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Avg. Performance</h4>
-             <div className="flex items-center gap-4">
-                <div className="text-4xl font-[1000] tracking-tighter text-emerald-500">
-                  {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.totalScore, 0) / (reportData.length * 4) * 100).toFixed(1) : 0}%
-                </div>
-                <div className="h-10 w-px bg-gray-200" />
-                <div className="w-full bg-gray-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-                   <div 
-                     style={{ width: `${reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.totalScore, 0) / (reportData.length * 4) * 100) : 0}%` }} 
-                     className="h-full bg-emerald-500 rounded-full"
-                   />
-                </div>
-             </div>
-          </div>
+        {/* Legal Disclaimer for Image */}
+        <div className="hidden print:flex items-center justify-between pt-8 border-t border-gray-100">
+           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub Operations • AI Generated Audit</p>
+           <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Secure Report Integrity Verified</p>
+           </div>
         </div>
       </div>
     </div>

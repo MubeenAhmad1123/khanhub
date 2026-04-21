@@ -606,6 +606,38 @@ export default function CashierStationPage() {
 
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
 
+      // Handle Fine Reset for Staff Salary
+      if (isStaffMode && selectedCategoryId === 'staff_salary' && selectedEntity) {
+        const prefix = departmentCode.replace('-', '_');
+        const entityCollection = prefix === 'hq' ? 'hq_users' : `${prefix}_staff`;
+        
+        // Reset staff cycle
+        await updateDoc(doc(db, entityCollection, selectedEntity.id), {
+          totalFines: 0,
+          presentDays: 0, // Reset days as per user request
+          lastSalaryPaidAt: Timestamp.now()
+        }).catch(err => console.error("Failed to reset staff cycle:", err));
+
+        // Mark individual fines as paid
+        try {
+          const finesSnap = await getDocs(query(
+            collection(db, `${prefix}_fines`),
+            where('staffId', '==', selectedEntity.id),
+            where('status', '==', 'unpaid')
+          ));
+          
+          for (const fineDoc of finesSnap.docs) {
+            await updateDoc(fineDoc.ref, { 
+              status: 'paid', 
+              paidAt: Timestamp.now(),
+              paymentTxId: txRef.id 
+            });
+          }
+        } catch (err) {
+          console.error("Failed to mark fines as paid:", err);
+        }
+      }
+
       // Notify superadmin of new transaction pending approval
       void sendHqPushNotification({
         recipientId: superadminRecipient.customId,
@@ -832,11 +864,31 @@ export default function CashierStationPage() {
                       <button
                         key={p.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedEntity(p);
-                          setEntityResults([p]);
-                          setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
-                          setSearchOpen(false);
+                        onClick={async () => {
+                           // Auto-set amount for salary if in staff mode
+                           if (isStaffMode) {
+                             // Fetch current fines for this specific staff member
+                             const prefix = departmentCode.replace('-', '_');
+                             const finesSnap = await getDocs(query(
+                               collection(db, `${prefix}_fines`),
+                               where('staffId', '==', p.id),
+                               where('status', '==', 'unpaid')
+                             ));
+                             const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
+                             
+                             const base = Number(p.monthlySalary || 0);
+                             const net = Math.max(0, base - totalFines);
+                             
+                             setSelectedEntity({ ...p, totalFines });
+                             setAmount(String(net));
+                             setDescription(`Salary payment for ${p.name || p.employeeId} (Base: Rs ${base.toLocaleString()}, Fines: Rs ${totalFines.toLocaleString()})`);
+                           } else {
+                             setSelectedEntity(p);
+                           }
+                           
+                           setEntityResults([p]);
+                           setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
+                           setSearchOpen(false);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
                       >
@@ -877,11 +929,28 @@ export default function CashierStationPage() {
               <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
                 <div className="flex items-center justify-between gap-4">
-                  <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? selectedEntity.name : departmentCode === 'hospital' ? 'General Hospital Account (Auto-selected)' : 'Search and select account from left panel'}</p>
+                  <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account (Auto-selected)' : 'Search and select account from left panel'}</p>
                   {selectedEntity && (
-                    <button type="button" onClick={() => setSelectedEntity(null)} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-300">Clear</button>
+                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-300 transition-colors">Clear</button>
                   )}
                 </div>
+                
+                {selectedEntity && isStaffMode && (
+                  <div className="mt-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 animate-in zoom-in-95 duration-500">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Base Salary</span>
+                      <span className="text-xs font-black text-white">Rs {Number(selectedEntity.monthlySalary || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[9px] font-black uppercase text-rose-400 tracking-widest">Unpaid Fines</span>
+                      <span className="text-xs font-black text-rose-500">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="pt-2 border-t border-indigo-500/20 flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Net Payable</span>
+                      <span className="text-lg font-[1000] text-emerald-400">Rs {(Number(selectedEntity.monthlySalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

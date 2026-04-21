@@ -81,7 +81,7 @@ async function loadFinesTotal(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_fines`;
-  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(() => ({ docs: [] } as any));
+  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), where('status', '==', 'unpaid'))).catch(() => ({ docs: [] } as any));
   return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.amount) || 0), 0);
 }
 

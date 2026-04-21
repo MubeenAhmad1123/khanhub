@@ -1,7 +1,7 @@
 // src/app/hq/dashboard/manager/staff/[id]/page.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import {
   doc, getDoc, collection, getDocs, query, where, orderBy,
@@ -91,7 +91,7 @@ function calculateDutyHours(start: string, end: string) {
   if (totalMinutes < 0) totalMinutes += 24 * 60; // Handle overnight shifts
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return { 
+  return {
     total: (totalMinutes / 60).toFixed(1),
     text: `${hours}h ${minutes}m`
   };
@@ -158,7 +158,13 @@ export default function StaffProfilePage() {
 
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
-  const [dutyForm, setDutyForm] = useState({ type: 'morning_shift', status: 'completed', comment: '' });
+  const [dutyForm, setDutyForm] = useState({
+    type: 'morning_shift',
+    status: 'completed',
+    comment: '',
+    fineAmount: '',
+    fineReason: ''
+  });
 
   // Special Tasks State
   const [specialTasks, setSpecialTasks] = useState<HqSpecialTask[]>([]);
@@ -198,6 +204,26 @@ export default function StaffProfilePage() {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, HqDailyAttendanceRecord>>({});
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
   const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
+
+  const tillDateSalary = useMemo(() => {
+    if (!staff) return 0;
+    const monthlySalary = Number(staff.monthlySalary) || 0;
+    const daysInMonth = 30; // Standard month division as requested
+    const dailyRate = monthlySalary / daysInMonth;
+
+    // Count present days in the selected month
+    const presentDays = attendance.filter(a => a.status === 'present').length;
+    const earnings = dailyRate * presentDays;
+
+    // Fines for the current month/staff
+    const totalFines = staff.totalFines || 0;
+
+    return Math.floor(Math.max(0, earnings - totalFines));
+  }, [staff, attendance]);
+
+  const presentDaysCount = useMemo(() => {
+    return attendance.filter(a => a.status === 'present').length;
+  }, [attendance]);
   const [timePopup, setTimePopup] = useState<{
     isOpen: boolean;
     date: string;
@@ -215,7 +241,7 @@ export default function StaffProfilePage() {
     if (isNaN(year) || isNaN(month)) return [];
     const date = new Date(year, month - 1, 1);
     if (isNaN(date.getTime())) return [];
-    
+
     const days = [];
     while (date.getMonth() === month - 1) {
       days.push(new Date(date).toISOString().slice(0, 10));
@@ -484,7 +510,7 @@ export default function StaffProfilePage() {
       const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
 
       const prevRecord = attendanceMap[date] || {};
-      
+
       const normalizeTime = (t: string) => {
         if (!t) return '00:00';
         if (t.includes('AM') || t.includes('PM')) {
@@ -520,12 +546,12 @@ export default function StaffProfilePage() {
       };
 
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
-      await setDoc(ref, { 
-        [field]: value, 
+      await setDoc(ref, {
+        [field]: value,
         status: newRecord.status,
         arrivedOnTime: newRecord.arrivedOnTime,
         departedOnTime: newRecord.departedOnTime,
-        updatedAt: newRecord.updatedAt 
+        updatedAt: newRecord.updatedAt
       }, { merge: true });
     } catch (err) {
       toast.error("Failed to update time");
@@ -534,7 +560,7 @@ export default function StaffProfilePage() {
 
   const handleAttendanceCell = (dateStr: string) => {
     const existing = attendanceMap[dateStr];
-    
+
     const normalizeTime = (t: string) => {
       if (!t) return '';
       if (t.includes('AM') || t.includes('PM')) {
@@ -812,22 +838,46 @@ export default function StaffProfilePage() {
       if (!staff) return;
       const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
+
+      // 1. Record Duty Log
       await addDoc(collection(db, `${slug}_duty_logs`), {
         staffId: uid,
         dutyType: dutyForm.type,
         status: dutyForm.status,
-        comment: dutyForm.comment,
-        points: dutyForm.status === 'completed' ? 10 : 0,
+        comment: dutyForm.comment || (dutyForm.status === 'not_completed' ? `Fine: ${dutyForm.fineReason}` : ''),
+        points: dutyForm.status === 'completed' ? 10 : -5, // Penalty points
         date: serverTimestamp(),
         createdAt: serverTimestamp(),
-        markedBy: session?.uid
+        markedBy: session?.uid,
+        fineAmount: dutyForm.status === 'not_completed' ? Number(dutyForm.fineAmount) || 0 : 0,
+        fineReason: dutyForm.status === 'not_completed' ? dutyForm.fineReason : ''
       });
 
-      toast.success("Duty marked successfully");
-      setDutyForm({ type: 'morning_shift', status: 'completed', comment: '' });
+      // 2. If it's a fine, record it in the fines collection for salary deduction
+      if (dutyForm.status === 'not_completed' && Number(dutyForm.fineAmount) > 0) {
+        await addDoc(collection(db, `${slug}_fines`), {
+          staffId: uid,
+          amount: Number(dutyForm.fineAmount),
+          reason: dutyForm.fineReason || `Fine for ${dutyForm.type.replace(/_/g, ' ')}`,
+          status: 'unpaid',
+          date: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          markedBy: session?.uid,
+          source: 'duty_assessment'
+        });
+      }
+
+      toast.success(dutyForm.status === 'completed' ? "Duty marked successfully" : "Fine recorded successfully");
+      setDutyForm({
+        type: 'morning_shift',
+        status: 'completed',
+        comment: '',
+        fineAmount: '',
+        fineReason: ''
+      });
       fetchData();
     } catch (error) {
-      toast.error("Failed to mark duty");
+      toast.error("Failed to record assessment");
     } finally {
       setMarkingDuty(false);
     }
@@ -1043,9 +1093,18 @@ export default function StaffProfilePage() {
                   </p>
                 </div>
                 <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Salary</p>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Base Salary</p>
                   <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
                 </div>
+              </div>
+
+              <div className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] ${isDark ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-indigo-50 border-indigo-100 shadow-sm'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Till Date Salary</p>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-500 text-white text-[8px] font-black uppercase">{presentDaysCount} Days</span>
+                </div>
+                <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-indigo-600'}`}>₨{tillDateSalary.toLocaleString()}</p>
+                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Calculated minus ₨{staff?.totalFines?.toLocaleString() || 0} fines</p>
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-4 text-left border ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-amber-50/50 border-amber-100'}`}>
@@ -1101,8 +1160,8 @@ export default function StaffProfilePage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[7px] min-[400px]:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id
-                      ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20')
-                      : 'text-gray-500 hover:text-indigo-500'
+                    ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20')
+                    : 'text-gray-500 hover:text-indigo-500'
                     }`}
                 >
                   <span className="opacity-70">{tab.icon}</span> {tab.label}
@@ -1179,40 +1238,40 @@ export default function StaffProfilePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-8">
-                       <div className="text-center">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty In</p>
-                          <p className="text-sm font-black">{staff?.dutyStartTime || '09:00'}</p>
-                       </div>
-                       <div className="w-px h-8 bg-emerald-500/20" />
-                       <div className="text-center">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty Out</p>
-                          <p className="text-sm font-black">{staff?.dutyEndTime || '17:00'}</p>
-                       </div>
+                      <div className="text-center">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty In</p>
+                        <p className="text-sm font-black">{staff?.dutyStartTime || '09:00'}</p>
+                      </div>
+                      <div className="w-px h-8 bg-emerald-500/20" />
+                      <div className="text-center">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty Out</p>
+                        <p className="text-sm font-black">{staff?.dutyEndTime || '17:00'}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
-                        <Shield size={14} className="text-indigo-500" /> Active Dress Code
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                         {staff?.dressCodeConfig?.length ? staff.dressCodeConfig.map(i => (
-                           <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
-                         )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
-                      </div>
-                   </div>
-                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
-                        <ClipboardList size={14} className="text-teal-500" /> Operational Duties
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                         {staff?.dutyConfig?.length ? staff.dutyConfig.map(i => (
-                           <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
-                         )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
-                      </div>
-                   </div>
+                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                      <Shield size={14} className="text-indigo-500" /> Active Dress Code
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {staff?.dressCodeConfig?.length ? staff.dressCodeConfig.map(i => (
+                        <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
+                      )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
+                    </div>
+                  </div>
+                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                      <ClipboardList size={14} className="text-teal-500" /> Operational Duties
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {staff?.dutyConfig?.length ? staff.dutyConfig.map(i => (
+                        <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
+                      )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1261,7 +1320,7 @@ export default function StaffProfilePage() {
                     ) : (
                       specialTasks.map(task => (
                         <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') :
-                            isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
+                          isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
                           }`}>
                           <div>
                             <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
@@ -1276,7 +1335,7 @@ export default function StaffProfilePage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :
-                                task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
+                              task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
                               }`}>
                               {task.status}
                             </span>
@@ -1395,18 +1454,43 @@ export default function StaffProfilePage() {
                         <button
                           onClick={() => setDutyForm({ ...dutyForm, status: 'completed' })}
                           className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'completed'
-                              ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                            ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
+                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
                             }`}
                         >Completed</button>
                         <button
                           onClick={() => setDutyForm({ ...dutyForm, status: 'not_completed' })}
                           className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'not_completed'
-                              ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                            ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
+                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
                             }`}
-                        >Penalty</button>
+                        >Fine</button>
                       </div>
+
+                      {dutyForm.status === 'not_completed' && (
+                        <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                          <div>
+                            <label className="text-[9px] font-black text-rose-500 uppercase tracking-widest ml-1 mb-1 block">Fine Amount (PKR)</label>
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-rose-50 text-rose-900 placeholder:text-rose-300'}`}
+                              value={dutyForm.fineAmount}
+                              onChange={e => setDutyForm({ ...dutyForm, fineAmount: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black text-rose-500 uppercase tracking-widest ml-1 mb-1 block">Reason for Fine</label>
+                            <input
+                              type="text"
+                              placeholder="Late arrival / Misbehavior / etc."
+                              className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-rose-50 text-rose-900 placeholder:text-rose-300'}`}
+                              value={dutyForm.fineReason}
+                              onChange={e => setDutyForm({ ...dutyForm, fineReason: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-4">
                       <textarea
@@ -1502,7 +1586,7 @@ export default function StaffProfilePage() {
                             <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50">Shift In</span>
                           </td>
                           {daysInMonth().map(d => (
-                              <td
+                            <td
                               key={d}
                               className="px-1 py-4 text-center"
                             >
@@ -1511,7 +1595,7 @@ export default function StaffProfilePage() {
                                 className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.arrivalTime
                                   ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600')
                                   : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
-                                }`}
+                                  }`}
                               >
                                 {attendanceMap[d]?.arrivalTime || 'Set'}
                               </button>
@@ -1565,7 +1649,7 @@ export default function StaffProfilePage() {
                                 className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.departureTime
                                   ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-600')
                                   : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
-                                }`}
+                                  }`}
                               >
                                 {attendanceMap[d]?.departureTime || 'Set'}
                               </button>
@@ -1836,10 +1920,10 @@ export default function StaffProfilePage() {
                                 setEditForm({ ...editForm, secondaryDepts: [...current, d as StaffDept] });
                               }
                             }}
-                            className={`px-2 py-1 rounded-lg text-[7px] font-bold uppercase tracking-wider border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept) 
-                              ? 'bg-indigo-600 border-indigo-600 text-white' 
+                            className={`px-2 py-1 rounded-lg text-[7px] font-bold uppercase tracking-wider border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept)
+                              ? 'bg-indigo-600 border-indigo-600 text-white'
                               : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-200 text-gray-400')
-                            }`}
+                              }`}
                           >
                             {d}
                           </button>
@@ -1965,20 +2049,20 @@ export default function StaffProfilePage() {
                     <div className="space-y-3 mb-8 min-h-[100px]">
                       {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
                         <div key={key} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                           <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
-                             <span className="text-gray-400 font-extrabold uppercase whitespace-nowrap">{key.replace(/_/g, ' ')}:</span>
-                             <span className="break-all">{val}</span>
-                           </div>
-                           <button
-                             onClick={() => {
-                               const next = { ...editForm.basicInfoExtras };
-                               delete next[key];
-                               setEditForm({ ...editForm, basicInfoExtras: next });
-                             }}
-                             className="p-4 rounded-2xl bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
-                           >
-                             <Trash2 size={16} />
-                           </button>
+                          <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
+                            <span className="text-gray-400 font-extrabold uppercase whitespace-nowrap">{key.replace(/_/g, ' ')}:</span>
+                            <span className="break-all">{val}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const next = { ...editForm.basicInfoExtras };
+                              delete next[key];
+                              setEditForm({ ...editForm, basicInfoExtras: next });
+                            }}
+                            className="p-4 rounded-2xl bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       ))}
                       {Object.keys(editForm.basicInfoExtras || {}).length === 0 && (
@@ -1994,13 +2078,13 @@ export default function StaffProfilePage() {
                         placeholder="Label"
                         className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500'}`}
                         value={newExtraField.key}
-                        onChange={e => setNewExtraField({...newExtraField, key: e.target.value})}
+                        onChange={e => setNewExtraField({ ...newExtraField, key: e.target.value })}
                       />
                       <input
                         placeholder="Value"
                         className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500'}`}
                         value={newExtraField.value}
-                        onChange={e => setNewExtraField({...newExtraField, value: e.target.value})}
+                        onChange={e => setNewExtraField({ ...newExtraField, value: e.target.value })}
                       />
                       <button
                         onClick={() => {
@@ -2027,7 +2111,7 @@ export default function StaffProfilePage() {
                       <div>
                         <h4 className="text-sm font-black uppercase tracking-widest">Shift Timing</h4>
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                          Operational Hours — 
+                          Operational Hours —
                           <span className="text-emerald-500 ml-1">
                             {calculateDutyHours(editForm.dutyStartTime, editForm.dutyEndTime).text} total
                           </span>
@@ -2107,8 +2191,8 @@ export default function StaffProfilePage() {
                             />
                           )}
                           <div className="flex gap-3">
-                            <button 
-                              onClick={handleAddConfig} 
+                            <button
+                              onClick={handleAddConfig}
                               disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
                               className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
                             >
@@ -2142,7 +2226,7 @@ export default function StaffProfilePage() {
                   {/* Duty Config */}
                   <div className={`p-10 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-100/50 border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-8">
-                       <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white flex items-center justify-center">
                           <ClipboardList size={20} />
                         </div>
@@ -2186,8 +2270,8 @@ export default function StaffProfilePage() {
                             />
                           )}
                           <div className="flex gap-3">
-                            <button 
-                              onClick={handleAddConfig} 
+                            <button
+                              onClick={handleAddConfig}
                               disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
                               className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-2xl shadow-lg shadow-teal-500/20 transition-all disabled:opacity-50"
                             >
@@ -2219,7 +2303,7 @@ export default function StaffProfilePage() {
                   </div>
                 </div>
 
-                 {/* Bottom Synchronization Info */}
+                {/* Bottom Synchronization Info */}
                 <div className="mt-12 flex items-center justify-between px-10">
                   <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-zinc-600' : 'text-gray-400'}`}>
                     Last synchronized with global KhanHub registry
@@ -2291,8 +2375,8 @@ export default function StaffProfilePage() {
                         onChange={(e) => setDeleteConfirmText(e.target.value)}
                         placeholder={staff?.name}
                         className={`w-full h-16 rounded-2xl px-6 text-sm font-bold outline-none border-2 transition-all ${isDark
-                            ? 'bg-zinc-800 border-zinc-700 text-white focus:border-rose-500'
-                            : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-rose-500'
+                          ? 'bg-zinc-800 border-zinc-700 text-white focus:border-rose-500'
+                          : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-rose-500'
                           }`}
                       />
                     </div>
@@ -2392,8 +2476,8 @@ export default function StaffProfilePage() {
                           <div className="flex flex-col md:flex-row justify-between gap-6">
                             <div className="flex gap-4">
                               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' :
-                                  record.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
-                                    'bg-amber-500/10 text-amber-500'
+                                record.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
+                                  'bg-amber-500/10 text-amber-500'
                                 }`}>
                                 <DollarSign size={24} />
                               </div>
@@ -2403,8 +2487,8 @@ export default function StaffProfilePage() {
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                      record.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    record.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                      'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                     }`}>
                                     {record.status}
                                   </span>
