@@ -28,8 +28,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'hq',
     name: 'HQ',
     collection: 'hq_users',
-    domain: '@hq.Khan Hub.com',
-    legacyDomain: '@Khan Hub.io',
+    domain: '@hq.khanhub.com.pk',
+    legacyDomain: '@khanhub.io',
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -38,7 +38,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'rehab',
     name: 'Rehab',
     collection: 'rehab_users',
-    domain: '@rehab.Khan Hub',
+    domain: '@rehab.khanhub.com.pk',
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -47,7 +47,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'spims',
     name: 'SPIMS',
     collection: 'spims_users',
-    domain: '@spims.Khan Hub',
+    domain: '@spims.khanhub.com.pk',
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
     legacyDomain: '@spims.edu.pk',
@@ -57,7 +57,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'hospital',
     name: 'Hospital',
     collection: 'hospital_users',
-    domain: '@hospital.Khan Hub',
+    domain: '@hospital.khanhub.com.pk',
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -66,7 +66,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'sukoon',
     name: 'Sukoon',
     collection: 'sukoon_users',
-    domain: '@sukoon.Khan Hub',
+    domain: '@sukoon.khanhub.com.pk',
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -75,7 +75,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'welfare',
     name: 'Welfare',
     collection: 'welfare_users',
-    domain: '@welfare.Khan Hub',
+    domain: '@welfare.khanhub.com.pk',
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -84,8 +84,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'job-center',
     name: 'Job Center',
     collection: 'jobcenter_users',
-    domain: '@jobcenter.Khan Hub',
-    legacyDomain: '@job-center.Khan Hub',
+    domain: '@jobcenter.khanhub.com.pk',
+    legacyDomain: '@job-center.khanhub.com.pk',
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -94,7 +94,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'social-media',
     name: 'Social Media',
     collection: 'media_users',
-    domain: '@media.Khan Hub',
+    domain: '@media.khanhub.com.pk',
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -103,7 +103,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'it',
     name: 'IT',
     collection: 'it_users',
-    domain: '@it.Khan Hub',
+    domain: '@it.khanhub.com.pk',
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']
