@@ -28,7 +28,7 @@ import {
   ChevronUp,
   CheckCircle2,
   MessageCircle,
-  Twitter,
+
 } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { CgLogIn } from 'react-icons/cg';
@@ -44,7 +44,7 @@ export default function Footer() {
     { platform: 'facebook', url: SITE.social.facebook, icon: Facebook, label: 'Facebook', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600' },
     { platform: 'instagram', url: SITE.social.instagram, icon: Instagram, label: 'Instagram', hoverClass: 'hover:bg-pink-50 hover:border-pink-400 hover:text-pink-600' },
     { platform: 'youtube', url: SITE.social.youtube, icon: Youtube, label: 'YouTube', hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600' },
-    { platform: 'twitter', url: SITE.social.twitter, icon: Twitter, label: 'Twitter', hoverClass: 'hover:bg-sky-50 hover:border-sky-400 hover:text-sky-500' },
+
     { platform: 'tiktok', url: SITE.social.tiktok, icon: SiTiktok, label: 'TikTok', hoverClass: 'hover:bg-neutral-100 hover:border-neutral-400 hover:text-black' },
     { platform: 'linkedin', url: SITE.social.linkedin, icon: Linkedin, label: 'LinkedIn', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700' },
   ];
@@ -181,44 +181,40 @@ export default function Footer() {
               </li>
             </ul>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <div className="flex items-center gap-2">
-                {socialMedia.map(({ platform, url, icon: Icon, label, hoverClass }) => (
-                  <a
-                    key={platform}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md ${hoverClass}`}
-                    aria-label={label}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-success-500 border-2 border-white rounded-full shadow-sm"></span>
-                  </a>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 border-l border-neutral-200 pl-2">
-                {/* Dashboard Login Button */}
-                <Link
-                  href="/auth/signin"
-                  className="flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-xl bg-white text-neutral-600 hover:bg-blue-50 hover:text-blue-600 transition-all border-2 border-neutral-200 hover:border-blue-200 shadow-sm hover:shadow-md group"
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              {socialMedia.map(({ platform, url, icon: Icon, label, hoverClass }) => (
+                <a
+                  key={platform}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md ${hoverClass}`}
+                  aria-label={label}
                 >
-                  <CgLogIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  <span className="text-[8px] font-bold uppercase tracking-wider">Login</span>
-                </Link>
+                  <Icon className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-success-500 border-2 border-white rounded-full shadow-sm"></span>
+                </a>
+              ))}
 
-                {/* Mobile App Button */}
-                <Link
-                  href="/download-app"
-                  className="flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-xl bg-white text-neutral-600 hover:bg-success-50 hover:text-success-600 transition-all border-2 border-neutral-200 hover:border-success-200 shadow-sm hover:shadow-md group"
-                >
-                  <div className="animate-flip group-hover:scale-110 transition-transform">
-                    <Image src="/app-download.webp" alt="App" width={20} height={20} className="rounded-md" />
-                  </div>
-                  <span className="text-[8px] font-bold uppercase tracking-wider text-center leading-none">Mobile App</span>
-                </Link>
-              </div>
+              {/* Dashboard Login Button */}
+              <Link
+                href="/auth/signin"
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-white text-neutral-500 hover:bg-blue-50 hover:text-blue-600 transition-all border-2 border-neutral-200 hover:border-blue-200 shadow-sm hover:shadow-md group"
+                aria-label="Dashboard Login"
+              >
+                <CgLogIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              </Link>
+
+              {/* Mobile App Button */}
+              <Link
+                href="/download-app"
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-white text-neutral-500 hover:bg-success-50 hover:text-success-600 transition-all border-2 border-neutral-200 hover:border-success-200 shadow-sm hover:shadow-md group"
+                aria-label="Download Mobile App"
+              >
+                <div className="animate-flip group-hover:scale-110 transition-transform">
+                  <Image src="/app-download.webp" alt="App" width={20} height={20} className="rounded-md" />
+                </div>
+              </Link>
             </div>
           </div>
         </div>
