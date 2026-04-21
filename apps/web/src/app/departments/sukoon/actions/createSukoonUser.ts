@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/hq/auth/adminAuth';
 
-const DOMAIN = '@sukoon.Khan Hub';
+const DOMAIN = '@sukoon.khanhub.com.pk';
 
 export async function createSukoonUserServer(
   customId: string,

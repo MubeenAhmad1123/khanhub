@@ -1,29 +1,10 @@
 'use server'
 
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAdminApp } from '@/lib/hq/auth/adminAuth';
 
-const DOMAIN = '@welfare.Khan Hub';
-const ADMIN_APP_NAME = 'welfare-admin';
-
-function getAdminApp(): App {
-  const existing = getApps().find(a => a.name === ADMIN_APP_NAME);
-  if (existing) return existing;
-
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-
-  const sa = JSON.parse(json);
-
-  return initializeApp({
-    credential: cert({
-      projectId: sa.project_id,
-      clientEmail: sa.client_email,
-      privateKey: sa.private_key,
-    }),
-  }, ADMIN_APP_NAME);
-}
+const DOMAIN = '@welfare.khanhub.com.pk';
 
 export async function createWelfareUserServer(
   customId: string,
@@ -38,7 +19,7 @@ export async function createWelfareUserServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('welfare');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
 
@@ -154,7 +135,7 @@ export async function deactivateWelfareUser(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('welfare');
     await getAuth(app).updateUser(uid, { disabled: true });
     await getFirestore(app).collection('welfare_users').doc(uid).update({ isActive: false });
     try {
@@ -178,7 +159,7 @@ export async function resetWelfarePassword(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('welfare');
     await getAuth(app).updateUser(uid, { password: newPassword });
     await getFirestore(app).collection('welfare_users').doc(uid).update({ password: newPassword });
     return { success: true };
@@ -231,7 +212,7 @@ export async function markSetupComplete(
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('welfare');
     await getFirestore(app).collection('welfare_meta').doc('setup').set({
       completed: true,
       completedAt: new Date(),
@@ -255,7 +236,7 @@ export async function createStaffMemberServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('welfare');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
     const email = `${customId.toLowerCase()}${emailDomain}`;

@@ -1,28 +1,10 @@
 'use server'
 
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAdminApp } from '@/lib/hq/auth/adminAuth';
 
-const DOMAIN = '@jobcenter.Khan Hub';
-
-function getAdminApp(): App {
-  const existing = getApps().find((a: any) => a.name === 'job-center-admin');
-  if (existing) return existing;
-
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-
-  const sa = JSON.parse(json);
-
-  return initializeApp({
-    credential: cert({
-      projectId: sa.project_id,
-      clientEmail: sa.client_email,
-      privateKey: sa.private_key,
-    }),
-  }, 'job-center-admin');
-}
+const DOMAIN = '@jobcenter.khanhub.com.pk';
 
 export async function createJobCenterUserServer(
   customId: string,
@@ -38,7 +20,7 @@ export async function createJobCenterUserServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('job-center');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
 
@@ -164,7 +146,7 @@ export async function deactivateJobCenterUser(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('job-center');
     await getAuth(app).updateUser(uid, { disabled: true });
     await getFirestore(app).collection('jobcenter_users').doc(uid).update({ isActive: false });
     try {
@@ -188,7 +170,7 @@ export async function resetJobCenterPassword(
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
     return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('job-center');
     await getAuth(app).updateUser(uid, { password: newPassword });
     await getFirestore(app).collection('jobcenter_users').doc(uid).update({
       password: newPassword,
@@ -206,7 +188,7 @@ export async function markJobCenterSetupComplete(
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('job-center');
     await getFirestore(app).collection('jobcenter_meta').doc('setup').set({
       completed: true,
       completedAt: new Date(),
@@ -230,7 +212,7 @@ export async function createJobCenterStaffMemberServer(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
   try {
-    const app = getAdminApp();
+    const app = getAdminApp('job-center');
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
     const email = `${customId.toLowerCase()}${emailDomain}`;

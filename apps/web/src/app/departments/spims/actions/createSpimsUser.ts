@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/hq/auth/adminAuth';
 
-const DOMAIN = '@spims.Khan Hub';
+const DOMAIN = '@spims.khanhub.com.pk';
 
 export async function createSpimsUserServer(
   customId: string,

@@ -29,7 +29,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com.pk',
-    legacyDomains: ['@hq.khanhub.com', '@hq.Khan Hub.com', '@khanhub.io'],
+    legacyDomains: ['@hq.khanhub.com', '@khanhub.io'],
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -39,7 +39,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Rehab',
     collection: 'rehab_users',
     domain: '@rehab.khanhub.com.pk',
-    legacyDomains: ['@rehab.khanhub.com', '@rehab.Khan Hub'],
+    legacyDomains: ['@rehab.khanhub.com'],
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -49,7 +49,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'SPIMS',
     collection: 'spims_users',
     domain: '@spims.khanhub.com.pk',
-    legacyDomains: ['@spims.khanhub.com', '@spims.Khan Hub', '@spims.edu.pk'],
+    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk'],
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
     prefixes: ['SPIMS', 'STU', 'STUDENT']
@@ -59,7 +59,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Hospital',
     collection: 'hospital_users',
     domain: '@hospital.khanhub.com.pk',
-    legacyDomains: ['@hospital.khanhub.com', '@hospital.Khan Hub'],
+    legacyDomains: ['@hospital.khanhub.com'],
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -69,7 +69,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Sukoon',
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub.com.pk',
-    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.Khan Hub'],
+    legacyDomains: ['@sukoon.khanhub.com'],
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -79,7 +79,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Welfare',
     collection: 'welfare_users',
     domain: '@welfare.khanhub.com.pk',
-    legacyDomains: ['@welfare.khanhub.com', '@welfare.Khan Hub'],
+    legacyDomains: ['@welfare.khanhub.com'],
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -89,7 +89,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub.com.pk',
-    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.Khan Hub', '@job-center.khanhub.com.pk'],
+    legacyDomains: ['@jobcenter.khanhub.com', '@job-center.khanhub.com.pk'],
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -99,7 +99,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Social Media',
     collection: 'media_users',
     domain: '@media.khanhub.com.pk',
-    legacyDomains: ['@media.Khan Hub'],
+    legacyDomains: ['@media.khanhub.com'],
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -109,7 +109,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'IT',
     collection: 'it_users',
     domain: '@it.khanhub.com.pk',
-    legacyDomains: ['@it.Khan Hub'],
+    legacyDomains: ['@it.khanhub.com'],
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']
@@ -276,8 +276,9 @@ export async function loginUniversal(customId: string, password: string, deptHin
       // Try any explicit email stored in Firestore first
       if (finalData.email && typeof finalData.email === 'string' && finalData.email.includes('@')) {
         try {
-          console.log('[UniversalAuth] Trying Firestore email:', finalData.email);
-          cred = await signInWithEmailAndPassword(auth, finalData.email, password);
+          const cleanEmail = finalData.email.replace(/\s+/g, '');
+          console.log('[UniversalAuth] Trying Firestore email:', cleanEmail);
+          cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
         } catch (e: any) {
           lastError = e;
         }
@@ -287,7 +288,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
       if (!cred) {
         for (const prefix of prefixes) {
           for (const domain of domains) {
-            const email = `${prefix}${domain}`;
+            const email = `${prefix}${domain}`.replace(/\s+/g, '');
             try {
               console.log('[UniversalAuth] Trying generated email:', email);
               cred = await signInWithEmailAndPassword(auth, email, password);

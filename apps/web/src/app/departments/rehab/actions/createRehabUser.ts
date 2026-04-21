@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/hq/auth/adminAuth';
 
-const DOMAIN = '@rehab.Khan Hub';
+const DOMAIN = '@rehab.khanhub.com.pk';
 
 export async function createRehabUserServer(
   customId: string,
@@ -142,7 +142,7 @@ export async function createRehabUserServer(
   }
 }
 
-const SPIMS_DOMAIN = '@spims.Khan Hub';
+const SPIMS_DOMAIN = '@spims.khanhub.com.pk';
 
 /** Creates Firebase Auth + `spims_users` doc for a student portal login. */
 export async function createSpimsStudentUserServer(
