@@ -30,6 +30,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
+import { CgLogIn } from 'react-icons/cg';
 import { SITE } from '@/data/site';
 import { DEPARTMENTS } from '@/data/departments';
 import GoogleTranslateWidget from '@/components/ui/GoogleTranslateWidget';
@@ -43,7 +44,9 @@ export default function Footer() {
     { platform: 'instagram', url: SITE.social.instagram, icon: Instagram, label: 'Instagram', hoverClass: 'hover:bg-pink-50 hover:border-pink-400 hover:text-pink-600' },
     { platform: 'youtube', url: SITE.social.youtube, icon: Youtube, label: 'YouTube', hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600' },
     { platform: 'tiktok', url: SITE.social.tiktok, icon: SiTiktok, label: 'TikTok', hoverClass: 'hover:bg-neutral-100 hover:border-neutral-400 hover:text-black' },
-    { platform: 'linkedin', url: SITE.social.linkedin, icon: Linkedin, label: 'LinkedIn', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700' }
+    { platform: 'linkedin', url: SITE.social.linkedin, icon: Linkedin, label: 'LinkedIn', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700' },
+    { platform: 'login', url: '/auth/signin', icon: CgLogIn, label: 'Login', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600' },
+    { platform: 'app', url: '/download-app', icon: () => <Image src="/app-download.webp" alt="App" width={20} height={20} className="rounded-md" />, label: 'Download App', hoverClass: 'hover:bg-primary-50 hover:border-primary-400 hover:text-primary-600' },
   ];
 
   return (
@@ -188,7 +191,7 @@ export default function Footer() {
                   className={`relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md ${hoverClass}`}
                   aria-label={label}
                 >
-                  <Icon className="w-4 h-4" />
+                  {typeof Icon === 'function' ? <Icon className="w-4 h-4" /> : Icon}
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-success-500 border-2 border-white rounded-full shadow-sm"></span>
                 </a>
               ))}

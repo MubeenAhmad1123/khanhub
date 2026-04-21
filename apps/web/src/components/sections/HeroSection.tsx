@@ -529,7 +529,7 @@ export default function HeroSection() {
         className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4"
       >
         <Link
-          href="https://job.Khan Hub.com.pk/"
+          href="https://job.khanhub.com.pk/"
           target="_blank"
           rel="noopener noreferrer"
           className="group inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500/10 hover:bg-primary-500 border border-primary-400/40 hover:border-primary-500 rounded-full text-primary-700 hover:text-white text-sm font-semibold transition-all duration-300 hover:scale-105 hover:shadow-primary-md backdrop-blur-sm"
@@ -553,8 +553,8 @@ export default function HeroSection() {
             '@type': 'Organization',
             name: 'Khan Hub',
             description: 'Leading Pakistan\'s social welfare transformation with 16+ specialized departments',
-            url: 'https://Khan Hub.com.pk',
-            logo: 'https://Khan Hub.com.pk/logo-circle.webp',
+            url: 'https://khanhub.com.pk',
+            logo: 'https://khanhub.com.pk/logo-circle.webp',
             contactPoint: {
               '@type': 'ContactPoint',
               telephone: '+92-67-3364220',
@@ -563,8 +563,8 @@ export default function HeroSection() {
             },
             areaServed: 'PK',
             sameAs: [
-              'https://www.facebook.com/Khan Hub.com.pk/',
-              'https://www.instagram.com/Khan Hub.com.pk/'
+              'https://www.facebook.com/khanhub.com.pk/',
+              'https://www.instagram.com/khanhub.com.pk/'
             ]
           })
         }}

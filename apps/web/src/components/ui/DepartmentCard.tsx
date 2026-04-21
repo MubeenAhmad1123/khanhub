@@ -265,11 +265,11 @@ const DepartmentCard = memo(function DepartmentCard({
                         '@type': 'GovernmentService',
                         name: department.name,
                         description: department.description,
-                        url: `https://Khan Hub.com.pk/departments/${department.slug}`,
+                        url: `https://khanhub.com.pk/departments/${department.slug}`,
                         provider: {
                             '@type': 'GovernmentOrganization',
                             name: 'Khan Hub',
-                            url: 'https://Khan Hub.com.pk'
+                            url: 'https://khanhub.com.pk'
                         },
                         areaServed: {
                             '@type': 'Country',

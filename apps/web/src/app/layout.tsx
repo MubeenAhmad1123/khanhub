@@ -20,7 +20,7 @@ export const viewport: Viewport = {
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
-  metadataBase: new URL('https://Khan Hub.com.pk'),
+  metadataBase: new URL('https://khanhub.com.pk'),
 
   title: {
     default: "Khan Hub - Empowering Lives Through Care | Pakistan's Leading Welfare Organization",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     'medical assistance Pakistan',
   ],
 
-  authors: [{ name: 'Khan Hub', url: 'https://Khan Hub.com.pk' }],
+  authors: [{ name: 'Khan Hub', url: 'https://khanhub.com.pk' }],
   creator: 'Khan Hub',
   publisher: 'Khan Hub',
 
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_PK',
-    url: 'https://Khan Hub.com.pk',
+    url: 'https://khanhub.com.pk',
     siteName: 'Khan Hub',
     title: 'Khan Hub - Empowering Lives Through Care',
     description: "Leading Pakistan's social welfare transformation with 16+ specialized departments",
@@ -110,9 +110,9 @@ export const metadata: Metadata = {
   },
 
   alternates: {
-    canonical: 'https://Khan Hub.com.pk',
+    canonical: 'https://khanhub.com.pk',
     languages: {
-      'en-PK': 'https://Khan Hub.com.pk',
+      'en-PK': 'https://khanhub.com.pk',
     },
   },
 

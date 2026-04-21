@@ -312,7 +312,7 @@ export function DonateCTASection() {
                         recipient: {
                             '@type': 'Organization',
                             name: 'Khan Hub',
-                            url: 'https://Khan Hub.com.pk'
+                            url: 'https://khanhub.com.pk'
                         },
                         actionStatus: 'https://schema.org/PotentialActionStatus'
                     })

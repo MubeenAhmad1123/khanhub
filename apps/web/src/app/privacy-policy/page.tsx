@@ -24,7 +24,7 @@ const SECTIONS = [
   },
   {
     title: 'Your Rights',
-    content: 'You have the right to access, correct, or delete your personal data at any time. Simply contact us at info@Khan Hub.com.pk with your request, and we will process it within 7 business days.',
+    content: 'You have the right to access, correct, or delete your personal data at any time. Simply contact us at info@khanhub.com.pk with your request, and we will process it within 7 business days.',
   },
   {
     title: 'Changes to This Policy',

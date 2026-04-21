@@ -311,7 +311,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
     if (dept.id === 'hq' && finalData.role === 'superadmin') {
       return {
         success: false,
-        error: 'HQ Superadmin access requires Google Sign-in. Please use the "Continue with Google" button at Khan Hub.com.pk/auth/signin',
+        error: 'HQ Superadmin access requires Google Sign-in. Please use the "Continue with Google" button at khanhub.com.pk/auth/signin',
       };
     }
 

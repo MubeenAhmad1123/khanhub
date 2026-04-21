@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title: 'Official Certificates & Legal Registrations - Khan Hub',
     description:
       'Official registration documents, NGO approvals, healthcare accreditations, and legal certificates of Khan Hub - Pakistan\'s trusted welfare organization since 2015.',
-    url: `${SITE.url || 'https://Khan Hub.com.pk'}/certificates`,
+    url: `${SITE.url || 'https://khanhub.com.pk'}/certificates`,
     type: 'website',
     images: [
       {
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   },
 
   alternates: {
-    canonical: `${SITE.url || 'https://Khan Hub.com.pk'}/certificates`,
+    canonical: `${SITE.url || 'https://khanhub.com.pk'}/certificates`,
   },
 
   robots: {
@@ -101,7 +101,7 @@ export default function CertificatesPage() {
               '@context': 'https://schema.org',
               '@type': 'NGO',
               name: 'Khan Hub',
-              url: SITE.url || 'https://Khan Hub.com.pk',
+              url: SITE.url || 'https://khanhub.com.pk',
               description:
                 'Verified welfare and healthcare organization in Pakistan with official registrations from SECP, FBR, and Punjab Health Department',
               foundingDate: '2015',

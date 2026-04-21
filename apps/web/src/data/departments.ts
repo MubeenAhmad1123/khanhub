@@ -584,7 +584,7 @@ export const DEPARTMENTS: Department[] = [
     facilities: ['Career Centers', 'Computer Labs', 'Interview Rooms', 'Resource Libraries'],
     contactPhone: '0300-6395220',
     contactEmail: 'jobs@Khan Hub.pk',
-    externalUrl: 'https://job.Khan Hub.com.pk/'
+    externalUrl: 'https://job.khanhub.com.pk/'
   },
   {
     slug: 'skill-development',

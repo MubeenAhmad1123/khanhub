@@ -163,8 +163,8 @@ export default function ContactPage() {
               closes: '23:59'
             },
             sameAs: [
-              'https://www.facebook.com/Khan Hub.com.pk/',
-              'https://www.instagram.com/Khan Hub.com.pk/'
+              'https://www.facebook.com/khanhub.com.pk/',
+              'https://www.instagram.com/khanhub.com.pk/'
             ]
           })
         }}

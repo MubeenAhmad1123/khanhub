@@ -322,6 +322,16 @@ export default function Navbar() {
                 <span className="hidden lg:inline group-hover:text-red-700 transition-colors">Emergency</span>
               </Link>
               <Link
+                href="/download-app"
+                className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-bold text-primary-600 bg-primary-50/70 border-2 border-primary-200/60 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 transition-all duration-300 whitespace-nowrap group shadow-sm shadow-primary-200/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                aria-label="Download Mobile App"
+              >
+                <div className="animate-flip">
+                  <Image src="/app-download.webp" alt="App" width={18} height={18} className="rounded-md" />
+                </div>
+                <span>Download App</span>
+              </Link>
+              <Link
                 href="/donate"
                 className="flex items-center gap-2 px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 rounded-lg text-xs sm:text-sm lg:text-sm font-bold text-white bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700 shadow-lg shadow-success-500/30 hover:shadow-success-500/50 hover:scale-105 transition-all duration-300 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-success-500 focus:ring-offset-2"
               >
@@ -541,6 +551,16 @@ export default function Navbar() {
                 className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700 shadow-lg shadow-success-500/30 hover:shadow-success-500/50 hover:scale-105 transition-all duration-300 touch-manipulation min-h-[44px]"
               >
                 <span aria-hidden="true">💝</span> Donate Now
+              </Link>
+              <Link
+                href="/download-app"
+                onClick={closeMobileMenu}
+                className="flex items-center justify-center gap-2.5 px-4 py-4 rounded-xl bg-primary-50/70 border-2 border-primary-200/60 text-primary-600 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 text-sm font-bold transition-all duration-300 group shadow-sm shadow-primary-200/30 touch-manipulation min-h-[44px]"
+              >
+                <div className="animate-flip">
+                  <Image src="/app-download.webp" alt="App" width={20} height={20} className="rounded-md" />
+                </div>
+                Download Mobile App
               </Link>
 
               <div className="flex flex-col items-center gap-4 pt-4 border-t border-neutral-100">

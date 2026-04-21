@@ -91,7 +91,7 @@ export default function HqLoginPage() {
   const SUPERADMIN_EMAILS = [
     'mk.rana.0301@gmail.com',
     'mubeenahma1123@gmail.com',
-    'Khan Hubnetwork@gmail.com',
+    'khanhubnetwork@gmail.com',
     'dilshad4408@gmail.com',
   ];
 

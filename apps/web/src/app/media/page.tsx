@@ -913,8 +913,8 @@ export default function MediaPage() {
               '@type': 'MediaGallery',
               name: 'Khan Hub Media Gallery',
               description: 'Videos and photos from Khan Hub healthcare, education, and welfare programs',
-              url: 'https://Khan Hub.com.pk/media',
-              image: 'https://Khan Hub.com.pk/og-media.jpg',
+              url: 'https://khanhub.com.pk/media',
+              image: 'https://khanhub.com.pk/og-media.jpg',
             }),
           }}
         />

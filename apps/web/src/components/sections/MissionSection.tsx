@@ -253,7 +253,7 @@ export function MissionSection() {
             mainEntity: {
               '@type': 'Organization',
               name: 'Khan Hub',
-              url: 'https://Khan Hub.com.pk',
+              url: 'https://khanhub.com.pk',
               numberOfEmployees: {
                 '@type': 'QuantitativeValue',
                 value: '50000+',
