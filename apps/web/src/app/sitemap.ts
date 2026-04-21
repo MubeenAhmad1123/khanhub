@@ -37,32 +37,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
     }));
 
-    // Dynamic program pages
+    // Dynamic program pages (only those with defined slugs)
     const programRoutes = DEPARTMENTS.flatMap((dept) => {
-        if (Array.isArray(dept.programs)) {
-            return (dept.programs as any[]).map((program) => ({
+        if (!Array.isArray(dept.programs)) return [];
+        return (dept.programs as any[])
+            .filter(p => typeof p === 'object' && p !== null && p.slug)
+            .map((program) => ({
                 url: `${baseUrl}/departments/${dept.slug}/${program.slug}`,
                 lastModified: new Date(),
                 changeFrequency: 'weekly' as const,
                 priority: 0.6,
             }));
-        }
-        return [];
     });
 
-    // Institute courses
-    const courseRoutes = DEPARTMENTS
-        .filter(dept => dept.slug === 'institute-health-sciences')
-        .flatMap(dept => {
-            return (dept.subDepartments || []).flatMap(sub => {
-                return (sub.courses || []).map(course => ({
+    // Sub-department courses (e.g. Institute and Rehab courses)
+    const courseRoutes = DEPARTMENTS.flatMap((dept) => {
+        if (!Array.isArray(dept.subDepartments)) return [];
+        return dept.subDepartments.flatMap(sub => {
+            if (!Array.isArray(sub.courses)) return [];
+            return sub.courses
+                .filter(course => course && course.slug)
+                .map(course => ({
                     url: `${baseUrl}/departments/${dept.slug}/${course.slug}`,
                     lastModified: new Date(),
                     changeFrequency: 'weekly' as const,
                     priority: 0.6,
                 }));
-            });
         });
+    });
 
     return [...routes, ...departmentRoutes, ...programRoutes, ...courseRoutes];
 }
