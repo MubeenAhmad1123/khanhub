@@ -91,7 +91,7 @@ export default function HqLoginPage() {
   const SUPERADMIN_EMAILS = [
     'mk.rana.0301@gmail.com',
     'mubeenahma1123@gmail.com',
-    'khanhubnetwork@gmail.com',
+    'Khan Hubnetwork@gmail.com',
     'dilshad4408@gmail.com',
   ];
 
@@ -147,7 +147,7 @@ export default function HqLoginPage() {
     <div className="min-h-screen bg-[#fcfdfd] flex items-center justify-center p-6">
       <div className="w-full max-w-lg bg-white p-12 rounded-[50px] shadow-2xl shadow-gray-200/50 border border-gray-100 flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <div className="text-center">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">KhanHub HQ Portal</h1>
+          <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">Khan Hub HQ Portal</h1>
           <p className="text-[#1D9E75] font-black uppercase text-xs tracking-[0.4em] ml-1">Superadmin · Manager · Cashier</p>
         </div>
 

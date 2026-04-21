@@ -3,7 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';   // use existing firebase config
 import type { JobCenterUser } from '@/types/job-center';
 
-const DOMAIN = '@job-center.khanhub';
+const DOMAIN = '@job-center.Khan Hub';
 
 export function buildEmail(customId: string): string {
   return `${customId.trim().toLowerCase()}${DOMAIN}`;

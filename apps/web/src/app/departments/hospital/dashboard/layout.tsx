@@ -208,7 +208,7 @@ export default function HospitalDashboardLayout({
                 </div>
                 <div>
                   <h1 className="font-bold text-slate-900 dark:text-white leading-none">Hospital</h1>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-1">KhanHub Ecosystem</p>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-1">Khan Hub Ecosystem</p>
                 </div>
               </div>
             </div>

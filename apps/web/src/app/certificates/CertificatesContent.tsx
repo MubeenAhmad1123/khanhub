@@ -84,7 +84,7 @@ const RAW_CERTIFICATES = [
         icon: '✅',
         type: 'support' as const,
         status: 'Active' as const,
-        imagePath: '/images/certificats/MOU_DPO_Vehari_KhanHubMedicalCenter.webp',
+        imagePath: '/images/certificats/MOU_DPO_Vehari_Khan HubMedicalCenter.webp',
       },
       {
         title: 'MOU with DPO Vehari - Khan Hub Rehab Center',
@@ -93,7 +93,7 @@ const RAW_CERTIFICATES = [
         icon: '✅',
         type: 'support' as const,
         status: 'Active' as const,
-        imagePath: '/images/certificats/MOU_DPO_Vehari_KhanHubRehabCenter.webp',
+        imagePath: '/images/certificats/MOU_DPO_Vehari_Khan HubRehabCenter.webp',
       },
       {
         title: 'MOU with South Punjab Institute of Medical Sciences',

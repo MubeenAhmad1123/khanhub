@@ -22,7 +22,7 @@ export interface UploadProgress {
  */
 export async function uploadToCloudinary(
     file: File,
-    folder: string = 'khanhub/rehab',
+    folder: string = 'Khan Hub/rehab',
     onProgress?: (progress: UploadProgress) => void,
     resourceType: 'image' | 'video' | 'auto' | 'raw' = 'auto'
 ): Promise<string> {

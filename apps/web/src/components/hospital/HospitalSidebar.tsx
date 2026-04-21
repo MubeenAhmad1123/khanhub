@@ -31,7 +31,7 @@ export default function HospitalSidebar({ role, patientId }: { role: HospitalRol
   return (
     <aside className="w-64 bg-white border-r border-gray-100 flex-shrink-0 flex flex-col min-h-screen">
       <div className="p-6 border-b border-gray-50 flex items-center gap-3">
-        <img src="/logo.webp" alt="KhanHub" className="w-8 h-8 rounded-lg" />
+        <img src="/logo.webp" alt="Khan Hub" className="w-8 h-8 rounded-lg" />
         <span className="font-bold text-[#1D9E75] text-lg">Hospital Portal</span>
       </div>
       <nav className="flex-1 p-4 space-y-1">

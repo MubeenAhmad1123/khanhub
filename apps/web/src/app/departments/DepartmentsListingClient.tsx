@@ -335,7 +335,7 @@ export default function DepartmentsListingClient() {
                                 '@type': 'GovernmentService',
                                 name: dept.name,
                                 description: dept.description,
-                                url: `https://khanhub.com.pk/departments/${dept.slug}`
+                                url: `https://Khan Hub.com.pk/departments/${dept.slug}`
                             }
                         }))
                     })

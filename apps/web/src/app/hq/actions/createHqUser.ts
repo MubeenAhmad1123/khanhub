@@ -5,7 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import type { HqUser, HqRole, HqMeta } from '@/types/hq';
 
-const DOMAIN = '@hq.khanhub.com';
+const DOMAIN = '@hq.Khan Hub.com';
 
 function getAdminApp(): App {
   const existing = getApps().find(a => a.name === 'hq-admin');
@@ -52,7 +52,7 @@ export async function createHqUserServer(data: {
     const app = getAdminApp();
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
-    const email = `${data.customId.toLowerCase()}@hq.khanhub.com`;
+    const email = `${data.customId.toLowerCase()}@hq.Khan Hub.com`;
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);

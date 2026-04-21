@@ -3,7 +3,7 @@ import { DEPARTMENTS } from '@/data/departments';
 import { SITE } from '@/data/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = SITE.url || 'https://khanhub.com.pk';
+    const baseUrl = SITE.url || 'https://Khan Hub.com.pk';
 
     // Specific pages
     const routes = [

@@ -244,7 +244,7 @@ export const DEPARTMENTS: Department[] = [
       'Patient Wards'
     ],
     contactPhone: '0300-6395220',
-    contactEmail: 'emergency@medicalcenter.khanhub.pk'
+    contactEmail: 'emergency@medicalcenter.Khan Hub.pk'
   },
   {
     slug: 'rehabilitation',
@@ -419,7 +419,7 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['Therapy Rooms', 'Counseling Centers', 'Residential Units', 'Exercise Areas', 'Group Therapy Halls'],
     contactPhone: '0300-6395220',
-    contactEmail: 'rehab@khanhub.pk'
+    contactEmail: 'rehab@Khan Hub.pk'
   },
   {
     slug: 'education',
@@ -496,7 +496,7 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['District Offices', 'Training Centers', 'Assessment Centers', 'Resource Libraries'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@education.khanhub.pk'
+    contactEmail: 'info@education.Khan Hub.pk'
   },
   {
     slug: 'sukoon-center',
@@ -517,7 +517,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Individual Counseling', 'Group Therapy', 'Mindfulness Workshops', 'Yoga & Meditation'],
     facilities: ['Meditation Rooms', 'Therapy Suites', 'Relaxation Gardens'],
     contactPhone: '0300-6395220',
-    contactEmail: 'sukoon@khanhub.pk'
+    contactEmail: 'sukoon@Khan Hub.pk'
   },
   {
     slug: 'job-placement',
@@ -583,8 +583,8 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['Career Centers', 'Computer Labs', 'Interview Rooms', 'Resource Libraries'],
     contactPhone: '0300-6395220',
-    contactEmail: 'jobs@khanhub.pk',
-    externalUrl: 'https://job.khanhub.com.pk/'
+    contactEmail: 'jobs@Khan Hub.pk',
+    externalUrl: 'https://job.Khan Hub.com.pk/'
   },
   {
     slug: 'skill-development',
@@ -605,7 +605,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['IT Training', 'Welding & Fabrication', 'Electrical Work', 'Plumbing', 'Beautician Courses', 'Tailoring'],
     facilities: ['Training Workshops', 'Computer Labs', 'Practice Areas', 'Certification Centers'],
     contactPhone: '0300-6395220',
-    contactEmail: 'skills@khanhub.pk'
+    contactEmail: 'skills@Khan Hub.pk'
   },
   {
     slug: 'surgical-repair',
@@ -626,7 +626,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Reconstructive Surgery', 'Cosmetic Surgery', 'Burn Unit', 'Trauma Surgery', 'Microsurgery'],
     facilities: ['Specialized Operating Theaters', 'Burn Unit', 'Recovery Rooms', 'Physiotherapy', 'Counseling Center'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@surgicalrepair.khanhub.pk'
+    contactEmail: 'info@surgicalrepair.Khan Hub.pk'
   },
   {
     slug: 'transport',
@@ -681,7 +681,7 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['License Centers', 'Registration Offices', 'Testing Tracks', 'Customer Service Centers'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@transport.khanhub.pk'
+    contactEmail: 'info@transport.Khan Hub.pk'
   },
   {
     slug: 'surgical-services',
@@ -702,7 +702,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['General Surgery', 'Orthopedic Surgery', 'Cardiac Surgery', 'Neurosurgery', 'Laparoscopic Surgery'],
     facilities: ['Modern Operating Rooms', 'Recovery Wards', 'ICU', 'Surgical Equipment', 'Sterilization Units'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@surgical.khanhub.pk'
+    contactEmail: 'info@surgical.Khan Hub.pk'
   },
   {
     slug: 'prosthetic-services',
@@ -723,7 +723,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Custom Prosthetics', 'Orthotic Solutions', 'Adaptive Technology', 'Mobility Training'],
     facilities: ['Prosthetic Labs', 'Assessment Rooms', 'Training Centers'],
     contactPhone: '0300-6395220',
-    contactEmail: 'prosthetics@khanhub.pk'
+    contactEmail: 'prosthetics@Khan Hub.pk'
   },
   {
     slug: 'residential-services',
@@ -744,7 +744,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Affordable Housing', 'Urban Development', 'Building Permits', 'Infrastructure Development'],
     facilities: ['Planning Offices', 'Approval Centers', 'Display Centers', 'Customer Service'],
     contactPhone: '0300-6395220',
-    contactEmail: 'housing@khanhub.pk'
+    contactEmail: 'housing@Khan Hub.pk'
   },
   {
     slug: 'tourism',
@@ -765,7 +765,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Tourist Guides', 'Heritage Conservation', 'Tourism Promotion', 'Hospitality Training'],
     facilities: ['Information Centers', 'Tourist Facilitation Centers', 'Heritage Museums', 'Rest Areas'],
     contactPhone: '0300-6395220',
-    contactEmail: 'tourism@khanhub.pk'
+    contactEmail: 'tourism@Khan Hub.pk'
   },
   {
     slug: 'marketing',
@@ -786,7 +786,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Digital Marketing', 'Trade Fairs', 'Export Support', 'Brand Development', 'Market Analysis'],
     facilities: ['Marketing Centers', 'Exhibition Halls', 'Conference Rooms', 'Media Studios'],
     contactPhone: '0300-6395220',
-    contactEmail: 'marketing@khanhub.pk'
+    contactEmail: 'marketing@Khan Hub.pk'
   },
   {
     slug: 'enterprises',
@@ -807,7 +807,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Startup Incubator', 'SME Support', 'Investment Network', 'Business Training'],
     facilities: ['Co-working Spaces', 'Meeting Rooms', 'Innovation Hubs'],
     contactPhone: '0300-6395220',
-    contactEmail: 'enterprises@khanhub.pk'
+    contactEmail: 'enterprises@Khan Hub.pk'
   },
   {
     slug: 'institute-health-sciences',
@@ -829,7 +829,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Pharmacy Technician', 'LHV', 'CNA', 'OTT', 'MLT'],
     facilities: ['Modern Labs', 'Hostel Facility', 'Digital Library', 'Clinical Training'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@ihs.khanhub.pk',
+    contactEmail: 'info@ihs.Khan Hub.pk',
     features: [
       'Less Fee Structure',
       'Better Educational Standards',
@@ -1181,7 +1181,7 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['Welfare Centers', 'Community Halls', 'Support Offices', 'Distribution Points'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@welfare.khanhub.pk'
+    contactEmail: 'info@welfare.Khan Hub.pk'
   }
 ];
 

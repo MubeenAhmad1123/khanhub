@@ -370,7 +370,7 @@ export default function CashierStationPage() {
     try {
       let proofUrl: string | undefined;
       if (forwardProofFile) {
-        proofUrl = await uploadToCloudinary(forwardProofFile, 'khanhub/hq/receipts');
+        proofUrl = await uploadToCloudinary(forwardProofFile, 'Khan Hub/hq/receipts');
       }
 
       const updatePayload: Record<string, any> = {
@@ -519,7 +519,7 @@ export default function CashierStationPage() {
     try {
       let proofUrl: string | undefined;
       if (proofFile) {
-        proofUrl = await uploadToCloudinary(proofFile, 'khanhub/hq/receipts');
+        proofUrl = await uploadToCloudinary(proofFile, 'Khan Hub/hq/receipts');
       }
 
       const createPayload: Record<string, any> = {

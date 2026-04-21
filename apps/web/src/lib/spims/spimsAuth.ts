@@ -3,7 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';   // use existing firebase config
 import type { SpimsUser } from '@/types/spims';
 
-const DOMAIN = '@spims.khanhub';
+const DOMAIN = '@spims.Khan Hub';
 const LEGACY_DOMAIN = '@spims.edu.pk';
 
 export function buildEmail(customId: string): string {

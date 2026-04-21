@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\app\departments\job-center\dashboard\admin\finance\page.tsx
+// d:\Khan Hub\apps\web\src\app\departments\job-center\dashboard\admin\finance\page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';

@@ -4,7 +4,7 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const DOMAIN = '@rehab.khanhub';
+const DOMAIN = '@rehab.Khan Hub';
 
 function getAdminApp(): App {
   const existing = getApps().find(a => a.name === 'rehab-admin');
@@ -263,7 +263,7 @@ export async function createStaffMemberServer(
   customId: string,
   password: string,
   displayName: string,
-  emailDomain: string = '@rehab.khanhub',
+  emailDomain: string = '@rehab.Khan Hub',
   userCollection: string = 'rehab_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;

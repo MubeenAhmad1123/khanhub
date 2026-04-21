@@ -219,7 +219,7 @@ export default function ManagerStaffPage() {
               onChange={e => setDeptFilter(e.target.value)}
             >
               <option value="all">Global Matrix</option>
-              <option value="hq">KhanHub HQ</option>
+              <option value="hq">Khan Hub HQ</option>
               <option value="rehab">Rehab Center</option>
               <option value="spims">SPIMS Academy</option>
               <option value="hospital">Hospital</option>

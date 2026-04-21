@@ -25,12 +25,12 @@ function getAdminApp(): App {
 }
 
 const DEPT_CONFIGS = [
-  { domain: '@rehab.khanhub', collection: 'rehab_users', pathBase: '/departments/rehab/dashboard' },
-  { domain: '@jobcenter.khanhub', collection: 'jobcenter_users', pathBase: '/departments/job-center/dashboard' },
-  { domain: '@spims.khanhub', collection: 'spims_users', pathBase: '/departments/spims/dashboard' },
-  { domain: '@hospital.khanhub', collection: 'hospital_users', pathBase: '/departments/hospital/dashboard' },
-  { domain: '@sukoon.khanhub', collection: 'sukoon_users', pathBase: '/departments/sukoon/dashboard' },
-  { domain: '@welfare.khanhub', collection: 'welfare_users', pathBase: '/departments/welfare/dashboard' },
+  { domain: '@rehab.Khan Hub', collection: 'rehab_users', pathBase: '/departments/rehab/dashboard' },
+  { domain: '@jobcenter.Khan Hub', collection: 'jobcenter_users', pathBase: '/departments/job-center/dashboard' },
+  { domain: '@spims.Khan Hub', collection: 'spims_users', pathBase: '/departments/spims/dashboard' },
+  { domain: '@hospital.Khan Hub', collection: 'hospital_users', pathBase: '/departments/hospital/dashboard' },
+  { domain: '@sukoon.Khan Hub', collection: 'sukoon_users', pathBase: '/departments/sukoon/dashboard' },
+  { domain: '@welfare.Khan Hub', collection: 'welfare_users', pathBase: '/departments/welfare/dashboard' },
 ];
 
 export async function resolveDashboardPathOnServer(uid: string): Promise<string | null> {

@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\CareerProgressTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\CareerProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/job-center';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/job-center/seekers';

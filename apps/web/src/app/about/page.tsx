@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: 'About Khan Hub - Mission, Vision & Impact',
     description:
       'Leading Pakistan\'s welfare transformation with 16 specialized departments. 10+ years of service, 50,000+ lives impacted through healthcare, education, and community development.',
-    url: `${SITE.url || 'https://khanhub.com.pk'}/about`,
+    url: `${SITE.url || 'https://Khan Hub.com.pk'}/about`,
     type: 'website',
     images: [
       {
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   },
 
   alternates: {
-    canonical: `${SITE.url || 'https://khanhub.com.pk'}/about`,
+    canonical: `${SITE.url || 'https://Khan Hub.com.pk'}/about`,
   },
 
   robots: {
@@ -538,8 +538,8 @@ export default function AboutPage() {
               '@type': 'NGO',
               name: 'Khan Hub',
               alternateName: 'Khan Hub Pakistan',
-              url: SITE.url || 'https://khanhub.com.pk',
-              logo: `${SITE.url || 'https://khanhub.com.pk'}/logo.png`,
+              url: SITE.url || 'https://Khan Hub.com.pk',
+              logo: `${SITE.url || 'https://Khan Hub.com.pk'}/logo.png`,
               description:
                 'Leading welfare organization in Pakistan providing integrated healthcare, education, skills development, and social services through 16 specialized departments.',
               foundingDate: '2015',

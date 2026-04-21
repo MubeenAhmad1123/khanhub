@@ -143,7 +143,7 @@ export default function ProfilePage() {
     if (!session?.uid) return;
     try {
       setUploadingPhoto(true);
-      const url = await uploadToCloudinary(file, 'khanhub/spims/profile');
+      const url = await uploadToCloudinary(file, 'Khan Hub/spims/profile');
 
       // Update user doc for all roles
       await updateDoc(doc(db, 'spims_users', session.uid), { photoUrl: url });

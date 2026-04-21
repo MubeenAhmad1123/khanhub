@@ -124,7 +124,7 @@ export default function AdmitPatientPage() {
       let photoUrl = null;
       if (photoFile) {
         setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+        photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/rehab/patients');
       }
 
       // Financial Calculations

@@ -238,7 +238,7 @@ export default function SuperadminAuditPage() {
             <SettingsIcon />
             Retention
           </button>
-          <CsvExportButton filename="khanhub_audit_export.csv" rows={csvRows} />
+          <CsvExportButton filename="Khan Hub_audit_export.csv" rows={csvRows} />
         </div>
       </div>
 

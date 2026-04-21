@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\RegistrationTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\RegistrationTab.tsx
 import React, { useState } from 'react';
 import { JobSeeker } from '@/types/job-center';
 import { Edit3, Save, Loader2, User, Phone, Briefcase, GraduationCap, Clock } from 'lucide-react';

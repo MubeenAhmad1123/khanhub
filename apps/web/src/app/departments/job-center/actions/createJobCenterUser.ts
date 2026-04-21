@@ -4,7 +4,7 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const DOMAIN = '@jobcenter.khanhub';
+const DOMAIN = '@jobcenter.Khan Hub';
 
 function getAdminApp(): App {
   const existing = getApps().find((a: any) => a.name === 'job-center-admin');
@@ -223,7 +223,7 @@ export async function createJobCenterStaffMemberServer(
   customId: string,
   password: string,
   displayName: string,
-  emailDomain: string = '@jobcenter.khanhub',
+  emailDomain: string = '@jobcenter.Khan Hub',
   userCollection: string = 'jobcenter_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;

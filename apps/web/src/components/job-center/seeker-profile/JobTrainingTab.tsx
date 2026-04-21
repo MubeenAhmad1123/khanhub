@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\JobTrainingTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\JobTrainingTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { TherapySession } from '@/types/job-center'; // Reusing type for consistency
 import { getTherapySessions, addTherapySession } from '@/lib/job-center/seekers';

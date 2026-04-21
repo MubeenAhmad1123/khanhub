@@ -18,7 +18,7 @@ export default function DashboardPage() {
                             Welcome back, {user?.displayName?.split(' ')[0] || 'User'}! 👋
                         </h1>
                         <p className="text-neutral-600 text-lg">
-                            Here's what's happening with your KhanHub account
+                            Here's what's happening with your Khan Hub account
                         </p>
                     </div>
 

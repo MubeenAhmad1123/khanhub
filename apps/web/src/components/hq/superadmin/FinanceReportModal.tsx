@@ -162,7 +162,7 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
         <div className="flex-1 overflow-y-auto p-12 space-y-12 print:p-0 print:overflow-visible custom-scrollbar">
           {/* Report Header for Print */}
           <div className="hidden print:block text-center border-b-[3px] border-black pb-10">
-            <h1 className="text-5xl font-black text-black tracking-tighter">KHANHUB FINANCIAL AUDIT</h1>
+            <h1 className="text-5xl font-black text-black tracking-tighter">Khan Hub FINANCIAL AUDIT</h1>
             <div className="mt-4 flex items-center justify-center gap-8 border-y border-black/10 py-4">
               <p className="text-xs font-black uppercase tracking-widest text-gray-600">DEPT: {tab.toUpperCase()}</p>
               <p className="text-xs font-black uppercase tracking-widest text-gray-600">PERIOD: {formatDateDMY(dateRange.start)} — {formatDateDMY(dateRange.end)}</p>
@@ -351,7 +351,7 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
 
                 {/* Print Footer */}
                 <div className="hidden print:flex items-center justify-between border-t-2 border-black pt-12 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                  <p>© KhanHub Intelligent Management Systems — Financial Division</p>
+                  <p>© Khan Hub Intelligent Management Systems — Financial Division</p>
                   <p>Authenticated Snapshot: {new Date().toLocaleString('en-PK', { dateStyle: 'full', timeStyle: 'short' })}</p>
                 </div>
               </div>

@@ -293,7 +293,7 @@ export default function DailyReportPage() {
 
         {/* Print Only Header */}
         <div className="hidden print:block text-center mb-10 border-b-4 border-gray-900 pb-8">
-           <h1 className="text-4xl font-[1000] uppercase tracking-tighter mb-2">KhanHub HQ Performance Ledger</h1>
+           <h1 className="text-4xl font-[1000] uppercase tracking-tighter mb-2">Khan Hub HQ Performance Ledger</h1>
            <p className="text-xl font-bold text-gray-600 italic">Daily Operations Audit • {new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
 

@@ -27,7 +27,7 @@ export default function SuperAdminRedirect() {
         <h1 className="text-2xl font-black text-gray-900 mb-3">Portal Relocated</h1>
         <p className="text-gray-500 mb-8 leading-relaxed">
           The <span className="font-bold text-gray-900">Superadmin Dashboard</span> has been moved to the new 
-          <span className="font-bold text-emerald-600"> KhanHub Headquarter (HQ)</span> portal for centralized management.
+          <span className="font-bold text-emerald-600"> Khan Hub Headquarter (HQ)</span> portal for centralized management.
         </p>
 
         <div className="space-y-4">

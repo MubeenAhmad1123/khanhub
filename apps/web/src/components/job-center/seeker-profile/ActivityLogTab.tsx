@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\ActivityLogTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\ActivityLogTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/job-center';
 import { getDailyActivities, saveDailyActivity } from '@/lib/job-center/seekers';

@@ -1,5 +1,5 @@
 // src/lib/growthPoints.ts
-// Growth Point & Score calculation utilities for KhanHub (April 2026)
+// Growth Point & Score calculation utilities for Khan Hub (April 2026)
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

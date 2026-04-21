@@ -135,7 +135,7 @@ export default function SignInPage() {
                             <div className="w-20 h-20 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-blue-500/20 transition-transform group-hover:scale-105 duration-500">
                                 <Image
                                     src="/logo.webp"
-                                    alt="KhanHub"
+                                    alt="Khan Hub"
                                     width={80}
                                     height={80}
                                     className="w-16 h-16 object-contain rounded-2xl"

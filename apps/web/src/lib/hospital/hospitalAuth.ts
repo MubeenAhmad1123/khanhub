@@ -3,7 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';   // use existing firebase config
 import type { HospitalUser } from '@/types/hospital';
 
-const DOMAIN = '@hospital.khanhub';
+const DOMAIN = '@hospital.Khan Hub';
 
 export function buildEmail(customId: string): string {
   return `${customId.trim().toLowerCase()}${DOMAIN}`;

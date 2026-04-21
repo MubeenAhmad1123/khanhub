@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\components\job-center\seeker-profile\SupportRecordTab.tsx
+// d:\Khan Hub\apps\web\src\components\job-center\seeker-profile\SupportRecordTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { MedicationRecord } from '@/types/job-center';
 import { getMedicationRecords, addMedicationRecord } from '@/lib/job-center/seekers';

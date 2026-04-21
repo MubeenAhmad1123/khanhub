@@ -73,15 +73,15 @@ import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS, UNIFORM_RULES } from '@/data/hqConfi
 type TabType = 'admin' | 'staff' | 'client';
 
 const DEPARTMENTS = [
-  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', prefix: 'HQ' },
-  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
-  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
-  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
-  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
-  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
-  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.khanhub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
-  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', prefix: 'MED' },
-  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', prefix: 'IT' },
+  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@Khan Hub.io', prefix: 'HQ' },
+  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.Khan Hub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
+  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.Khan Hub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
+  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.Khan Hub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
+  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.Khan Hub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
+  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.Khan Hub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
+  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.Khan Hub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
+  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.Khan Hub', prefix: 'MED' },
+  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.Khan Hub', prefix: 'IT' },
 ];
 
 const DOCUMENT_TYPES = [
@@ -298,7 +298,7 @@ export default function ManagerUsersPage() {
     const fieldId = type === 'profile' ? 'photoUrl' : 'document';
     setUploading(fieldId);
     try {
-      const url = await uploadToCloudinary(file, `khanhub/staff/${type}`);
+      const url = await uploadToCloudinary(file, `Khan Hub/staff/${type}`);
       if (type === 'profile') {
         setFormData(prev => ({ ...prev, photoUrl: url }));
       } else {
@@ -319,7 +319,7 @@ export default function ManagerUsersPage() {
     const fullName = `${formData.firstName} ${formData.lastName}`.trim();
     const empId = generateEmployeeId();
     const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-    const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
+    const domain = deptDetails ? deptDetails.emailDomain : '@rehab.Khan Hub';
     const autoEmail = `${empId.toLowerCase()}${domain}`;
 
     setFormData(prev => ({
@@ -1292,7 +1292,7 @@ export default function ManagerUsersPage() {
                             {formData.createAccount ? <Unlock size={28} /> : <Lock size={28} />}
                           </div>
                           <div>
-                            <h3 className="text-xl font-black tracking-tight">KHANHUB LOGIN ACCESS</h3>
+                            <h3 className="text-xl font-black tracking-tight">Khan Hub LOGIN ACCESS</h3>
                             <p className="text-sm opacity-50 font-medium">Enable mobile app & centralized dashboard access</p>
                           </div>
                         </div>
@@ -1328,7 +1328,7 @@ export default function ManagerUsersPage() {
                                 onChange={e => {
                                   const val = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
                                   const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-                                  const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
+                                  const domain = deptDetails ? deptDetails.emailDomain : '@rehab.Khan Hub';
                                   setFormData({
                                     ...formData,
                                     userId: val,
@@ -1343,7 +1343,7 @@ export default function ManagerUsersPage() {
                               />
                             </div>
                             <p className="text-[9px] text-indigo-400/60 font-bold ml-1 uppercase tracking-widest">
-                              Login email will be: <span className="text-indigo-300">{formData.userId || '...'}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}</span>
+                              Login email will be: <span className="text-indigo-300">{formData.userId || '...'}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}</span>
                             </p>
                           </div>
 
@@ -1489,7 +1489,7 @@ export default function ManagerUsersPage() {
                 {[
                   {
                     label: 'Authentication ID',
-                    value: formData.firstName ? `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase() || 'stf'}@rehab.khanhub` : 'Awaiting Details',
+                    value: formData.firstName ? `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase() || 'stf'}@rehab.Khan Hub` : 'Awaiting Details',
                     icon: Fingerprint,
                     color: 'text-indigo-500',
                     bg: 'bg-indigo-500/10'
@@ -1593,7 +1593,7 @@ export default function ManagerUsersPage() {
                       <div className="min-w-0">
                         <p className="text-sm font-black truncate">{u.displayName}</p>
                         <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                          {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}
                         </p>
                       </div>
                     </div>
@@ -1664,7 +1664,7 @@ export default function ManagerUsersPage() {
                                 <div className="min-w-0">
                                   <p className="text-sm font-black truncate">{u.displayName}</p>
                                   <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                                    {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}
                                   </p>
                                 </div>
                               </div>

@@ -102,7 +102,7 @@ export default function ReportGenerator() {
           </div>
 
           <div className="pt-6 border-t border-gray-50 text-center text-xs text-gray-400 font-medium">
-             KhanHub Hospital Center Management System — Transaction Count: {reportData.transactionCount}
+             Khan Hub Hospital Center Management System — Transaction Count: {reportData.transactionCount}
           </div>
         </div>
       )}

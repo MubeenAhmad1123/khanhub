@@ -198,7 +198,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         </div>
         <div className="mt-6 text-center">
           <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
-            KhanHub HQ
+            Khan Hub HQ
           </p>
           <div className="mt-2 flex items-center gap-1 justify-center">
             <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.3s]" />
@@ -235,7 +235,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </div>
             <div>
               <p className="font-black tracking-tight text-base leading-none">
-                {viewMode === 'hq' ? 'KhanHub HQ' : DEPT_INFO[viewMode]?.label}
+                {viewMode === 'hq' ? 'Khan Hub HQ' : DEPT_INFO[viewMode]?.label}
               </p>
               <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-gray-400 dark:text-gray-500">
                 {viewMode === 'hq' ? 'Central Console' : 'Management'}
@@ -429,7 +429,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="w-7 h-7 bg-purple-600 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
             </div>
-            <span className="font-black text-sm text-gray-900 dark:text-white">KhanHub HQ</span>
+            <span className="font-black text-sm text-gray-900 dark:text-white">Khan Hub HQ</span>
           </div>
           <div className="flex items-center gap-2">
             {user ? <HqNotificationBell session={user} /> : null}
@@ -450,7 +450,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               Back
             </button>
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
-              KhanHub HQ Portal
+              Khan Hub HQ Portal
             </span>
           </div>
           <div className="flex items-center gap-3">

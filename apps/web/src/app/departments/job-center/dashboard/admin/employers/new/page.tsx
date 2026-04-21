@@ -1,4 +1,4 @@
-// d:\khanhub\apps\web\src\app\departments\job-center\dashboard\admin\employers\new\page.tsx
+// d:\Khan Hub\apps\web\src\app\departments\job-center\dashboard\admin\employers\new\page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -86,7 +86,7 @@ export default function RegisterEmployerPage() {
       let logoUrl = '';
       if (logoFile) {
         setSubmitStatus('Uploading logo...');
-        logoUrl = await uploadToCloudinary(logoFile, 'khanhub/jobcenter/employers');
+        logoUrl = await uploadToCloudinary(logoFile, 'Khan Hub/jobcenter/employers');
       }
 
       // 2. Create employer document in Firestore
