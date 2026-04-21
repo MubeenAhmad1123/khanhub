@@ -6,9 +6,9 @@ import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, add
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
-import { 
-  FileText, ArrowLeft, Loader2, Search, Filter, 
-  Calendar, CheckCircle, XCircle, Info, Download, 
+import {
+  FileText, ArrowLeft, Loader2, Search, Filter,
+  Calendar, CheckCircle, XCircle, Info, Download,
   Printer, TrendingUp, Shield, AlertTriangle, Clock
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
@@ -64,11 +64,11 @@ export default function DailyReportPage() {
     try {
       setLoading(true);
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
-      
+
       const staffSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))));
       const allStaff: any[] = [];
       const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel'];
-      
+
       staffSnaps.forEach((snap, i) => {
         snap.docs.forEach(doc => {
           const data = doc.data();
@@ -137,7 +137,7 @@ export default function DailyReportPage() {
           const item = uniformItems.find((i: any) => i.key === c.key);
           return !item || item.status === 'no';
         }).map((c: any) => c.label);
-        
+
         const uniformScore = (uniformConfig.length > 0 && uniformMissing.length === 0) ? 1 : 0;
 
         // Duty Score (1 if all duties performed, 0 if any not)
@@ -159,16 +159,16 @@ export default function DailyReportPage() {
         let attendanceStatus: DailyReportRow['attendance'] = att?.status || 'unmarked';
         if (att?.isLate && attendanceStatus === 'present') attendanceStatus = 'late';
 
-        const uniformStatus: DailyReportRow['uniformStatus'] = uniformConfig.length === 0 ? 'na' : 
-                            (uniformMissing.length === 0 ? 'yes' : 
-                            (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
+        const uniformStatus: DailyReportRow['uniformStatus'] = uniformConfig.length === 0 ? 'na' :
+          (uniformMissing.length === 0 ? 'yes' :
+            (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
 
         const dutyStatus: DailyReportRow['dutyStatus'] = dutyConfig.length === 0 ? 'na' :
-                          (dutiesPending.length === 0 ? 'yes' :
-                          (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
+          (dutiesPending.length === 0 ? 'yes' :
+            (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
 
         const gpStatus: DailyReportRow['gpStatus'] = attendanceStatus === 'present' ? 'yes' :
-                        (attendanceStatus === 'late' ? 'invalid' : 'no');
+          (attendanceStatus === 'late' ? 'invalid' : 'no');
 
         return {
           id: sid,
@@ -205,8 +205,8 @@ export default function DailyReportPage() {
 
   const filteredData = useMemo(() => {
     return reportData.filter(r => {
-      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) || 
-                           r.designation.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
+        r.designation.toLowerCase().includes(search.toLowerCase());
       const matchesDept = deptFilter === 'all' || r.department === deptFilter;
       return matchesSearch && matchesDept;
     });
@@ -223,7 +223,7 @@ export default function DailyReportPage() {
     try {
       setDownloading(true);
       toast.loading("Preparing high-quality image...", { id: 'download-image' });
-      
+
       // Ensure element is visible and styles are loaded
       const dataUrl = await toPng(element, {
         quality: 1.0,
@@ -239,7 +239,7 @@ export default function DailyReportPage() {
       link.download = `HQ_Daily_Report_${reportDate}.png`;
       link.href = dataUrl;
       link.click();
-      
+
       toast.success("Report downloaded successfully!", { id: 'download-image' });
     } catch (err) {
       console.error('Download error:', err);
@@ -253,16 +253,16 @@ export default function DailyReportPage() {
   const [saving, setSaving] = useState(false);
 
   const getAutoValues = (status: DailyReportRow['attendance']) => {
-    switch(status) {
-      case 'present': 
+    switch (status) {
+      case 'present':
         return { uniform: 'yes', duties: 'yes', gp: 'yes', score: 100, fine: 0 };
-      case 'absent': 
+      case 'absent':
         return { uniform: 'no', duties: 'no', gp: 'no', score: 0, fine: 500 };
-      case 'late': 
+      case 'late':
         return { uniform: 'incomplete', duties: 'incomplete', gp: 'invalid', score: 50, fine: 0 };
-      case 'leave': 
+      case 'leave':
         return { uniform: 'na', duties: 'na', gp: 'na', score: 0, fine: 0 };
-      default: 
+      default:
         return null;
     }
   };
@@ -302,7 +302,7 @@ export default function DailyReportPage() {
       for (const row of dirtyRows) {
         const prefix = getDeptPrefix(row.department as StaffDept);
         const attId = `${reportDate}_${row.id}`;
-        
+
         // 1. Save Attendance
         await setDoc(doc(db, `${prefix}_attendance`, attId), {
           staffId: row.id,
@@ -351,11 +351,11 @@ export default function DailyReportPage() {
   return (
     <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
       <div id="daily-performance-report-content" className={`max-w-7xl mx-auto space-y-8 p-8 rounded-[3rem] ${isDark ? 'bg-zinc-950' : 'bg-white shadow-2xl shadow-blue-900/5'} print:p-0 print:shadow-none`}>
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
-            <Link 
+            <Link
               href="/hq/dashboard/manager"
               className={`p-3 rounded-2xl border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800' : 'bg-white border-gray-100 hover:shadow-lg'}`}
             >
@@ -371,15 +371,15 @@ export default function DailyReportPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-100 shadow-sm'}`}>
-               <Calendar size={18} className="text-indigo-500" />
-               <input 
-                 type="date" 
-                 value={reportDate} 
-                 onChange={(e) => setReportDate(e.target.value)}
-                 className="bg-transparent border-none outline-none font-black text-xs uppercase tracking-widest text-indigo-600"
-               />
+              <Calendar size={18} className="text-indigo-500" />
+              <input
+                type="date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                className="bg-transparent border-none outline-none font-black text-xs uppercase tracking-widest text-indigo-600"
+              />
             </div>
-            <button 
+            <button
               onClick={saveAssessment}
               disabled={saving || !reportData.some(r => r.isDirty)}
               className="flex items-center gap-3 px-6 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-50 hover:scale-[1.02] active:scale-95"
@@ -387,11 +387,10 @@ export default function DailyReportPage() {
               {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
               Save Assessment
             </button>
-            <button 
+            <button
               onClick={handleDownloadImage}
-              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-xs font-black transition-all shadow-xl hover:scale-[1.02] active:scale-95 ${
-                isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
-              }`}
+              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-xs font-black transition-all shadow-xl hover:scale-[1.02] active:scale-95 ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
+                }`}
             >
               <Download size={18} />
               Export Image
@@ -401,17 +400,17 @@ export default function DailyReportPage() {
 
         {/* Branding for Image Export (Hidden in UI) */}
         <div className="hidden print:block mb-10 pb-8 border-b-2 border-gray-100">
-           <div className="flex justify-between items-end">
-             <div>
-               <h1 className="text-4xl font-[1000] uppercase tracking-tighter text-gray-900">Khan Hub HQ</h1>
-               <p className="text-lg font-black text-indigo-600 uppercase tracking-[0.2em] mt-1">Performance Intelligence Ledger</p>
-               <p className="text-sm font-bold text-gray-400 mt-4 italic">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-             </div>
-             <div className="text-right">
-                <div className="inline-block px-4 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-xl">Verified Audit</div>
-                <p className="text-[10px] font-bold text-gray-400 mt-2">Document Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
-             </div>
-           </div>
+          <div className="flex justify-between items-end">
+            <div>
+              <h1 className="text-4xl font-[1000] uppercase tracking-tighter text-gray-900">Khan Hub HQ</h1>
+              <p className="text-lg font-black text-indigo-600 uppercase tracking-[0.2em] mt-1">Performance Intelligence Ledger</p>
+              <p className="text-sm font-bold text-gray-400 mt-4 italic">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            </div>
+            <div className="text-right">
+              <div className="inline-block px-4 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-xl">Verified Audit</div>
+              <p className="text-[10px] font-bold text-gray-400 mt-2">Document Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
+            </div>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -452,15 +451,15 @@ export default function DailyReportPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative group">
               <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} size={18} />
-              <input 
-                type="text" 
-                placeholder="Search staff by name or role..." 
+              <input
+                type="text"
+                placeholder="Search staff by name or role..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className={`w-full pl-12 pr-4 py-4 rounded-2xl border-none outline-none font-bold text-sm shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900'}`}
               />
             </div>
-            <select 
+            <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
               className={`px-6 py-4 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-sm ${isDark ? 'bg-white/5 text-zinc-400' : 'bg-white text-gray-500'}`}
@@ -477,11 +476,10 @@ export default function DailyReportPage() {
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
-                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
-                  activeFilter === f 
-                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-black dark:border-white' 
+                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === f
+                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-black dark:border-white'
                     : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 dark:bg-white/5 dark:border-zinc-800'
-                }`}
+                  }`}
               >
                 {f}
               </button>
@@ -514,96 +512,91 @@ export default function DailyReportPage() {
                           {row.name[0]}
                         </div>
                         <div>
-                          <p className="font-black text-xs text-gray-900 dark:text-white truncate max-w-[120px]">{row.name}</p>
+                          <p className="font-black text-xs text-gray-900 dark:text-black truncate max-w-[120px]">{row.name}</p>
                           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{row.designation}</p>
                         </div>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                        row.attendance === 'present' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        row.attendance === 'absent' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                        row.attendance === 'late' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                        'bg-gray-100 text-gray-400 border-gray-200'
-                      }`}>
-                        {row.attendance === 'present' ? <CheckCircle size={10} /> : 
-                         row.attendance === 'absent' ? <XCircle size={10} /> :
-                         row.attendance === 'late' ? <Clock size={10} /> : <Info size={10} />}
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${row.attendance === 'present' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                          row.attendance === 'absent' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                            row.attendance === 'late' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                              'bg-gray-100 text-gray-400 border-gray-200'
+                        }`}>
+                        {row.attendance === 'present' ? <CheckCircle size={10} /> :
+                          row.attendance === 'absent' ? <XCircle size={10} /> :
+                            row.attendance === 'late' ? <Clock size={10} /> : <Info size={10} />}
                         {row.attendance}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${
-                        row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                        row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                        'bg-gray-100 text-gray-400 border-gray-200'
-                      }`}>
+                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                          row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                            row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                              'bg-gray-100 text-gray-400 border-gray-200'
+                        }`}>
                         {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
                         {row.uniformStatus}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${
-                        row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                        row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                        'bg-gray-100 text-gray-400 border-gray-200'
-                      }`}>
+                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                          row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                            row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                              'bg-gray-100 text-gray-400 border-gray-200'
+                        }`}>
                         {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
                         {row.dutyStatus}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${
-                        row.gpStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        row.gpStatus === 'invalid' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                        'bg-gray-100 text-gray-400 border-gray-200'
-                      }`}>
+                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.gpStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                          row.gpStatus === 'invalid' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                            'bg-gray-100 text-gray-400 border-gray-200'
+                        }`}>
                         {row.gpStatus}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                       <span className={`text-xs font-black ${row.dailyScore >= 75 ? 'text-emerald-500' : row.dailyScore >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                         {row.dailyScore}
-                       </span>
+                      <span className={`text-xs font-black ${row.dailyScore >= 75 ? 'text-emerald-500' : row.dailyScore >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                        {row.dailyScore}
+                      </span>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                       <span className={`text-xs font-black ${row.fines > 0 ? 'text-rose-600' : 'text-gray-300'}`}>
-                         {row.fines > 0 ? `₨${row.fines}` : '0'}
-                       </span>
-                       {row.fines > 0 && row.fineReason && (
-                         <p className="text-[8px] font-bold text-rose-500/60 uppercase mt-1 leading-none italic">{row.fineReason}</p>
-                       )}
+                      <span className={`text-xs font-black ${row.fines > 0 ? 'text-rose-600' : 'text-gray-300'}`}>
+                        {row.fines > 0 ? `₨${row.fines}` : '0'}
+                      </span>
+                      {row.fines > 0 && row.fineReason && (
+                        <p className="text-[8px] font-bold text-rose-500/60 uppercase mt-1 leading-none italic">{row.fineReason}</p>
+                      )}
                     </td>
 
                     <td className="px-6 py-5 text-right print:hidden">
-                       <select 
-                         value={row.attendance}
-                         onChange={(e) => handleUpdateStatus(row.id, e.target.value as any)}
-                         className={`px-3 py-1.5 rounded-xl border-none outline-none text-[9px] font-black uppercase tracking-widest cursor-pointer transition-all ${
-                           isDark ? 'bg-white/5 text-indigo-400 hover:bg-white/10' : 'bg-gray-50 text-indigo-600 hover:bg-indigo-50'
-                         }`}
-                       >
-                         <option value="unmarked">Unmarked</option>
-                         <option value="present">Present</option>
-                         <option value="late">Late</option>
-                         <option value="absent">Absent</option>
-                         <option value="leave">Leave</option>
-                       </select>
+                      <select
+                        value={row.attendance}
+                        onChange={(e) => handleUpdateStatus(row.id, e.target.value as any)}
+                        className={`px-3 py-1.5 rounded-xl border-none outline-none text-[9px] font-black uppercase tracking-widest cursor-pointer transition-all ${isDark ? 'bg-white/5 text-indigo-400 hover:bg-white/10' : 'bg-gray-50 text-indigo-600 hover:bg-indigo-50'
+                          }`}
+                      >
+                        <option value="unmarked">Unmarked</option>
+                        <option value="present">Present</option>
+                        <option value="late">Late</option>
+                        <option value="absent">Absent</option>
+                        <option value="leave">Leave</option>
+                      </select>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          
+
           {filteredData.length === 0 && (
             <div className="py-24 text-center">
               <div className="w-20 h-20 bg-gray-50 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
@@ -617,11 +610,11 @@ export default function DailyReportPage() {
 
         {/* Legal Disclaimer for Image */}
         <div className="hidden print:flex items-center justify-between pt-8 border-t border-gray-100">
-           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub Operations • AI Generated Audit</p>
-           <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Secure Report Integrity Verified</p>
-           </div>
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub Operations • AI Generated Audit</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Secure Report Integrity Verified</p>
+          </div>
         </div>
       </div>
     </div>
