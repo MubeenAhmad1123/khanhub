@@ -60,7 +60,7 @@ function pktEndOfToday(): Date {
 }
 
 let cachedStats: { data: OverviewStats; timestamp: number } | null = null;
-const CACHE_TTL = 60000; // 1 minute
+const CACHE_TTL = 300000; // 5 minutes cache for superadmin dashboard stats
 
 export async function fetchOverviewStats(): Promise<OverviewStats> {
   const now = Date.now();
@@ -142,17 +142,20 @@ export async function fetchTodayTxAmount(): Promise<number> {
     return null;
   }
 
+  const startOfToday = pktStartOfToday();
+  const endOfToday = pktEndOfToday();
+
   const [rehabSnap, spimsSnap, jobSnap, hqSnap] = await Promise.all([
-    getDocs(query(collection(db, 'rehab_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
+    getDocs(query(collection(db, 'rehab_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
       (): { docs: any[] } => ({ docs: [] })
     ),
-    getDocs(query(collection(db, 'spims_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
+    getDocs(query(collection(db, 'spims_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
       (): { docs: any[] } => ({ docs: [] })
     ),
-    getDocs(query(collection(db, 'job_center_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
+    getDocs(query(collection(db, 'job_center_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
       (): { docs: any[] } => ({ docs: [] })
     ),
-    getDocs(query(collection(db, 'cashierTransactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
+    getDocs(query(collection(db, 'cashierTransactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
       (): { docs: any[] } => ({ docs: [] })
     ),
   ]);

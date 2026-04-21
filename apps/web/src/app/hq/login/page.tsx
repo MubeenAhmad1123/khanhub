@@ -10,7 +10,7 @@ import type { HqSession, HqRole } from '@/types/hq';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 
 const SESSION_KEY = 'hq_session';
-const SESSION_TIMEOUT = 43200000;
+const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
 
 export default function HqLoginPage() {
   const [customId, setCustomId] = useState('');

@@ -5,6 +5,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UnifiedAuditEntry } from './types';
@@ -121,7 +122,6 @@ export function subscribeUnifiedAuditFeed({
   const unsubscribers: Array<() => void> = [];
   const buffers: Record<string, UnifiedAuditEntry[]> = {};
   
-  // Initialize buffers
   sources.forEach(s => buffers[s] = []);
 
   const push = () => {
@@ -138,9 +138,8 @@ export function subscribeUnifiedAuditFeed({
         };
       })
       .sort((a, b) => b.whenMs - a.whenMs)
-      .slice(0, limitCount * sources.length); // Allow enough depth for merging
+      .slice(0, limitCount * sources.length);
     
-    // Finally slice to limitCount to show requested total
     onData(decorated.slice(0, limitCount));
   };
 
@@ -163,4 +162,38 @@ export function subscribeUnifiedAuditFeed({
   });
 
   return () => unsubscribers.forEach((u) => u());
+}
+
+/**
+ * Optimized non-realtime fetch for audit logs to save Firestore reads.
+ */
+export async function fetchUnifiedAuditFeed(limitCount = 15, sources = DEFAULT_SOURCES) {
+  const allResults = await Promise.all(
+    sources.map(async (source) => {
+      const col = source === 'hq' ? 'hq_audit' : `${source}_audit`;
+      const q = query(collection(db, col), orderBy('createdAt', 'desc'), limit(limitCount));
+      try {
+        const snap = await getDocs(q);
+        return snap.docs.map(d => normalizeAudit(source, d.id, d.data()));
+      } catch (err) {
+        console.error(`Fetch Audit Error [${source}]:`, err);
+        return [];
+      }
+    })
+  );
+
+  const merged = allResults.flat();
+  return merged
+    .map((e: UnifiedAuditEntry) => {
+      const d = toDate(e.createdAt);
+      const ms = d instanceof Date && !Number.isNaN(d.getTime()) ? d.getTime() : 0;
+      return { 
+        ...e, 
+        whenLabel: formatDateDMY(d), 
+        whenMs: ms,
+        readableMessage: parseAuditMessage(e) 
+      };
+    })
+    .sort((a: any, b: any) => b.whenMs - a.whenMs)
+    .slice(0, limitCount);
 }

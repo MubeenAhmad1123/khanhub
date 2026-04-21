@@ -7,7 +7,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import type { HqSession } from '@/types/hq';
 
 const SESSION_KEY = 'hq_session';
-const SESSION_TIMEOUT = 43200000; // 12 hours in milliseconds
+const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
 
 export function useHqSession() {
   const [session, setSession] = useState<HqSession | null>(null);

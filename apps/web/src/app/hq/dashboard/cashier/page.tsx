@@ -12,6 +12,7 @@ import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
 import { useTheme } from 'next-themes';
+import { toast } from 'react-hot-toast';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 
 type TxnType = 'income' | 'expense';
@@ -617,12 +618,35 @@ export default function CashierStationPage() {
         actionUrl: '/hq/dashboard/superadmin/approvals',
       });
 
-      setMessage({ type: 'success', text: 'Transaction sent for superadmin approval.' });
+      setMessage({ type: 'success', text: 'Amount Submitted Successfully!' });
+      toast.success('Amount Submitted Successfully!');
+      
+      // Clear all fields
+      setSelectedEntity(null);
       setAmount('');
       setDescription('');
       setReferenceNo('');
       setProofFile(null);
       setProofReason('');
+      setCategorySearch('');
+      setSearchQuery('');
+      setEntityResults([]);
+      
+      // Clear Hospital fields if any
+      setHospPatientName('');
+      setHospGuardian('');
+      setHospAge('');
+      setHospContact('');
+      setHospAddress('');
+      setHospReferredBy('');
+      setHospTestName('');
+      setHospTestReport('');
+      setHospTestExpense('');
+      setHospOpType('');
+      setHospAdmitDate('');
+      setHospDischargeDate('');
+      setHospVisitPurpose('');
+
       setProofUploading(false);
       await fetchHistory();
     } catch (err: any) {
@@ -1059,8 +1083,21 @@ export default function CashierStationPage() {
                 </div>
               )}
 
-              <button type="submit" disabled={processing} className="min-h-[44px] w-full md:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black text-xs uppercase tracking-widest px-8 py-3.5 rounded-2xl transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
-                {processing ? <Loader2 size={18} className="animate-spin" /> : <>Submit Transaction <ArrowRight size={18} /></>}
+              <button 
+                type="submit" 
+                disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
+                className="min-h-[44px] w-full md:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black text-xs uppercase tracking-widest px-8 py-3.5 rounded-2xl transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    Submit Amount <ArrowRight size={18} />
+                  </>
+                )}
               </button>
             </form>
           </div>

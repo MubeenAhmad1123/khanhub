@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import {
-  collection, getDocs, query, where, orderBy, limit, Timestamp
+  collection, getDocs, query, where, orderBy, limit, Timestamp, getCountFromServer
 } from 'firebase/firestore';
 import {
   Heart, UserCog, TrendingUp, TrendingDown,
@@ -62,13 +62,18 @@ export default function AdminDashboardPage() {
 
   const loadDashboard = async () => {
     try {
+      const totalCountSnap = await getCountFromServer(query(
+        collection(db, 'rehab_patients'), 
+        where('isActive', '==', true)
+      ));
+      setTotalPatients(totalCountSnap.data().count);
+
       const patientsSnap = await getDocs(query(
         collection(db, 'rehab_patients'), 
         where('isActive', '==', true),
-        orderBy('name', 'asc')
+        orderBy('name', 'asc'),
+        limit(10)
       ));
-
-      setTotalPatients(patientsSnap.size);
       setActivePatients(patientsSnap.docs.map(d => ({
         id: d.id,
         ...d.data()

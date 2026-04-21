@@ -70,11 +70,12 @@ export default function PatientDetailPage() {
   const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '', 
-    diagnosis: '', 
-    packageAmount: 0, 
+    name: '',
+    diagnosis: '',
+    packageAmount: 0,
     photoUrl: '',
-    admissionDate: new Date().toISOString().split('T')[0]
+    admissionDate: new Date().toISOString().split('T')[0],
+    dischargeDate: ''
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -236,7 +237,10 @@ export default function PatientDetailPage() {
         photoUrl: data.photoUrl || '',
         admissionDate: data.admissionDate?.toDate?.() 
           ? data.admissionDate.toDate().toISOString().split('T')[0] 
-          : (typeof data.admissionDate === 'string' ? data.admissionDate : new Date().toISOString().split('T')[0])
+          : (typeof data.admissionDate === 'string' ? data.admissionDate : new Date().toISOString().split('T')[0]),
+        dischargeDate: data.dischargeDate?.toDate?.()
+          ? data.dischargeDate.toDate().toISOString().split('T')[0]
+          : (typeof data.dischargeDate === 'string' ? data.dischargeDate : '')
       });
       setPhotoPreview(data.photoUrl || '');
 
@@ -550,6 +554,7 @@ export default function PatientDetailPage() {
         packageAmount: monthlyPkg,
         monthlyPackage: monthlyPkg,
         admissionDate: Timestamp.fromDate(new Date(editForm.admissionDate)),
+        dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null,
         photoUrl: photoUrl || null
       });
 
@@ -578,7 +583,8 @@ export default function PatientDetailPage() {
           dailyRate,
           dueTillDate,
           overallRemaining: dueTillDate - (prev.overallReceived || 0),
-          photoUrl: photoUrl 
+          photoUrl: photoUrl,
+          dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null
         };
       });
       setEditForm(prev => ({ ...prev, photoUrl }));
@@ -1108,20 +1114,37 @@ export default function PatientDetailPage() {
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
-                     <input 
-                       type="text" 
-                       placeholder="DD MM YYYY"
-                       value={formatDateDMY(editForm.admissionDate)} 
-                       onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
-                       onBlur={e => {
-                         const parsed = parseDateDMY(e.target.value);
-                         if (parsed) setEditForm({...editForm, admissionDate: parsed.toISOString().split('T')[0]});
-                       }}
-                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
-                     />
-                  </div>
+                   <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
+                      <input 
+                        type="text" 
+                        placeholder="DD MM YYYY"
+                        value={formatDateDMY(editForm.admissionDate)} 
+                        onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
+                        onBlur={e => {
+                          const parsed = parseDateDMY(e.target.value);
+                          if (parsed) setEditForm({...editForm, admissionDate: parsed.toISOString().split('T')[0]});
+                        }}
+                        className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                      />
+                   </div>
+
+                   {!patient.isActive && (
+                     <div className="md:col-span-2">
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discharge Date</label>
+                       <input 
+                         type="text" 
+                         placeholder="DD MM YYYY"
+                         value={formatDateDMY(editForm.dischargeDate)} 
+                         onChange={e => setEditForm({...editForm, dischargeDate: e.target.value})} 
+                         onBlur={e => {
+                           const parsed = parseDateDMY(e.target.value);
+                           if (parsed) setEditForm({...editForm, dischargeDate: parsed.toISOString().split('T')[0]});
+                         }}
+                         className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                       />
+                     </div>
+                   )}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
                     <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" />
@@ -1137,6 +1160,14 @@ export default function PatientDetailPage() {
                     <p className="text-xs font-bold text-teal-500 dark:text-teal-400/80 mt-1 italic">
                       {patient.durationFormatted}
                     </p>
+                    {!patient.isActive && patient.dischargeDate && (
+                      <div className="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-teal-200/30 dark:border-teal-800/30">
+                        <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Discharged On</p>
+                        <p className="text-xl font-black text-teal-700 dark:text-teal-300">
+                          {formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate)}
+                        </p>
+                      </div>
+                    )}
                     {patient.isActive && (
                       <button
                         type="button"

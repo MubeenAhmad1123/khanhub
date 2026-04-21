@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, orderBy, startAfter, getCountFromServer, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
@@ -29,8 +29,17 @@ export default function PatientsListPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [allPatients, setAllPatients] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('active');
-  const [sortMethod, setSortMethod] = useState<string>('newest'); // 'newest' | 'oldest' | 'admission_desc' | 'admission_asc'
+  const [sortMethod, setSortMethod] = useState<string>('newest'); 
   const [yearFilter, setYearFilter] = useState<string>('all');
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalActiveCount, setTotalActiveCount] = useState(0);
+  const [totalDischargedCount, setTotalDischargedCount] = useState(0);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     let sessionData = localStorage.getItem('rehab_session');
@@ -62,13 +71,49 @@ export default function PatientsListPage() {
     fetchPatients();
   }, [router]);
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (isNext = false, isPrev = false) => {
     try {
       setLoading(true);
-      const [snap, feesSnap, canteenSnap] = await Promise.all([
-        getDocs(collection(db, 'rehab_patients')),
-        getDocs(collection(db, 'rehab_fees')),
-        getDocs(collection(db, 'rehab_canteen')),
+      
+      // 1. Get counts using zero-cost getCountFromServer (1 read per 1000 docs)
+      const activeCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
+      const dischargedCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', false)));
+      setTotalActiveCount(activeCountSnap.data().count);
+      setTotalDischargedCount(dischargedCountSnap.data().count);
+
+      // 2. Build Paginated Query
+      let q = query(
+        collection(db, 'rehab_patients'),
+        orderBy('createdAt', sortMethod.includes('asc') ? 'asc' : 'desc'),
+        limit(PAGE_SIZE)
+      );
+
+      if (statusFilter !== 'all') {
+        q = query(q, where('isActive', '==', statusFilter === 'active'));
+      }
+
+      if (isNext && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setHasMore(false);
+        setPatients([]);
+        return;
+      }
+
+      setLastVisible(snap.docs[snap.docs.length - 1]);
+      setFirstVisible(snap.docs[0]);
+      setHasMore(snap.docs.length === PAGE_SIZE);
+
+      const patientDocs = snap.docs;
+      const patientIds = patientDocs.map(d => d.id);
+
+      // 3. Only fetch fees and canteen for THESE 20 patients (Save hundreds of reads!)
+      const [feesSnap, canteenSnap] = await Promise.all([
+        getDocs(query(collection(db, 'rehab_fees'), where('patientId', 'in', patientIds))),
+        getDocs(query(collection(db, 'rehab_canteen'), where('patientId', 'in', patientIds))),
       ]);
       
       const feesMap: Record<string, any[]> = {};
@@ -85,7 +130,7 @@ export default function PatientsListPage() {
         canteenMap[data.patientId].push(data);
       });
 
-      const all = snap.docs.map(d => {
+      const paginatedData = patientDocs.map(d => {
         const data = d.data() as Patient;
         const admissionDate = toDate(data.admissionDate);
         const pFees = feesMap[d.id] || [];
@@ -116,9 +161,7 @@ export default function PatientsListPage() {
 
         const months = Math.floor(daysSinceAdmission / 30);
         const days = daysSinceAdmission % 30;
-        const durationFormatted = months > 0 
-          ? `${months}M ${days}D`
-          : `${days} Days`;
+        const durationFormatted = months > 0 ? `${months}M ${days}D` : `${days} Days`;
 
         return {
           id: d.id,
@@ -142,14 +185,18 @@ export default function PatientsListPage() {
         };
       });
 
-      setPatients(all);
-      setAllPatients(all);
+      setPatients(paginatedData);
+      // We don't update allPatients here because it's only for the current page
     } catch (err: any) {
       console.error('Fetch patients error:', err?.message);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPatients();
+  }, [statusFilter, sortMethod]);
 
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -201,9 +248,9 @@ export default function PatientsListPage() {
     return b.serialNumber - a.serialNumber;
   });
 
-  const totalActive = patients.filter(p => p.isActive).length;
-  const totalDischarged = patients.filter(p => !p.isActive).length;
-  const totalOutstanding = patients.filter(p => p.isActive && p.remaining > 0).reduce((s, p) => s + p.remaining, 0);
+  const totalActive = totalActiveCount;
+  const totalDischarged = totalDischargedCount;
+  const totalOutstanding = 0; // Disabled global sum to save reads. Total outstanding is now viewed per-patient.
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 w-full overflow-x-hidden">
@@ -362,7 +409,7 @@ export default function PatientsListPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredPatients.map(patient => (
+            {patients.map(patient => (
               <Link 
                 href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
                 key={patient.id}
@@ -431,6 +478,30 @@ export default function PatientsListPage() {
           </div>
         )}
 
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mt-8 pb-10">
+          <button
+            onClick={() => {
+               setPage(1);
+               fetchPatients();
+            }}
+            disabled={page === 1}
+            className="px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-500 disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+          >
+            Reset to Start
+          </button>
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Page {page}</span>
+          <button
+            onClick={() => {
+              setPage(p => p + 1);
+              fetchPatients(true);
+            }}
+            disabled={!hasMore}
+            className="px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-500 disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+          >
+            Next Page
+          </button>
+        </div>
       </div>
     </div>
   );
