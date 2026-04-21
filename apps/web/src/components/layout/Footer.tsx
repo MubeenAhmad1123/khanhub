@@ -28,6 +28,7 @@ import {
   ChevronUp,
   CheckCircle2,
   MessageCircle,
+  Twitter,
 } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { CgLogIn } from 'react-icons/cg';
@@ -43,6 +44,7 @@ export default function Footer() {
     { platform: 'facebook', url: SITE.social.facebook, icon: Facebook, label: 'Facebook', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600' },
     { platform: 'instagram', url: SITE.social.instagram, icon: Instagram, label: 'Instagram', hoverClass: 'hover:bg-pink-50 hover:border-pink-400 hover:text-pink-600' },
     { platform: 'youtube', url: SITE.social.youtube, icon: Youtube, label: 'YouTube', hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600' },
+    { platform: 'twitter', url: SITE.social.twitter, icon: Twitter, label: 'Twitter', hoverClass: 'hover:bg-sky-50 hover:border-sky-400 hover:text-sky-500' },
     { platform: 'tiktok', url: SITE.social.tiktok, icon: SiTiktok, label: 'TikTok', hoverClass: 'hover:bg-neutral-100 hover:border-neutral-400 hover:text-black' },
     { platform: 'linkedin', url: SITE.social.linkedin, icon: Linkedin, label: 'LinkedIn', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700' },
   ];
@@ -190,7 +192,7 @@ export default function Footer() {
                     className={`relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md ${hoverClass}`}
                     aria-label={label}
                   >
-                    {typeof Icon === 'function' ? <Icon className="w-4 h-4" /> : Icon}
+                    <Icon className="w-4 h-4" />
                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-success-500 border-2 border-white rounded-full shadow-sm"></span>
                   </a>
                 ))}
