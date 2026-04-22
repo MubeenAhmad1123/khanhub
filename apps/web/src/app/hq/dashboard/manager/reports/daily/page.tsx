@@ -70,7 +70,7 @@ export default function DailyReportPage() {
       const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel'];
 
       staffSnaps.forEach((snap, i) => {
-        snap.docs.forEach(doc => {
+        snap.docs.forEach((doc: any) => {
           const data = doc.data();
           const role = String(data.role || '').toLowerCase();
           if (staffRoles.includes(role)) {
