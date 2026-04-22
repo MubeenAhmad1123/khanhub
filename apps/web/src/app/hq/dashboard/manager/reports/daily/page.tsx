@@ -62,7 +62,10 @@ export default function DailyReportPage() {
       setLoading(true);
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
-      const staffSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))));
+      const staffSnaps = await Promise.all(depts.map(d => 
+        getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))
+          .catch(() => ({ docs: [] } as any))
+      ));
       const allStaff: any[] = [];
       const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel'];
 
@@ -77,12 +80,26 @@ export default function DailyReportPage() {
       });
 
       // 2. Fetch Daily Logs for each department
-      const attSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', reportDate)))));
-      const dressSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_dress_logs`), where('date', '==', reportDate)))));
-      const dutySnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_duty_logs`), where('date', '==', reportDate)))));
-      // Fetch all unpaid fines for these departments to show total debt
-      const fineSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('status', '==', 'unpaid')))));
-      const contribSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))));
+      const attSnaps = await Promise.all(depts.map(d => 
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', reportDate)))
+          .catch(() => ({ docs: [] } as any))
+      ));
+      const dressSnaps = await Promise.all(depts.map(d => 
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_dress_logs`), where('date', '==', reportDate)))
+          .catch(() => ({ docs: [] } as any))
+      ));
+      const dutySnaps = await Promise.all(depts.map(d => 
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_duty_logs`), where('date', '==', reportDate)))
+          .catch(() => ({ docs: [] } as any))
+      ));
+      const fineSnaps = await Promise.all(depts.map(d => 
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('status', '==', 'unpaid')))
+          .catch(() => ({ docs: [] } as any))
+      ));
+      const contribSnaps = await Promise.all(depts.map(d => 
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))
+          .catch(() => ({ docs: [] } as any))
+      ));
       
       // Removed full growth_points fetch to prevent 429 - GP status now driven by today's contributions
 

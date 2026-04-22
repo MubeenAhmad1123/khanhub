@@ -12,6 +12,9 @@ service cloud.firestore {
     function isDiscoveryQuery() {
       return request.query.limit != null && request.query.limit <= 1;
     }
+    function isSystemAdmin() {
+      return request.auth != null && request.auth.token.email == 'khanhubnetwork@gmail.com';
+    }
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
     }
@@ -698,10 +701,15 @@ service cloud.firestore {
 
     function isHqAuth() { 
       return request.auth != null 
-        && exists(/databases/$(database)/documents/hq_users/$(request.auth.uid)); 
+        && (
+          exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
+          || isSystemAdmin()
+        ); 
     } 
     function hqRole() { 
-      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role; 
+      return exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role
+        : (isSystemAdmin() ? 'superadmin' : ''); 
     } 
     function hqCustomId() {
       return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
