@@ -11,7 +11,6 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
-import { useTheme } from 'next-themes';
 import { toast } from 'react-hot-toast';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 
@@ -57,9 +56,7 @@ function getLocalDateString(val: any): string {
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const isDark = mounted && resolvedTheme === 'dark';
 
   const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
   const [incomingLoading, setIncomingLoading] = useState(false);
@@ -720,49 +717,49 @@ export default function CashierStationPage() {
 
   if (sessionLoading || !mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
+      <div className="min-h-screen flex items-center justify-center bg-surface-default">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-white text-black pb-24 md:pb-8">
-      <div className="sticky top-0 z-20 backdrop-blur-md bg-white/90 border-b border-gray-200 px-4 py-4 md:px-8 md:py-6">
+    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-surface-default text-black pb-24 md:pb-8">
+      <div className="sticky top-0 z-20 backdrop-blur-md bg-surface-overlay border-b border-border-subtle px-4 py-4 md:px-8 md:py-6">
         <div className="max-w-7xl mx-auto flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-black/5">
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-black/10">
             <CreditCard size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight truncate">Cashier Station</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight truncate uppercase">Cashier Station</h1>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Link 
               href="/hq/dashboard/cashier/history"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 transition-all active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-surface-subtle rounded-xl border border-border-subtle text-[10px] md:text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-sm"
             >
-              <History size={14} className="text-purple-500" />
+              <History size={14} className="text-purple-600" />
               <span className="hidden md:inline">History</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/daily-report"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 transition-all active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-surface-subtle rounded-xl border border-border-subtle text-[10px] md:text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-sm"
             >
-              <LayoutDashboard size={14} className="text-indigo-400" />
+              <LayoutDashboard size={14} className="text-indigo-600" />
               <span className="hidden md:inline">Report</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/reconciliation"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 transition-all active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-surface-subtle rounded-xl border border-border-subtle text-[10px] md:text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-sm"
             >
-              <ShieldCheck size={14} className="text-emerald-400" />
+              <ShieldCheck size={14} className="text-emerald-600" />
               <span className="hidden md:inline">Audit</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/day-close"
-              className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-900/40 transition-all active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-zinc-800 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-black/20 transition-all active:scale-95"
             >
               <Lock size={14} />
               <span className="hidden md:inline">Day Close</span>
@@ -771,12 +768,12 @@ export default function CashierStationPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-4 space-y-4 min-w-0">
-          <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50">
-            <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-black uppercase tracking-widest text-black flex items-center gap-2">
-              <Plus size={14} className="text-purple-600" /> Admin Fee Requests
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-6 min-w-0">
+          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black flex items-center gap-2">
+              <Plus size={14} className="text-purple-600" /> Pending Requests
             </h2>
             </div>
             {incomingError ? (
@@ -785,21 +782,24 @@ export default function CashierStationPage() {
               </div>
             ) : null}
             {incomingLoading ? (
-              <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center">
-                <Loader2 size={18} className="animate-spin text-purple-500" />
+              <div className="p-8 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center">
+                <Loader2 size={24} className="animate-spin text-purple-600" />
               </div>
             ) : incomingFeeReqs.length === 0 ? (
-              <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs font-bold text-gray-400">
-                No incoming fee requests.
+              <div className="p-10 rounded-2xl bg-surface-subtle border border-border-subtle text-center">
+                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border-subtle">
+                  <FileText className="text-gray-300" size={24} />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Queue empty</p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 scrollbar-hide">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                 {incomingFeeReqs.map((tx, index) => (
                   <div 
                     key={tx.id} 
                     style={{ animationDelay: `${index * 60}ms` }} 
                     onClick={() => setDetailModalTx(tx)}
-                    className="animate-in fade-in slide-in-from-bottom-2 duration-300 group cursor-pointer bg-white border border-gray-200 rounded-2xl p-4 md:p-5 hover:bg-gray-50 hover:border-black/20 transition-all duration-300"
+                    className="animate-in fade-in slide-in-from-bottom-2 duration-300 group cursor-pointer bg-white border border-border-subtle rounded-2xl p-5 hover:border-black transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -807,7 +807,7 @@ export default function CashierStationPage() {
                           <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
                             {formatDateDMY(tx.createdAt)}
                           </span>
-                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
                             {tx.departmentCode}
                           </span>
                         </div>
@@ -815,7 +815,7 @@ export default function CashierStationPage() {
                         <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
                         <div className="text-xs font-black text-black mt-2">Rs {Number(tx.amount || 0).toLocaleString()}</div>
                         <div className="text-[10px] font-semibold text-gray-500 mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
-                        <span className={cn('mt-2.5 inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20')}>
+                        <span className={cn('mt-2.5 inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200')}>
                           {tx.status || 'pending_cashier'}
                         </span>
                       </div>
@@ -823,16 +823,16 @@ export default function CashierStationPage() {
                         <button
                           type="button"
                           disabled={incomingActionId === tx.id}
-                          onClick={() => openForwardModal(tx)}
-                          className="min-h-[44px] px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                          onClick={(e) => { e.stopPropagation(); openForwardModal(tx); }}
+                          className="px-3 py-2 rounded-lg bg-black hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95 shadow-lg shadow-black/10"
                         >
-                          {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+                          {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Process'}
                         </button>
                         <button
                           type="button"
                           disabled={incomingActionId === tx.id}
-                          onClick={() => openRejectModal(tx)}
-                          className="min-h-[44px] px-3 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-200 border border-red-500/25 text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                          onClick={(e) => { e.stopPropagation(); openRejectModal(tx); }}
+                          className="px-3 py-2 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-red-100 text-[10px] font-black uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95"
                         >
                           Reject
                         </button>
@@ -842,52 +842,75 @@ export default function CashierStationPage() {
                 ))}
               </div>
             )}
-            <p className="mt-3 text-[10px] font-bold text-gray-500">
-              Clicking <span className="text-gray-200 font-black">Add</span> sends request to superadmin approvals.
+            <p className="mt-4 text-[10px] font-bold text-gray-400">
+              Clicking <span className="text-black font-black">Process</span> sends request to superadmin approvals.
             </p>
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-7 shadow-sm">
-            <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
-              <Search size={14} /> {isStaffMode ? 'Search Staff' : 'Search Account'}
-            </h2>
-            <div className="space-y-3">
-              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-gray-900 text-sm font-medium outline-none focus:border-purple-500/60 focus:bg-white transition-all duration-200">
-                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code} className="bg-white">{d.label}</option>)}
-              </select>
-              {departmentCode !== 'hospital' && (
-                <div className="relative w-full">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-black" size={16} />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      onFocus={() => searchQuery && setSearchOpen(true)}
-                      placeholder="Search by name or ID..."
-                      className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-10 py-3 text-black text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
+          {/* Quick Statistics */}
+          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 shadow-sm">
+                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-4 border border-green-100">
+                  <TrendingUp size={20} />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Income Today</p>
+                <p className="text-xl font-black text-black">Rs {totals.income.toLocaleString()}</p>
+              </div>
+              <div className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 shadow-sm">
+                <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600 mb-4 border border-red-100">
+                  <TrendingDown size={20} />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Expense Today</p>
+                <p className="text-xl font-black text-black">Rs {totals.expense.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
 
-                  {searchOpen && searchResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+          {/* Search Section */}
+          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
+              <Search size={14} className="text-black" /> {isStaffMode ? 'Search Staff' : 'Search Account'}
+            </h2>
+            <div className="space-y-4">
+              <select 
+                value={departmentCode} 
+                onChange={(e) => setDepartmentCode(e.target.value)} 
+                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all"
+              >
+                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+              </select>
+              
+              <div className="relative w-full">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onFocus={() => searchQuery && setSearchOpen(true)}
+                    placeholder="Search by name or ID..."
+                    className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-12 pr-10 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-gray-400"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {searchOpen && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-border-subtle rounded-[1.5rem] shadow-2xl z-50 overflow-hidden border-t-0 animate-in fade-in slide-in-from-top-2 duration-200">
                     {searchResults.map((p) => (
                       <button
                         key={p.id}
                         type="button"
                         onClick={async () => {
-                           // Auto-set amount for salary if in staff mode
                            if (isStaffMode) {
-                             // Fetch current fines for this specific staff member
                              const prefix = departmentCode.replace('-', '_');
                              const finesSnap = await getDocs(query(
                                collection(db, `${prefix}_fines`),
@@ -895,32 +918,29 @@ export default function CashierStationPage() {
                                where('status', '==', 'unpaid')
                              ));
                              const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
-                             
                              const baseSalary = Number(p.monthlySalary || 0);
                              const daysPresent = Number(p.presentDays || 0);
                              const perDay = baseSalary / 30;
                              const calculatedSalary = Math.round(perDay * daysPresent);
                              const net = Math.max(0, calculatedSalary - totalFines);
-                             
                              setSelectedEntity({ ...p, totalFines, calculatedSalary, daysPresent });
                              setAmount(String(net));
                              setDescription(`Salary payment for ${p.name || p.employeeId}. Days Present: ${daysPresent}, Base: Rs ${baseSalary.toLocaleString()}, Calculated: Rs ${calculatedSalary.toLocaleString()}, Fines Deducted: Rs ${totalFines.toLocaleString()}`);
                            } else {
                              setSelectedEntity(p);
                            }
-                           
                            setEntityResults([p]);
                            setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
                            setSearchOpen(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
+                        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-subtle transition-colors text-left border-b border-border-subtle last:border-0"
                       >
-                        <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-black text-xs flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-white font-black text-xs shrink-0">
                           {String(p.name || p.fullName || '?')[0]?.toUpperCase()}
                         </div>
-                        <div>
-                          <p className="text-white text-sm font-bold">{p.name || p.fullName || 'Unknown'}</p>
-                          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-black text-sm font-black truncate">{p.name || p.fullName || 'Unknown'}</p>
+                          <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest truncate">
                             {p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id}
                           </p>
                         </div>
@@ -928,92 +948,113 @@ export default function CashierStationPage() {
                     ))}
                   </div>
                 )}
-
-                {searchOpen && (
-                  <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
-                )}
+                {searchOpen && <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />}
               </div>
-              )}
             </div>
-            <div className="mt-3 space-y-2 max-h-[300px] overflow-y-auto">
-              {entityResults.map((e) => (
-                <button key={e.id} type="button" onClick={() => setSelectedEntity(e)} className="min-h-[44px] w-full text-left p-3 rounded-xl bg-[#1a1f2a] border border-transparent hover:border-teal-500/40">
-                  <div className="text-sm font-black text-white truncate">{e.name || e.fullName || 'Unknown'}</div>
-                  <div className="text-[10px] font-bold text-gray-400 truncate">{e.customId || e.rollNumber || e.id?.slice(0, 10)}</div>
-                </button>
-              ))}
-            </div>
+            {entityResults.length > 0 && (
+              <div className="mt-4 space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                {entityResults.map((e) => (
+                  <button 
+                    key={e.id} 
+                    type="button" 
+                    onClick={() => setSelectedEntity(e)} 
+                    className={cn(
+                      "w-full text-left p-4 rounded-2xl border transition-all",
+                      selectedEntity?.id === e.id ? "bg-black border-black text-white" : "bg-surface-subtle border-border-subtle text-black hover:border-black"
+                    )}
+                  >
+                    <div className="text-sm font-black truncate">{e.name || e.fullName || 'Unknown'}</div>
+                    <div className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", selectedEntity?.id === e.id ? "text-gray-400" : "text-gray-500")}>
+                      {e.customId || e.rollNumber || e.id?.slice(0, 10)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-8 min-w-0">
-          <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50">
-            <form onSubmit={submitTx} className="space-y-4">
-              <div className="p-6 rounded-2xl bg-black text-white min-w-0 shadow-xl shadow-black/10">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
-                <div className="flex items-center justify-between gap-4 mt-1">
-                  <p className="text-base sm:text-xl font-black truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Search and select account'}</p>
+          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-10 shadow-sm">
+            <form onSubmit={submitTx} className="space-y-6">
+              <div className="p-8 rounded-[2rem] bg-black text-white min-w-0 shadow-2xl shadow-black/20">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Action Required'}</p>
+                <div className="flex items-center justify-between gap-4 mt-2">
+                  <p className="text-xl sm:text-2xl font-black truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Select account from search'}</p>
                   {selectedEntity && (
-                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-white underline underline-offset-4 uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity">Clear</button>
+                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-white underline underline-offset-8 uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Change</button>
                   )}
                 </div>
                 
                 {selectedEntity && isStaffMode && (
-                  <div className="mt-4 p-5 rounded-2xl bg-white/10 border border-white/20 animate-in zoom-in-95 duration-500">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[9px] font-black uppercase opacity-60 tracking-widest">Days Present</span>
+                  <div className="mt-6 p-6 rounded-2xl bg-white/5 border border-white/10 animate-in zoom-in-95 duration-500">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Days Present</span>
                       <span className="text-sm font-black">{selectedEntity.daysPresent || 0} Days</span>
                     </div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[9px] font-black uppercase opacity-60 tracking-widest">Pro-rated Salary</span>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Pro-rated Salary</span>
                       <span className="text-sm font-black">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[9px] font-black uppercase opacity-60 tracking-widest">Unpaid Fines</span>
-                      <span className="text-sm font-black text-red-300">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Unpaid Fines</span>
+                      <span className="text-sm font-black text-red-400">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
                     </div>
-                    <div className="pt-3 border-t border-white/20 flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Net Payable</span>
-                      <span className="text-xl font-[1000] text-emerald-300">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                    <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Net Payable</span>
+                      <span className="text-2xl font-[1000] text-green-400">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button type="button" onClick={() => setTxnType('income')} className={cn('min-h-[44px] p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300', txnType === 'income' ? 'border-black bg-black text-white shadow-xl shadow-black/10' : 'border-gray-200 bg-white hover:bg-gray-50')}>
-                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', txnType === 'income' ? 'bg-white/20 text-white' : 'bg-gray-100 text-black')}><TrendingUp size={20} /></div>
-                  <span className="text-[11px] font-[1000] uppercase tracking-[0.2em]">Payment In</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button type="button" onClick={() => setTxnType('income')} className={cn('p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all active:scale-95', txnType === 'income' ? 'border-black bg-black text-white shadow-xl shadow-black/20' : 'border-border-subtle bg-white hover:bg-surface-subtle text-black')}>
+                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', txnType === 'income' ? 'bg-white/10 text-white' : 'bg-surface-subtle text-black')}><TrendingUp size={24} /></div>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Payment In</span>
                 </button>
-                <button type="button" onClick={() => setTxnType('expense')} className={cn('min-h-[44px] p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300', txnType === 'expense' ? 'border-black bg-black text-white shadow-xl shadow-black/10' : 'border-gray-200 bg-white hover:bg-gray-50')}>
-                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', txnType === 'expense' ? 'bg-white/20 text-white' : 'bg-gray-100 text-black')}><TrendingDown size={20} /></div>
-                  <span className="text-[11px] font-[1000] uppercase tracking-[0.2em]">Payment Out</span>
+                <button type="button" onClick={() => setTxnType('expense')} className={cn('p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all active:scale-95', txnType === 'expense' ? 'border-black bg-black text-white shadow-xl shadow-black/20' : 'border-border-subtle bg-white hover:bg-surface-subtle text-black')}>
+                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', txnType === 'expense' ? 'bg-white/10 text-white' : 'bg-surface-subtle text-black')}><TrendingDown size={24} /></div>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Payment Out</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="min-w-0">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Field / Category</label>
-                  <input value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Search or create custom field..." className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
-                  <div className="mt-2 border border-white/10 rounded-xl overflow-hidden max-h-36 overflow-y-auto shadow-inner bg-black/20">
+                  <input 
+                    value={categorySearch} 
+                    onChange={(e) => setCategorySearch(e.target.value)} 
+                    placeholder="Search or create field..." 
+                    className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-gray-400" 
+                  />
+                  <div className="mt-3 border border-border-subtle rounded-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar bg-white shadow-inner">
                     {visibleCategories.map((c) => (
-                      <button key={c.id} type="button" onClick={() => setSelectedCategoryId(c.id)} className={cn('min-h-[44px] w-full text-left px-3 py-2 text-sm font-semibold border-b border-white/10 last:border-0 truncate transition-colors', selectedCategoryId === c.id ? 'text-teal-400 bg-teal-500/10' : 'text-gray-200 bg-[#1a1f2a] hover:bg-white/5')}>
+                      <button 
+                        key={c.id} 
+                        type="button" 
+                        onClick={() => setSelectedCategoryId(c.id)} 
+                        className={cn(
+                          'w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest border-b border-border-subtle last:border-0 transition-all', 
+                          selectedCategoryId === c.id ? 'bg-black text-white' : 'text-black bg-white hover:bg-surface-subtle'
+                        )}
+                      >
                         {c.name}
                       </button>
                     ))}
                     {visibleCategories.length === 0 && categorySearch.trim() && (
-                      <button type="button" onClick={createCategory} className="min-h-[44px] w-full text-left px-3 py-3 text-sm font-bold text-teal-400 bg-[#1a1f2a] truncate">
+                      <button type="button" onClick={createCategory} className="w-full text-left px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-purple-600 bg-purple-50 hover:bg-purple-100 transition-all">
                         Create "{categorySearch.trim()}"
                       </button>
                     )}
                   </div>
                   {departmentCode === 'spims' && selectedCategoryId === 'fee' && (
-                    <div className="mt-4 p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">SPIMS Fee Category</label>
+                    <div className="mt-4 p-5 rounded-2xl bg-indigo-50 border border-indigo-100">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">SPIMS Fee Category</label>
                       <select
                         value={spimsFeeSubtype}
                         onChange={(e) => setSpimsFeeSubtype(e.target.value as any)}
-                        className="mt-2 w-full bg-cyan-900/20 border border-cyan-500/30 rounded-2xl px-4 py-3 text-cyan-100 text-sm font-bold outline-none focus:border-cyan-400 transition-all duration-200"
+                        className="mt-2 w-full bg-white border border-indigo-200 rounded-2xl px-4 py-3 text-indigo-900 text-xs font-black uppercase tracking-widest outline-none focus:border-indigo-500 transition-all"
                       >
                         <option value="admission">Admission Fee</option>
                         <option value="registration">Registration Fee</option>
@@ -1023,11 +1064,11 @@ export default function CashierStationPage() {
                     </div>
                   )}
                 </div>
-                <div className="space-y-3 min-w-0">
+                <div className="space-y-6 min-w-0">
                   {departmentCode === 'hospital' ? (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 mt-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Hospital Service Details</label>
-                      <select value={hospCategory} onChange={(e) => setHospCategory(e.target.value as any)} className="mt-2 w-full bg-emerald-900/20 border border-emerald-500/30 rounded-2xl px-4 py-3 text-emerald-100 text-sm font-bold outline-none focus:border-emerald-400">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-[1.5rem] p-6 shadow-sm">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Hospital Service Details</label>
+                      <select value={hospCategory} onChange={(e) => setHospCategory(e.target.value as any)} className="mt-2 w-full bg-white border border-emerald-200 rounded-xl px-4 py-3.5 text-black text-sm font-black outline-none focus:border-emerald-500">
                         <option value="opd_reception">OPD Reception</option>
                         <option value="lab_test">Lab Test</option>
                         <option value="operation">Operation/Surgery</option>
@@ -1039,39 +1080,39 @@ export default function CashierStationPage() {
                       </select>
 
                       {['opd_reception', 'lab_test', 'operation'].includes(hospCategory) && (
-                        <div className="mt-3 space-y-3">
-                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                          <div className="grid grid-cols-2 gap-2">
-                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                        <div className="mt-5 space-y-4">
+                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                          <div className="grid grid-cols-2 gap-4">
+                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
                           </div>
                           
                           {hospCategory === 'opd_reception' && (
                             <>
-                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white">
+                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500">
                                 <option value="morning">Morning Shift</option>
                                 <option value="evening">Evening Shift</option>
                               </select>
-                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose (e.g. Checkup)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose (e.g. Checkup)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
                             </>
                           )}
 
                           {hospCategory === 'lab_test' && (
                             <>
-                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                              {txnType === 'expense' && <input type="number" value={hospTestExpense} onChange={e => setHospTestExpense(e.target.value)} placeholder="Lab Cost/Expense (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />}
+                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                              {txnType === 'expense' && <input type="number" value={hospTestExpense} onChange={e => setHospTestExpense(e.target.value)} placeholder="Lab Cost/Expense (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />}
                             </>
                           )}
 
                           {hospCategory === 'operation' && (
                             <>
-                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Operation Type" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                              <div className="grid grid-cols-2 gap-2">
+                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Operation Type" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                              <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                  <label className="text-[10px] text-gray-500 px-1">Admit</label>
+                                  <label className="text-[9px] font-black uppercase text-emerald-600 pl-1">Admit Date</label>
                                   <input
                                     type="text"
                                     placeholder="DD MM YYYY"
@@ -1081,11 +1122,11 @@ export default function CashierStationPage() {
                                       const parsed = parseDateDMY(e.target.value);
                                       if (parsed) setHospAdmitDate(parsed.toISOString().split('T')[0]);
                                     }}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white"
+                                    className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-xs text-black font-black outline-none"
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[10px] text-gray-500 px-1">Discharge</label>
+                                  <label className="text-[9px] font-black uppercase text-emerald-600 pl-1">Discharge Date</label>
                                   <input
                                     type="text"
                                     placeholder="DD MM YYYY"
@@ -1095,7 +1136,7 @@ export default function CashierStationPage() {
                                       const parsed = parseDateDMY(e.target.value);
                                       if (parsed) setHospDischargeDate(parsed.toISOString().split('T')[0]);
                                     }}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white"
+                                    className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-xs text-black font-black outline-none"
                                   />
                                 </div>
                               </div>
@@ -1105,88 +1146,125 @@ export default function CashierStationPage() {
                       )}
                     </div>
                   ) : null}
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transaction Date</label>
-                    <input
-                      type="date"
-                      value={txDate}
-                      onChange={(e) => setTxDate(e.target.value)}
-                      className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200"
-                    />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Amount (Rs)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-6 py-5 text-3xl font-[1000] text-black outline-none focus:border-black transition-all placeholder:text-gray-200"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</label>
+                          <input
+                            type="date"
+                            value={txDate}
+                            onChange={(e) => setTxDate(e.target.value)}
+                            className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-4 text-sm font-black text-black outline-none focus:border-black transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Method</label>
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value as any)}
+                            className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-4 text-sm font-black text-black outline-none focus:border-black transition-all"
+                          >
+                            <option value="cash">Cash</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="jazzcash">JazzCash</option>
+                            <option value="easypaisa">EasyPaisa</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Reference / Bill No</label>
+                        <input 
+                          value={referenceNo} 
+                          onChange={(e) => setReferenceNo(e.target.value)} 
+                          placeholder="Internal or bank reference..." 
+                          className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-5 text-sm font-black text-black outline-none focus:border-black transition-all placeholder:text-gray-300" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proof Upload</label>
+                        <div className="relative mt-2">
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            disabled={processing}
+                          />
+                          <div className="w-full bg-surface-subtle border border-dashed border-border-subtle rounded-2xl px-5 py-4 flex items-center justify-between group transition-all hover:border-black">
+                            <span className="text-xs font-black text-black truncate max-w-[150px]">
+                              {proofFile ? proofFile.name : "Select Receipt Image"}
+                            </span>
+                            <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                              <ArrowRight size={14} className="-rotate-45" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Payment Method</label>
-                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)} className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600">
-                      <option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="jazzcash">JazzCash</option><option value="easypaisa">EasyPaisa</option><option value="other">Other</option>
-                    </select>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="min-w-0">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Missing Proof Reason</label>
+                      <textarea
+                        value={proofReason}
+                        onChange={(e) => setProofReason(e.target.value)}
+                        placeholder="Explain if receipt is not available..."
+                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-gray-300"
+                        disabled={processing}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Purpose / Details</label>
+                      <textarea 
+                        value={description} 
+                        onChange={(e) => setDescription(e.target.value)} 
+                        placeholder="Additional details about this transaction..." 
+                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-gray-300" 
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Amount (PKR)</label>
-                  <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Reference No</label>
-                  <input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="Optional reference..." className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="min-w-0">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proof Upload (Image/PDF)</label>
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                    className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600"
-                    disabled={processing}
-                  />
-                  <p className="mt-2 text-[11px] text-gray-500 font-bold break-all">
-                    {proofFile ? `Selected: ${proofFile.name}` : 'No file selected.'}
-                  </p>
-                </div>
-                <div className="min-w-0">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                    Reason if proof is missing
-                  </label>
-                  <textarea
-                    value={proofReason}
-                    onChange={(e) => setProofReason(e.target.value)}
-                    placeholder="If you cannot upload screenshot, explain why..."
-                    className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 min-h-[96px] resize-none placeholder-gray-600"
-                    disabled={processing}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Purpose / Note</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Purpose of this transaction..." className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 min-h-[110px] resize-none placeholder-gray-600" />
               </div>
 
               {message && (
-                <div className={cn('p-3 rounded-xl border flex items-center gap-2', message.type === 'success' ? 'bg-teal-500/10 border-teal-500/30 text-teal-300' : 'bg-red-500/10 border-red-500/30 text-red-300')}>
-                  {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                  <p className="text-sm font-bold">{message.text}</p>
+                <div className={cn('p-5 rounded-2xl border flex items-center gap-3 animate-in fade-in zoom-in-95', message.type === 'success' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700')}>
+                  {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                  <p className="text-sm font-black uppercase tracking-tight">{message.text}</p>
                 </div>
               )}
 
               <button 
                 type="submit" 
                 disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                className="min-h-[44px] w-full md:w-auto bg-black hover:bg-zinc-800 active:scale-95 text-white font-[1000] text-xs uppercase tracking-[0.2em] px-10 py-4 rounded-2xl transition-all duration-300 shadow-2xl shadow-black/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full bg-black hover:bg-zinc-800 active:scale-[0.98] text-white font-black text-xs uppercase tracking-[0.2em] px-10 py-6 rounded-2xl transition-all shadow-2xl shadow-black/20 disabled:opacity-30 flex items-center justify-center gap-4"
               >
                 {processing ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>Submitting...</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Processing Securely...</span>
                   </>
                 ) : (
                   <>
-                    Submit Amount <ArrowRight size={18} />
+                    Finalize Transaction <ArrowRight size={20} />
                   </>
                 )}
               </button>
@@ -1195,63 +1273,67 @@ export default function CashierStationPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12">
-        <div className="lg:col-span-12 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/10">
-              <History size={20} />
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-black/20">
+              <History size={24} />
             </div>
-            <h2 className="text-xl sm:text-3xl font-[1000] text-black uppercase tracking-tight">Terminal History</h2>
+            <div>
+              <h2 className="text-2xl sm:text-4xl font-[1000] text-black uppercase tracking-tight">Terminal History</h2>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Live Transaction Ledger</p>
+            </div>
           </div>
           <button 
             type="button" 
             onClick={() => void fetchHistory()} 
             disabled={historyLoading}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all active:rotate-180"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all active:scale-95"
           >
-            <RefreshCw size={16} className={cn(historyLoading && 'animate-spin')} />
+            <RefreshCw size={14} className={cn(historyLoading && 'animate-spin')} />
+            {historyLoading ? 'Syncing...' : 'Refresh Records'}
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Date Period</span>
-            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
-              <option value="today">Today</option>
-              <option value="range">Date Range</option>
-              <option value="all">All History</option>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Timeframe</span>
+            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
+              <option value="today">Today's Transactions</option>
+              <option value="range">Custom Date Range</option>
+              <option value="all">Full Historical Log</option>
             </select>
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Status Filter</span>
-            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Transaction Status</span>
+            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
+              <option value="all">All Statuses</option>
+              <option value="pending">Awaiting Approval</option>
+              <option value="approved">Verified / Approved</option>
+              <option value="rejected">Rejected / Error</option>
             </select>
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Payment Type</span>
-            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
-              <option value="all">In & Out</option>
-              <option value="income">Payment In</option>
-              <option value="expense">Payment Out</option>
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Flow Type</span>
+            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
+              <option value="all">All Cash Flows</option>
+              <option value="income">Inbound Payments</option>
+              <option value="expense">Outbound Expenses</option>
             </select>
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Department</span>
-            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
-              <option value="all">All Departments</option>
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Department Origin</span>
+            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
+              <option value="all">All Portals</option>
               {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
             </select>
           </div>
         </div>
 
         {historyDateMode === 'range' && (
-          <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top-2 duration-200">
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">From Date</span>
+          <div className="grid grid-cols-2 gap-4 mb-8 animate-in slide-in-from-top-2 duration-300">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Start Date</span>
               <input
                 type="text"
                 placeholder="DD MM YYYY"
@@ -1261,11 +1343,11 @@ export default function CashierStationPage() {
                   const parsed = parseDateDMY(e.target.value);
                   if (parsed) setHistoryFrom(parsed.toISOString().split('T')[0]);
                 }}
-                className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black"
               />
             </div>
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">To Date</span>
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">End Date</span>
               <input
                 type="text"
                 placeholder="DD MM YYYY"
@@ -1275,169 +1357,182 @@ export default function CashierStationPage() {
                   const parsed = parseDateDMY(e.target.value);
                   if (parsed) setHistoryTo(parsed.toISOString().split('T')[0]);
                 }}
-                className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black"
               />
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
-          <div className="border-l-4 border-l-emerald-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Income</p>
-            <p className="text-xl md:text-2xl font-black text-white">Rs {totals.income.toLocaleString()}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white border-l-8 border-l-black border border-border-subtle rounded-[2rem] p-6 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Income</p>
+            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.income.toLocaleString()}</p>
           </div>
-          <div className="border-l-4 border-l-rose-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Expense</p>
-            <p className="text-xl md:text-2xl font-black text-white">Rs {totals.expense.toLocaleString()}</p>
+          <div className="bg-white border-l-8 border-l-red-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Expense</p>
+            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.expense.toLocaleString()}</p>
           </div>
-          <div className="border-l-4 border-l-amber-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Txns Found</p>
-            <p className="text-xl md:text-2xl font-black text-white">{historyFiltered.length}</p>
+          <div className="bg-white border-l-8 border-l-gray-300 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Transactions</p>
+            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">{historyFiltered.length}</p>
           </div>
-          <div className="border-l-4 border-l-blue-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Net Balance</p>
-            <p className="text-xl md:text-2xl font-black text-white">Rs {totals.net.toLocaleString()}</p>
+          <div className="bg-white border-l-8 border-l-emerald-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Net Balance</p>
+            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.net.toLocaleString()}</p>
           </div>
         </div>
 
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden space-y-4">
           {historyLoading ? (
-            <div className="bg-[#11151d] rounded-xl p-6 border border-white/10 text-center"><Loader2 className="w-7 h-7 animate-spin text-teal-400 mx-auto" /></div>
+            <div className="bg-white rounded-[2rem] p-10 border border-border-subtle text-center shadow-sm">
+              <Loader2 className="w-8 h-8 animate-spin text-black mx-auto" />
+              <p className="text-[10px] font-black uppercase tracking-widest mt-4">Retrieving Ledger...</p>
+            </div>
           ) : historyFiltered.length === 0 ? (
-            <div className="bg-[#11151d] rounded-xl p-4 border border-white/10 text-sm font-bold text-gray-400">No transactions match your filters.</div>
+            <div className="bg-white rounded-[2rem] p-8 border border-border-subtle text-center shadow-sm">
+              <p className="text-sm font-black text-gray-400">No records found for this selection.</p>
+            </div>
           ) : historyFiltered.map((tx) => (
-            <div key={tx.id} className="bg-[#11151d] rounded-xl p-4 border border-white/10 animate-in fade-in duration-300">
-                  <div className="flex items-start justify-between gap-2">
+            <div key={tx.id} onClick={() => setDetailModalTx(tx)} className="bg-white rounded-[2rem] p-6 border border-border-subtle shadow-sm active:scale-[0.98] transition-all">
+              <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-white truncate">{tx.patientName || tx.staffName || '-'}</div>
-                  <div className="text-[10px] font-bold text-gray-400">{tx.departmentName || tx.departmentCode}</div>
+                  <div className="text-sm font-black text-black truncate">{tx.patientName || tx.staffName || 'General Tx'}</div>
+                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{tx.departmentCode} • {tx.categoryName || tx.category}</div>
                 </div>
-                <div className={cn('text-sm font-black shrink-0', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>{tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                <div className={cn('text-sm font-black shrink-0', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
+                  {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                </div>
               </div>
-              <div className="mt-2 text-xs text-gray-300">{tx.categoryName || tx.category}</div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className={cn('px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider', tx.status === 'approved' ? 'bg-teal-500/10 text-teal-300' : tx.status === 'rejected' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300')}>{tx.status || 'pending'}</span>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={cn('px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border', 
+                  tx.status === 'approved' ? 'bg-black text-white border-black' : 
+                  tx.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' : 
+                  'bg-surface-subtle text-black border-border-subtle'
+                )}>
+                  {tx.status || 'pending'}
+                </span>
                 <span className="text-[10px] font-bold text-gray-400">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-gray-200 dark:border-white/10 overflow-hidden shadow-xl shadow-gray-100/50 dark:shadow-none">
+        <div className="hidden md:block bg-white rounded-[2.5rem] border border-border-subtle overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <div className="table-responsive">
-              <table className="w-full min-w-[860px] text-left border-separate border-spacing-0">
-                <thead>
-                  <tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
-                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Date</th>
-                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Dept</th>
-                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Account / Entity</th>
-                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Category</th>
-                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Status</th>
-                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400 text-right">Amount</th>
+            <table className="w-full min-w-[860px] text-left border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-surface-subtle">
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Dept</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Account / Detail</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Category</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {historyLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-20 text-center">
+                      <Loader2 className="w-12 h-12 animate-spin text-black mx-auto" />
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-6">Securing Live Data Stream...</p>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                  {historyLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-12 text-center">
-                        <Loader2 className="w-10 h-10 animate-spin text-teal-400 mx-auto" />
-                        <p className="text-gray-500 text-xs font-black uppercase tracking-widest mt-4">Standardizing & Fetching Records...</p>
-                      </td>
-                    </tr>
-                  ) : historyFiltered.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-12 text-center text-sm font-bold text-gray-400">No cached transactions match your query.</td>
-                    </tr>
-                  ) : historyFiltered.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors group">
-                      <td className="px-5 py-4 text-sm font-black text-white">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
-                      <td className="px-5 py-4">
-                        <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-wider text-gray-400">{tx.departmentCode}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="text-sm font-black text-white group-hover:text-amber-400 transition-colors">{tx.patientName || tx.staffName || '-'}</div>
-                        <div className="text-[10px] font-bold text-gray-500 tracking-wider">{tx.patientId || tx.staffId || tx.id?.slice(0, 8)}</div>
-                      </td>
-                      <td className="px-5 py-4 text-sm font-bold text-gray-300">{tx.categoryName || tx.category}</td>
-                      <td className="px-5 py-4">
-                        <span className={cn('px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border', 
-                          tx.status === 'approved' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 
-                          tx.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                          'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        )}>
-                          {tx.status || 'pending'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className={cn('text-sm font-black flex items-center justify-end gap-1', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>
-                          {tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}
-                          Rs {Number(tx.amount || 0).toLocaleString()}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ) : historyFiltered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-20 text-center text-sm font-black text-gray-300 uppercase tracking-widest">No entries found for this query.</td>
+                  </tr>
+                ) : historyFiltered.map((tx) => (
+                  <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-surface-subtle transition-colors cursor-pointer group">
+                    <td className="px-8 py-6 text-xs font-black text-black">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
+                    <td className="px-8 py-6">
+                      <span className="px-2 py-0.5 rounded bg-black text-white text-[9px] font-black uppercase tracking-widest">{tx.departmentCode}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="text-sm font-black text-black group-hover:underline underline-offset-4">{tx.patientName || tx.staffName || 'General Account'}</div>
+                      <div className="text-[9px] font-bold text-gray-400 tracking-wider uppercase mt-0.5">{tx.id?.slice(0, 12)}</div>
+                    </td>
+                    <td className="px-8 py-6 text-xs font-black text-gray-500 uppercase tracking-widest">{tx.categoryName || tx.category}</td>
+                    <td className="px-8 py-6">
+                      <span className={cn('px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border', 
+                        tx.status === 'approved' ? 'bg-black text-white border-black' : 
+                        tx.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' : 
+                        'bg-surface-subtle text-black border-border-subtle'
+                      )}>
+                        {tx.status || 'pending'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className={cn('text-sm font-black', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
+                        {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-
       {forwardModalTx && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-[#0d0f14] border border-white/10 rounded-2xl p-5">
-            <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-xl bg-white border border-border-subtle rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div className="bg-surface-subtle px-8 py-6 border-b border-border-subtle flex items-center justify-between">
               <div>
-                <p className="text-lg font-black text-white">Add Fee Request Proof</p>
-                <p className="text-sm font-bold text-gray-400 mt-1">
-                  {forwardModalTx.patientName || forwardModalTx.patientId || 'Patient'} - Rs {Number(forwardModalTx.amount || 0).toLocaleString()}
+                <h3 className="text-xl font-[1000] text-black uppercase tracking-tight">Authorization Proof</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                  {forwardModalTx.patientName || forwardModalTx.patientId || 'Account Holder'} • Rs {Number(forwardModalTx.amount || 0).toLocaleString()}
                 </p>
               </div>
               <button
                 type="button"
                 disabled={forwardProofUploading}
                 onClick={() => setForwardModalTx(null)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-colors"
+                className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center text-black hover:bg-black hover:text-white transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proof Upload (Image/PDF)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => setForwardProofFile(e.target.files?.[0] || null)}
-                  className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
-                  disabled={forwardProofUploading}
-                />
-                <p className="mt-2 text-[11px] text-gray-500 font-bold">
-                  {forwardProofFile ? `Selected: ${forwardProofFile.name}` : 'No file selected yet.'}
-                </p>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">Digital Evidence (Image/PDF)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setForwardProofFile(e.target.files?.[0] || null)}
+                    className="w-full opacity-0 absolute inset-0 cursor-pointer z-10"
+                    disabled={forwardProofUploading}
+                  />
+                  <div className="w-full bg-surface-subtle border-2 border-dashed border-border-subtle rounded-2xl px-6 py-8 text-center transition-all hover:border-black">
+                    <p className="text-sm font-black text-black">
+                      {forwardProofFile ? forwardProofFile.name : 'Click or Drop Proof File'}
+                    </p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-2">Maximum file size: 5MB</p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                  Reason (required if no proof uploaded)
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">
+                  Compliance Note (Required if no proof)
                 </label>
                 <textarea
                   value={forwardProofReason}
                   onChange={(e) => setForwardProofReason(e.target.value)}
-                  placeholder="Why proof is missing? (e.g., app error / receipt not available)"
-                  className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-semibold text-white border border-white/10 min-h-[90px] resize-none placeholder:text-gray-500"
+                  placeholder="Explain the circumstances if digital proof is unavailable..."
+                  className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black min-h-[100px] resize-none transition-all"
                   disabled={forwardProofUploading}
                 />
               </div>
 
-              <div className="flex gap-3 pt-1">
+              <div className="flex gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => setForwardModalTx(null)}
                   disabled={forwardProofUploading}
-                  className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+                  className="flex-1 py-4 rounded-2xl bg-white border border-border-subtle text-black font-black text-[10px] uppercase tracking-widest hover:bg-surface-subtle transition-all"
                 >
                   Cancel
                 </button>
@@ -1445,9 +1540,9 @@ export default function CashierStationPage() {
                   type="button"
                   onClick={() => void confirmForwardToSuperadmin()}
                   disabled={forwardProofUploading}
-                  className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-60"
+                  className="flex-1 py-4 rounded-2xl bg-black text-white font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50"
                 >
-                  {forwardProofUploading ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Add'}
+                  {forwardProofUploading ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Authorize & Commit'}
                 </button>
               </div>
             </div>
@@ -1456,45 +1551,48 @@ export default function CashierStationPage() {
       )}
 
       {rejectModalTx && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-[#0d0f14] border border-white/10 rounded-2xl p-5">
-            <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in zoom-in-95 duration-300">
+          <div className="w-full max-w-xl bg-white border border-border-subtle rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div className="bg-red-50 px-8 py-6 border-b border-red-100 flex items-center justify-between">
               <div>
-                <p className="text-lg font-black text-white">Reject Fee Request</p>
-                <p className="text-sm font-bold text-gray-400 mt-1">
-                  {rejectModalTx.patientName || rejectModalTx.patientId || 'Patient'} - Rs {Number(rejectModalTx.amount || 0).toLocaleString()}
+                <h3 className="text-xl font-[1000] text-red-600 uppercase tracking-tight">Rejection Protocol</h3>
+                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mt-1">
+                  Final denial for transaction: {rejectModalTx.id?.slice(0, 8)}
                 </p>
               </div>
               <button
                 type="button"
                 disabled={rejecting}
                 onClick={() => setRejectModalTx(null)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-colors"
+                className="w-10 h-10 rounded-xl bg-white border border-red-100 flex items-center justify-center text-red-600 hover:bg-red-600 hover:text-white transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                  Rejection reason (shown to admin)
-                </label>
+            <div className="p-8 space-y-6">
+              <div className="p-5 bg-surface-subtle border border-border-subtle rounded-2xl flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-gray-400">Claim Amount</span>
+                <span className="text-lg font-[1000] text-black">Rs {Number(rejectModalTx.amount || 0).toLocaleString()}</span>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">Reason for Rejection</label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Explain why this request is rejected..."
-                  className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-semibold text-white border border-white/10 min-h-[110px] resize-none placeholder:text-gray-500"
+                  placeholder="Clearly state the reason for this rejection..."
+                  className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black min-h-[120px] resize-none transition-all"
                   disabled={rejecting}
                 />
               </div>
 
-              <div className="flex gap-3 pt-1">
+              <div className="flex gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => setRejectModalTx(null)}
                   disabled={rejecting}
-                  className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+                  className="flex-1 py-4 rounded-2xl bg-white border border-border-subtle text-black font-black text-[10px] uppercase tracking-widest hover:bg-surface-subtle transition-all"
                 >
                   Cancel
                 </button>
@@ -1502,79 +1600,80 @@ export default function CashierStationPage() {
                   type="button"
                   onClick={() => void confirmRejectIncoming()}
                   disabled={rejecting}
-                  className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-red-600 hover:bg-red-700 text-white disabled:opacity-60"
+                  className="flex-1 py-4 rounded-2xl bg-red-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50"
                 >
-                  {rejecting ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Reject'}
+                  {rejecting ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Confirm Rejection'}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
       {detailModalTx && (
-        <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="relative p-8">
+        <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-white border border-border-subtle rounded-[3rem] overflow-hidden shadow-2xl">
+            <div className="relative p-10">
               <button 
                 onClick={() => setDetailModalTx(null)}
-                className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                className="absolute top-8 right-8 w-10 h-10 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-black hover:bg-black hover:text-white transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex flex-col items-center text-center mb-8">
-                <div className="w-16 h-16 bg-black dark:bg-white rounded-2xl flex items-center justify-center text-white dark:text-black mb-4 shadow-xl">
+              <div className="flex flex-col items-center text-center mb-10">
+                <div className="w-16 h-16 bg-black rounded-[1.5rem] flex items-center justify-center text-white mb-5 shadow-2xl shadow-black/20">
                   <FileText size={32} />
                 </div>
-                <h3 className="text-xl font-[1000] text-black dark:text-white uppercase tracking-tight">Transaction Detail</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">{detailModalTx.id}</p>
+                <h3 className="text-2xl font-[1000] text-black uppercase tracking-tight">Audit Record</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Log Reference: {detailModalTx.id}</p>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Date</p>
-                    <p className="text-sm font-black text-black dark:text-white">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
+                  <div className="p-5 rounded-2xl bg-surface-subtle border border-border-subtle">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Timestamp</p>
+                    <p className="text-sm font-black text-black">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Department</p>
-                    <p className="text-sm font-black text-black dark:text-white uppercase">{detailModalTx.departmentCode || 'HQ'}</p>
+                  <div className="p-5 rounded-2xl bg-surface-subtle border border-border-subtle">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Portal Source</p>
+                    <p className="text-sm font-black text-black uppercase">{detailModalTx.departmentCode || 'HQ'}</p>
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Account / Entity</p>
-                  <p className="text-lg font-black text-black dark:text-white">{detailModalTx.patientName || detailModalTx.donorName || 'General Account'}</p>
-                  <p className="text-[11px] font-bold text-gray-500 mt-0.5">{detailModalTx.patientId || detailModalTx.donorId || 'N/A'}</p>
+                <div className="p-6 rounded-2xl bg-white border-2 border-black/5 shadow-inner">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Account Entity</p>
+                  <p className="text-lg font-black text-black">{detailModalTx.patientName || detailModalTx.staffName || 'General Account'}</p>
+                  <p className="text-[11px] font-bold text-gray-400 mt-1">{detailModalTx.patientId || detailModalTx.staffId || 'ID UNKNOWN'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Category</p>
-                    <p className="text-sm font-black text-black dark:text-white">{detailModalTx.categoryName || detailModalTx.category || 'N/A'}</p>
+                  <div className="px-1">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Ledger Category</p>
+                    <p className="text-sm font-black text-black">{detailModalTx.categoryName || detailModalTx.category || 'Uncategorized'}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Amount</p>
-                    <p className="text-xl font-[1000] text-black dark:text-white">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
+                  <div className="text-right px-1">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Value Transacted</p>
+                    <p className="text-xl font-[1000] text-black">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {detailModalTx.description && (
-                  <div className="p-4 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 text-center">Internal Note</p>
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-400 text-center leading-relaxed">
-                      {detailModalTx.description}
+                  <div className="p-5 rounded-2xl bg-surface-subtle border border-dashed border-border-subtle">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center">Transaction Memo</p>
+                    <p className="text-xs font-bold text-black text-center leading-relaxed italic">
+                      "{detailModalTx.description}"
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="mt-8 flex gap-3">
+              <div className="mt-10 flex gap-4">
                 <button 
                   onClick={() => setDetailModalTx(null)}
-                  className="flex-1 py-4 bg-black text-white dark:bg-white dark:text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10"
+                  className="flex-1 py-5 bg-white border border-border-subtle text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black hover:text-white transition-all"
                 >
-                  Close Detail
+                  Dismiss
                 </button>
                 {detailModalTx.status === 'pending_cashier' && (
                    <button 
@@ -1582,9 +1681,9 @@ export default function CashierStationPage() {
                      setDetailModalTx(null);
                      openForwardModal(detailModalTx);
                    }}
-                   className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20"
+                   className="flex-1 py-5 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
                  >
-                   Approve / Add
+                   Authorize Tx
                  </button>
                 )}
               </div>
@@ -1592,6 +1691,7 @@ export default function CashierStationPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

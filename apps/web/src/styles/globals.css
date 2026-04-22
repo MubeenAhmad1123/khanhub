@@ -172,30 +172,21 @@
     }
   }
 
-  /* ─── Monochromatic System Tokens (Light) ─── */
-  --surface-default: #ffffff;
-  --surface-subtle: #fafafa;
-  --surface-overlay: rgba(255, 255, 255, 0.9);
-  --border-subtle: #f1f1f1;
+  /* ─── Monochromatic System Tokens (Light-Only) ─── */
+  --surface-default: #FCFBF4; /* Creamy Background */
+  --surface-subtle: #F5F4EA;
+  --surface-overlay: rgba(252, 251, 244, 0.9);
+  --border-subtle: #E8E7DC;
   --text-primary: #000000;
-  --text-secondary: #6b7280;
-  --tooltip-bg: #ffffff;
+  --text-secondary: #262626;
+  --tooltip-bg: #FCFBF4;
 }
 
-.dark {
-  color-scheme: dark;
-  --surface-default: #000000;
-  --surface-subtle: rgba(255, 255, 255, 0.05);
-  --surface-overlay: rgba(0, 0, 0, 0.9);
-  --border-subtle: rgba(255, 255, 255, 0.1);
-  --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --tooltip-bg: #000000;
-}
+/* Removed .dark overrides to enforce light-only theme */
 
 .shimmer {
   animation: shimmer 2s infinite linear;
-  background: linear-gradient(to right, #f6f7f8 4%, #edeef1 25%, #f6f7f8 36%);
+  background: linear-gradient(to right, #F5F4EA 4%, #E8E7DC 25%, #F5F4EA 36%);
   background-size: 1000px 100%;
 }
 
@@ -210,7 +201,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-neutral-200);
+  background-color: #D6D3C1;
   border-radius: var(--radius-full);
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -218,37 +209,23 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-neutral-300);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: #BDB9A2;
 }
 
 /* ─── Base Reset ─── */
 @layer base {
   html {
     scroll-behavior: smooth;
-    transition: color 0.3s, background-color 0.3s;
+    /* No transitions to keep it snappy as requested */
   }
 
   body {
     font-family: var(--font-body);
-    background-color: var(--color-white);
-    color: var(--color-neutral-900);
+    background-color: var(--surface-default);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: color 0.3s, background-color 0.3s;
     font-feature-settings: 'kern' 1, 'liga' 1;
-  }
-
-  .dark body {
-    background-color: var(--color-black);
-    color: var(--color-gray-100);
   }
 
   h1,
@@ -258,11 +235,7 @@
   h5,
   h6 {
     font-family: var(--font-display);
-    color: var(--color-neutral-900);
-  }
-
-  .dark :is(h1, h2, h3, h4, h5, h6) {
-    color: var(--color-white);
+    color: #000000;
   }
 
   * {
@@ -270,14 +243,10 @@
     border-color: var(--color-neutral-200);
   }
 
-  .dark * {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
   input,
   textarea,
   select {
-    @apply bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm transition-all;
+    @apply bg-white border border-neutral-200 rounded-xl px-4 py-2 text-sm transition-all;
   }
 }
 
@@ -294,10 +263,6 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: var(--color-neutral-200);
     border-radius: 20px;
-  }
-
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--color-neutral-800);
   }
 }
 
