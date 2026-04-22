@@ -114,8 +114,10 @@ export default function ManagerStaffPage() {
 
       const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
       const matchesStatus = statusFilter === 'all' ||
-        (statusFilter === 'active' && s.isActive !== false) ||
-        (statusFilter === 'inactive' && s.isActive === false);
+        (statusFilter === 'active' && s.status === 'active') ||
+        (statusFilter === 'inactive' && s.status === 'inactive') ||
+        (statusFilter === 'resigned' && s.status === 'resigned') ||
+        (statusFilter === 'terminated' && s.status === 'terminated');
 
       return matchesSearch && matchesDept && matchesStatus;
     });
@@ -233,6 +235,8 @@ export default function ManagerStaffPage() {
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+              <option value="resigned">Resigned</option>
+              <option value="terminated">Terminated</option>
             </select>
           </div>
         </div>

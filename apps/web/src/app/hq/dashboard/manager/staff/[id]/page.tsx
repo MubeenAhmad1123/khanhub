@@ -15,8 +15,9 @@ import {
   Target, Camera, Activity,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
-  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
-  ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle
+  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X,
+  ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
+  Sparkles, Save
 } from 'lucide-react';
 import {
   fetchStaffProfile,
@@ -44,7 +45,6 @@ import {
 import { awardStaffPoint } from '@/app/hq/actions/points';
 
 // Define unified icons for tasks
-import { Sparkles, Save, X } from 'lucide-react';
 import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS } from '@/data/hqConfig';
 
 interface Staff {
@@ -345,6 +345,43 @@ export default function StaffProfilePage() {
       setLoading(false);
     }
   }, [staffId, router, daysInMonth]);
+
+  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated') => {
+    if (!staff) return;
+    try {
+      setSaving(true);
+      const isActive = newStatus === 'active';
+      await updateStaffProfile(staffId, { 
+        status: newStatus,
+        isActive
+      });
+      setStaff(prev => prev ? { ...prev, status: newStatus, isActive } : null);
+      toast.success(`Staff status updated to ${newStatus}`);
+    } catch (err) {
+      toast.error("Failed to update status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteConfig = async (type: 'duty' | 'dress', key: string) => {
+    if (!staff) return;
+    try {
+      setProcessingConfig(true);
+      const field = type === 'duty' ? 'dutyConfig' : 'dressCodeConfig';
+      const current = type === 'duty' ? (staff.dutyConfig || []) : (staff.dressCodeConfig || []);
+      const next = current.filter(i => i.key !== key);
+      
+      await updateStaffProfile(staffId, { [field]: next });
+      setStaff(prev => prev ? { ...prev, [field]: next } : null);
+      setEditForm(prev => ({ ...prev, [field]: next }));
+      toast.success(`${type === 'duty' ? 'Duty' : 'Dress Item'} removed`);
+    } catch (err) {
+      toast.error("Failed to remove item");
+    } finally {
+      setProcessingConfig(false);
+    }
+  };
 
   const handleAddConfig = async () => {
     if (!staff || !addingConfig || processingConfig) return;
@@ -1084,10 +1121,22 @@ export default function StaffProfilePage() {
 
               <div className="w-full grid grid-cols-2 gap-4 mt-4">
                 <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
-                  <p className="text-[10px] font-black text-black uppercase tracking-widest mb-1">Status</p>
-                  <p className={`font-black text-xs uppercase ${staff?.isActive !== false ? 'text-teal-500' : 'text-rose-500'}`}>
-                    {staff?.isActive !== false ? 'Active' : 'Inactive'}
-                  </p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Lifecycle Status</p>
+                  <select 
+                    className={`bg-transparent font-black text-xs uppercase outline-none border-none cursor-pointer w-full p-0 m-0 ${
+                      staff?.status === 'active' ? 'text-teal-500' : 
+                      staff?.status === 'resigned' ? 'text-amber-500' : 
+                      staff?.status === 'terminated' ? 'text-rose-500' : 
+                      'text-slate-900'
+                    }`}
+                    value={staff?.status || (staff?.isActive !== false ? 'active' : 'inactive')}
+                    onChange={(e) => handleUpdateStatus(e.target.value as any)}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="resigned">Resigned</option>
+                    <option value="terminated">Terminated</option>
+                  </select>
                 </div>
                 <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
                   <p className="text-[10px] font-black text-black uppercase tracking-widest mb-1">Base Salary</p>
@@ -1267,7 +1316,15 @@ export default function StaffProfilePage() {
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {staff?.dutyConfig?.length ? staff.dutyConfig.map(i => (
-                        <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
+                        <div key={i.key} className={`group flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>
+                          <span className="text-[9px] font-black uppercase tracking-widest">{i.label}</span>
+                          <button 
+                            onClick={() => handleDeleteConfig('duty', i.key)}
+                            className="text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       )) : <p className="text-xs text-black italic">No configuration found</p>}
                     </div>
                   </div>

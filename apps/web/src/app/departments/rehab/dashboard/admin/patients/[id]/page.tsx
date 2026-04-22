@@ -633,6 +633,24 @@ export default function PatientDetailPage() {
     }
   };
 
+  const handleRejoin = async () => {
+    if (!window.confirm("Are you sure you want to rejoin this patient?")) return;
+    try {
+      setDeactivating(true);
+      await updateDoc(doc(db, 'rehab_patients', patientId), { 
+        isActive: true,
+        rejoinDate: Timestamp.now()
+      });
+      toast.success('Patient rejoined successfully ✓');
+      fetchData();
+    } catch (error) {
+      console.error("Rejoin error", error);
+      toast.error('Rejoin failed');
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   const handleDischarge = () => {
     // Reset modal and open
     const today = new Date().toISOString().split('T')[0];
@@ -1215,11 +1233,15 @@ export default function PatientDetailPage() {
                 <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
                 <button 
-                  onClick={handleDeactivate} 
+                  onClick={patient.isActive !== false ? handleDeactivate : handleRejoin} 
                   disabled={deactivating}
-                  className="bg-white dark:bg-gray-900 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  className={`bg-white dark:bg-gray-900 border px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto ${
+                    patient.isActive !== false 
+                      ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' 
+                      : 'border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                  }`}
                 >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
+                  {deactivating ? 'Processing...' : (patient.isActive !== false ? 'Deactivate Patient' : 'Rejoin Patient')}
                 </button>
               </div>
             </div>

@@ -493,6 +493,24 @@ export default function PatientDetailPage() {
     }
   };
 
+  const handleRejoin = async () => {
+    if (!window.confirm("Are you sure you want to rejoin this patient?")) return;
+    try {
+      setDeactivating(true);
+      await updateDoc(doc(db, 'hospital_patients', patientId), { 
+        isActive: true,
+        rejoinDate: Timestamp.now()
+      });
+      toast.success('Patient rejoined successfully ✓');
+      fetchData();
+    } catch (error) {
+      console.error("Rejoin error", error);
+      toast.error('Rejoin failed');
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   const handleDischarge = async () => {
     if (!window.confirm("Are you sure you want to discharge this patient?")) return;
     try {
@@ -956,11 +974,15 @@ export default function PatientDetailPage() {
                 <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
                 <p className="text-sm text-gray-500 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
                 <button 
-                  onClick={handleDeactivate} 
+                  onClick={patient.isActive !== false ? handleDeactivate : handleRejoin} 
                   disabled={deactivating}
-                  className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  className={`bg-white border px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto ${
+                    patient.isActive !== false 
+                      ? 'border-red-200 text-red-600 hover:bg-red-50' 
+                      : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                  }`}
                 >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
+                  {deactivating ? 'Processing...' : (patient.isActive !== false ? 'Deactivate Patient' : 'Rejoin Patient')}
                 </button>
               </div>
             </div>

@@ -10,16 +10,34 @@ import {
   ArrowUpRight,
   Plus
 } from 'lucide-react';
-import { collection, query, getDocs, limit } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useHqSession } from '@/hooks/hq/useHqSession';
+import { getDeptPrefix } from '@/lib/hq/superadmin/staff';
+import { toast } from 'react-hot-toast';
+import { Loader2, Sparkles, CheckCircle, X } from 'lucide-react';
 
 export default function ItOverviewPage() {
+  const { session } = useHqSession();
   const [stats, setStats] = useState({
     totalStaff: 0,
     activeSystems: 12,
     openTickets: 4,
     uptime: '99.9%'
   });
+
+  // Staff Self-Service Data
+  const [userStats, setUserStats] = useState({
+    attendance: '—',
+    fines: 0,
+    growthPoints: 0,
+    loading: true,
+    dept: ''
+  });
+
+  const [showContributionModal, setShowContributionModal] = useState(false);
+  const [contributionText, setContributionText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -33,6 +51,106 @@ export default function ItOverviewPage() {
     }
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    if (!session?.uid) return;
+
+    async function fetchPersonalStats() {
+      if (!session?.uid) return;
+      const uid = session.uid;
+
+      try {
+        setUserStats(prev => ({ ...prev, loading: true }));
+        
+        // Find which department this user belongs to
+        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
+        let userDept = '';
+        let userData = null;
+
+        for (const d of depts) {
+          const col = d === 'hq' ? 'hq_users' : (d === 'job-center' ? 'jobcenter_users' : (d === 'social-media' ? 'media_users' : `${d.replace('-', '_')}_users`));
+          const docRef = doc(db, col, uid);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            userDept = d;
+            userData = snap.data();
+            break;
+          }
+        }
+
+        if (userDept) {
+          const prefix = getDeptPrefix(userDept as any);
+          
+          // Fetch Fines
+          const finesSnap = await getDocs(query(
+            collection(db, `${prefix}_fines`),
+            where('staffId', '==', uid),
+            where('status', '==', 'unpaid')
+          ));
+          const totalFines = finesSnap.docs.reduce((acc, d) => acc + (d.data().amount || 0), 0);
+
+          // Fetch Growth Points
+          const gpSnap = await getDocs(query(
+            collection(db, `${prefix}_growth_points`),
+            where('staffId', '==', uid)
+          ));
+          const totalGP = gpSnap.docs.reduce((acc, d) => acc + (d.data().points || 0), 0);
+
+          // Attendance % (Last 30 days)
+          const attSnap = await getDocs(query(
+            collection(db, `${prefix}_attendance`),
+            where('staffId', '==', uid),
+            limit(30)
+          ));
+          const presentCount = attSnap.docs.filter(d => d.data().status === 'present').length;
+          const attRate = attSnap.size > 0 ? Math.round((presentCount / attSnap.size) * 100) : 0;
+
+          setUserStats({
+            attendance: `${attRate}%`,
+            fines: totalFines,
+            growthPoints: totalGP,
+            loading: false,
+            dept: userDept
+          });
+        } else {
+          setUserStats(prev => ({ ...prev, loading: false }));
+        }
+      } catch (err) {
+        console.error("Error fetching personal stats:", err);
+        setUserStats(prev => ({ ...prev, loading: false }));
+      }
+    }
+
+    fetchPersonalStats();
+  }, [session]);
+
+  const handleSubmitContribution = async () => {
+    if (!contributionText.trim() || !userStats.dept || !session?.uid) return;
+    const uid = session.uid;
+    const name = session.name || session.displayName || 'Staff';
+    
+    setSubmitting(true);
+    try {
+      const prefix = getDeptPrefix(userStats.dept as any);
+      await addDoc(collection(db, `${prefix}_growth_points`), {
+        staffId: uid,
+        staffName: name,
+        description: contributionText,
+        points: 0, // Pending review
+        status: 'pending',
+        type: 'contribution',
+        createdAt: serverTimestamp()
+      });
+      toast.success("Contribution submitted for review!");
+      setContributionText('');
+      setShowContributionModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to submit contribution");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-10">
@@ -79,6 +197,106 @@ export default function ItOverviewPage() {
           </div>
         ))}
       </div>
+
+      {/* Staff Self-Service (New Section) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="bg-black text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group border-4 border-black">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Activity size={120} />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-gray-500">Personal Performance Matrix</p>
+          <h2 className="text-4xl font-black tracking-tighter mb-8 uppercase">My Dashboard</h2>
+          
+          {userStats.loading ? (
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Syncing telemetry...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-8">
+              <div className="hover:translate-y-[-4px] transition-transform">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Attendance</p>
+                <p className="text-3xl font-black text-emerald-400">{userStats.attendance}</p>
+              </div>
+              <div className="hover:translate-y-[-4px] transition-transform">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Pending Fines</p>
+                <p className="text-3xl font-black text-rose-400">PKR {userStats.fines}</p>
+              </div>
+              <div className="hover:translate-y-[-4px] transition-transform">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Growth Pts</p>
+                <p className="text-3xl font-black text-blue-400">+{userStats.growthPoints}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button 
+          onClick={() => setShowContributionModal(true)}
+          className="bg-white border-4 border-black p-10 rounded-[3rem] text-left hover:bg-gray-50 transition-all group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Sparkles size={120} />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-gray-400">Value Addition</p>
+          <h2 className="text-4xl font-black tracking-tighter mb-4 uppercase">Contribution</h2>
+          <p className="text-sm font-bold uppercase tracking-tight text-gray-500 max-w-xs leading-snug">
+            Record growth milestones, suggest improvements, or log daily value added.
+          </p>
+          <div className="mt-8 w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10">
+            <Plus size={28} />
+          </div>
+        </button>
+      </div>
+
+      {/* Contribution Modal */}
+      {showContributionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowContributionModal(false)} />
+          <div className="relative bg-white w-full max-w-lg rounded-[3rem] p-10 shadow-2xl border-4 border-black animate-in zoom-in duration-300">
+            <button 
+              onClick={() => setShowContributionModal(false)}
+              className="absolute top-8 right-8 text-gray-400 hover:text-black transition-colors"
+            >
+              <X size={24} />
+            </button>
+            
+            <div className="mb-8">
+              <div className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center mb-4">
+                <Sparkles size={24} />
+              </div>
+              <h3 className="text-2xl font-black uppercase tracking-tight">Record Contribution</h3>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Submit growth points for verification</p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Description of Contribution</label>
+                <textarea
+                  className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-3xl p-6 text-sm font-bold outline-none min-h-[150px] transition-all"
+                  placeholder="What did you achieve or contribute today?"
+                  value={contributionText}
+                  onChange={e => setContributionText(e.target.value)}
+                />
+              </div>
+
+              <button
+                onClick={handleSubmitContribution}
+                disabled={submitting || !contributionText.trim()}
+                className="w-full bg-black text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle size={18} />
+                    Submit for Approval
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
