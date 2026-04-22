@@ -330,7 +330,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group ${
                   isActive
                     ? 'bg-black text-white shadow-lg shadow-black/20'
-                    : 'text-black hover:bg-white hover:text-black'
+                    : 'text-black hover:bg-black hover:text-white'
                 }`}
               >
                 <div className={`p-1 rounded-lg transition-colors ${isActive ? 'text-white' : 'text-black group-hover:text-black'}`}>

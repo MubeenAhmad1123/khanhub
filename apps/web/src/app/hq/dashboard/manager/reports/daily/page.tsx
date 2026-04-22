@@ -156,7 +156,15 @@ export default function DailyReportPage() {
         const fineTotal = finesList.reduce((acc: number, f: any) => acc + (Number(f.amount) || 0), 0);
 
         // Determine statuses based on data
-        let attendanceStatus: DailyReportRow['attendance'] = att?.status || 'unmarked';
+        const rawStatus = att?.status || 'unmarked';
+        let attendanceStatus: DailyReportRow['attendance'] = 'unmarked';
+
+        if (rawStatus === 'paid_leave' || rawStatus === 'unpaid_leave') {
+          attendanceStatus = 'leave';
+        } else if (['present', 'absent', 'late', 'unmarked'].includes(rawStatus)) {
+          attendanceStatus = rawStatus as any;
+        }
+
         if (att?.isLate && attendanceStatus === 'present') attendanceStatus = 'late';
 
         const uniformStatus: DailyReportRow['uniformStatus'] = uniformConfig.length === 0 ? 'na' :
@@ -167,8 +175,13 @@ export default function DailyReportPage() {
           (dutiesPending.length === 0 ? 'yes' :
             (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
 
-        const gpStatus: DailyReportRow['gpStatus'] = attendanceStatus === 'present' ? 'yes' :
-          (attendanceStatus === 'late' ? 'invalid' : 'no');
+        // Point Calculation (1 point each, total 4)
+        const attPoint = (attendanceStatus === 'present' || attendanceStatus === 'late') ? 1 : 0;
+        const uniformPoint = uniformStatus === 'yes' ? 1 : 0;
+        const dutyPoint = dutyStatus === 'yes' ? 1 : 0;
+        const contribPoint = contribScore > 0 ? 1 : 0;
+
+        const totalDailyPoints = attPoint + uniformPoint + dutyPoint + contribPoint;
 
         return {
           id: sid,
@@ -178,14 +191,16 @@ export default function DailyReportPage() {
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
-          gpStatus,
-          dailyScore: (attScore + (uniformStatus === 'yes' ? 1 : 0) + (dutyStatus === 'yes' ? 1 : 0) + contribScore) * 25,
+          gpStatus: totalDailyPoints >= 3 ? 'yes' : 'no',
+          dailyScore: totalDailyPoints,
           fines: fineTotal,
+          fineReason: finesList.length > 0 ? finesList[0].reason : '',
           details: {
             uniformMissing,
             dutiesPending,
             finesReason: finesList.map((f: any) => `${f.reason} (₨${f.amount})`)
-          }
+          },
+          arrivalTime: att?.arrivalTime
         };
       });
 
@@ -349,8 +364,8 @@ export default function DailyReportPage() {
   }
 
   return (
-    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
-      <div id="daily-performance-report-content" className={`max-w-7xl mx-auto space-y-8 p-8 rounded-[3rem] ${isDark ? 'bg-zinc-950' : 'bg-white shadow-2xl shadow-blue-900/5'} print:p-0 print:shadow-none`}>
+    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#FCFBF4] text-black font-bold'}`}>
+      <div id="daily-performance-report-content" className={`max-w-7xl mx-auto space-y-8 p-8 rounded-[3rem] ${isDark ? 'bg-zinc-950' : 'bg-white border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]'} print:p-0 print:shadow-none`}>
 
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
@@ -436,10 +451,10 @@ export default function DailyReportPage() {
           </div>
 
           <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Performance Index</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Operational GP Index</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-[1000] text-indigo-600">
-                {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 100) * 100).toFixed(0) : 0}%
+                {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
               </span>
               <CheckCircle size={16} className="text-indigo-500" />
             </div>
@@ -462,7 +477,7 @@ export default function DailyReportPage() {
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className={`px-6 py-4 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-sm ${isDark ? 'bg-white/5 text-black' : 'bg-white text-black'}`}
+              className={`px-6 py-4 rounded-2xl border-2 border-black outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${isDark ? 'bg-white/5 text-black' : 'bg-white text-black'}`}
             >
               <option value="all">Global Matrix</option>
               {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].map(d => (
@@ -498,7 +513,7 @@ export default function DailyReportPage() {
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Uniform</th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Duties</th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">GP</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Score</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Score (4)</th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Fine</th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-right print:hidden">Action</th>
                 </tr>
@@ -528,43 +543,56 @@ export default function DailyReportPage() {
                           row.attendance === 'absent' ? <XCircle size={10} /> :
                             row.attendance === 'late' ? <Clock size={10} /> : <Info size={10} />}
                         {row.attendance}
+                        {row.attendance === 'late' && (row as any).arrivalTime && (
+                          <span className="ml-1 opacity-60">@{(row as any).arrivalTime}</span>
+                        )}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                          row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                            row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              'bg-gray-100 text-black border-gray-200'
-                        }`}>
-                        {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
-                        {row.uniformStatus}
+                      <div className={`flex flex-col items-center gap-1`}>
+                        <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                            row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                              row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                                'bg-gray-100 text-black border-gray-200'
+                          }`}>
+                          {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
+                          {row.uniformStatus}
+                        </div>
+                        {row.uniformStatus === 'incomplete' && (row as any).details?.uniformMissing?.length > 0 && (
+                          <p className="text-[7px] font-bold text-rose-500 uppercase leading-none mt-1">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
+                        )}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                          row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                            row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              'bg-gray-100 text-black border-gray-200'
-                        }`}>
-                        {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
-                        {row.dutyStatus}
+                      <div className={`flex flex-col items-center gap-1`}>
+                        <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                            row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                              row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                                'bg-gray-100 text-black border-gray-200'
+                          }`}>
+                          {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
+                          {row.dutyStatus}
+                        </div>
+                        {row.dutyStatus === 'incomplete' && (row as any).details?.dutiesPending?.length > 0 && (
+                          <p className="text-[7px] font-bold text-rose-500 uppercase leading-none mt-1">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
+                        )}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
                       <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.gpStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                          row.gpStatus === 'invalid' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                            'bg-gray-100 text-black border-gray-200'
+                          'bg-rose-500/10 text-rose-600 border-rose-500/20'
                         }`}>
+                        {row.gpStatus === 'yes' ? <CheckCircle size={10} /> : <XCircle size={10} />}
                         {row.gpStatus}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <span className={`text-xs font-black ${row.dailyScore >= 75 ? 'text-emerald-500' : row.dailyScore >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                        {row.dailyScore}
+                      <span className={`text-sm font-black ${row.dailyScore >= 3 ? 'text-emerald-500' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
+                        {row.dailyScore} / 4
                       </span>
                     </td>
 
@@ -608,12 +636,19 @@ export default function DailyReportPage() {
           )}
         </div>
 
-        {/* Legal Disclaimer for Image */}
-        <div className="hidden print:flex items-center justify-between pt-8 border-t border-gray-100">
-          <p className="text-[9px] font-bold text-black uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub Operations • AI Generated Audit</p>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Secure Report Integrity Verified</p>
+        {/* Signature & Legal Disclaimer */}
+        <div className="flex items-center justify-between pt-12 mt-12 border-t border-gray-100 print:pt-8 print:mt-8">
+          <div className="flex flex-col gap-2">
+            <div className="w-48 h-px bg-black opacity-20" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Manager Authorized Signature</p>
+            <p className="text-[8px] font-bold text-black opacity-40 uppercase tracking-widest mt-1">Audit Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] font-bold text-black uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub HQ • Growth Points Ledger</p>
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Integrity Verified</p>
+            </div>
           </div>
         </div>
       </div>

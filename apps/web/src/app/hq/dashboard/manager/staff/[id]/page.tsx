@@ -431,8 +431,8 @@ export default function StaffProfilePage() {
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
       await setDoc(ref, newRecord, { merge: true });
 
-      // Award Point if present
-      if (next === 'present') {
+      // Award Point if present or late
+      if (next === 'present' || next === 'late') {
         await awardStaffPoint(uid, staff.dept, 'attendance', date);
       }
     } catch (err) {
@@ -1158,13 +1158,15 @@ export default function StaffProfilePage() {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[7px] min-[400px]:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id
-                    ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20')
-                    : 'text-black hover:text-indigo-500'
+                  onClick={() => {
+                    setActiveTab(tab.id as any);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
+                    ? (isDark ? 'bg-white text-black' : 'bg-black text-white')
+                    : 'text-black hover:bg-black/5'
                     }`}
                 >
-                  <span className="opacity-70">{tab.icon}</span> {tab.label}
+                  {tab.icon} <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -1420,10 +1422,14 @@ export default function StaffProfilePage() {
                   <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                     <span className="text-[10px] font-black text-black uppercase tracking-widest">Attendance</span>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Present</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Absent</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Paid Leave</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Unpd Leave</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Present</button>
+                      <button onClick={() => {
+                        toggleAttendance(todayStr, 'late');
+                        handleAttendanceCell(todayStr); // Open time popup for late entry
+                      }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'late' ? 'bg-amber-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Late</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Absent</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Paid Leave</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Unpd Leave</button>
                     </div>
                   </div>
                 </div>
