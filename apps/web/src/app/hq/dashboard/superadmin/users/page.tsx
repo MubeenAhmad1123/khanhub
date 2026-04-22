@@ -11,6 +11,10 @@ import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState'
 import { resetPortalUserPassword } from '@/app/hq/actions/resetPortalUserPassword';
 import { toggleUserActive } from '@/lib/hq/superadmin/users';
 
+import { getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
+
+const ALL_PORTALS: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
+
 export default function SuperadminUsersPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -80,7 +84,7 @@ export default function SuperadminUsersPage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-12">
           <div>
             <h1 className="text-4xl font-black tracking-tight text-black uppercase">Institutional Identity</h1>
             <p className="mt-2 text-[10px] font-black uppercase tracking-[0.3em] text-black/60 italic">
@@ -88,15 +92,15 @@ export default function SuperadminUsersPage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-2 p-1.5 bg-white border-2 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            {(['hq', 'rehab', 'spims'] as const).map((t) => (
+          <div className="flex items-center gap-2 p-1.5 bg-white border-2 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-x-auto max-w-full no-scrollbar">
+            {ALL_PORTALS.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex-shrink-0 ${
                   tab === t 
                     ? 'bg-black text-white' 
-                    : 'text-black/40 hover:text-black'
+                    : 'text-black/40 hover:text-black hover:bg-black/5'
                 }`}
               >
                 {t}

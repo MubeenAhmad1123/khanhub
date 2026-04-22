@@ -33,7 +33,7 @@ export default function ManagerReportsPage() {
   useEffect(() => {
     if (!session) return;
     
-    const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'] as StaffDept[];
+    const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'] as StaffDept[];
     
     const fetchData = async () => {
       try {

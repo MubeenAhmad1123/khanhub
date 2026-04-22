@@ -6,6 +6,7 @@ import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'other';
+export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated';
 
 export function getDeptCollection(dept: StaffDept): string {
   if (dept === 'hq') return 'hq_users';
@@ -28,6 +29,7 @@ export type StaffCardRow = {
   name: string;
   role: StaffRole;
   isActive: boolean;
+  status: StaffStatus;
   presentCount: number;
   absentCount: number;
   lateCount: number;
@@ -161,7 +163,7 @@ export async function listStaffCards({
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const targetDepts: StaffDept[] = dept === 'all' 
-    ? ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'] 
+    ? ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'] 
     : [dept];
 
   const base = await Promise.all(
@@ -174,8 +176,11 @@ export async function listStaffCards({
 
   const rows = base.flat().filter((s: any) => {
     const active = s.isActive !== false;
-    if (status === 'active' && !active) return false;
-    if (status === 'inactive' && active) return false;
+    const staffStatus = s.status || (active ? 'active' : 'inactive');
+
+    if (status === 'active' && staffStatus !== 'active') return false;
+    if (status === 'inactive' && (staffStatus === 'active')) return false;
+
     const normalizedRole = normalizeRole(s.role);
     if (normalizedRole === 'superadmin') return false;
 
@@ -206,6 +211,7 @@ export async function listStaffCards({
         name: String(s.name || s.displayName || '—'),
         role: normalizeRole(s.role),
         isActive: s.isActive !== false,
+        status: s.status || (s.isActive !== false ? 'active' : 'inactive'),
         presentCount: att.present,
         absentCount: att.absent,
         lateCount: att.late,
@@ -284,6 +290,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     name: String(data.name || data.displayName || '—'),
     role: normalizeRole(data.role),
     isActive: data.isActive !== false,
+    status: data.status || (data.isActive !== false ? 'active' : 'inactive'),
     email: data.email,
     phone: data.phone,
     customId: data.customId, // Login ID

@@ -44,7 +44,7 @@ export default function ManagerAttendancePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+      const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
       const targetDepts = deptFilter === 'all' ? depts : [deptFilter as StaffDept];
       
       // 1. Fetch staff from target departments

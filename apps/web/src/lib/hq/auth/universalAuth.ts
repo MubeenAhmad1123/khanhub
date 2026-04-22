@@ -99,7 +99,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Social Media',
     collection: 'media_users',
     domain: '@media.khanhub.com.pk',
-    legacyDomains: ['@media.khanhub.com'],
+    legacyDomains: ['@media.khanhub.com', '@media.KhanHub'],
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -109,7 +109,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'IT',
     collection: 'it_users',
     domain: '@it.khanhub.com.pk',
-    legacyDomains: ['@it.khanhub.com'],
+    legacyDomains: ['@it.khanhub.com', '@it.KhanHub', '@it.khanhub'],
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']

@@ -66,7 +66,7 @@ export default function ManagerStaffPage() {
 
         // Stats Aggregation
         const today = new Date().toISOString().split('T')[0];
-        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
         
         // Fetch Today's Attendance for all departments
         const attSnaps = await Promise.all(
@@ -226,6 +226,8 @@ export default function ManagerStaffPage() {
               <option value="sukoon">Sukoon Center</option>
               <option value="welfare">Welfare</option>
               <option value="job-center">Job Center</option>
+              <option value="social-media">Social Media</option>
+              <option value="it">IT Department</option>
             </select>
             <select 
               className={`border-none rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer transition-colors flex-shrink-0 ${

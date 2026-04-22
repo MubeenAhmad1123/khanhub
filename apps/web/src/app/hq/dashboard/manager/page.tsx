@@ -82,7 +82,7 @@ export default function ManagerOverviewPage() {
         const now = Date.now();
 
         // 1. Fetch Staff (All 7 Departments)
-        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
         
         const staffQueries: any[] = [];
         depts.forEach(d => {

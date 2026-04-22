@@ -12,8 +12,9 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDeptCollection, type StaffDept } from './staff';
 
-export type Portal = 'hq' | 'rehab' | 'spims';
+export type Portal = StaffDept;
 
 export type PortalUserRow = {
   id: string;
@@ -50,7 +51,7 @@ export function subscribePortalUsers(
   onData: (rows: PortalUserRow[]) => void,
   onError?: (err: unknown) => void
 ) {
-  const col = portal === 'hq' ? 'hq_users' : portal === 'rehab' ? 'rehab_users' : 'spims_users';
+  const col = getDeptCollection(portal);
   const q = query(collection(db, col), orderBy('createdAt', 'desc'), limit(500));
   return onSnapshot(
     q,
@@ -60,12 +61,12 @@ export function subscribePortalUsers(
 }
 
 export async function toggleUserActive(portal: Portal, uid: string, isActive: boolean) {
-  const col = portal === 'hq' ? 'hq_users' : portal === 'rehab' ? 'rehab_users' : 'spims_users';
+  const col = getDeptCollection(portal);
   await updateDoc(doc(db, col, uid), { isActive });
 }
 
 export async function fetchUserProfile(portal: Portal, uid: string): Promise<PortalUserRow | null> {
-  const col = portal === 'hq' ? 'hq_users' : portal === 'rehab' ? 'rehab_users' : 'spims_users';
+  const col = getDeptCollection(portal);
   const snap = await getDoc(doc(db, col, uid));
   if (!snap.exists()) return null;
   return normalizeUser(portal, uid, snap.data());

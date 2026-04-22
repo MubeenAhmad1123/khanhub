@@ -49,7 +49,7 @@ export default function ManagerApprovalsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'] as StaffDept[];
+        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'] as StaffDept[];
         
         const snaps = await Promise.all(
           depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))))

@@ -63,7 +63,7 @@ export default function DailyReportPage() {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+      const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
       const staffSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))));
       const allStaff: any[] = [];
@@ -83,7 +83,8 @@ export default function DailyReportPage() {
       const attSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', reportDate)))));
       const dressSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_dress_logs`), where('date', '==', reportDate)))));
       const dutySnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_duty_logs`), where('date', '==', reportDate)))));
-      const fineSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('date', '==', reportDate)))));
+      // Fetch all unpaid fines for these departments to show total debt
+      const fineSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('status', '==', 'unpaid')))));
       const contribSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))));
       const gpSnaps = await Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_growth_points`))));
 
@@ -191,7 +192,8 @@ export default function DailyReportPage() {
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
-          gpStatus: totalDailyPoints >= 3 ? 'yes' : 'no',
+          // GP status is specifically tied to contribution approval as requested
+          gpStatus: contribScore > 0 ? 'yes' : 'no',
           dailyScore: totalDailyPoints,
           fines: fineTotal,
           fineReason: finesList.length > 0 ? finesList[0].reason : '',
@@ -270,7 +272,7 @@ export default function DailyReportPage() {
   const getAutoValues = (status: DailyReportRow['attendance']) => {
     switch (status) {
       case 'present':
-        return { uniform: 'yes', duties: 'yes', gp: 'yes', score: 100, fine: 0 };
+        return { uniform: 'yes', duties: 'yes', gp: 'no', score: 3, fine: 0 };
       case 'absent':
         return { uniform: 'no', duties: 'no', gp: 'no', score: 0, fine: 500 };
       case 'late':
@@ -480,7 +482,7 @@ export default function DailyReportPage() {
               className={`px-6 py-4 rounded-2xl border-2 border-black outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${isDark ? 'bg-white/5 text-black' : 'bg-white text-black'}`}
             >
               <option value="all">Global Matrix</option>
-              {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].map(d => (
+              {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
                 <option key={d} value={d}>{d.toUpperCase()}</option>
               ))}
             </select>

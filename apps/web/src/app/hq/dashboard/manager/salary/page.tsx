@@ -11,7 +11,7 @@ import { Loader2, Plus, FileText, CheckCircle, DollarSign } from 'lucide-react';
 import type { HqStaff, SalarySlip } from '@/types/hq';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
-const ALL_DEPTS: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+const ALL_DEPTS: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);

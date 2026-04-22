@@ -25,7 +25,7 @@ function getAdminApp(): App {
   );
 }
 
-type Portal = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'job-center' | 'welfare';
+type Portal = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 
 const COLLECTION_BY_PORTAL: Record<Portal, string> = {
   hq: 'hq_users',
@@ -33,8 +33,10 @@ const COLLECTION_BY_PORTAL: Record<Portal, string> = {
   spims: 'spims_users',
   hospital: 'hospital_users',
   sukoon: 'sukoon_users',
-  'job-center': 'job_center_users',
+  'job-center': 'jobcenter_users',
   welfare: 'welfare_users',
+  'social-media': 'media_users',
+  it: 'it_users',
 };
 
 export async function resetPortalUserPassword(

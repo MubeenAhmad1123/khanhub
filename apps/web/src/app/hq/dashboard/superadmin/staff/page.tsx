@@ -16,6 +16,8 @@ const DEPT_INFO: Record<string, { label: string; color: string; bg: string; text
   sukoon: { label: 'Sukoon Center', color: 'border-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600' },
   welfare: { label: 'Welfare', color: 'border-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
   'job-center': { label: 'Job Center', color: 'border-amber-500', bg: 'bg-amber-50', text: 'text-amber-600' },
+  'social-media': { label: 'Social Media', color: 'border-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-600' },
+  'it': { label: 'IT Department', color: 'border-violet-500', bg: 'bg-violet-50', text: 'text-violet-600' },
 };
 
 const SENIORITY_RANKS: Record<string, number> = {
@@ -129,7 +131,7 @@ export default function SuperadminStaffPage() {
           </div>
 
           <div className="flex gap-2">
-            {(['all', 'hq', 'rehab', 'spims'] as const).map((t) => (
+            {(['all', 'hq', 'rehab', 'spims', 'it'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setDept(t as any)}
