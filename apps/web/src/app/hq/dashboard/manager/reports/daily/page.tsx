@@ -111,15 +111,15 @@ export default function DailyReportPage() {
       const contribMap = new Map();
       const gpMap = new Map();
 
-      attSnaps.forEach(snap => snap.docs.forEach(d => attMap.set(d.data().staffId || d.id, d.data())));
-      dressSnaps.forEach(snap => snap.docs.forEach(d => dressMap.set(d.data().staffId || d.id, d.data())));
-      dutySnaps.forEach(snap => snap.docs.forEach(d => dutyMap.set(d.data().staffId || d.id, d.data())));
-      fineSnaps.forEach(snap => snap.docs.forEach(d => {
+      attSnaps.forEach(snap => snap.docs.forEach((d: any) => attMap.set(d.data().staffId || d.id, d.data())));
+      dressSnaps.forEach(snap => snap.docs.forEach((d: any) => dressMap.set(d.data().staffId || d.id, d.data())));
+      dutySnaps.forEach(snap => snap.docs.forEach((d: any) => dutyMap.set(d.data().staffId || d.id, d.data())));
+      fineSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const sid = d.data().staffId || d.id;
         const existing = fineMap.get(sid) || [];
         fineMap.set(sid, [...existing, d.data()]);
       }));
-      contribSnaps.forEach(snap => snap.docs.forEach(d => {
+      contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const sid = d.data().staffId || d.id;
         const existing = contribMap.get(sid) || 0;
         contribMap.set(sid, existing + 1);
