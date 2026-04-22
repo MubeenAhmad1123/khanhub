@@ -3,7 +3,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2, UserPlus, TrendingUp, Search } from 'lucide-react';
+import { 
+  Activity, BadgeCheck, Building2, ClipboardList, CreditCard, 
+  Users2, UserPlus, TrendingUp, Search, ShieldCheck, ChevronRight 
+} from 'lucide-react';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
 import { fetchTodayClientCounts, formatPKTDate, type TodayClientsResult } from '@/lib/hq/superadmin/clients';
@@ -25,6 +28,10 @@ const DEPT_LABELS: Record<string, string> = {
   job_center: 'Job Center',
   'job-center': 'Job Center',
 };
+
+// ─── Components ───────────────────────────────────────────────────────────────
+
+
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -156,127 +163,101 @@ export default function HqSuperadminPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      {/* ── Clients Flow Modal ────────────────────────────────────────────── */}
-      {flowOpen && clientsData && (
-        <ClientsFlowModal
-          open={flowOpen}
-          onClose={() => setFlowOpen(false)}
-          byDept={clientsData.byDept}
-          total={clientsData.total}
-          todayLabel={todayLabel}
-        />
-      )}
-
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-black dark:text-white uppercase">HQ Governance Hub</h1>
-          <p className="mt-1 text-sm font-bold text-black dark:text-black uppercase tracking-widest italic">Global Operations Matrix</p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/hq/dashboard/superadmin/approvals"
-            className="rounded-xl bg-black dark:bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-white dark:text-black hover:opacity-90 active:scale-95 shadow-lg border-2 border-transparent hover:border-black dark:hover:border-white transition-all"
-          >
-            Review approvals
-          </Link>
-        </div>
-      </div>
-
-      {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {cards.map((c, idx) => (
-          <StatCard
-            key={c.title}
-            title={c.title}
-            value={c.value}
-            subtitle={c.subtitle}
-            href={(c as any).href}
-            icon={c.icon}
-            tone={
-              idx % 6 === 0 ? 'danger' :
-              idx % 6 === 1 ? 'primary' :
-              idx % 6 === 2 ? 'hq' :
-              idx % 6 === 3 ? 'rehab' :
-              idx % 6 === 4 ? 'spims' :
-              'warning'
-            }
-            format={(c as any).format}
-            loading={statsLoading && !('onClick' in c)}
-            onClick={(c as any).onClick}
+    <div className="min-h-screen bg-[#FCFBF4] py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        {/* ── Clients Flow Modal ────────────────────────────────────────────── */}
+        {flowOpen && clientsData && (
+          <ClientsFlowModal
+            open={flowOpen}
+            onClose={() => setFlowOpen(false)}
+            byDept={clientsData.byDept}
+            total={clientsData.total}
+            todayLabel={todayLabel}
           />
-        ))}
-      </div>
+        )}
 
-      {/* ── Governance Terminal ─────────────────────────────────────────────── */}
-      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Execution Terminal */}
-        <div className="rounded-[2.5rem] border-4 border-black dark:border-white bg-white dark:bg-black p-8 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,1)]">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest italic">Institutional Control Terminal</h2>
+        {/* ── Page Header ────────────────────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <Building2 className="text-white" size={24} />
+              </div>
+              <h1 className="text-4xl font-black tracking-tight text-black uppercase">HQ Governance Hub</h1>
+            </div>
+            <p className="text-[10px] font-black text-black/60 uppercase tracking-[0.4em] italic pl-1">
+              Global Operations Matrix • Real-time Institutional Oversight
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, color: 'bg-indigo-500' },
-              { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, color: 'bg-emerald-500' },
-              { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, color: 'bg-amber-500' },
-              { label: 'Secure Archives',  href: '/hq/dashboard/superadmin/audit',       icon: ClipboardList, color: 'bg-rose-500' },
-            ].map((btn) => (
-              <Link
-                key={btn.label}
-                className="group relative flex flex-col items-center justify-center gap-4 rounded-[2rem] border-2 border-black dark:border-white bg-gray-50 dark:bg-white/5 p-8 transition-all hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black active:scale-95 overflow-hidden shadow-sm"
-                href={btn.href}
-              >
-                <div className={`absolute top-0 left-0 w-full h-1.5 ${btn.color}`} />
-                <div className="p-3 rounded-2xl bg-white dark:bg-white/10 group-hover:bg-transparent transition-colors">
-                  <btn.icon size={24} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{btn.label}</span>
-              </Link>
-            ))}
+          <div className="flex gap-4">
+            <Link
+              href="/hq/dashboard/superadmin/approvals"
+              className="group relative px-8 py-4 bg-white border-4 border-black text-xs font-black uppercase tracking-widest text-black hover:bg-black hover:text-white transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 rounded-2xl"
+            >
+              Review Approvals
+            </Link>
           </div>
         </div>
 
-        {/* Strategic Intelligence */}
-        <div className="rounded-[2.5rem] border-4 border-black dark:border-white bg-gradient-to-br from-[#1a1a1a] to-[#000000] p-8 shadow-2xl text-white relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full" />
-          <div className="relative z-10">
-            <h2 className="text-[10px] font-black px-2 border-l-4 border-indigo-500 uppercase tracking-widest mb-8 italic">Network Intelligence Matrix</h2>
-            <div className="space-y-8">
-              <div>
-                <div className="flex justify-between items-end mb-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Governance Integrity</p>
-                  <p className="text-sm font-black italic">99.9%</p>
-                </div>
-                <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
-                  <div className="h-full w-[99.9%] bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
-                </div>
+        {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5 mb-12">
+          {cards.map((c, idx) => (
+            <StatCard
+              key={c.title}
+              title={c.title}
+              value={c.value}
+              subtitle={c.subtitle}
+              href={(c as any).href}
+              icon={c.icon}
+              tone={
+                idx % 6 === 0 ? 'danger' :
+                idx % 6 === 1 ? 'primary' :
+                idx % 6 === 2 ? 'hq' :
+                idx % 6 === 3 ? 'rehab' :
+                idx % 6 === 4 ? 'spims' :
+                'warning'
+              }
+              format={(c as any).format}
+              loading={statsLoading && !('onClick' in c)}
+              onClick={(c as any).onClick}
+            />
+          ))}
+        </div>
+
+        {/* ── Governance Terminal ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Execution Terminal */}
+          <div className="lg:col-span-2 rounded-[3rem] border-4 border-black bg-white p-10 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <ShieldCheck className="text-black" size={28} />
+                <h2 className="text-xl font-black text-black uppercase tracking-tight">Institutional Control Matrix</h2>
               </div>
-              <div>
-                <div className="flex justify-between items-end mb-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Operational Velocity</p>
-                  <p className="text-sm font-black italic">94.2%</p>
-                </div>
-                <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
-                  <div className="h-full w-[94.2%] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
-                </div>
+              <div className="px-4 py-1 bg-black text-white rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">
+                System Active
               </div>
-              <div className="pt-6 border-t border-white/10 mt-6">
-                <p className="text-xs font-medium italic opacity-70 leading-relaxed">
-                  "Institutional governance parameters are operating within optimal range. Global synchronization for staff performance and growth points is active."
-                </p>
-                <div className="mt-4 flex gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Node Alpha: Online</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, color: 'from-indigo-600 to-blue-700', desc: 'Staff registry & compliance' },
+                { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, color: 'from-emerald-500 to-teal-600', desc: 'Real-time data visualization' },
+                { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, color: 'from-amber-500 to-orange-600', desc: 'Institutional structure' },
+                { label: 'Finance Center',   href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, color: 'from-rose-500 to-pink-600', desc: 'Global financial ledger' },
+              ].map((btn) => (
+                <Link
+                  key={btn.label}
+                  className="group relative flex flex-col items-center text-center gap-4 rounded-[2.5rem] border-4 border-black bg-[#FCFBF4] p-8 transition-all hover:bg-black hover:text-white active:scale-[0.98] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                  href={btn.href}
+                >
+                  <div className={`w-20 h-20 shrink-0 rounded-3xl bg-gradient-to-br ${btn.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform border-2 border-black/10`}>
+                    <btn.icon size={32} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Node Beta: Syncing</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black uppercase tracking-[0.2em]">{btn.label}</span>
+                    <span className="text-[10px] font-bold text-black/40 group-hover:text-white/60 uppercase tracking-widest mt-2">{btn.desc}</span>
                   </div>
-                </div>
-              </div>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

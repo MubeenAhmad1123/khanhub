@@ -534,14 +534,14 @@ export default function DailyReportPage() {
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${row.attendance === 'present' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                          row.attendance === 'absent' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                            row.attendance === 'late' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              'bg-gray-100 text-black border-gray-200'
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${row.attendance === 'present' ? 'bg-emerald-400 text-black' :
+                          row.attendance === 'absent' ? 'bg-rose-400 text-black' :
+                            row.attendance === 'late' ? 'bg-amber-400 text-black' :
+                              'bg-white text-black'
                         }`}>
-                        {row.attendance === 'present' ? <CheckCircle size={10} /> :
-                          row.attendance === 'absent' ? <XCircle size={10} /> :
-                            row.attendance === 'late' ? <Clock size={10} /> : <Info size={10} />}
+                        {row.attendance === 'present' ? <CheckCircle size={12} /> :
+                          row.attendance === 'absent' ? <XCircle size={12} /> :
+                            row.attendance === 'late' ? <Clock size={12} /> : <Info size={12} />}
                         {row.attendance}
                         {row.attendance === 'late' && (row as any).arrivalTime && (
                           <span className="ml-1 opacity-60">@{(row as any).arrivalTime}</span>
@@ -551,39 +551,39 @@ export default function DailyReportPage() {
 
                     <td className="px-6 py-5 text-center">
                       <div className={`flex flex-col items-center gap-1`}>
-                        <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                            row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                              row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                                'bg-gray-100 text-black border-gray-200'
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${row.uniformStatus === 'yes' ? 'bg-emerald-400 text-black' :
+                            row.uniformStatus === 'no' ? 'bg-rose-400 text-black' :
+                              row.uniformStatus === 'incomplete' ? 'bg-amber-400 text-black' :
+                                'bg-white text-black'
                           }`}>
                           {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
                           {row.uniformStatus}
                         </div>
                         {row.uniformStatus === 'incomplete' && (row as any).details?.uniformMissing?.length > 0 && (
-                          <p className="text-[7px] font-bold text-rose-500 uppercase leading-none mt-1">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
+                          <p className="text-[7px] font-black text-rose-600 uppercase leading-none mt-2">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
                         )}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
                       <div className={`flex flex-col items-center gap-1`}>
-                        <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                            row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                              row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                                'bg-gray-100 text-black border-gray-200'
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${row.dutyStatus === 'yes' ? 'bg-emerald-400 text-black' :
+                            row.dutyStatus === 'no' ? 'bg-rose-400 text-black' :
+                              row.dutyStatus === 'incomplete' ? 'bg-amber-400 text-black' :
+                                'bg-white text-black'
                           }`}>
                           {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
                           {row.dutyStatus}
                         </div>
                         {row.dutyStatus === 'incomplete' && (row as any).details?.dutiesPending?.length > 0 && (
-                          <p className="text-[7px] font-bold text-rose-500 uppercase leading-none mt-1">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
+                          <p className="text-[7px] font-black text-rose-600 uppercase leading-none mt-2">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
                         )}
                       </div>
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.gpStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                          'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${row.gpStatus === 'yes' ? 'bg-emerald-400 text-black' :
+                          'bg-rose-400 text-black'
                         }`}>
                         {row.gpStatus === 'yes' ? <CheckCircle size={10} /> : <XCircle size={10} />}
                         {row.gpStatus}

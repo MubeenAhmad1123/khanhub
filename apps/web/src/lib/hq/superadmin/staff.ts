@@ -41,6 +41,10 @@ export type StaffCardRow = {
   emergencyContactName?: string;
   emergencyPhone?: string;
   seniority?: string;
+  // Daily Stats for Today
+  todayUniformStatus?: 'yes' | 'no' | 'incomplete' | 'na';
+  todayDutyStatus?: 'yes' | 'no' | 'incomplete' | 'na';
+  todayDailyScore?: number;
 };
 
 function normalizeRole(raw: any): StaffRole {
@@ -100,6 +104,51 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
   return `${formatDateDMY(when)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
 
+async function loadTodayStats(dept: StaffDept, staffId: string, date: string, s: any) {
+  if (dept === 'hq') return { uniform: 'na' as const, duty: 'na' as const, score: 0 };
+  const prefix = getDeptPrefix(dept);
+  
+  const [attSnap, dressSnap, dutySnap, contribSnap] = await Promise.all([
+    getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId), where('date', '==', date))),
+    getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId), where('date', '==', date))),
+    getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId), where('date', '==', date))),
+    getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', staffId), where('date', '==', date), where('isApproved', '==', true))),
+  ]).catch(() => [null, null, null, null]);
+
+  const att = attSnap?.docs[0]?.data();
+  const dress = dressSnap?.docs[0]?.data();
+  const duty = dutySnap?.docs[0]?.data();
+  const contribCount = contribSnap?.docs.length || 0;
+
+  const attPoint = (att?.status === 'present' || att?.isLate) ? 1 : 0;
+  
+  const uniformConfig = s.dressCodeConfig || [];
+  const uniformItems = dress?.items || [];
+  const uniformMissing = uniformConfig.filter((c: any) => {
+    const item = uniformItems.find((i: any) => i.key === c.key);
+    return !item || item.status === 'no';
+  });
+  const uniformStatus = uniformConfig.length === 0 ? 'na' : (uniformMissing.length === 0 ? 'yes' : (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
+  const uniformPoint = uniformStatus === 'yes' ? 1 : 0;
+
+  const dutyConfig = s.dutyConfig || [];
+  const dutyItems = duty?.duties || [];
+  const dutiesPending = dutyConfig.filter((c: any) => {
+    const item = dutyItems.find((d: any) => d.key === c.key);
+    return !item || item.status === 'not_done';
+  });
+  const dutyStatus = dutyConfig.length === 0 ? 'na' : (dutiesPending.length === 0 ? 'yes' : (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
+  const dutyPoint = dutyStatus === 'yes' ? 1 : 0;
+
+  const contribPoint = contribCount > 0 ? 1 : 0;
+
+  return {
+    uniform: uniformStatus as any,
+    duty: dutyStatus as any,
+    score: attPoint + uniformPoint + dutyPoint + contribPoint
+  };
+}
+
 export async function listStaffCards({
   dept,
   status,
@@ -142,11 +191,12 @@ export async function listStaffCards({
     rows.map(async (s: any) => {
       const d = s._dept as StaffDept;
       const staffId = String(s.id);
-      const [att, gp, fines, lastDuty] = await Promise.all([
+      const [att, gp, fines, lastDuty, today] = await Promise.all([
         loadAttendanceMonth(d, staffId, monthKey),
         loadGrowthPoints(d, staffId),
         loadFinesTotal(d, staffId),
         loadLastDuty(d, staffId),
+        loadTodayStats(d, staffId, now.toISOString().split('T')[0], s),
       ]);
 
       return {
@@ -167,6 +217,9 @@ export async function listStaffCards({
         monthlySalary: Number(s.monthlySalary || 0),
         lastDutyLabel: lastDuty,
         seniority: s.seniority || 'Staff',
+        todayUniformStatus: today.uniform,
+        todayDutyStatus: today.duty,
+        todayDailyScore: today.score,
       } as StaffCardRow;
     })
   );

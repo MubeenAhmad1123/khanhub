@@ -30,72 +30,80 @@ export function StatCard({
   loading?: boolean;
   onClick?: () => void;
 }) {
-  const toneStyles =
-    tone === 'rehab'
-      ? 'from-emerald-500/10 dark:from-emerald-500/20 to-transparent border-emerald-500/20 dark:border-emerald-500/30'
-      : tone === 'spims'
-        ? 'from-blue-500/10 dark:from-blue-500/20 to-transparent border-blue-500/20 dark:border-blue-500/30'
-        : tone === 'hq'
-          ? 'from-purple-500/10 dark:from-purple-500/20 to-transparent border-purple-500/20 dark:border-purple-500/30'
-    : tone === 'primary'
-      ? 'from-gray-500/5 dark:from-white/5 to-transparent border-gray-200 dark:border-white/10'
-    : tone === 'warning'
-      ? 'from-amber-500/10 dark:from-amber-500/20 to-transparent border-amber-500/20 dark:border-amber-500/30'
-    : tone === 'danger'
-      ? 'from-red-500/10 dark:from-red-500/20 to-transparent border-red-500/20 dark:border-red-500/30'
-          : 'from-gray-100 dark:from-white/5 to-transparent border-gray-200 dark:border-white/10';
+  const toneGradients = {
+    rehab: 'from-emerald-400 to-teal-600',
+    spims: 'from-sky-400 to-blue-600',
+    hq: 'from-purple-400 to-indigo-600',
+    primary: 'from-gray-700 to-black',
+    warning: 'from-amber-400 to-orange-600',
+    danger: 'from-rose-400 to-red-600',
+    neutral: 'from-gray-400 to-gray-600',
+  };
 
   const badgeStyles = (bTone: string | undefined) => {
     switch (bTone) {
       case 'danger':
-        return 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-300';
+        return 'bg-red-500 text-white border-red-600';
       case 'warning':
-        return 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300';
+        return 'bg-amber-500 text-black border-amber-600';
       case 'success':
-        return 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300';
+        return 'bg-emerald-500 text-white border-emerald-600';
       default:
-        return 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300';
+        return 'bg-blue-500 text-white border-blue-600';
     }
   };
 
   const displayValue =
     loading ? '—'
-    : format === 'pkr' ? `PKR ${Number(value || 0).toLocaleString('en-PK')}`
+    : format === 'pkr' ? `₨${Number(value || 0).toLocaleString('en-PK')}`
     : String(value ?? '');
 
   const Card = (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-col h-full justify-between gap-4">
+      <div className="flex items-start justify-between">
+        <div className="w-14 h-14 rounded-2xl bg-black border-2 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+          {Icon && <Icon className={`w-7 h-7 text-white`} />}
+        </div>
+        {badge ? (
+          <div className={`inline-flex px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border-2 ${badgeStyles(badge.tone)} shadow-sm`}>
+            {badge.label}
+          </div>
+        ) : null}
+      </div>
+
       <div className="min-w-0">
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{title}</div>
-        <div className="mt-1 text-xl sm:text-2xl font-black text-black dark:text-white break-words tracking-tight leading-none">{displayValue}</div>
+        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-black/40 mb-1">{title}</div>
+        <div className="text-3xl font-[1000] text-black tracking-tighter leading-none">{displayValue}</div>
+        
         {trend && (
-          <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-            {trend.isUp ? <TrendingUp size={12} strokeWidth={3} /> : <TrendingDown size={12} strokeWidth={3} />}
-            {Math.abs(trend.value).toFixed(1)}%
+          <div className={`mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <div className={`px-2 py-0.5 rounded-md border-2 border-current flex items-center gap-1`}>
+              {trend.isUp ? <TrendingUp size={10} strokeWidth={4} /> : <TrendingDown size={10} strokeWidth={4} />}
+              {Math.abs(trend.value).toFixed(1)}%
+            </div>
+            <span className="opacity-40 tracking-normal font-bold lowercase italic">vs last period</span>
           </div>
         )}
-        {subtitle ? <div className="mt-1 text-sm font-bold text-gray-600 dark:text-gray-400">{subtitle}</div> : null}
-      </div>
-      {Icon ? (
-        <div className="shrink-0 flex flex-col items-end gap-2">
-          <div className="w-11 h-11 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm">
-            <Icon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        
+        {subtitle && (
+          <div className="mt-3 text-[10px] font-bold text-black/60 uppercase tracking-widest border-l-2 border-black/10 pl-3">
+            {subtitle}
           </div>
-          {badge ? (
-            <div className={`inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-transparent ${badgeStyles(badge.tone)}`}>
-              {badge.label}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 
-  const className = `block rounded-[2rem] border bg-gradient-to-br ${toneStyles} bg-white dark:bg-black p-6 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-300 w-full text-left`;
+  const className = `block rounded-[2.5rem] border-4 border-black bg-white p-8 hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all duration-300 w-full text-left shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group`;
+
+  const Accent = (
+    <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${toneGradients[tone]} opacity-[0.03] group-hover:opacity-10 transition-opacity rounded-bl-full -mr-12 -mt-12`} />
+  );
 
   if (onClick && !href) {
     return (
       <button onClick={onClick} className={className}>
+        {Accent}
         {Card}
       </button>
     );
@@ -103,10 +111,14 @@ export function StatCard({
 
   return href ? (
     <Link href={href} className={className}>
+      {Accent}
       {Card}
     </Link>
   ) : (
-    <div className={className}>{Card}</div>
+    <div className={className}>
+      {Accent}
+      {Card}
+    </div>
   );
 }
 

@@ -85,7 +85,7 @@ export default function SuperadminStaffPage() {
   }, [filtered]);
 
   return (
-    <div className="min-h-screen py-8 bg-[#FCFBF4] dark:bg-black transition-colors duration-300">
+    <div className="min-h-screen py-8 bg-[#FCFBF4] transition-colors duration-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         
         {/* Header Section */}
@@ -226,65 +226,128 @@ function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
   return (
     <Link
       href={`/hq/dashboard/superadmin/staff/${r.id}`}
-      className="group relative flex flex-col bg-white dark:bg-black rounded-[2.5rem] border-2 border-black dark:border-white overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all duration-300"
+      className="group relative flex flex-col bg-white rounded-[2.5rem] border-4 border-black overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all duration-300"
     >
       {/* Top Banner with Seniority */}
-      <div className={`h-12 border-b-2 border-black dark:border-white flex items-center justify-between px-6 ${info.bg}`}>
-        <span className={`text-[9px] font-black uppercase tracking-widest ${info.text}`}>
-          {r.dept.toUpperCase()}
+      <div className={`h-14 border-b-4 border-black flex items-center justify-between px-6 ${info.bg}`}>
+        <span className={`text-[10px] font-[1000] uppercase tracking-[0.2em] ${info.text}`}>
+          {info.label}
         </span>
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-black text-white dark:bg-white dark:text-black rounded-full">
-          <ShieldCheck size={10} />
-          <span className="text-[8px] font-black uppercase tracking-wider">{r.seniority || 'Staff'}</span>
+        <div className="flex items-center gap-1.5 px-4 py-1.5 bg-black text-white rounded-full border-2 border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+          <Award size={12} className="text-amber-400" />
+          <span className="text-[9px] font-black uppercase tracking-widest">{r.seniority || 'Staff'}</span>
         </div>
       </div>
 
       <div className="p-8">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h3 className="text-2xl font-black text-black dark:text-white leading-none mb-2 group-hover:italic transition-all">
+        <div className="flex items-start justify-between mb-8">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-2xl font-[1000] text-black leading-tight mb-2 group-hover:italic transition-all truncate">
               {r.name}
             </h3>
-            <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest">
-              ID: {r.id.split('_')[1].slice(0, 8)}
+            <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em]">
+              ID: {r.id.split('_')[1].slice(0, 8)} • {r.designation}
             </p>
           </div>
-          <div className="w-14 h-14 rounded-2xl border-2 border-black dark:border-white overflow-hidden bg-gray-100 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-[2rem] border-4 border-black overflow-hidden bg-gray-50 flex items-center justify-center shrink-0 ml-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-transform group-hover:scale-105">
             {r.photoUrl ? (
               <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
             ) : (
-              <Users2 size={24} className="text-black/20" />
+              <Users2 size={32} className="text-black/10" />
             )}
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="p-4 rounded-2xl border-2 border-black dark:border-white bg-emerald-50 dark:bg-emerald-500/10 flex flex-col items-center">
-            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 mb-1">Growth Points</span>
-            <div className="flex items-center gap-1">
-              <Zap size={14} className="text-emerald-500 fill-emerald-500" />
-              <span className="text-xl font-black text-black dark:text-white">{r.growthPointsTotal}</span>
+        {/* Performance Score Dashboard */}
+        <div className="bg-black/5 rounded-[2rem] p-6 mb-8 border-2 border-black/10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+                <Zap size={18} className="fill-emerald-400 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-black uppercase tracking-widest leading-none mb-1">Performance Index</p>
+                <p className="text-lg font-[1000] text-black uppercase">Level {r.todayDailyScore || 0}</p>
+              </div>
+            </div>
+            <div className={`px-4 py-2 rounded-xl border-4 border-black text-[10px] font-[1000] uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${
+              (r.todayDailyScore || 0) >= 3 ? 'bg-emerald-400 text-black' : 'bg-rose-400 text-black'
+            }`}>
+              {(r.todayDailyScore || 0) >= 3 ? 'Optimal' : 'Review'}
             </div>
           </div>
-          <div className="p-4 rounded-2xl border-2 border-black dark:border-white bg-rose-50 dark:bg-rose-500/10 flex flex-col items-center">
-            <span className="text-[8px] font-black uppercase tracking-widest text-rose-600 mb-1">Total Fines</span>
-            <span className="text-xl font-black text-black dark:text-white">₨{Number(r.totalFines || 0).toLocaleString()}</span>
+
+          <div className="grid grid-cols-2 gap-3">
+            <MetricStatus label="Uniform" status={r.todayUniformStatus || 'na'} />
+            <MetricStatus label="Duties" status={r.todayDutyStatus || 'na'} />
           </div>
         </div>
 
-        {/* Detailed Metrics */}
-        <div className="space-y-3">
-          <MetricBar label="Attendance" value={r.presentCount} max={30} color="bg-emerald-500" unit="Days" />
-          <MetricBar label="Compliance" value={r.lateCount > 0 ? 100 - (r.lateCount * 10) : 100} max={100} color="bg-blue-500" unit="%" />
+        {/* Core Stats Matrix */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          <div className="p-6 rounded-[2rem] border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-2">Growth Points</span>
+              <span className="text-3xl font-[1000] text-black">{r.growthPointsTotal}</span>
+            </div>
+          </div>
+          <div className="p-6 rounded-[2rem] border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-2">Deductions</span>
+              <span className="text-3xl font-[1000] text-black">₨{Number(r.totalFines || 0).toLocaleString()}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-8 flex items-center justify-between text-black group-hover:translate-x-2 transition-transform">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em]">View Dossier</span>
-          <ChevronRight size={16} strokeWidth={3} />
+        {/* Attendance Progression */}
+        <div className="space-y-4 mb-8">
+           <MetricBar 
+            label="Operational Attendance" 
+            value={r.presentCount} 
+            max={26} 
+            color="bg-black" 
+            unit="Days" 
+          />
+        </div>
+
+        <div className="pt-8 border-t-4 border-black flex items-center justify-between group-hover:px-2 transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center">
+              <ChevronRight size={16} strokeWidth={4} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Personnel Dossier</span>
+          </div>
+          {r.isActive ? (
+            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Active Matrix
+            </span>
+          ) : (
+             <span className="text-[8px] font-black uppercase tracking-widest text-rose-600 flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-rose-500" /> Offline
+            </span>
+          )}
         </div>
       </div>
     </Link>
+  );
+}
+
+function MetricStatus({ label, status }: { label: string; status: string }) {
+  const isOk = status === 'yes';
+  const isNa = status === 'na';
+  const isIncomplete = status === 'incomplete';
+  
+  const statusColors = isOk ? 'bg-emerald-400' : 
+                      isNa ? 'bg-gray-100 opacity-50' : 
+                      isIncomplete ? 'bg-amber-400' : 'bg-rose-400';
+
+  return (
+    <div className={`p-4 rounded-2xl border-2 border-black bg-white flex flex-col items-center justify-center gap-1.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`}>
+      <span className="text-[8px] font-[1000] uppercase tracking-widest text-black/40">{label}</span>
+      <div className={`px-3 py-1 rounded-full border-2 border-black ${statusColors} flex items-center justify-center`}>
+        <span className="text-[9px] font-[1000] uppercase tracking-widest text-black">{status}</span>
+      </div>
+    </div>
   );
 }
 
@@ -292,13 +355,13 @@ function MetricBar({ label, value, max, color, unit }: { label: string; value: n
   const percentage = Math.min((value / max) * 100, 100);
   return (
     <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-[8px] font-black uppercase tracking-widest opacity-60">{label}</span>
-        <span className="text-[9px] font-black uppercase tracking-widest">{value} {unit}</span>
+      <div className="flex justify-between items-center mb-3 px-1">
+        <span className="text-[10px] font-[1000] uppercase tracking-[0.2em] text-black/60">{label}</span>
+        <span className="text-[10px] font-[1000] uppercase tracking-widest text-black bg-white border-2 border-black px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">{value}/{max} {unit}</span>
       </div>
-      <div className="h-1.5 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden border border-black/5">
+      <div className="h-5 w-full bg-black/5 rounded-full overflow-hidden border-4 border-black p-0.5 shadow-inner">
         <div 
-          className={`h-full ${color} rounded-full transition-all duration-1000`} 
+          className={`h-full ${color} rounded-full transition-all duration-1000 shadow-[4px_0px_0px_rgba(0,0,0,0.2)]`} 
           style={{ width: `${percentage}%` }}
         />
       </div>

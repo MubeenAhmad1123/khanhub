@@ -1034,8 +1034,8 @@ export default function StaffProfilePage() {
             </button>
             <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] font-black text-black uppercase tracking-widest">Growth Points</p>
-              <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{growthPoints?.total || 0}</p>
+              <p className="text-[10px] font-[1000] text-black uppercase tracking-widest leading-tight">Growth Points</p>
+              <p className="text-sm font-[1000] text-black">{growthPoints?.total || 0}</p>
             </div>
           </div>
         </div>
@@ -1421,15 +1421,34 @@ export default function StaffProfilePage() {
 
                   <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                     <span className="text-[10px] font-black text-black uppercase tracking-widest">Attendance</span>
-                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Present</button>
-                      <button onClick={() => {
-                        toggleAttendance(todayStr, 'late');
-                        handleAttendanceCell(todayStr); // Open time popup for late entry
-                      }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'late' ? 'bg-amber-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Late</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Absent</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Paid Leave</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black border border-gray-100')}`}>Unpd Leave</button>
+                    <div className="flex flex-wrap gap-3">
+                      <button 
+                        onClick={() => toggleAttendance(todayStr, 'present')} 
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'present' ? 'bg-emerald-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                      >
+                        Present
+                      </button>
+                      <button 
+                        onClick={() => {
+                          toggleAttendance(todayStr, 'late');
+                          handleAttendanceCell(todayStr);
+                        }} 
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'late' ? 'bg-amber-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                      >
+                        Late Entry
+                      </button>
+                      <button 
+                        onClick={() => toggleAttendance(todayStr, 'absent')} 
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                      >
+                        Absent
+                      </button>
+                      <button 
+                        onClick={() => toggleAttendance(todayStr, 'leave')} 
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'leave' || attendanceMap[todayStr]?.status === 'paid_leave' || attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-blue-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                      >
+                        Leave
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2616,40 +2635,7 @@ export default function StaffProfilePage() {
                   </div>
                 </div>
 
-                <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-8">
-                    <div>
-                      <h3 className="text-sm font-black uppercase tracking-widest text-black italic">Chronological Growth Audit</h3>
-                      <p className="text-[10px] font-bold text-black uppercase tracking-widest mt-1">Verified historical data blocks</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {growthHistory.length === 0 ? (
-                      <div className="py-12 text-center text-black font-bold uppercase tracking-widest text-[10px]">No historical cycles found</div>
-                    ) : (
-                      growthHistory.map((h: any) => (
-                        <div key={h.id} className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all hover:border-indigo-500/30 ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isDark ? 'bg-zinc-900 text-indigo-400' : 'bg-white text-indigo-600 shadow-sm'}`}>
-                              <Calendar size={20} />
-                            </div>
-                            <div>
-                              <p className={`text-md font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tighter`}>{new Date(h.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-                              <p className="text-[10px] font-bold text-black uppercase tracking-widest">Aggregated Strength: {h.total || 0} pts</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${(h.total || 0) >= 100 ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'
-                              }`}>
-                              {(h.total || 0) >= 100 ? 'Senior Expert' : 'Standard Staff'}
-                            </span>
-                            <p className="text-[8px] font-black text-black uppercase tracking-[0.2em]">Validated Cycle</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+
               </div>
             )}
 
@@ -2661,8 +2647,7 @@ export default function StaffProfilePage() {
       {timePopup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setTimePopup({ ...timePopup, isOpen: false })} />
-          <div className={`relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-gray-100 text-gray-900'
-            }`}>
+          <div className="relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] border-4 border-black animate-in zoom-in-95 duration-200 bg-white text-black">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-xl font-black italic tracking-tight">Shift Timing</h3>
@@ -2672,7 +2657,7 @@ export default function StaffProfilePage() {
               </div>
               <button
                 onClick={() => setTimePopup({ ...timePopup, isOpen: false })}
-                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-black/90 text-black' : 'hover:bg-gray-100 text-black'}`}
+                className="p-2 rounded-xl transition-colors hover:bg-black hover:text-white text-black border-2 border-black"
               >
                 <RefreshCw size={18} className="rotate-45" />
               </button>
@@ -2685,8 +2670,7 @@ export default function StaffProfilePage() {
                   type="time"
                   value={timePopup.arrivalTime}
                   onChange={e => setTimePopup({ ...timePopup, arrivalTime: e.target.value })}
-                  className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                    }`}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-indigo-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 />
               </div>
               <div>
@@ -2695,12 +2679,11 @@ export default function StaffProfilePage() {
                   type="time"
                   value={timePopup.departureTime}
                   onChange={e => setTimePopup({ ...timePopup, departureTime: e.target.value })}
-                  className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                    }`}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-indigo-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 />
               </div>
 
-              <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
+              <div className="p-4 rounded-2xl border-2 border-black flex items-start gap-3 bg-indigo-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <AlertCircle size={16} className="text-indigo-500 mt-0.5 shrink-0" />
                 <p className="text-[9px] font-bold leading-relaxed text-indigo-500/70 uppercase tracking-wider">
                   Setting these times will mark the staff as present for this specific date only.
@@ -2710,7 +2693,7 @@ export default function StaffProfilePage() {
               <button
                 onClick={handleTimePopupSave}
                 disabled={saving}
-                className="w-full h-14 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full h-14 rounded-2xl bg-black text-white text-[11px] font-[1000] uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                 {saving ? 'Synchronizing...' : 'Update Record'}
@@ -2724,8 +2707,7 @@ export default function StaffProfilePage() {
       {notePopup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setNotePopup({ ...notePopup, isOpen: false })} />
-          <div className={`relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-gray-100 text-gray-900'
-            }`}>
+          <div className="relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] border-4 border-black animate-in zoom-in-95 duration-200 bg-white text-black">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-xl font-black italic tracking-tight text-amber-500">Attendance Note</h3>
@@ -2735,7 +2717,7 @@ export default function StaffProfilePage() {
               </div>
               <button
                 onClick={() => setNotePopup({ ...notePopup, isOpen: false })}
-                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-black/90 text-black' : 'hover:bg-gray-100 text-black'}`}
+                className="p-2 rounded-xl transition-colors hover:bg-black hover:text-white text-black border-2 border-black"
               >
                 <X size={18} />
               </button>
@@ -2748,12 +2730,11 @@ export default function StaffProfilePage() {
                   value={notePopup.note}
                   onChange={e => setNotePopup({ ...notePopup, note: e.target.value })}
                   placeholder="e.g. Flight delayed, Medical emergency..."
-                  className={`w-full min-h-[120px] p-6 rounded-2xl text-sm font-bold outline-none border-2 transition-all resize-none ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-amber-500'
-                    }`}
+                  className="w-full min-h-[120px] p-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-amber-50 transition-all resize-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 />
               </div>
 
-              <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-50 border-amber-100'}`}>
+              <div className="p-4 rounded-2xl border-2 border-black flex items-start gap-3 bg-amber-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
                 <p className="text-[9px] font-bold leading-relaxed text-amber-500/70 uppercase tracking-wider">
                   This note will be visible in the attendance audit history.
@@ -2762,7 +2743,7 @@ export default function StaffProfilePage() {
 
               <button
                 onClick={handleSaveNote}
-                className="w-full h-14 rounded-2xl bg-amber-500 text-white text-[11px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2"
+                className="w-full h-14 rounded-2xl bg-amber-400 text-black text-[11px] font-[1000] uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black flex items-center justify-center gap-2"
               >
                 <Save size={16} />
                 Save Note

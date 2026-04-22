@@ -51,25 +51,14 @@ export default function ManagerOverviewPage() {
     urgentApprovals: 0,
   });
   const [deptStats, setDeptStats] = useState<Record<string, { present: number, absent: number, leave: number, total: number }>>({});
-  const [activities, setActivities] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const isDark = mounted && resolvedTheme === 'dark';
 
   const [allStaff, setAllStaff] = useState<any[]>([]);
   const [attMap, setAttMap] = useState<Map<string, string>>(new Map());
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  const getMs = (dateInput: any): number => {
-    if (!dateInput) return 0;
-    if (dateInput?.seconds) return dateInput.seconds * 1000;
-    if (dateInput instanceof Date) return dateInput.getTime();
-    const parsed = new Date(dateInput).getTime();
-    return isNaN(parsed) ? 0 : parsed;
-  };
 
   useEffect(() => {
     setMounted(true);
@@ -91,18 +80,15 @@ export default function ManagerOverviewPage() {
         const today = new Date().toISOString().split('T')[0];
         const now = Date.now();
 
-        // 1. Fetch Staff (All 7 Departments) - Handle diverse collection schemas
+        // 1. Fetch Staff (All 7 Departments)
         const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
         
         const staffQueries: any[] = [];
-        
         depts.forEach(d => {
-          // Main staff collection (Unified in _users)
           staffQueries.push({ dept: d, q: query(collection(db, getDeptCollection(d)), where('isActive', '==', true)) });
         });
 
         const staffSnaps = await Promise.all(staffQueries.map(sq => getDocs(sq.q)));
-        // Exclude superadmin as per user requirements
         const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor'];
 
         let allStaffDocs: any[] = [];
@@ -114,7 +100,6 @@ export default function ManagerOverviewPage() {
             const data = doc.data() as any;
             const role = String(data.role || '').toLowerCase();
             
-            // Only include legitimate staff roles (excluding superadmin)
             if (STAFF_ROLES.includes(role) && role !== 'superadmin') {
               const id = doc.id;
               if (!seenStaffIds.has(id)) {
@@ -129,7 +114,7 @@ export default function ManagerOverviewPage() {
           });
         });
 
-        // 2. Fetch Attendance (All 7 Departments)
+        // 2. Fetch Attendance
         const attSnaps = await Promise.all(
           depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
         );
@@ -145,7 +130,6 @@ export default function ManagerOverviewPage() {
           dStats[d] = { present: 0, absent: 0, leave: 0, total: 0 };
         });
 
-        // Count staff per department
         allStaffDocs.forEach(s => {
           const dept = (s.dept as string) || 'hq';
           if (dStats[dept]) dStats[dept].total++;
@@ -171,9 +155,7 @@ export default function ManagerOverviewPage() {
           });
         });
 
-        setDeptStats(dStats);
-
-        // 3. Fetch Contributions (Pending)
+        // 3. Fetch Contributions
         const contribSnaps = await Promise.all(
           depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))))
         );
@@ -185,17 +167,6 @@ export default function ManagerOverviewPage() {
           allContribs = [...allContribs, ...docs];
         });
 
-        // Fetch Recent Audit Log for activities
-        const auditSnap = await getDocs(query(collection(db, 'hq_audit'), limit(10)));
-        const auditActivities = auditSnap.docs.map(d => ({
-          id: d.id,
-          ...(d.data() as any),
-          type: 'audit'
-        }));
-
-        setActivities(auditActivities.sort((a: any, b: any) => getMs(b.createdAt || b.timestamp || b.at) - getMs(a.createdAt || a.timestamp || a.at)));
-
-        // Fetch Staff Names for the recent list
         const staffMap: Record<string, string> = {};
         allStaffDocs.forEach(s => {
           staffMap[s.id] = s.name || s.displayName || 'Staff Member';
@@ -213,20 +184,14 @@ export default function ManagerOverviewPage() {
           staffName: staffMap[c.staffId] || staffMap[c.userId] || 'Staff'
         }));
 
-        const pendingCount = allContribs.length;
-        const urgent = allContribs.filter(p => {
-          if (!p.createdAt?.seconds) return false;
-          return (now - (p.createdAt.seconds * 1000)) > 48 * 60 * 60 * 1000;
-        });
-
         setStats({
           totalStaff,
           presentToday: presentCount,
           absentToday: absentCount,
           leaveToday: leaveCount,
           notMarkedToday: totalStaff - presentCount - absentCount - leaveCount,
-          pendingApprovals: pendingCount,
-          urgentApprovals: urgent.length,
+          pendingApprovals: allContribs.length,
+          urgentApprovals: allContribs.filter(p => (now - ((p.createdAt?.seconds || 0) * 1000)) > 48 * 60 * 60 * 1000).length,
         });
 
         setAllStaff(allStaffDocs);
@@ -245,61 +210,61 @@ export default function ManagerOverviewPage() {
 
   if (sessionLoading || loading || !mounted) {
     return (
-      <div className={`min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950`}>
-        <Loader2 className={`w-8 h-8 animate-spin text-black dark:text-black`} />
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF4]">
+        <Loader2 className="w-10 h-10 animate-spin text-black" />
       </div>
     );
   }
 
   return (
-    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white`}>
+    <div className="min-h-screen bg-[#FCFBF4] text-black p-4 md:p-8 space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent">Manager Overview</h1>
-          <p className="text-black text-sm font-medium mt-1">Global Departmental Oversight & Real-time Metrics</p>
+          <h1 className="text-4xl font-black tracking-tight uppercase italic">Managerial Command</h1>
+          <p className="text-black/60 text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">Global Departmental Oversight • Real-time Operational Metrics</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <Link 
             href="/hq/dashboard/manager/reports/daily"
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-lg hover:-translate-y-1 ${
-              isDark ? 'bg-zinc-100 text-black hover:bg-white' : 'bg-gray-900 text-white hover:bg-black shadow-gray-200'
-            }`}
+            className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-[2rem] text-xs font-black uppercase tracking-widest transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
           >
-            <TrendingUp size={18} /> Generate Today's Report
+            <TrendingUp size={18} /> Generate Daily Report
           </Link>
-          <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-4 px-6 py-3 bg-white border-2 border-black rounded-2xl shadow-sm">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live Connection</p>
             </div>
-            <div className="w-px h-4 bg-gray-200" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-black">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            <div className="w-px h-4 bg-black/10" />
+            <p className="text-[9px] font-black uppercase tracking-widest text-black/60">
+              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={18} />} color="bg-blue-500/10 text-blue-500" onClick={() => setSelectedMetric('total')} />
-        <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" onClick={() => setSelectedMetric('present')} />
-        <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" onClick={() => setSelectedMetric('absent')} />
-        <StatCard isDark={isDark} label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={18} />} color="bg-amber-500/10 text-amber-500" onClick={() => setSelectedMetric('leave')} />
-        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-black" onClick={() => setSelectedMetric('notMarked')} />
-        <StatCard isDark={isDark} label="Pending Tasks" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <StatCard label="Total Staff" value={stats.totalStaff} icon={<Users size={20} />} color="bg-blue-50" textColor="text-blue-600" onClick={() => setSelectedMetric('total')} />
+        <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-emerald-50" textColor="text-emerald-600" onClick={() => setSelectedMetric('present')} />
+        <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-rose-50" textColor="text-rose-600" onClick={() => setSelectedMetric('absent')} />
+        <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-amber-50" textColor="text-amber-600" onClick={() => setSelectedMetric('leave')} />
+        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-gray-100" textColor="text-gray-600" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-purple-50" textColor="text-purple-600" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
 
       {/* Metric Detail View */}
       {selectedMetric && (
-        <div className={`animate-in slide-in-from-top duration-500 p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-gray-100 shadow-xl'}`}>
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-8 rounded-[3rem] border-4 border-black bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-black/5">
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-                {selectedMetric === 'notMarked' ? 'Unmarked Attendance' : 
-                 selectedMetric === 'present' ? 'Present Staff' :
-                 selectedMetric === 'absent' ? 'Absent Staff' :
-                 selectedMetric === 'leave' ? 'Staff on Leave' : 'Staff List'}
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black'}`}>
+              <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-4">
+                {selectedMetric === 'notMarked' ? 'Registry Variance' : 
+                 selectedMetric === 'present' ? 'Verified Personnel' :
+                 selectedMetric === 'absent' ? 'Personnel Deficit' :
+                 selectedMetric === 'leave' ? 'Authorized Leave' : 'Personnel Registry'}
+                <span className="text-[10px] px-3 py-1 bg-black text-white rounded-full font-black uppercase tracking-widest">
                   {allStaff.filter(s => {
                     const status = attMap.get(s.id);
                     if (selectedMetric === 'notMarked') return !status;
@@ -307,14 +272,14 @@ export default function ManagerOverviewPage() {
                     if (selectedMetric === 'absent') return status === 'absent';
                     if (selectedMetric === 'leave') return status?.includes('leave');
                     return true;
-                  }).length} Total
+                  }).length} Records
                 </span>
               </h2>
             </div>
-            <button onClick={() => setSelectedMetric(null)} className="text-xs font-black uppercase tracking-widest text-black hover:text-rose-500 transition-colors">Close List</button>
+            <button onClick={() => setSelectedMetric(null)} className="text-[9px] font-black uppercase tracking-widest px-4 py-2 border-2 border-black rounded-xl hover:bg-black hover:text-white transition-all">Collapse View</button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {allStaff.filter(s => {
               const status = attMap.get(s.id);
               if (selectedMetric === 'notMarked') return !status;
@@ -324,146 +289,65 @@ export default function ManagerOverviewPage() {
               if (selectedMetric === 'total') return true;
               return false;
             }).map(s => (
-              <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-black/90' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
-                <Link 
-                  href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} 
-                  className="flex items-center gap-3 hover:opacity-75 transition-opacity"
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
-                    ${isDark ? 'bg-zinc-700 text-black' : 'bg-white text-black shadow-sm'}`}>
+              <div key={s.id} className="p-5 rounded-2xl border-2 border-black bg-white flex items-center justify-between group hover:bg-gray-50 transition-all">
+                <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="flex items-center gap-4 truncate">
+                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-black text-xs">
                     {s.name?.[0] || 'S'}
                   </div>
-                  <div>
-                    <p className="text-sm font-black text-blue-500 hover:underline">{s.name}</p>
-                    <p className="text-[10px] font-bold text-black uppercase tracking-widest">{s.department}</p>
+                  <div className="truncate">
+                    <p className="text-sm font-black truncate">{s.name}</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-black/40">{s.department}</p>
                   </div>
                 </Link>
-                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {(!attMap.get(s.id)) && (
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={async () => {
-                          try {
-                            setActionLoading(s.id);
-                            const prefix = getDeptPrefix(s.department as any);
-                            const today = new Date().toISOString().split('T')[0];
-                            const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
-                            await setDoc(doc(db, `${prefix}_attendance`, `${s.id}_${today}`), {
-                              staffId: s.id,
-                              status: 'present',
-                              date: today,
-                              timestamp: serverTimestamp(),
-                              markedBy: session?.name || 'HQ Manager'
-                            }, { merge: true });
-                            const newMap = new Map(attMap);
-                            newMap.set(s.id, 'present');
-                            setAttMap(newMap);
-                            setStats(prev => ({ ...prev, presentToday: prev.presentToday + 1, notMarkedToday: prev.notMarkedToday - 1 }));
-                          } catch (e) {
-                            console.error(e);
-                          } finally {
-                            setActionLoading(null);
-                          }
-                        }}
-                        disabled={actionLoading === s.id}
-                        className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
-                      >
-                        {actionLoading === s.id ? '...' : 'Present'}
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          try {
-                            setActionLoading(s.id);
-                            const prefix = getDeptPrefix(s.department as any);
-                            const today = new Date().toISOString().split('T')[0];
-                            const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
-                            await setDoc(doc(db, `${prefix}_attendance`, `${s.id}_${today}`), {
-                              staffId: s.id,
-                              status: 'absent',
-                              date: today,
-                              timestamp: serverTimestamp(),
-                              markedBy: session?.name || 'HQ Manager'
-                            }, { merge: true });
-                            const newMap = new Map(attMap);
-                            newMap.set(s.id, 'absent');
-                            setAttMap(newMap);
-                            setStats(prev => ({ ...prev, absentToday: prev.absentToday + 1, notMarkedToday: prev.notMarkedToday - 1 }));
-                          } catch (e) {
-                            console.error(e);
-                          } finally {
-                            setActionLoading(null);
-                          }
-                        }}
-                        disabled={actionLoading === s.id}
-                        className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
-                      >
-                        {actionLoading === s.id ? '...' : 'Absent'}
-                      </button>
-                    </div>
-                  )}
-                  {attMap.get(s.id) && (
-                    <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${attMap.get(s.id) === 'present' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {attMap.get(s.id)}
-                    </span>
-                  )}
-                  <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="p-2 text-black hover:text-blue-500 transition-colors">
-                    <ArrowRight size={14} />
-                  </Link>
-                </div>
+                <ChevronRight size={16} className="text-black/20 group-hover:text-black group-hover:translate-x-1 transition-all" />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Analytics & Reports Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Department Breakdown Report */}
-        <div className={`lg:col-span-2 rounded-[2.5rem] p-8 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
-          <div className="flex items-center justify-between mb-10">
+      {/* Main Analysis Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Department Breakdown */}
+        <div className="lg:col-span-7 rounded-[3.5rem] p-10 border-4 border-black bg-white shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex items-center justify-between mb-12">
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight italic">Institutional Status Breakdown</h3>
-              <p className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Real-time attendance velocity by department</p>
+              <h3 className="text-3xl font-black uppercase tracking-tight italic">Institutional Velocity</h3>
+              <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.3em] mt-2 italic">Real-time attendance density by division</p>
             </div>
-            <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black'}`}>
-              Today Snapshot
+            <div className="px-6 py-2 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest">
+              24H Matrix
             </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-10">
             {Object.entries(deptStats).map(([dept, data]) => (
               <div key={dept} className="group">
-                <div className="flex items-center justify-between px-2 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.15em] text-black group-hover:text-blue-500 transition-colors">{dept}</span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-2 h-2 rounded-full bg-black group-hover:scale-150 transition-all" />
+                    <span className="text-xs font-black uppercase tracking-[0.2em]">{dept}</span>
                   </div>
                   <div className="flex gap-6">
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest leading-none mb-1">Present</span>
-                      <span className="text-sm font-black text-emerald-500">{data.present}</span>
+                    <div className="text-right">
+                      <span className="block text-[8px] font-black text-emerald-600 uppercase tracking-widest">Verified</span>
+                      <span className="text-sm font-black">{data.present}</span>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest leading-none mb-1">Absent</span>
-                      <span className="text-sm font-black text-rose-500">{data.absent}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest leading-none mb-1">Leave</span>
-                      <span className="text-sm font-black text-amber-500">{data.leave}</span>
+                    <div className="text-right">
+                      <span className="block text-[8px] font-black text-rose-600 uppercase tracking-widest">Deficit</span>
+                      <span className="text-sm font-black">{data.absent}</span>
                     </div>
                   </div>
                 </div>
-                <div className={`h-3 w-full rounded-2xl flex overflow-hidden p-0.5 ${isDark ? 'bg-zinc-800/50' : 'bg-gray-100/50'}`}>
+                <div className="h-4 w-full rounded-full bg-gray-50 border-2 border-black overflow-hidden flex p-0.5">
                   {data.total > 0 ? (
                     <>
-                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 rounded-full mr-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-1000" />
-                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-500 rounded-full mr-0.5 shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all duration-1000" />
-                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.3)] transition-all duration-1000" />
+                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 rounded-full mr-0.5 transition-all duration-1000" />
+                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-500 rounded-full mr-0.5 transition-all duration-1000" />
+                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-500 rounded-full transition-all duration-1000" />
                     </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                       <span className="text-[8px] font-bold text-black uppercase italic">No active staff registered</span>
-                    </div>
+                    <div className="w-full h-full flex items-center justify-center bg-gray-50 italic text-[8px] font-bold opacity-30 uppercase tracking-widest">Registry Empty</div>
                   )}
                 </div>
               </div>
@@ -471,95 +355,70 @@ export default function ManagerOverviewPage() {
           </div>
         </div>
         
-        {/* Left Column: Quick Actions & Pending List */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Quick Actions */}
-          <section>
-            <h2 className="text-[11px] font-black text-black uppercase tracking-[0.2em] mb-4">Quick Operations</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Operations & Pending */}
+        <div className="lg:col-span-5 space-y-8">
+          <div className="p-8 rounded-[3rem] border-4 border-black bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <h3 className="text-xl font-black uppercase tracking-tight mb-8">Priority Operations</h3>
+            <div className="grid grid-cols-1 gap-4">
               {[
-                { href: '/hq/dashboard/manager/staff/attendance', label: 'Mark Attendance', sub: "Daily check-in logs", icon: <CheckCircle className="text-emerald-500" /> },
-                { href: '/hq/dashboard/manager/approvals', label: 'Handle Approvals', sub: 'Contributions & Requests', icon: <FileText className="text-purple-500" /> },
-                { href: '/hq/dashboard/manager/staff', label: 'Global Staff Roster', sub: 'Manage all departments', icon: <Users className="text-blue-500" /> },
-                { href: '/hq/dashboard/manager/users', label: 'User Provisioning', sub: 'Create staff accounts', icon: <ArrowRight className="text-black" /> }
-              ].map((link, idx) => (
-                <Link key={idx} href={link.href}
-                  className={`flex items-center gap-4 p-5 rounded-3xl border transition-all group hover:shadow-2xl hover:-translate-y-1 ${
-                    isDark ? 'bg-zinc-900/40 border-zinc-800/60 hover:bg-black/90' : 'bg-white border-gray-100/80 hover:border-blue-100 shadow-sm'
-                  }`}>
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isDark ? 'bg-zinc-800' : 'bg-gray-50'}`}>
-                    {link.icon}
+                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-emerald-500" /> },
+                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-purple-500" /> },
+                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-blue-500" /> },
+                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-black" /> }
+              ].map((op, i) => (
+                <Link key={i} href={op.href} className="flex items-center justify-between p-6 rounded-2xl border-2 border-black hover:bg-black hover:text-white transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-black/5 group-hover:bg-white/10">
+                      {op.icon}
+                    </div>
+                    <span className="text-sm font-black uppercase tracking-widest">{op.label}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-black text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>{link.label}</p>
-                    <p className="text-black text-[10px] font-bold uppercase tracking-wide mt-0.5">{link.sub}</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-black group-hover:text-blue-500 transition-colors" />
+                  <ChevronRight size={18} strokeWidth={3} />
                 </Link>
               ))}
             </div>
-          </section>
+          </div>
 
-          {/* Pending Items */}
           {pendingList.length > 0 && (
-            <section>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[11px] font-black text-black uppercase tracking-[0.2em] flex items-center gap-2">
-                  <AlertTriangle size={14} className="text-amber-500" /> Critical Pending Items
-                </h2>
-                <Link href="/hq/dashboard/manager/approvals" className="text-[10px] font-black text-blue-500 hover:underline uppercase tracking-widest">View All</Link>
+            <div className="p-8 rounded-[3rem] border-4 border-black bg-black text-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black uppercase tracking-tight italic">Pending Sync</h3>
+                <Link href="/hq/dashboard/manager/approvals" className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100">View Grid</Link>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {pendingList.map(p => (
-                    <div key={p.id} className={`p-5 rounded-3xl border flex items-center justify-between gap-4 transition-all hover:scale-[1.01] ${
-                      isDark ? 'bg-zinc-900/20 border-zinc-800/40' : 'bg-white border-gray-100/60 shadow-sm'
-                    }`}>
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 bg-gradient-to-br from-purple-500 to-blue-600 text-white uppercase`}>
-                           {p.dept?.[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <p className={`font-black text-sm md:text-base truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{p.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-black bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full uppercase">{p.dept}</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-300" />
-                            <p className="text-black text-[10px] font-bold truncate">By {p.staffName}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className={`font-black text-sm ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>+1 Unit</p>
-                        <p className="text-black text-[10px] font-bold mt-0.5 italic">{timeAgo(p.createdAt)}</p>
-                      </div>
+                  <div key={p.id} className="p-5 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer">
+                    <div className="truncate pr-4">
+                      <p className="text-sm font-black truncate">{p.title}</p>
+                      <p className="text-[9px] font-bold opacity-40 uppercase mt-1">{p.dept} • {p.staffName}</p>
                     </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-black text-emerald-400 italic">{timeAgo(p.createdAt)}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </section>
+            </div>
           )}
         </div>
-
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, icon, color, urgent, isDark, onClick }: {
-  label: string; value: number; icon: React.ReactNode; color: string; urgent?: boolean; isDark?: boolean; onClick?: () => void;
-}) {
+function StatCard({ label, value, icon, color, textColor, urgent, onClick }: any) {
   return (
-    <div 
+    <button 
       onClick={onClick}
-      className={`rounded-3xl p-5 border transition-all duration-500 relative overflow-hidden group cursor-pointer ${
-      isDark ? 'bg-zinc-900/50 border-zinc-800 hover:bg-black/90/80 shadow-2xl shadow-black/50' : 'bg-white border-gray-100/80 hover:shadow-2xl shadow-sm'
-    } ${urgent ? 'ring-2 ring-rose-500 ring-offset-2 ring-offset-zinc-950 shadow-rose-900/20' : ''} active:scale-95`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-10 rounded-full -mr-8 -mt-8 ${color.split(' ')[0]}`} />
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-inner ${color}`}>
+      className={`relative flex flex-col p-8 rounded-[2.5rem] border-4 border-black transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-left group`}
+    >
+      <div className={`w-12 h-12 rounded-2xl ${color} ${textColor} flex items-center justify-center mb-6 border-2 border-black/5 group-hover:scale-110 transition-transform shadow-inner`}>
         {icon}
       </div>
-      <p className={`text-4xl font-[1000] tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-60 group-hover:opacity-100 transition-opacity">{label}</p>
-      {urgent && <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />}
-    </div>
+      <p className="text-5xl font-[1000] tracking-tighter mb-2 text-black">{value}</p>
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black opacity-40 group-hover:opacity-100 transition-opacity italic">{label}</p>
+      {urgent && <div className="absolute top-6 right-6 w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
+    </button>
   );
 }
+
