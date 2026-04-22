@@ -89,7 +89,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub.com.pk',
-    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.KhanHub', '@jobcenter.Khan Hub', '@job-center.khanhub.com.pk', '@jobcenter.khanhub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.KhanHub', '@jobcenter.Khan Hub', '@job-center.khanhub.com.pk', '@jobcenter.khanhub', '@job-center.khanhub', '@job-center.KhanHub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -99,7 +99,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Social Media',
     collection: 'media_users',
     domain: '@media.khanhub.com.pk',
-    legacyDomains: ['@media.khanhub.com', '@media.KhanHub', '@media.Khan Hub', '@media.khanhub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@media.khanhub.com', '@media.KhanHub', '@media.Khan Hub', '@media.khanhub', '@social-media.khanhub', '@social-media.KhanHub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
