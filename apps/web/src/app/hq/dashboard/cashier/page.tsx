@@ -65,6 +65,7 @@ export default function CashierStationPage() {
   const [incomingLoading, setIncomingLoading] = useState(false);
   const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
   const [incomingError, setIncomingError] = useState<string | null>(null);
+  const [detailModalTx, setDetailModalTx] = useState<any | null>(null);
   const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
   const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
   const [forwardProofReason, setForwardProofReason] = useState('');
@@ -720,15 +721,15 @@ export default function CashierStationPage() {
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 pb-24 md:pb-8">
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-white/10 px-4 py-4 md:px-8 md:py-6">
+    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-white dark:bg-zinc-950 text-black dark:text-gray-100 pb-24 md:pb-8">
+      <div className="sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-zinc-900/90 border-b border-gray-200 dark:border-white/10 px-4 py-4 md:px-8 md:py-6">
         <div className="max-w-7xl mx-auto flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center text-white shrink-0">
+          <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black shrink-0 shadow-lg shadow-black/5">
             <CreditCard size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight truncate">Cashier Station</h1>
-            <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
+            <h1 className="text-2xl md:text-3xl font-black text-black dark:text-white tracking-tight truncate">Cashier Station</h1>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -766,10 +767,10 @@ export default function CashierStationPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-4 space-y-4 min-w-0">
-          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-sm">
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50 dark:shadow-none">
             <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-              <Plus size={14} /> Admin Fee Requests
+            <h2 className="text-sm font-black uppercase tracking-widest text-black dark:text-gray-400 flex items-center gap-2">
+              <Plus size={14} className="text-purple-600" /> Admin Fee Requests
             </h2>
             </div>
             {incomingError ? (
@@ -786,16 +787,29 @@ export default function CashierStationPage() {
                 No incoming fee requests.
               </div>
             ) : (
-              <div className="space-y-3 max-h-[320px] overflow-y-auto">
+              <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 scrollbar-hide">
                 {incomingFeeReqs.map((tx, index) => (
-                  <div key={tx.id} style={{ animationDelay: `${index * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 duration-300 group bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-4 md:p-5 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-purple-500/20 transition-all duration-300">
+                  <div 
+                    key={tx.id} 
+                    style={{ animationDelay: `${index * 60}ms` }} 
+                    onClick={() => setDetailModalTx(tx)}
+                    className="animate-in fade-in slide-in-from-bottom-2 duration-300 group cursor-pointer bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-4 md:p-5 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-black/20 dark:hover:border-white/20 transition-all duration-300"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-black text-gray-900 dark:text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            {formatDateDMY(tx.createdAt)}
+                          </span>
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                            {tx.departmentCode}
+                          </span>
+                        </div>
+                        <div className="text-sm font-black text-black dark:text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
                         <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
-                        <div className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
-                        <span className={cn('mt-2 inline-flex px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/15 text-amber-500 border-amber-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20')}>
+                        <div className="text-xs font-black text-black dark:text-purple-400 mt-2">Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                        <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
+                        <span className={cn('mt-2.5 inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20')}>
                           {tx.status || 'pending_cashier'}
                         </span>
                       </div>
@@ -838,20 +852,20 @@ export default function CashierStationPage() {
               {departmentCode !== 'hospital' && (
                 <div className="relative w-full">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-black" size={16} />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       onFocus={() => searchQuery && setSearchOpen(true)}
                       placeholder="Search by name or ID..."
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
+                      className="w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl pl-10 pr-10 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400"
                     />
                     {searchQuery && (
                       <button
                         type="button"
                         onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
                       >
                         <X size={14} />
                       </button>
@@ -927,47 +941,47 @@ export default function CashierStationPage() {
         </div>
 
         <div className="lg:col-span-8 min-w-0">
-          <div className="bg-white/5 border border-white/8 rounded-3xl p-5 md:p-7">
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50 dark:shadow-none">
             <form onSubmit={submitTx} className="space-y-4">
-              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account (Auto-selected)' : 'Search and select account from left panel'}</p>
+              <div className="p-6 rounded-2xl bg-black text-white dark:bg-white dark:text-black min-w-0 shadow-xl shadow-black/10">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
+                <div className="flex items-center justify-between gap-4 mt-1">
+                  <p className="text-base sm:text-xl font-black truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Search and select account'}</p>
                   {selectedEntity && (
-                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-300 transition-colors">Clear</button>
+                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-white dark:text-black underline underline-offset-4 uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity">Clear</button>
                   )}
                 </div>
                 
                 {selectedEntity && isStaffMode && (
-                  <div className="mt-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 animate-in zoom-in-95 duration-500">
+                  <div className="mt-4 p-5 rounded-2xl bg-white/10 border border-white/20 animate-in zoom-in-95 duration-500">
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Days Present</span>
-                      <span className="text-xs font-black text-white">{selectedEntity.daysPresent || 0} Days</span>
+                      <span className="text-[9px] font-black uppercase opacity-60 tracking-widest">Days Present</span>
+                      <span className="text-sm font-black">{selectedEntity.daysPresent || 0} Days</span>
                     </div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest">Pro-rated Salary</span>
-                      <span className="text-xs font-black text-white">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
+                      <span className="text-[9px] font-black uppercase opacity-60 tracking-widest">Pro-rated Salary</span>
+                      <span className="text-sm font-black">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-[9px] font-black uppercase text-rose-400 tracking-widest">Unpaid Fines</span>
-                      <span className="text-xs font-black text-rose-500">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
+                      <span className="text-[9px] font-black uppercase opacity-60 tracking-widest">Unpaid Fines</span>
+                      <span className="text-sm font-black text-red-300">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
                     </div>
-                    <div className="pt-2 border-t border-indigo-500/20 flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Net Payable</span>
-                      <span className="text-lg font-[1000] text-emerald-400">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                    <div className="pt-3 border-t border-white/20 flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Net Payable</span>
+                      <span className="text-xl font-[1000] text-emerald-300">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button type="button" onClick={() => setTxnType('income')} className={cn('min-h-[44px] p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200', txnType === 'income' ? 'border-teal-500 bg-teal-500/10' : 'border-white/10 bg-[#1a1f2a] hover:bg-white/5')}>
-                  <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', txnType === 'income' ? 'bg-teal-500 text-white' : 'bg-[#242b39] text-gray-300')}><TrendingUp size={20} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Payment In</span>
+                <button type="button" onClick={() => setTxnType('income')} className={cn('min-h-[44px] p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300', txnType === 'income' ? 'border-black bg-black text-white shadow-xl shadow-black/10' : 'border-gray-200 bg-white hover:bg-gray-50')}>
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', txnType === 'income' ? 'bg-white/20 text-white' : 'bg-gray-100 text-black')}><TrendingUp size={20} /></div>
+                  <span className="text-[11px] font-[1000] uppercase tracking-[0.2em]">Payment In</span>
                 </button>
-                <button type="button" onClick={() => setTxnType('expense')} className={cn('min-h-[44px] p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200', txnType === 'expense' ? 'border-red-500 bg-red-500/10' : 'border-white/10 bg-[#1a1f2a] hover:bg-white/5')}>
-                  <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', txnType === 'expense' ? 'bg-red-500 text-white' : 'bg-[#242b39] text-gray-300')}><TrendingDown size={20} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Payment Out</span>
+                <button type="button" onClick={() => setTxnType('expense')} className={cn('min-h-[44px] p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300', txnType === 'expense' ? 'border-black bg-black text-white shadow-xl shadow-black/10' : 'border-gray-200 bg-white hover:bg-gray-50')}>
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', txnType === 'expense' ? 'bg-white/20 text-white' : 'bg-gray-100 text-black')}><TrendingDown size={20} /></div>
+                  <span className="text-[11px] font-[1000] uppercase tracking-[0.2em]">Payment Out</span>
                 </button>
               </div>
 
@@ -1096,7 +1110,7 @@ export default function CashierStationPage() {
                         const parsed = parseDateDMY(e.target.value);
                         if (parsed) setTxDate(parsed.toISOString().split('T')[0]);
                       }}
-                      className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600"
+                      className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400"
                     />
                   </div>
                   <div>
@@ -1111,11 +1125,11 @@ export default function CashierStationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Amount (PKR)</label>
-                  <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
+                  <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400" />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Reference No</label>
-                  <input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="Optional reference..." className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
+                  <input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="Optional reference..." className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400" />
                 </div>
               </div>
 
@@ -1162,7 +1176,7 @@ export default function CashierStationPage() {
               <button 
                 type="submit" 
                 disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                className="min-h-[44px] w-full md:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black text-xs uppercase tracking-widest px-8 py-3.5 rounded-2xl transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="min-h-[44px] w-full md:w-auto bg-black hover:bg-zinc-800 active:scale-95 text-white font-[1000] text-xs uppercase tracking-[0.2em] px-10 py-4 rounded-2xl transition-all duration-300 shadow-2xl shadow-black/20 disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 {processing ? (
                   <>
@@ -1180,11 +1194,13 @@ export default function CashierStationPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <History size={18} className="text-teal-400" />
-            <h2 className="text-xl sm:text-2xl font-black text-white">Terminal History</h2>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black">
+              <History size={20} />
+            </div>
+            <h2 className="text-xl sm:text-3xl font-[1000] text-black dark:text-white uppercase tracking-tight">Terminal History</h2>
           </div>
           <button 
             type="button" 
@@ -1306,21 +1322,21 @@ export default function CashierStationPage() {
           ))}
         </div>
 
-        <div className="hidden md:block bg-[#11151d] rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+        <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-gray-200 dark:border-white/10 overflow-hidden shadow-xl shadow-gray-100/50 dark:shadow-none">
           <div className="overflow-x-auto">
             <div className="table-responsive">
-              <table className="w-full min-w-[860px] text-left">
+              <table className="w-full min-w-[860px] text-left border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white/[0.02] border-b border-white/10">
-                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</th>
-                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Dept</th>
-                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Account / Entity</th>
-                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Category</th>
-                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Status</th>
-                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Amount</th>
+                  <tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Date</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Dept</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Account / Entity</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Category</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400">Status</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-gray-400 text-right">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                   {historyLoading ? (
                     <tr>
                       <td colSpan={6} className="px-5 py-12 text-center">
@@ -1489,6 +1505,87 @@ export default function CashierStationPage() {
                 >
                   {rejecting ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Reject'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {detailModalTx && (
+        <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="relative p-8">
+              <button 
+                onClick={() => setDetailModalTx(null)}
+                className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-16 h-16 bg-black dark:bg-white rounded-2xl flex items-center justify-center text-white dark:text-black mb-4 shadow-xl">
+                  <FileText size={32} />
+                </div>
+                <h3 className="text-xl font-[1000] text-black dark:text-white uppercase tracking-tight">Transaction Detail</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">{detailModalTx.id}</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Date</p>
+                    <p className="text-sm font-black text-black dark:text-white">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Department</p>
+                    <p className="text-sm font-black text-black dark:text-white uppercase">{detailModalTx.departmentCode || 'HQ'}</p>
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Account / Entity</p>
+                  <p className="text-lg font-black text-black dark:text-white">{detailModalTx.patientName || detailModalTx.donorName || 'General Account'}</p>
+                  <p className="text-[11px] font-bold text-gray-500 mt-0.5">{detailModalTx.patientId || detailModalTx.donorId || 'N/A'}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Category</p>
+                    <p className="text-sm font-black text-black dark:text-white">{detailModalTx.categoryName || detailModalTx.category || 'N/A'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Amount</p>
+                    <p className="text-xl font-[1000] text-black dark:text-white">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {detailModalTx.description && (
+                  <div className="p-4 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 text-center">Internal Note</p>
+                    <p className="text-xs font-bold text-gray-600 dark:text-gray-400 text-center leading-relaxed">
+                      {detailModalTx.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button 
+                  onClick={() => setDetailModalTx(null)}
+                  className="flex-1 py-4 bg-black text-white dark:bg-white dark:text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10"
+                >
+                  Close Detail
+                </button>
+                {detailModalTx.status === 'pending_cashier' && (
+                   <button 
+                   onClick={() => {
+                     setDetailModalTx(null);
+                     openForwardModal(detailModalTx);
+                   }}
+                   className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20"
+                 >
+                   Approve / Add
+                 </button>
+                )}
               </div>
             </div>
           </div>
