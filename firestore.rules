@@ -1591,7 +1591,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1599,7 +1599,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1640,7 +1644,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1648,7 +1652,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1689,7 +1697,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1697,7 +1705,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1743,7 +1755,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1751,7 +1763,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1762,7 +1778,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1770,7 +1786,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1841,7 +1861,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1849,7 +1869,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1894,7 +1918,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1902,7 +1926,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1952,7 +1980,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1960,7 +1988,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }

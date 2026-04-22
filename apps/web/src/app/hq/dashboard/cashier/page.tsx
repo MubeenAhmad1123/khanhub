@@ -1102,15 +1102,10 @@ export default function CashierStationPage() {
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transaction Date</label>
                     <input
-                      type="text"
-                      placeholder="DD MM YYYY"
-                      value={formatDateDMY(txDate)}
+                      type="date"
+                      value={txDate}
                       onChange={(e) => setTxDate(e.target.value)}
-                      onBlur={(e) => {
-                        const parsed = parseDateDMY(e.target.value);
-                        if (parsed) setTxDate(parsed.toISOString().split('T')[0]);
-                      }}
-                      className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400"
+                      className="mt-2 w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200"
                     />
                   </div>
                   <div>
