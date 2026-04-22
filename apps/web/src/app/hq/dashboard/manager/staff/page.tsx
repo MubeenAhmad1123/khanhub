@@ -75,7 +75,7 @@ export default function ManagerStaffPage() {
 
         const attendanceMap = new Map<string, string>();
         attSnaps.forEach(snap => {
-          snap.docs.forEach(d => {
+          snap.docs.forEach((d: any) => {
             const data = d.data();
             const key = data.staffId || d.id;
             attendanceMap.set(key, data.status);

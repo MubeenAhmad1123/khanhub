@@ -102,7 +102,7 @@ export default function ManagerOverviewPage() {
         
         staffSnaps.forEach((s, idx) => {
           const dept = staffQueries[idx].dept;
-          s.docs.forEach(doc => {
+          s.docs.forEach((doc: any) => {
             const data = doc.data() as any;
             const role = String(data.role || '').toLowerCase();
             
@@ -146,7 +146,7 @@ export default function ManagerOverviewPage() {
 
         attSnaps.forEach((snap, i) => {
           const dept = depts[i];
-          snap.docs.forEach(d => {
+          snap.docs.forEach((d: any) => {
             const data = d.data();
             const key = data.staffId || d.id;
             attendanceMap.set(key, data.status);
