@@ -336,8 +336,14 @@ export default function CashierStationPage() {
         cashierRejectedByName: session?.name || session?.displayName || 'HQ Cashier',
         cashierRejectReason: reason,
       });
-      if (rejectModalTx.feePaymentId && col === 'spims_transactions') {
-        await updateDoc(doc(db, 'spims_fees', rejectModalTx.feePaymentId), { status: 'rejected_cashier' });
+      if (rejectModalTx.feePaymentId) {
+        // Automatically handle fee status for all departments
+        const feeCol = col.replace('_transactions', '_fees');
+        try {
+          await updateDoc(doc(db, feeCol, rejectModalTx.feePaymentId), { status: 'rejected_cashier' });
+        } catch (err) {
+          console.warn(`[HQ Cashier] could not update linked fee in ${feeCol}:`, err);
+        }
       }
       setMessage({ type: 'success', text: 'Request rejected and sent back to admin.' });
       setRejectModalTx(null);
@@ -721,35 +727,35 @@ export default function CashierStationPage() {
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-white dark:bg-zinc-950 text-black dark:text-gray-100 pb-24 md:pb-8">
-      <div className="sticky top-0 z-20 backdrop-blur-md bg-white/90 dark:bg-zinc-900/90 border-b border-gray-200 dark:border-white/10 px-4 py-4 md:px-8 md:py-6">
+    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-white text-black pb-24 md:pb-8">
+      <div className="sticky top-0 z-20 backdrop-blur-md bg-white/90 border-b border-gray-200 px-4 py-4 md:px-8 md:py-6">
         <div className="max-w-7xl mx-auto flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black shrink-0 shadow-lg shadow-black/5">
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-black/5">
             <CreditCard size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-black text-black dark:text-white tracking-tight truncate">Cashier Station</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight truncate">Cashier Station</h1>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Link 
               href="/hq/dashboard/cashier/history"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 transition-all active:scale-95"
             >
               <History size={14} className="text-purple-500" />
               <span className="hidden md:inline">History</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/daily-report"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 transition-all active:scale-95"
             >
               <LayoutDashboard size={14} className="text-indigo-400" />
               <span className="hidden md:inline">Report</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/reconciliation"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 transition-all active:scale-95"
             >
               <ShieldCheck size={14} className="text-emerald-400" />
               <span className="hidden md:inline">Audit</span>
@@ -767,9 +773,9 @@ export default function CashierStationPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-4 space-y-4 min-w-0">
-          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50 dark:shadow-none">
+          <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50">
             <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-black uppercase tracking-widest text-black dark:text-gray-400 flex items-center gap-2">
+            <h2 className="text-sm font-black uppercase tracking-widest text-black flex items-center gap-2">
               <Plus size={14} className="text-purple-600" /> Admin Fee Requests
             </h2>
             </div>
@@ -793,7 +799,7 @@ export default function CashierStationPage() {
                     key={tx.id} 
                     style={{ animationDelay: `${index * 60}ms` }} 
                     onClick={() => setDetailModalTx(tx)}
-                    className="animate-in fade-in slide-in-from-bottom-2 duration-300 group cursor-pointer bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-4 md:p-5 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-black/20 dark:hover:border-white/20 transition-all duration-300"
+                    className="animate-in fade-in slide-in-from-bottom-2 duration-300 group cursor-pointer bg-white border border-gray-200 rounded-2xl p-4 md:p-5 hover:bg-gray-50 hover:border-black/20 transition-all duration-300"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -805,10 +811,10 @@ export default function CashierStationPage() {
                             {tx.departmentCode}
                           </span>
                         </div>
-                        <div className="text-sm font-black text-black dark:text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
+                        <div className="text-sm font-black text-black truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
                         <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
-                        <div className="text-xs font-black text-black dark:text-purple-400 mt-2">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
+                        <div className="text-xs font-black text-black mt-2">Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                        <div className="text-[10px] font-semibold text-gray-500 mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
                         <span className={cn('mt-2.5 inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20')}>
                           {tx.status || 'pending_cashier'}
                         </span>
@@ -841,13 +847,13 @@ export default function CashierStationPage() {
             </p>
           </div>
 
-          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-sm">
+          <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-7 shadow-sm">
             <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
               <Search size={14} /> {isStaffMode ? 'Search Staff' : 'Search Account'}
             </h2>
             <div className="space-y-3">
-              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-gray-900 dark:text-white text-sm font-medium outline-none focus:border-purple-500/60 focus:bg-white dark:focus:bg-white/8 transition-all duration-200">
-                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code} className="bg-white dark:bg-gray-800">{d.label}</option>)}
+              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-gray-900 text-sm font-medium outline-none focus:border-purple-500/60 focus:bg-white transition-all duration-200">
+                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code} className="bg-white">{d.label}</option>)}
               </select>
               {departmentCode !== 'hospital' && (
                 <div className="relative w-full">
@@ -859,7 +865,7 @@ export default function CashierStationPage() {
                       onChange={e => setSearchQuery(e.target.value)}
                       onFocus={() => searchQuery && setSearchOpen(true)}
                       placeholder="Search by name or ID..."
-                      className="w-full bg-white border border-gray-200 dark:border-white/10 rounded-2xl pl-10 pr-10 py-3 text-black dark:text-white text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400"
+                      className="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-10 py-3 text-black text-sm font-medium outline-none focus:border-black transition-all duration-200 placeholder-gray-400"
                     />
                     {searchQuery && (
                       <button
@@ -941,14 +947,14 @@ export default function CashierStationPage() {
         </div>
 
         <div className="lg:col-span-8 min-w-0">
-          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50 dark:shadow-none">
+          <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-7 shadow-xl shadow-gray-100/50">
             <form onSubmit={submitTx} className="space-y-4">
-              <div className="p-6 rounded-2xl bg-black text-white dark:bg-white dark:text-black min-w-0 shadow-xl shadow-black/10">
+              <div className="p-6 rounded-2xl bg-black text-white min-w-0 shadow-xl shadow-black/10">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
                 <div className="flex items-center justify-between gap-4 mt-1">
                   <p className="text-base sm:text-xl font-black truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Search and select account'}</p>
                   {selectedEntity && (
-                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-white dark:text-black underline underline-offset-4 uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity">Clear</button>
+                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-white underline underline-offset-4 uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity">Clear</button>
                   )}
                 </div>
                 
@@ -1190,12 +1196,12 @@ export default function CashierStationPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black">
+        <div className="lg:col-span-12 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/10">
               <History size={20} />
             </div>
-            <h2 className="text-xl sm:text-3xl font-[1000] text-black dark:text-white uppercase tracking-tight">Terminal History</h2>
+            <h2 className="text-xl sm:text-3xl font-[1000] text-black uppercase tracking-tight">Terminal History</h2>
           </div>
           <button 
             type="button" 
