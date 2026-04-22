@@ -614,7 +614,7 @@ export default function ManagerUsersPage() {
               <Users className="w-10 h-10 text-blue-500" />
               Account Management
             </h1>
-            <p className={`mt-1 font-medium ${darkMode ? 'text-black-500' : 'text-gray-500'}`}>
+            <p className={`mt-1 font-medium ${darkMode ? 'text-black-500' : 'text-black'}`}>
               Create and manage administrative, staff, and family credentials
             </p>
           </div>
@@ -629,7 +629,7 @@ export default function ManagerUsersPage() {
             </div>
             <div className="text-right">
               <p className="text-xs font-black uppercase tracking-tight text-blue-500 leading-none">Global Access</p>
-              <p className={`text-[10px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Unified Account Hub</p>
+              <p className={`text-[10px] font-bold ${darkMode ? 'text-black' : 'text-black'}`}>Unified Account Hub</p>
             </div>
           </div>
         </div>
@@ -646,7 +646,7 @@ export default function ManagerUsersPage() {
               onClick={() => { setActiveTab(tab.id as TabType); setMessage(null); }}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                  : `hover:bg-gray-300/50 dark:hover:bg-gray-800/50 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`
+                  : `hover:bg-gray-300/50 dark:hover:bg-gray-800/50 ${darkMode ? 'text-black' : 'text-black'}`
                 }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -669,10 +669,10 @@ export default function ManagerUsersPage() {
                     onClick={() => { setFormData({ ...formData, department: dept.id }); fetchCounts(); }}
                     className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.department === dept.id
                         ? 'border-blue-500 bg-blue-500/10'
-                        : `border-transparent ${darkMode ? 'bg-zinc-900/60 hover:bg-zinc-800' : 'bg-white hover:bg-gray-50'} shadow-sm`
+                        : `border-transparent ${darkMode ? 'bg-zinc-900/60 hover:bg-black/90' : 'bg-white hover:bg-white'} shadow-sm`
                       }`}
                   >
-                    <div className={formData.department === dept.id ? 'text-blue-500' : 'text-gray-400'}>
+                    <div className={formData.department === dept.id ? 'text-blue-500' : 'text-black'}>
                       <dept.icon size={24} />
                     </div>
                     <div className="text-left">
@@ -700,7 +700,7 @@ export default function ManagerUsersPage() {
                   <h2 className="text-xl font-black uppercase tracking-tight">
                     Create {activeTab} Account
                   </h2>
-                  <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-black' : 'text-black'}`}>
                     {activeTab === 'admin' ? 'Strategic administrative oversight credentials' :
                       activeTab === 'staff' ? 'Operational and clinical personnel management' :
                         `${DEPARTMENTS.find(d => d.id === formData.department)?.clientLabel || 'Client'} family and guardian portal access`}
@@ -760,9 +760,9 @@ export default function ManagerUsersPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
                     {/* Common Fields */}
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">Custom User ID</label>
+                      <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">Custom User ID</label>
                       <div className="relative group">
-                        <Users className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-gray-600 group-focus-within:text-blue-500' : 'text-gray-300 group-focus-within:text-blue-600'}`} />
+                        <Users className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-black group-focus-within:text-blue-500' : 'text-black group-focus-within:text-blue-600'}`} />
                         <input
                           type="text"
                           placeholder="e.g. jdoe_001"
@@ -775,9 +775,9 @@ export default function ManagerUsersPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">Full Display Name</label>
+                      <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">Full Display Name</label>
                       <div className="relative group">
-                        <UserPlus className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-gray-600 group-focus-within:text-blue-500' : 'text-gray-300 group-focus-within:text-blue-600'}`} />
+                        <UserPlus className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-black group-focus-within:text-blue-500' : 'text-black group-focus-within:text-blue-600'}`} />
                         <input
                           type="text"
                           placeholder="e.g. Johnathan Doe"
@@ -790,9 +790,9 @@ export default function ManagerUsersPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">Secure Password</label>
+                      <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">Secure Password</label>
                       <div className="relative group">
-                        <ShieldCheck className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-gray-600 group-focus-within:text-blue-500' : 'text-gray-300 group-focus-within:text-blue-600'}`} />
+                        <ShieldCheck className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-black group-focus-within:text-blue-500' : 'text-black group-focus-within:text-blue-600'}`} />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           placeholder="Min 6 characters"
@@ -803,7 +803,7 @@ export default function ManagerUsersPage() {
                         />
                         <button
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-black hover:text-blue-500 transition-colors"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -812,11 +812,11 @@ export default function ManagerUsersPage() {
 
                     {activeTab === 'client' && (
                       <div className="space-y-2">
-                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">
                           {DEPARTMENTS.find(d => d.id === formData.department)?.clientLabel || 'Patient'} ID Link
                         </label>
                         <div className="relative group">
-                          <TrendingUp className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                          <TrendingUp className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-black' : 'text-black'}`} />
                           <input
                             type="text"
                             placeholder="e.g. P001, P002"
@@ -855,7 +855,7 @@ export default function ManagerUsersPage() {
                           <User className="text-blue-500" size={20} />
                         </div>
                         <div>
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">SECTION 1 — Profile & Identity</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-black">SECTION 1 — Profile & Identity</h3>
                           <p className="text-sm font-bold opacity-60">Personal information and identity verification</p>
                         </div>
                       </div>
@@ -885,7 +885,7 @@ export default function ManagerUsersPage() {
 
                         <div className="sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">First Name*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">First Name*</label>
                             <input
                               type="text"
                               placeholder="Enter first name"
@@ -895,7 +895,7 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Last Name*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Last Name*</label>
                             <input
                               type="text"
                               placeholder="Enter last name"
@@ -905,7 +905,7 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Gender*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Gender*</label>
                             <div className="flex gap-2 p-1 bg-gray-100 dark:bg-white/5 rounded-2xl">
                               {['male', 'female'].map(g => (
                                 <button
@@ -913,7 +913,7 @@ export default function ManagerUsersPage() {
                                   onClick={() => setFormData({ ...formData, gender: g })}
                                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.gender === g
                                       ? 'bg-blue-600 text-white shadow-lg'
-                                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                                      : 'text-black hover:text-black dark:hover:text-gray-200'
                                     }`}
                                 >
                                   {g}
@@ -922,7 +922,7 @@ export default function ManagerUsersPage() {
                             </div>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Date of Birth</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Date of Birth</label>
                             <input
                               type="date"
                               value={formData.dateOfBirth}
@@ -931,7 +931,7 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">CNIC Number (00000-0000000-0)</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">CNIC Number (00000-0000000-0)</label>
                             <input
                               type="text"
                               placeholder="42101-XXXXXXX-X"
@@ -941,9 +941,9 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone / WhatsApp*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Phone / WhatsApp*</label>
                             <div className="relative">
-                              <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                              <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-black' : 'text-black'}`} />
                               <input
                                 type="tel"
                                 placeholder="+92 3XX XXXXXXX"
@@ -958,7 +958,7 @@ export default function ManagerUsersPage() {
 
                       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-white/5 pt-6">
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Emergency Contact Name</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Emergency Contact Name</label>
                           <input
                             type="text"
                             placeholder="John Doe"
@@ -968,7 +968,7 @@ export default function ManagerUsersPage() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Emergency Contact Phone</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Emergency Contact Phone</label>
                           <input
                             type="tel"
                             placeholder="+92 3XX XXXXXXX"
@@ -987,7 +987,7 @@ export default function ManagerUsersPage() {
                           <Building2 className="text-emerald-500" size={20} />
                         </div>
                         <div>
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">SECTION 2 — Employment Details</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-black">SECTION 2 — Employment Details</h3>
                           <p className="text-sm font-bold opacity-60">Job location, role and initial salary</p>
                         </div>
                       </div>
@@ -1006,12 +1006,12 @@ export default function ManagerUsersPage() {
                                 onChange={e => setFormData({ ...formData, employeeId: e.target.value.toUpperCase() })}
                                 className={`flex-1 h-14 px-5 rounded-2xl font-mono text-sm outline-none transition-all ${darkMode
                                     ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:border-indigo-500/50'
-                                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500/50'
+                                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-black focus:border-indigo-500/50'
                                   }`}
                               />
                               <button
                                 onClick={() => setFormData({ ...formData, employeeId: generateEmployeeId() })}
-                                className={`px-4 h-14 rounded-2xl border text-xs font-black transition-all whitespace-nowrap ${darkMode ? 'bg-white/10 border-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                                className={`px-4 h-14 rounded-2xl border text-xs font-black transition-all whitespace-nowrap ${darkMode ? 'bg-white/10 border-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 border-gray-200 text-black hover:bg-gray-200'
                                   }`}
                               >
                                 Auto
@@ -1022,7 +1022,7 @@ export default function ManagerUsersPage() {
                             </p>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Joining Date*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Joining Date*</label>
                             <input
                               type="date"
                               value={formData.joiningDate}
@@ -1034,7 +1034,7 @@ export default function ManagerUsersPage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Designation / Title*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Designation / Title*</label>
                             <input
                               type="text"
                               placeholder="e.g. Senior Doctor"
@@ -1044,7 +1044,7 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Category / Role*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Category / Role*</label>
                             <select
                               value={formData.staffRole}
                               onChange={(e) => setFormData({ ...formData, staffRole: e.target.value })}
@@ -1065,9 +1065,9 @@ export default function ManagerUsersPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Starting Basic Salary (PKR)*</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Starting Basic Salary (PKR)*</label>
                           <div className="relative">
-                            <DollarSign className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                            <DollarSign className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-black' : 'text-black'}`} />
                             <input
                               type="number"
                               placeholder="50000"
@@ -1087,14 +1087,14 @@ export default function ManagerUsersPage() {
                           <ClipboardList className="text-purple-500" size={20} />
                         </div>
                         <div>
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">SECTION 3 — Duties & Timings</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-black">SECTION 3 — Duties & Timings</h3>
                           <p className="text-sm font-bold opacity-60">Working hours and specific responsibilities</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-1 space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Daily Duty Shift</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Daily Duty Shift</label>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                               <span className="text-[8px] font-black uppercase tracking-widest opacity-40 ml-1">Start Time</span>
@@ -1125,7 +1125,7 @@ export default function ManagerUsersPage() {
                         </div>
 
                         <div className="lg:col-span-2 space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Select Responsibilities / Duties</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Select Responsibilities / Duties</label>
                           <div className="flex flex-wrap gap-2">
                              <button 
                                onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
@@ -1171,7 +1171,7 @@ export default function ManagerUsersPage() {
                                      >
                                        {processingConfig ? 'Processing...' : 'Save & Add'}
                                      </button>
-                                     <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
+                                     <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-black">Cancel</button>
                                    </div>
                                  </div>
                                </div>
@@ -1203,7 +1203,7 @@ export default function ManagerUsersPage() {
                           <Scissors className="text-orange-500" size={20} />
                         </div>
                         <div>
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">SECTION 4 — Uniform Policy</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-black">SECTION 4 — Uniform Policy</h3>
                           <p className="text-sm font-bold opacity-60">Required attire and equipment (Gender Aware)</p>
                         </div>
                       </div>
@@ -1253,7 +1253,7 @@ export default function ManagerUsersPage() {
                                  >
                                    {processingConfig ? 'Processing...' : 'Save & Add'}
                                  </button>
-                                 <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
+                                 <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-black">Cancel</button>
                                </div>
                              </div>
                            </div>
@@ -1338,7 +1338,7 @@ export default function ManagerUsersPage() {
                                 }}
                                 className={`w-full h-16 pl-12 pr-6 rounded-2xl font-mono text-sm outline-none transition-all ${darkMode
                                     ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:bg-white/15 focus:border-indigo-500/50'
-                                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-indigo-500/50'
+                                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-black focus:bg-white focus:border-indigo-500/50'
                                   }`}
                               />
                             </div>
@@ -1565,11 +1565,11 @@ export default function ManagerUsersPage() {
             }`}>
             <div className={`px-8 py-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${darkMode ? 'border-gray-800 bg-gray-900/60' : 'border-gray-50 bg-gray-50/50'}`}>
               <div className="flex items-center gap-3">
-                <History className="w-5 h-5 text-gray-400" />
+                <History className="w-5 h-5 text-black" />
                 <h2 className="text-lg font-black uppercase tracking-tight">Recent System Access</h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
+                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${darkMode ? 'bg-gray-800 border-gray-700 text-black' : 'bg-white border-gray-200 text-black'
                   }`}>
                   {users.length} Records
                 </span>
@@ -1578,7 +1578,7 @@ export default function ManagerUsersPage() {
 
             <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800/50">
               {users.length === 0 ? (
-                <div className="px-6 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
+                <div className="px-6 py-12 text-center text-black font-bold uppercase tracking-widest text-[11px]">
                   No account records initialized
                 </div>
               ) : (
@@ -1592,7 +1592,7 @@ export default function ManagerUsersPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-black truncate">{u.displayName}</p>
-                        <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-black' : 'text-black'}`}>
                           {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}
                         </p>
                       </div>
@@ -1636,7 +1636,7 @@ export default function ManagerUsersPage() {
 
                   <table className="w-full text-left min-w-[800px]">
                     <thead>
-                      <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-50'}`}>
+                      <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-black border-gray-800' : 'text-black border-gray-50'}`}>
                         <th className="px-8 py-5 text-[9px]">Full Identity</th>
                         <th className="px-8 py-5 text-[9px]">Assigned Role</th>
                         <th className="px-8 py-5 text-[9px]">Initialization Date</th>
@@ -1647,7 +1647,7 @@ export default function ManagerUsersPage() {
                     <tbody className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-50'}`}>
                       {users.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
+                          <td colSpan={5} className="px-8 py-12 text-center text-black font-bold uppercase tracking-widest text-[11px]">
                             No account records initialized
                           </td>
                         </tr>
@@ -1663,7 +1663,7 @@ export default function ManagerUsersPage() {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-sm font-black truncate">{u.displayName}</p>
-                                  <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-black' : 'text-black'}`}>
                                     {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.Khan Hub'}
                                   </p>
                                 </div>
@@ -1677,7 +1677,7 @@ export default function ManagerUsersPage() {
                                 {u.role}
                               </span>
                             </td>
-                            <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-black' : 'text-black'}`}>
                               {u.createdAt ? (() => {
                                 try {
                                   const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);

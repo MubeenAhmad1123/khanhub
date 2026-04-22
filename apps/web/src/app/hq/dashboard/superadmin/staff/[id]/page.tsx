@@ -164,7 +164,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
       <div className="mb-8 flex items-center justify-between">
         <Link
           href={isSuperadmin ? "/hq/dashboard/superadmin/staff" : "/hq/dashboard/manager/staff"}
-          className="group flex items-center gap-2 text-sm font-bold text-gray-500 transition-colors hover:text-black dark:text-gray-400 dark:hover:text-white"
+          className="group flex items-center gap-2 text-sm font-bold text-black transition-colors hover:text-black dark:text-black dark:hover:text-white"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 transition-all group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
             <ArrowLeft className="h-4 w-4" />
@@ -183,7 +183,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           )}
           <Link 
             href={`/hq/dashboard/superadmin/audit?entity=${staff.name}`}
-            className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest text-gray-600 transition-all hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+            className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest text-black transition-all hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-black dark:hover:bg-white/10"
           >
             <History className="h-3 w-3" />
             Activity Log
@@ -212,39 +212,39 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                 <span className="inline-flex items-center rounded-lg bg-black dark:bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white dark:text-black shadow-sm">
                   {staff.dept}
                 </span>
-                <span className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-100 dark:border-white/5">
+                <span className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-black dark:bg-white/10 dark:text-black border border-gray-100 dark:border-white/5">
                   {staff.role}
                 </span>
               </div>
 
               <div className="mt-8 w-full space-y-4 text-left">
                 <div className="group flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-black transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
                     <Mail className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email Address</p>
-                    <p className="truncate text-sm font-bold text-gray-700 dark:text-gray-300">{staff.email || '—'}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-black">Email Address</p>
+                    <p className="truncate text-sm font-bold text-black dark:text-black">{staff.email || '—'}</p>
                   </div>
                 </div>
 
                 <div className="group flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-black transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
                     <Phone className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Contact Number</p>
-                    <p className="truncate text-sm font-bold text-gray-700 dark:text-gray-300">{staff.phone || '—'}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-black">Contact Number</p>
+                    <p className="truncate text-sm font-bold text-black dark:text-black">{staff.phone || '—'}</p>
                   </div>
                 </div>
 
                 <div className="group flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-black transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
                     <MapPin className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Location / Address</p>
-                    <p className="truncate text-sm font-bold text-gray-700 dark:text-gray-300">{staff.address || '—'}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-black">Location / Address</p>
+                    <p className="truncate text-sm font-bold text-black dark:text-black">{staff.address || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -252,21 +252,21 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           </div>
 
           <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-200/50 dark:border-white/5 dark:bg-[#111] dark:shadow-none">
-            <h3 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400">
+            <h3 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black">
                <Shield className="h-3 w-3" />
                Security & Access
             </h3>
             <div className="space-y-4 text-xs">
               <div className="flex justify-between border-b border-gray-50 pb-2 dark:border-white/5">
-                <span className="text-gray-500">System ID</span>
+                <span className="text-black">System ID</span>
                 <span className="font-mono font-bold text-gray-900 dark:text-white">{staff.staffId.slice(0, 12)}...</span>
               </div>
               <div className="flex justify-between border-b border-gray-50 pb-2 dark:border-white/5">
-                <span className="text-gray-500">Custom ID</span>
+                <span className="text-black">Custom ID</span>
                 <span className="font-bold text-gray-900 dark:text-white">{staff.customId || '—'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Last Login</span>
+                <span className="text-black">Last Login</span>
                 <span className="font-bold text-gray-900 dark:text-white">
                   {lastLogin ? formatDateDMY(lastLogin) : 'Never'}
                 </span>
@@ -283,7 +283,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
                 <Calendar className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Attendance Stream (MTD)</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Attendance Stream (MTD)</div>
               <div className="mt-2 text-3xl font-black text-black dark:text-white">{staff.presentCount}</div>
             </div>
 
@@ -291,7 +291,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
                 <Award className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Growth Point Accumulation</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Growth Point Accumulation</div>
               <div className="mt-2 text-3xl font-black text-black dark:text-white">{staff.growthPointsTotal}</div>
             </div>
 
@@ -299,7 +299,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Financial Deductions</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Financial Deductions</div>
               <div className="mt-2 text-3xl font-black text-black dark:text-white">Rs. {staff.totalFines}</div>
             </div>
           </div>
@@ -312,21 +312,21 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Full Name</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-black">Full Name</p>
                   <p className="font-bold text-gray-900 dark:text-white">{staff.name}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">CNIC / Identity</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-black">CNIC / Identity</p>
                   <p className="font-bold text-gray-900 dark:text-white">{staff.cnic || 'Not provided'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Join Date</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-black">Join Date</p>
                   <p className="font-bold text-gray-900 dark:text-white">
                     {formatDateDMY(joinDate)}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Last Reported Status</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-black">Last Reported Status</p>
                   <p className={`inline-flex items-center rounded-lg bg-black dark:bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white dark:text-black shadow-sm`}>
                     {staff.isActive ? 'Active Member' : 'Inactive'}
                   </p>
@@ -353,7 +353,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                  Payroll History
                </h3>
             </div>
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+            <div className="p-8 text-center text-black dark:text-black">
                <p className="font-bold text-sm">Connection to Payroll module pending.</p>
                <p className="text-xs mt-1 opacity-70">Staff financial data and payouts will be listed here soon.</p>
             </div>
@@ -361,7 +361,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
 
           {/* Direct Actions Section */}
           <div>
-             <h3 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400">
+             <h3 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black">
                 <ExternalLink className="h-3 w-3" />
                 Administrative Actions
              </h3>
@@ -375,7 +375,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                   </div>
                   <div>
                     <h4 className="text-sm font-black text-black dark:text-white uppercase tracking-tight">Credential Reset</h4>
-                    <p className="mt-2 text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em] italic">Refresh authorization node</p>
+                    <p className="mt-2 text-[9px] text-black font-bold uppercase tracking-[0.2em] italic">Refresh authorization node</p>
                   </div>
                 </button>
 
@@ -388,7 +388,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                   </div>
                   <div>
                     <h4 className="text-sm font-black text-black dark:text-white uppercase tracking-tight">Active Impersonation</h4>
-                    <p className="mt-2 text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em] italic">Proxy session synchronization</p>
+                    <p className="mt-2 text-[9px] text-black font-bold uppercase tracking-[0.2em] italic">Proxy session synchronization</p>
                   </div>
                 </button>
              </div>

@@ -95,7 +95,7 @@ export default function SuperadminAnalyticsPage() {
         </div>
         <div className="text-center">
           <div className="text-xs font-black uppercase tracking-[0.5em] text-primary mb-2 animate-pulse">Synchronizing Intelligence</div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest opacity-50 italic">Compacting data fragments for analysis...</div>
+          <div className="text-[10px] font-bold text-black uppercase tracking-widest opacity-50 italic">Compacting data fragments for analysis...</div>
         </div>
       </div>
     );
@@ -170,7 +170,7 @@ export default function SuperadminAnalyticsPage() {
               <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-20 transition-all duration-500 group-hover:rotate-12">
                 <stat.icon className="w-16 h-16" />
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-6 italic">{stat.label}</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-black mb-6 italic">{stat.label}</p>
               <div className="text-3xl font-black tracking-tighter italic text-black dark:text-white mb-4">{stat.value}</div>
               <div className={cn(
                 "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black tracking-widest uppercase",
@@ -303,10 +303,10 @@ export default function SuperadminAnalyticsPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-muted/30 border-b border-border/50">
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">ENTITY identifier</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Classification</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Vulnerability amount</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Action status</th>
+                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">ENTITY identifier</th>
+                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Classification</th>
+                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Vulnerability amount</th>
+                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Action status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">

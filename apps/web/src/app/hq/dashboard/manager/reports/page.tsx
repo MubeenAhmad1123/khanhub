@@ -142,7 +142,7 @@ export default function ManagerReportsPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Staff Reports</h1>
             <div className="flex items-center gap-3 mt-1">
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Monthly performance overview</p>
+              <p className="text-black text-xs font-bold uppercase tracking-widest">Monthly performance overview</p>
               <div className="w-1 h-1 rounded-full bg-gray-700" />
               <Link href="/hq/dashboard/manager/reports/daily" className="text-blue-500 text-xs font-black uppercase tracking-widest hover:underline flex items-center gap-1">
                 View Daily Audit <ArrowRight size={12} />
@@ -158,7 +158,7 @@ export default function ManagerReportsPage() {
             />
             <button 
               onClick={() => window.print()} 
-              className="bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white font-black text-xs uppercase tracking-widest px-4 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2"
+              className="bg-white/5 hover:bg-white/10 border border-white/8 text-black hover:text-white font-black text-xs uppercase tracking-widest px-4 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2"
             >
               <Printer size={14} />
             </button>
@@ -175,7 +175,7 @@ export default function ManagerReportsPage() {
               <thead>
                 <tr className="bg-white/5 border-b border-white/5">
                   {['#', 'Staff', 'Dept', 'Attendance', 'Dress Code', 'Duty', 'Growth Pts'].map(h => (
-                    <th key={h} className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-4 py-4 text-[10px] font-black text-black uppercase tracking-widest text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -183,16 +183,16 @@ export default function ManagerReportsPage() {
                 {staffWithStats.map((member, index) => (
                   <tr key={member.id} className="animate-in fade-in duration-300 hover:bg-white/5 transition-colors">
                     <td className="px-4 py-4">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : index === 2 ? 'bg-amber-800 text-white' : 'bg-white/5 text-gray-500'}`}>
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : index === 2 ? 'bg-amber-800 text-white' : 'bg-white/5 text-black'}`}>
                         {index + 1}
                       </span>
                     </td>
                     <td className="px-4 py-4 cursor-pointer group" onClick={() => setViewingStaff(member)}>
                       <p className="text-white font-bold text-sm group-hover:text-amber-500 transition-colors">{member.name}</p>
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{member.designation}</p>
+                      <p className="text-black text-[10px] font-black uppercase tracking-widest">{member.designation}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="px-2 py-1 rounded-lg bg-white/5 text-gray-400 text-[9px] font-black uppercase tracking-widest">
+                      <span className="px-2 py-1 rounded-lg bg-white/5 text-black text-[9px] font-black uppercase tracking-widest">
                         {member.department}
                       </span>
                     </td>
@@ -235,10 +235,10 @@ export default function ManagerReportsPage() {
                   <div>
                     <h2 className="text-2xl font-black text-white">{viewingStaff.name}</h2>
                     <p className="text-amber-500 text-xs font-black uppercase tracking-[0.2em]">{viewingStaff.designation}</p>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">{viewingStaff.department} Department</p>
+                    <p className="text-black text-[10px] font-bold uppercase tracking-widest mt-1">{viewingStaff.department} Department</p>
                   </div>
                 </div>
-                <button onClick={() => setViewingStaff(null)} className="text-gray-500 hover:text-white transition-colors">
+                <button onClick={() => setViewingStaff(null)} className="text-black hover:text-white transition-colors">
                   <XCircle size={24} />
                 </button>
               </div>
@@ -251,7 +251,7 @@ export default function ManagerReportsPage() {
                   { label: 'Growth Pts', val: viewingStaff.stats.gp, color: 'text-amber-500' },
                 ].map(s => (
                   <div key={s.label} className="bg-white/5 border border-white/5 rounded-2xl p-4 text-center">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{s.label}</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">{s.label}</p>
                     <p className={`text-xl font-black ${s.color}`}>{s.val}</p>
                   </div>
                 ))}
@@ -264,14 +264,14 @@ export default function ManagerReportsPage() {
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                   {attendance.filter(a => a.staffId === viewingStaff.id).slice(0, 10).map((a, i) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
-                      <p className="text-xs font-bold text-gray-300">{a.date}</p>
+                      <p className="text-xs font-bold text-black">{a.date}</p>
                       <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${a.status === 'present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                         {a.status}
                       </span>
                     </div>
                   ))}
                   {attendance.filter(a => a.staffId === viewingStaff.id).length === 0 && (
-                    <p className="text-gray-500 text-xs italic text-center py-4">No recent logs available</p>
+                    <p className="text-black text-xs italic text-center py-4">No recent logs available</p>
                   )}
                 </div>
               </div>

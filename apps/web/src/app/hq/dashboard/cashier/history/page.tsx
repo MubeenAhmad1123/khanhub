@@ -168,7 +168,7 @@ export default function CashierHistoryPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
-          <p className="text-gray-500 font-bold animate-pulse text-xs uppercase tracking-[0.2em]">Accessing Archives...</p>
+          <p className="text-black font-bold animate-pulse text-xs uppercase tracking-[0.2em]">Accessing Archives...</p>
         </div>
       </div>
     );

@@ -1010,7 +1010,7 @@ export default function StaffProfilePage() {
 
   if (loading || sessionLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Loader2 className="w-8 h-8 animate-spin text-gray-800" />
+      <Loader2 className="w-8 h-8 animate-spin text-black" />
     </div>
   );
 
@@ -1019,8 +1019,8 @@ export default function StaffProfilePage() {
       {/* Dynamic Header */}
       <div className={`border-b sticky top-0 z-20 shadow-sm transition-colors ${isDark ? 'bg-zinc-900/90 backdrop-blur-xl border-zinc-800' : 'bg-white border-gray-100'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/hq/dashboard/manager/staff" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
-            <div className={`p-2 rounded-xl ${isDark ? 'group-hover:bg-zinc-800' : 'group-hover:bg-gray-100'}`}><ArrowLeft size={18} /></div>
+          <Link href="/hq/dashboard/manager/staff" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-black hover:text-white' : 'text-black hover:text-gray-900'}`}>
+            <div className={`p-2 rounded-xl ${isDark ? 'group-hover:bg-black/90' : 'group-hover:bg-gray-100'}`}><ArrowLeft size={18} /></div>
             <span className="text-xs font-black uppercase tracking-widest leading-none">Directory</span>
           </Link>
 
@@ -1034,7 +1034,7 @@ export default function StaffProfilePage() {
             </button>
             <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Growth Points</p>
+              <p className="text-[10px] font-black text-black uppercase tracking-widest">Growth Points</p>
               <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{growthPoints?.total || 0}</p>
             </div>
           </div>
@@ -1054,7 +1054,7 @@ export default function StaffProfilePage() {
                 {staff?.photoUrl ? (
                   <img src={staff.photoUrl} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-transparent shadow-2xl" />
                 ) : (
-                  <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black ring-8 shadow-inner ${isDark ? 'bg-zinc-800 text-zinc-600 ring-zinc-900/50' : 'bg-gray-100 text-gray-400 ring-white'
+                  <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black ring-8 shadow-inner ${isDark ? 'bg-zinc-800 text-black ring-zinc-900/50' : 'bg-gray-100 text-black ring-white'
                     }`}>
                     {staff?.name?.[0]}
                   </div>
@@ -1067,10 +1067,10 @@ export default function StaffProfilePage() {
               </div>
 
               <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{staff?.name || 'Unknown Staff'}</h2>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1 mb-4">{staff?.designation || 'Position N/A'}</p>
+              <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1 mb-4">{staff?.designation || 'Position N/A'}</p>
 
               <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-100 text-gray-500'
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-black' : 'bg-gray-50 border-gray-100 text-black'
                   }`}>
                   ID: {staff?.employeeId || staff?.customId || '—'}
                 </span>
@@ -1079,7 +1079,7 @@ export default function StaffProfilePage() {
                     {staff.seniority}
                   </span>
                 )}
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-gray-50 text-gray-600')
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-black border-zinc-700' : 'bg-gray-50 text-black')
                   }`}>
                   {staff?.dept || 'General'}
                 </span>
@@ -1087,13 +1087,13 @@ export default function StaffProfilePage() {
 
               <div className="w-full grid grid-cols-2 gap-4 mt-4">
                 <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                  <p className="text-[10px] font-black text-black uppercase tracking-widest mb-1">Status</p>
                   <p className={`font-black text-xs uppercase ${staff?.isActive !== false ? 'text-teal-500' : 'text-rose-500'}`}>
                     {staff?.isActive !== false ? 'Active' : 'Inactive'}
                   </p>
                 </div>
                 <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Base Salary</p>
+                  <p className="text-[10px] font-black text-black uppercase tracking-widest mb-1">Base Salary</p>
                   <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
                 </div>
               </div>
@@ -1104,21 +1104,21 @@ export default function StaffProfilePage() {
                   <span className="px-2 py-0.5 rounded-md bg-indigo-500 text-white text-[8px] font-black uppercase">{presentDaysCount} Days</span>
                 </div>
                 <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-indigo-600'}`}>₨{tillDateSalary.toLocaleString()}</p>
-                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Calculated minus ₨{staff?.totalFines?.toLocaleString() || 0} fines</p>
+                <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-1">Calculated minus ₨{staff?.totalFines?.toLocaleString() || 0} fines</p>
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-4 text-left border ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-amber-50/50 border-amber-100'}`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Lock className={`w-3 h-3 ${isDark ? 'text-zinc-500' : 'text-amber-500'}`} />
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Portal Credentials</p>
+                  <Lock className={`w-3 h-3 ${isDark ? 'text-black' : 'text-amber-500'}`} />
+                  <p className="text-[10px] font-black text-black uppercase tracking-widest">Portal Credentials</p>
                 </div>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Login Email / ID</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Login Email / ID</p>
                     <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.email || staff?.customId || 'No Email Registered'}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Password</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Password</p>
                     <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
                   </div>
                 </div>
@@ -1161,7 +1161,7 @@ export default function StaffProfilePage() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[7px] min-[400px]:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id
                     ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20')
-                    : 'text-gray-500 hover:text-indigo-500'
+                    : 'text-black hover:text-indigo-500'
                     }`}
                 >
                   <span className="opacity-70">{tab.icon}</span> {tab.label}
@@ -1180,7 +1180,7 @@ export default function StaffProfilePage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-black uppercase tracking-tight">Staff Information Card</h3>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Public profile details</p>
+                        <p className="text-[10px] font-bold text-black uppercase tracking-widest">Public profile details</p>
                       </div>
                     </div>
                     <button onClick={() => setActiveTab('edit')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDark ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}>
@@ -1190,31 +1190,31 @@ export default function StaffProfilePage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Full Identity Name</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Full Identity Name</p>
                       <p className="text-sm font-black">{staff?.name || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Professional Designation</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Professional Designation</p>
                       <p className="text-sm font-black">{staff?.designation || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Primary Department</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Primary Department</p>
                       <p className="text-sm font-black uppercase">{staff?.dept || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Phone</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Contact Phone</p>
                       <p className="text-sm font-black">{staff?.phone || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Gender Identification</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Gender Identification</p>
                       <p className="text-sm font-black capitalize">{staff?.gender || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Blood Group</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Blood Group</p>
                       <p className="text-sm font-black uppercase">{staff?.bloodGroup || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Joining Date</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Joining Date</p>
                       <p className="text-sm font-black uppercase">{formatDateDMY(staff?.joiningDate)}</p>
                     </div>
                     {staff?.seniority && (
@@ -1239,12 +1239,12 @@ export default function StaffProfilePage() {
                     </div>
                     <div className="flex items-center gap-8">
                       <div className="text-center">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty In</p>
+                        <p className="text-[9px] font-bold text-black uppercase tracking-widest mb-1">Duty In</p>
                         <p className="text-sm font-black">{staff?.dutyStartTime || '09:00'}</p>
                       </div>
                       <div className="w-px h-8 bg-emerald-500/20" />
                       <div className="text-center">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty Out</p>
+                        <p className="text-[9px] font-bold text-black uppercase tracking-widest mb-1">Duty Out</p>
                         <p className="text-sm font-black">{staff?.dutyEndTime || '17:00'}</p>
                       </div>
                     </div>
@@ -1253,23 +1253,23 @@ export default function StaffProfilePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
                       <Shield size={14} className="text-indigo-500" /> Active Dress Code
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {staff?.dressCodeConfig?.length ? staff.dressCodeConfig.map(i => (
                         <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
-                      )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
+                      )) : <p className="text-xs text-black italic">No configuration found</p>}
                     </div>
                   </div>
                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
                       <ClipboardList size={14} className="text-teal-500" /> Operational Duties
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {staff?.dutyConfig?.length ? staff.dutyConfig.map(i => (
                         <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
-                      )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
+                      )) : <p className="text-xs text-black italic">No configuration found</p>}
                     </div>
                   </div>
                 </div>
@@ -1316,7 +1316,7 @@ export default function StaffProfilePage() {
 
                   <div className="space-y-3">
                     {specialTasks.length === 0 ? (
-                      <div className="py-6 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
+                      <div className="py-6 text-center text-black font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
                     ) : (
                       specialTasks.map(task => (
                         <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') :
@@ -1325,7 +1325,7 @@ export default function StaffProfilePage() {
                           <div>
                             <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">By {task.assignedByName}</p>
+                              <p className="text-[10px] text-black font-bold uppercase tracking-widest">By {task.assignedByName}</p>
                               {task.recurrence && task.recurrence !== 'once' && (
                                 <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-tighter border border-purple-500/20">
                                   {task.recurrence}
@@ -1354,14 +1354,14 @@ export default function StaffProfilePage() {
                       <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         <Award className="text-indigo-500" /> Today&apos;s Daily Checklist
                       </h3>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{formatDateDMY(new Date(todayStr))}</p>
+                      <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-1">{formatDateDMY(new Date(todayStr))}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Dress Code Section */}
                     <div>
-                      <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Uniform Items</h4>
+                      <h4 className="text-[10px] font-black text-black uppercase tracking-widest mb-3">Uniform Items</h4>
                       <div className="space-y-2">
                         {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : [
                           { key: 'pant', label: 'Dress Pant' },
@@ -1373,7 +1373,7 @@ export default function StaffProfilePage() {
                           const status = dayRecord?.items?.find((i: any) => i.key === dress.key)?.status || 'na';
                           return (
                             <div key={dress.key} className="flex items-center justify-between">
-                              <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{dress.label}</span>
+                              <span className={`text-xs font-bold ${isDark ? 'text-black' : 'text-black'}`}>{dress.label}</span>
                               <HqCheckCell type="dresscode" size="md" value={status} onToggle={(next) => toggleDress(todayStr, dress.key, next)} />
                             </div>
                           );
@@ -1387,28 +1387,28 @@ export default function StaffProfilePage() {
                       <div className="flex flex-wrap gap-2 mb-8">
                         <button
                           onClick={() => handleAttendanceCell(todayStr)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivalTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivalTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-black" : "bg-gray-100 text-black")}`}
                         >
                           <Clock size={12} />
                           {attendanceMap[todayStr]?.arrivalTime || "Set Arrival"}
                         </button>
                         <button
                           onClick={() => handleAttendanceCell(todayStr)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departureTime ? "bg-rose-600 text-white shadow-sm shadow-rose-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departureTime ? "bg-rose-600 text-white shadow-sm shadow-rose-500/20" : (isDark ? "bg-zinc-800 text-black" : "bg-gray-100 text-black")}`}
                         >
                           <Clock size={12} />
                           {attendanceMap[todayStr]?.departureTime || "Set Departure"}
                         </button>
                       </div>
 
-                      <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
+                      <h4 className="text-[10px] font-black text-black uppercase tracking-widest mb-3">Operational Duties</h4>
                       <div className="space-y-2">
                         {(staff?.dutyConfig?.length ? staff.dutyConfig : GLOBAL_DUTIES.slice(0, 4).map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d }))).map((duty: any) => {
                           const dayRecord = dutyMap[todayStr];
                           const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
                           return (
                             <div key={duty.key} className="flex items-center justify-between">
-                              <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{duty.label}</span>
+                              <span className={`text-xs font-bold ${isDark ? 'text-black' : 'text-black'}`}>{duty.label}</span>
                               <HqCheckCell type="duty" size="md" value={status} onToggle={(next) => toggleDuty(todayStr, duty.key, next)} />
                             </div>
                           );
@@ -1418,12 +1418,12 @@ export default function StaffProfilePage() {
                   </div>
 
                   <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Attendance</span>
+                    <span className="text-[10px] font-black text-black uppercase tracking-widest">Attendance</span>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Present</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Absent</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Paid Leave</button>
-                      <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Unpd Leave</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Present</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Absent</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Paid Leave</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')}`}>Unpd Leave</button>
                     </div>
                   </div>
                 </div>
@@ -1437,7 +1437,7 @@ export default function StaffProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-4">
                       <div>
-                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
+                        <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
                         <select
                           className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
                             }`}
@@ -1455,14 +1455,14 @@ export default function StaffProfilePage() {
                           onClick={() => setDutyForm({ ...dutyForm, status: 'completed' })}
                           className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'completed'
                             ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
-                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-black' : 'bg-white border-gray-100 text-black')
                             }`}
                         >Completed</button>
                         <button
                           onClick={() => setDutyForm({ ...dutyForm, status: 'not_completed' })}
                           className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'not_completed'
                             ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
-                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-black' : 'bg-white border-gray-100 text-black')
                             }`}
                         >Fine</button>
                       </div>
@@ -1495,7 +1495,7 @@ export default function StaffProfilePage() {
                     <div className="space-y-4">
                       <textarea
                         placeholder="Operational performance notes..."
-                        className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${isDark ? 'bg-zinc-800 text-white placeholder:text-zinc-600' : 'bg-gray-50 text-gray-900'
+                        className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${isDark ? 'bg-zinc-800 text-white placeholder:text-black' : 'bg-gray-50 text-gray-900'
                           }`}
                         value={dutyForm.comment}
                         onChange={e => setDutyForm({ ...dutyForm, comment: e.target.value })}
@@ -1512,7 +1512,7 @@ export default function StaffProfilePage() {
                   </button>
                 </div>
 
-                {dutyLogs.length === 0 ? <div className="p-20 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
+                {dutyLogs.length === 0 ? <div className="p-20 text-center text-black font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
                   dutyLogs.map(log => (
                     <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
                       }`}>
@@ -1523,14 +1523,14 @@ export default function StaffProfilePage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <h4 className={`font-black capitalize text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
+                            <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${log.status === 'completed' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
                             }`}>
                             {log.status}
                           </span>
                         </div>
-                        <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>{log.comment || 'No assessment recorded'}</p>
+                        <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-black' : 'text-black'}`}>{log.comment || 'No assessment recorded'}</p>
                       </div>
                     </div>
                   ))
@@ -1557,7 +1557,7 @@ export default function StaffProfilePage() {
                     <table className="min-w-full">
                       <thead>
                         <tr>
-                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">Day of Month</th>
+                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-black whitespace-nowrap">Day of Month</th>
                           {daysInMonth().map(d => (
                             <th key={d} className="px-1 py-4 text-center min-w-[40px]">
                               <span className="text-[10px] font-black opacity-40">{d.split('-')[2]}</span>
@@ -1594,7 +1594,7 @@ export default function StaffProfilePage() {
                                 onClick={() => handleAttendanceCell(d)}
                                 className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.arrivalTime
                                   ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600')
-                                  : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
+                                  : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')
                                   }`}
                               >
                                 {attendanceMap[d]?.arrivalTime || 'Set'}
@@ -1626,7 +1626,7 @@ export default function StaffProfilePage() {
                                 {attendanceMap[d]?.arrivedOnTime === false && !attendanceMap[d]?.note && (
                                   <button
                                     onClick={() => setNotePopup({ isOpen: true, date: d, note: '' })}
-                                    className="opacity-0 group-hover:opacity-100 text-[8px] text-zinc-500 hover:text-indigo-500 font-black uppercase transition-all"
+                                    className="opacity-0 group-hover:opacity-100 text-[8px] text-black hover:text-indigo-500 font-black uppercase transition-all"
                                   >
                                     +Note
                                   </button>
@@ -1648,7 +1648,7 @@ export default function StaffProfilePage() {
                                 onClick={() => handleAttendanceCell(d)}
                                 className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.departureTime
                                   ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-600')
-                                  : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
+                                  : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')
                                   }`}
                               >
                                 {attendanceMap[d]?.departureTime || 'Set'}
@@ -1682,7 +1682,7 @@ export default function StaffProfilePage() {
               <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Dress Code Compliance</h3>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Monthly Item Grids</p>
+                  <p className="text-[10px] font-black text-black uppercase tracking-widest">Monthly Item Grids</p>
                 </div>
 
                 <div className="overflow-x-auto no-scrollbar -mx-4 sm:-mx-8 px-4 sm:px-8">
@@ -1690,7 +1690,7 @@ export default function StaffProfilePage() {
                     <table className="min-w-full">
                       <thead>
                         <tr>
-                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">Uniform Items</th>
+                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-black whitespace-nowrap">Uniform Items</th>
                           {daysInMonth().map(d => (
                             <th key={d} className="px-1 py-4 text-center min-w-[40px]">
                               <span className="text-[10px] font-black opacity-40">{d.split('-')[2]}</span>
@@ -1731,7 +1731,7 @@ export default function StaffProfilePage() {
               <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Daily Duty Logs</h3>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Performance Tracking</p>
+                  <p className="text-[10px] font-black text-black uppercase tracking-widest">Performance Tracking</p>
                 </div>
 
                 <div className="overflow-x-auto no-scrollbar -mx-4 sm:-mx-8 px-4 sm:px-8">
@@ -1739,7 +1739,7 @@ export default function StaffProfilePage() {
                     <table className="min-w-full">
                       <thead>
                         <tr>
-                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">Assigned Duties</th>
+                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-black whitespace-nowrap">Assigned Duties</th>
                           {daysInMonth().map(d => (
                             <th key={d} className="px-1 py-4 text-center min-w-[40px]">
                               <span className="text-[10px] font-black opacity-40">{d.split('-')[2]}</span>
@@ -1786,7 +1786,7 @@ export default function StaffProfilePage() {
                         <User className="text-indigo-500" size={24} />
                         Profile Optimization
                       </h3>
-                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1 ml-9">Surgical updates to staff credentials</p>
+                      <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1 ml-9">Surgical updates to staff credentials</p>
                     </div>
                     <button
                       onClick={handleSaveProfile}
@@ -1807,13 +1807,13 @@ export default function StaffProfilePage() {
                     </div>
                     <div>
                       <h4 className="text-sm font-black uppercase tracking-widest">Work Identity</h4>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Authentication & Internal ID</p>
+                      <p className="text-[10px] font-bold text-black uppercase tracking-widest">Authentication & Internal ID</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID</label>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID</label>
                       <input
                         type="text"
                         value={editForm.employeeId}
@@ -1821,7 +1821,7 @@ export default function StaffProfilePage() {
                         onChange={e => setEditForm({ ...editForm, employeeId: e.target.value })}
                         className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
                       />
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 ml-2">Visual ID for reporting</p>
+                      <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-2 ml-2">Visual ID for reporting</p>
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block flex items-center gap-2">
@@ -1837,7 +1837,7 @@ export default function StaffProfilePage() {
                       <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
                       <input
                         type="text"
                         value={editForm.name}
@@ -1846,7 +1846,7 @@ export default function StaffProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Professional Designation</label>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Professional Designation</label>
                       <input
                         type="text"
                         value={editForm.designation}
@@ -1876,9 +1876,9 @@ export default function StaffProfilePage() {
 
                   <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Monthly Salary (PKR)</label>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Monthly Salary (PKR)</label>
                       <div className="relative">
-                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400">
+                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-black">
                           <DollarSign size={16} />
                         </div>
                         <input
@@ -1891,7 +1891,7 @@ export default function StaffProfilePage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Primary Department</label>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Primary Department</label>
                       <select
                         value={editForm.department}
                         onChange={e => setEditForm({ ...editForm, department: e.target.value as StaffDept })}
@@ -1922,7 +1922,7 @@ export default function StaffProfilePage() {
                             }}
                             className={`px-2 py-1 rounded-lg text-[7px] font-bold uppercase tracking-wider border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept)
                               ? 'bg-indigo-600 border-indigo-600 text-white'
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-200 text-gray-400')
+                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-black' : 'bg-white border-gray-200 text-black')
                               }`}
                           >
                             {d}
@@ -1941,7 +1941,7 @@ export default function StaffProfilePage() {
                     </div>
                     <div>
                       <h4 className="text-sm font-black uppercase tracking-widest">Personal Information</h4>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Biometric & Identity Details</p>
+                      <p className="text-[10px] font-bold text-black uppercase tracking-widest">Biometric & Identity Details</p>
                     </div>
                   </div>
 
@@ -1949,7 +1949,7 @@ export default function StaffProfilePage() {
                     {/* Row 1: DOB & Gender */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
                         <input
                           type="date"
                           value={editForm.dob}
@@ -1958,7 +1958,7 @@ export default function StaffProfilePage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
                         <select
                           value={editForm.gender}
                           onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
@@ -1974,7 +1974,7 @@ export default function StaffProfilePage() {
                     {/* Row 2: CNIC / Passport & Joining Date */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
                         <input
                           type="text"
                           placeholder="00000-0000000-0"
@@ -1984,7 +1984,7 @@ export default function StaffProfilePage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Joining Date</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Joining Date</label>
                         <input
                           type="date"
                           value={editForm.joiningDate}
@@ -1997,7 +1997,7 @@ export default function StaffProfilePage() {
                     {/* Row 3: Blood Group & Emergency Contact */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
                         <input
                           type="text"
                           placeholder="B+"
@@ -2042,15 +2042,15 @@ export default function StaffProfilePage() {
                       </div>
                       <div>
                         <h4 className="text-sm font-black uppercase tracking-widest">Custom Basic Info</h4>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Extra Fields & Metadata</p>
+                        <p className="text-[10px] font-bold text-black uppercase tracking-widest">Extra Fields & Metadata</p>
                       </div>
                     </div>
 
                     <div className="space-y-3 mb-8 min-h-[100px]">
                       {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
                         <div key={key} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                          <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
-                            <span className="text-gray-400 font-extrabold uppercase whitespace-nowrap">{key.replace(/_/g, ' ')}:</span>
+                          <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-black' : 'bg-gray-50 border-gray-100 text-black'}`}>
+                            <span className="text-black font-extrabold uppercase whitespace-nowrap">{key.replace(/_/g, ' ')}:</span>
                             <span className="break-all">{val}</span>
                           </div>
                           <button
@@ -2066,7 +2066,7 @@ export default function StaffProfilePage() {
                         </div>
                       ))}
                       {Object.keys(editForm.basicInfoExtras || {}).length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+                        <div className="flex flex-col items-center justify-center py-6 text-black">
                           <AlertCircle size={32} className="opacity-20 mb-2" />
                           <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">No custom data strings</p>
                         </div>
@@ -2110,7 +2110,7 @@ export default function StaffProfilePage() {
                       </div>
                       <div>
                         <h4 className="text-sm font-black uppercase tracking-widest">Shift Timing</h4>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                        <p className="text-[10px] font-bold text-black uppercase tracking-widest">
                           Operational Hours —
                           <span className="text-emerald-500 ml-1">
                             {calculateDutyHours(editForm.dutyStartTime, editForm.dutyEndTime).text} total
@@ -2121,7 +2121,7 @@ export default function StaffProfilePage() {
 
                     <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty Start</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Duty Start</label>
                         <input
                           type="time"
                           value={editForm.dutyStartTime}
@@ -2130,7 +2130,7 @@ export default function StaffProfilePage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty End</label>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Duty End</label>
                         <input
                           type="time"
                           value={editForm.dutyEndTime}
@@ -2198,7 +2198,7 @@ export default function StaffProfilePage() {
                             >
                               {processingConfig ? 'Processing...' : 'Add to Profile'}
                             </button>
-                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-black hover:bg-black/90' : 'border-gray-200 text-black hover:bg-white'}`}>Cancel</button>
                           </div>
                         </div>
                       </div>
@@ -2277,7 +2277,7 @@ export default function StaffProfilePage() {
                             >
                               {processingConfig ? 'Processing...' : 'Add to Profile'}
                             </button>
-                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-black hover:bg-black/90' : 'border-gray-200 text-black hover:bg-white'}`}>Cancel</button>
                           </div>
                         </div>
                       </div>
@@ -2305,7 +2305,7 @@ export default function StaffProfilePage() {
 
                 {/* Bottom Synchronization Info */}
                 <div className="mt-12 flex items-center justify-between px-10">
-                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-zinc-600' : 'text-gray-400'}`}>
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-black' : 'text-black'}`}>
                     Last synchronized with global KhanHub registry
                   </p>
                   <button
@@ -2332,7 +2332,7 @@ export default function StaffProfilePage() {
                         </div>
                         <div>
                           <h4 className="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Danger Zone</h4>
-                          <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+                          <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-black' : 'text-black'}`}>
                             Permanently delete this staff profile and all associated data records.<br />
                             This action cannot be undone and will revoke all access immediately.
                           </p>
@@ -2361,14 +2361,14 @@ export default function StaffProfilePage() {
                       <Trash2 size={40} />
                     </div>
                     <h3 className={`text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>Confirm Deletion</h3>
-                    <p className={`text-sm font-bold leading-relaxed mb-8 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+                    <p className={`text-sm font-bold leading-relaxed mb-8 ${isDark ? 'text-black' : 'text-black'}`}>
                       Are you absolutely sure? This will permanently delete
                       <span className="mx-1 text-rose-500 font-black underline decoration-2 underline-offset-4">{staff?.name}</span>
                       from the system.
                     </p>
 
                     <div className="w-full space-y-4 mb-8">
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block text-left ml-2">Type the staff name to confirm</label>
+                      <label className="text-[10px] font-black text-black uppercase tracking-widest block text-left ml-2">Type the staff name to confirm</label>
                       <input
                         type="text"
                         value={deleteConfirmText}
@@ -2385,7 +2385,7 @@ export default function StaffProfilePage() {
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
-                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${isDark ? 'border-zinc-700 text-black hover:bg-black/90' : 'border-gray-200 text-black hover:bg-white'
                           } disabled:opacity-50`}
                       >
                         Cancel
@@ -2411,7 +2411,7 @@ export default function StaffProfilePage() {
                       <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
                         <DollarSign size={16} /> Payroll History
                       </h3>
-                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Financial Performance Audit</p>
+                      <p className="text-[10px] font-black text-black uppercase tracking-widest">Financial Performance Audit</p>
                     </div>
                     <button
                       onClick={() => {
@@ -2429,31 +2429,31 @@ export default function StaffProfilePage() {
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Month (YYYY-MM)</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Month (YYYY-MM)</label>
                           <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.month} onChange={e => setPayrollForm({ ...payrollForm, month: e.target.value })} />
                         </div>
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Basic Salary (PKR)</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Basic Salary (PKR)</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({ ...payrollForm, basicSalary: Number(e.target.value) })} />
                         </div>
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Present Days</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Present Days</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.presentDays} onChange={e => setPayrollForm({ ...payrollForm, presentDays: Number(e.target.value) })} />
                         </div>
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonuses (PKR)</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Bonuses (PKR)</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonuses} onChange={e => setPayrollForm({ ...payrollForm, bonuses: Number(e.target.value) })} />
                         </div>
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonus Reason</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Bonus Reason</label>
                           <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({ ...payrollForm, bonusReason: e.target.value })} placeholder="e.g. Performance" />
                         </div>
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deductions (PKR)</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Deductions (PKR)</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductions} onChange={e => setPayrollForm({ ...payrollForm, deductions: Number(e.target.value) })} />
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deduction Reason</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Deduction Reason</label>
                           <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({ ...payrollForm, deductionReason: e.target.value })} placeholder="e.g. Absences" />
                         </div>
                       </div>
@@ -2464,9 +2464,9 @@ export default function StaffProfilePage() {
                   {salaryRecords.length === 0 ? (
                     <div className="py-20 text-center">
                       <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
-                        <CreditCard className="text-gray-700" size={32} />
+                        <CreditCard className="text-black" size={32} />
                       </div>
-                      <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No salary slips recorded yet</p>
+                      <p className="text-black font-bold uppercase tracking-widest text-[10px]">No salary slips recorded yet</p>
                     </div>
                   ) : (
                     <div className="grid gap-4">
@@ -2492,7 +2492,7 @@ export default function StaffProfilePage() {
                                     }`}>
                                     {record.status}
                                   </span>
-                                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                  <span className="text-[10px] text-black font-bold uppercase tracking-widest">
                                     {(record as any).presentDays || 0} Working Days
                                   </span>
                                 </div>
@@ -2501,17 +2501,17 @@ export default function StaffProfilePage() {
 
                             <div className="md:text-right">
                               <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
-                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Net Payable Amount</p>
+                              <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Net Payable Amount</p>
                             </div>
                           </div>
 
                           <div className={`mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-dashed ${isDark ? 'border-dashed border-zinc-700/50' : 'border-gray-200'}`}>
                             <div>
-                              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Base Earnings</p>
-                              <p className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>
+                              <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Base Earnings</p>
+                              <p className={`text-xs font-bold ${isDark ? 'text-black' : 'text-black'}`}>
                                 ₨{Math.round(((record as any).basicSalary || 0) / 30 * ((record as any).presentDays || 0)).toLocaleString()}
                               </p>
-                              <p className="text-[9px] text-gray-600 mt-1 uppercase font-black">Pro-rated attendance</p>
+                              <p className="text-[9px] text-black mt-1 uppercase font-black">Pro-rated attendance</p>
                             </div>
 
                             {((record as any).bonus > 0) && (
@@ -2550,7 +2550,7 @@ export default function StaffProfilePage() {
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Performance Breakdown</h3>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                      <p className="text-[10px] font-bold text-black uppercase tracking-widest mt-1">
                         Cycle: {growthPoints?.month ? new Date(growthPoints.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
                       </p>
                     </div>
@@ -2575,7 +2575,7 @@ export default function StaffProfilePage() {
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
                           {stat.icon}
                         </div>
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{stat.label}</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-1">{stat.label}</h4>
                         <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.score}</p>
                         <div className="w-full h-1 bg-zinc-700/20 rounded-full mt-4 overflow-hidden">
                           <div
@@ -2583,7 +2583,7 @@ export default function StaffProfilePage() {
                             style={{ width: `${Math.min(100, (stat.score / (stat.max || 1)) * 100)}%` }}
                           />
                         </div>
-                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-2">
+                        <p className="text-[9px] font-bold text-black uppercase tracking-widest mt-2">
                           Efficiency: {Math.round((stat.score / (stat.max || 1)) * 100)}%
                         </p>
                       </div>
@@ -2600,11 +2600,11 @@ export default function StaffProfilePage() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {growthPoints?.extra || 0}</p>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
+                        <p className="text-[10px] font-bold text-black uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>
-                        <p className={`text-sm font-bold ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>T-3 Management Candidate</p>
+                        <p className={`text-sm font-bold ${isDark ? 'text-black' : 'text-black'}`}>T-3 Management Candidate</p>
                       </div>
                     </div>
                   </div>
@@ -2613,13 +2613,13 @@ export default function StaffProfilePage() {
                 <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                   <div className="flex items-center justify-between mb-8">
                     <div>
-                      <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 italic">Chronological Growth Audit</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Verified historical data blocks</p>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-black italic">Chronological Growth Audit</h3>
+                      <p className="text-[10px] font-bold text-black uppercase tracking-widest mt-1">Verified historical data blocks</p>
                     </div>
                   </div>
                   <div className="space-y-4">
                     {growthHistory.length === 0 ? (
-                      <div className="py-12 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No historical cycles found</div>
+                      <div className="py-12 text-center text-black font-bold uppercase tracking-widest text-[10px]">No historical cycles found</div>
                     ) : (
                       growthHistory.map((h: any) => (
                         <div key={h.id} className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all hover:border-indigo-500/30 ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
@@ -2629,7 +2629,7 @@ export default function StaffProfilePage() {
                             </div>
                             <div>
                               <p className={`text-md font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tighter`}>{new Date(h.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Aggregated Strength: {h.total || 0} pts</p>
+                              <p className="text-[10px] font-bold text-black uppercase tracking-widest">Aggregated Strength: {h.total || 0} pts</p>
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
@@ -2637,7 +2637,7 @@ export default function StaffProfilePage() {
                               }`}>
                               {(h.total || 0) >= 100 ? 'Senior Expert' : 'Standard Staff'}
                             </span>
-                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em]">Validated Cycle</p>
+                            <p className="text-[8px] font-black text-black uppercase tracking-[0.2em]">Validated Cycle</p>
                           </div>
                         </div>
                       ))
@@ -2660,13 +2660,13 @@ export default function StaffProfilePage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-xl font-black italic tracking-tight">Shift Timing</h3>
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">
                   Entry for {formatDateDMY(new Date(timePopup.date))}
                 </p>
               </div>
               <button
                 onClick={() => setTimePopup({ ...timePopup, isOpen: false })}
-                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-500' : 'hover:bg-gray-100 text-gray-400'}`}
+                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-black/90 text-black' : 'hover:bg-gray-100 text-black'}`}
               >
                 <RefreshCw size={18} className="rotate-45" />
               </button>
@@ -2674,7 +2674,7 @@ export default function StaffProfilePage() {
 
             <div className="space-y-6">
               <div>
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Arrival Time</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Arrival Time</label>
                 <input
                   type="time"
                   value={timePopup.arrivalTime}
@@ -2684,7 +2684,7 @@ export default function StaffProfilePage() {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Departure Time</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Departure Time</label>
                 <input
                   type="time"
                   value={timePopup.departureTime}
@@ -2723,13 +2723,13 @@ export default function StaffProfilePage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-xl font-black italic tracking-tight text-amber-500">Attendance Note</h3>
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">
                   Context for {formatDateDMY(new Date(notePopup.date))}
                 </p>
               </div>
               <button
                 onClick={() => setNotePopup({ ...notePopup, isOpen: false })}
-                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-500' : 'hover:bg-gray-100 text-gray-400'}`}
+                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-black/90 text-black' : 'hover:bg-gray-100 text-black'}`}
               >
                 <X size={18} />
               </button>
@@ -2737,7 +2737,7 @@ export default function StaffProfilePage() {
 
             <div className="space-y-6">
               <div>
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Late/Adjustment Reason</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Late/Adjustment Reason</label>
                 <textarea
                   value={notePopup.note}
                   onChange={e => setNotePopup({ ...notePopup, note: e.target.value })}

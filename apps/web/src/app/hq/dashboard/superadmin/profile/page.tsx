@@ -143,7 +143,7 @@ export default function HqProfilePage() {
             </div>
             Command Profile
           </h1>
-          <p className="text-gray-400 dark:text-gray-500 mt-4 text-[10px] font-black uppercase tracking-[0.2em] italic">Identity orchestration • Central security nodes</p>
+          <p className="text-black dark:text-black mt-4 text-[10px] font-black uppercase tracking-[0.2em] italic">Identity orchestration • Central security nodes</p>
         </div>
 
         {/* Feedback Message */}
@@ -167,18 +167,18 @@ export default function HqProfilePage() {
                 {userData?.name?.charAt(0)}
               </div>
               <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tight">{userData?.name}</h2>
-              <p className="text-gray-400 dark:text-gray-500 text-[9px] font-black uppercase tracking-[0.3em] mt-2 mb-8 italic">Master Authentication Node</p>
+              <p className="text-black dark:text-black text-[9px] font-black uppercase tracking-[0.3em] mt-2 mb-8 italic">Master Authentication Node</p>
               
               <div className="space-y-5 text-left pt-8 border-t border-gray-50 dark:border-white/5">
-                <div className="flex items-center gap-4 text-gray-500">
+                <div className="flex items-center gap-4 text-black">
                   <Shield size={18} className="text-black dark:text-white opacity-40" />
                   <span className="font-black text-[10px] uppercase tracking-widest">{userData?.customId}</span>
                 </div>
-                <div className="flex items-center gap-4 text-gray-400">
+                <div className="flex items-center gap-4 text-black">
                   <Mail size={18} className="text-black dark:text-white opacity-40" />
                   <span className="truncate text-[10px] font-bold uppercase tracking-widest">{userData?.email}</span>
                 </div>
-                <div className="flex items-center gap-4 text-gray-400">
+                <div className="flex items-center gap-4 text-black">
                   <Calendar size={18} className="text-black dark:text-white opacity-40" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">Enrolled {userData?.createdAt ? formatDateDMY(userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : userData.createdAt) : 'N/A'}</span>
                 </div>
@@ -186,19 +186,19 @@ export default function HqProfilePage() {
             </div>
 
             <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-8 rounded-[2rem] shadow-sm">
-              <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-3 italic">
+              <h3 className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest mb-6 flex items-center gap-3 italic">
                 <Clock size={14} className="text-black dark:text-white" />
                 Connectivity Status
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Last Auth</span>
+                  <span className="text-[10px] font-black text-black uppercase tracking-widest">Last Auth</span>
                   <span className="text-[10px] font-black text-black dark:text-white uppercase">
                     {session?.loginTime ? new Date(session.loginTime).toLocaleTimeString() : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Security Clearance</span>
+                  <span className="text-[10px] font-black text-black uppercase tracking-widest">Security Clearance</span>
                   <span className="text-[9px] font-black text-white dark:text-black uppercase tracking-[0.2em] bg-black dark:bg-white px-3 py-1 rounded-lg">
                     Level Alpha
                   </span>
@@ -216,7 +216,7 @@ export default function HqProfilePage() {
                 Identity Modulation
               </h3>
               <div className="space-y-6">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block italic">Display Identity String</label>
+                <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] ml-1 block italic">Display Identity String</label>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <input 
                     disabled={!editingName || actionLoading}
@@ -244,7 +244,7 @@ export default function HqProfilePage() {
                       <button 
                         disabled={actionLoading}
                         onClick={() => { setEditingName(false); setNewName(userData.name); }}
-                        className="flex-1 sm:flex-none px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white"
+                        className="flex-1 sm:flex-none px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-gray-100 dark:border-white/10 text-black hover:text-black dark:hover:text-white"
                       >
                         Abort
                       </button>
@@ -262,7 +262,7 @@ export default function HqProfilePage() {
               </h3>
               <form onSubmit={handleChangePassword} className="space-y-8">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block mb-4 italic">Active Authorization Key</label>
+                  <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] ml-1 block mb-4 italic">Active Authorization Key</label>
                   <EyePasswordInput 
                     required
                     className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm uppercase tracking-widest text-sm"
@@ -272,7 +272,7 @@ export default function HqProfilePage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block mb-4 italic">Target Key</label>
+                    <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] ml-1 block mb-4 italic">Target Key</label>
                     <EyePasswordInput 
                       required
                       className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm uppercase tracking-widest text-sm"
@@ -281,7 +281,7 @@ export default function HqProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block mb-4 italic">Verify Target Key</label>
+                    <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] ml-1 block mb-4 italic">Verify Target Key</label>
                     <EyePasswordInput 
                       required
                       className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm uppercase tracking-widest text-sm"
@@ -306,7 +306,7 @@ export default function HqProfilePage() {
                 <AlertTriangle size={32} />
                 <h3 className="text-xl font-black uppercase tracking-[0.2em]">Sovereign Terminal</h3>
               </div>
-              <p className="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest mb-8 leading-relaxed italic border-l-2 border-black dark:border-white pl-4">
+              <p className="text-black dark:text-black text-[10px] font-black uppercase tracking-widest mb-8 leading-relaxed italic border-l-2 border-black dark:border-white pl-4">
                 TERMINATING THIS MASTER SESSION WILL REVOKE ALL ACCESS PRIVILEGES FROM THIS NODE IMMEDIATELY. ALL LOCAL CACHES WILL BE WIPED FOR SECURITY COMPLIANCE.
               </p>
               <button 

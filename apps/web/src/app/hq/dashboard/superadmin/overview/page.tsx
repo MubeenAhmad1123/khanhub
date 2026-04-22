@@ -197,7 +197,7 @@ export default function OverviewPage() {
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-400">
              <Wifi size={14} /> Real-time Stream Active
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-black">
              <Lock size={14} /> Global Ledger Encrypted
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function OverviewPage() {
            <Globe size={20} className="text-white/20" />
            <div className="text-right">
               <p className="text-[9px] font-black uppercase">Node Proxy: KH-HQ-01</p>
-              <p className="text-[9px] font-bold text-gray-500 tracking-tighter">Lat: 24.8607° N, Lon: 67.0011° E</p>
+              <p className="text-[9px] font-bold text-black tracking-tighter">Lat: 24.8607° N, Lon: 67.0011° E</p>
            </div>
         </div>
       </footer>

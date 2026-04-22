@@ -161,7 +161,7 @@ export default function ManagerAttendancePage() {
       <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
-          <p className="text-gray-400 text-xs font-black uppercase tracking-[0.2em]">Synchronizing</p>
+          <p className="text-black text-xs font-black uppercase tracking-[0.2em]">Synchronizing</p>
         </div>
       </div>
     );
@@ -180,14 +180,14 @@ export default function ManagerAttendancePage() {
                 </div>
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">Staff Attendance</h1>
               </div>
-              <p className="text-gray-400 text-sm font-medium">Manage and monitor headquarter employee presence</p>
+              <p className="text-black text-sm font-medium">Manage and monitor headquarter employee presence</p>
             </div>
 
             {/* Date Selector */}
             <div className="flex items-center bg-gray-50 rounded-2xl p-1 border border-gray-100 shadow-sm">
               <button 
                 onClick={() => changeDate(-1)}
-                className="p-3 hover:bg-white hover:shadow-sm rounded-xl transition-all text-gray-500"
+                className="p-3 hover:bg-white hover:shadow-sm rounded-xl transition-all text-black"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -202,7 +202,7 @@ export default function ManagerAttendancePage() {
               </div>
               <button 
                 onClick={() => changeDate(1)}
-                className="p-3 hover:bg-white hover:shadow-sm rounded-xl transition-all text-gray-500"
+                className="p-3 hover:bg-white hover:shadow-sm rounded-xl transition-all text-black"
               >
                 <ChevronRight size={20} />
               </button>
@@ -220,8 +220,8 @@ export default function ManagerAttendancePage() {
               <span className="text-[10px] font-black text-red-600/60 uppercase tracking-wider">Absent</span>
             </div>
             <div className="bg-gray-50/50 border border-gray-200/50 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-2xl font-black text-gray-600">{stats.unmarked}</span>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Unmarked</span>
+              <span className="text-2xl font-black text-black">{stats.unmarked}</span>
+              <span className="text-[10px] font-black text-black uppercase tracking-wider">Unmarked</span>
             </div>
           </div>
         </div>
@@ -231,13 +231,13 @@ export default function ManagerAttendancePage() {
         {/* Controls */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-black w-5 h-5" />
             <input 
               type="text" 
               placeholder="Search employee by name or ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-teal-50 outline-none transition-all placeholder:text-gray-300"
+              className="w-full bg-white border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-teal-50 outline-none transition-all placeholder:text-black"
             />
           </div>
           <div className="flex gap-2">
@@ -251,7 +251,7 @@ export default function ManagerAttendancePage() {
               <option value="rehab">Rehab Center</option>
               <option value="spims">SPIMS College</option>
             </select>
-            <button className="bg-white border-gray-100 rounded-2xl px-4 py-4 shadow-sm hover:bg-gray-50 transition-all text-gray-500">
+            <button className="bg-white border-gray-100 rounded-2xl px-4 py-4 shadow-sm hover:bg-white transition-all text-black">
               <FileSpreadsheet size={20} />
             </button>
           </div>
@@ -264,30 +264,30 @@ export default function ManagerAttendancePage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-50">
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Employee</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Department</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest">Employee</th>
+                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest hidden md:table-cell">Department</th>
+                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest text-center">Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredStaff.map((s, idx) => {
                 const att = attendance[s.id];
                 return (
-                  <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr key={s.id} className="hover:bg-white/50 transition-colors group">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center text-gray-500 font-black text-sm shadow-inner group-hover:scale-105 transition-transform">
+                        <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center text-black font-black text-sm shadow-inner group-hover:scale-105 transition-transform">
                           {s.name[0].toUpperCase()}
                         </div>
                         <div>
                           <div className="text-sm font-black text-gray-900 group-hover:text-teal-600 transition-colors">{s.name}</div>
-                          <div className="text-[10px] font-mono text-gray-400 font-bold uppercase tracking-wider">{s.employeeId || 'No ID'}</div>
+                          <div className="text-[10px] font-mono text-black font-bold uppercase tracking-wider">{s.employeeId || 'No ID'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-5 hidden md:table-cell">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200/50">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gray-100 text-black border border-gray-200/50">
                         {s.department || 'General'}
                       </span>
                     </td>
@@ -329,7 +329,7 @@ export default function ManagerAttendancePage() {
                   <td colSpan={4} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Search className="w-12 h-12 text-gray-100" />
-                      <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">No staff found matching filters</p>
+                      <p className="text-black font-bold text-sm uppercase tracking-widest">No staff found matching filters</p>
                     </div>
                   </td>
                 </tr>

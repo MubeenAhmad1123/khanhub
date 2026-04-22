@@ -75,9 +75,9 @@ export default function ManagerProfilePage() {
 
         <div className="bg-white/5 border border-white/8 rounded-3xl p-6 space-y-4">
           <div>
-            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Full Name</label>
+            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Full Name</label>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={14} />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={14} />
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -86,9 +86,9 @@ export default function ManagerProfilePage() {
             </div>
           </div>
           <div>
-            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Phone Number</label>
+            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Phone Number</label>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={14} />
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={14} />
               <input
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
@@ -98,20 +98,20 @@ export default function ManagerProfilePage() {
           </div>
 
           <div>
-            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Employee ID</label>
+            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Employee ID</label>
             <input
               value={session?.customId || ''}
               disabled
-              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-gray-600 text-sm font-bold outline-none cursor-not-allowed"
+              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-black text-sm font-bold outline-none cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Email</label>
+            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Email</label>
             <input
               value={userData?.email || ''}
               disabled
-              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-gray-600 text-sm font-bold outline-none cursor-not-allowed"
+              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-black text-sm font-bold outline-none cursor-not-allowed"
             />
           </div>
 
@@ -126,7 +126,7 @@ export default function ManagerProfilePage() {
 
         <button
           onClick={handleLogout}
-          className="w-full bg-white/5 hover:bg-rose-500/10 border border-white/8 hover:border-rose-500/20 text-gray-500 hover:text-rose-400 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2"
+          className="w-full bg-white/5 hover:bg-rose-500/10 border border-white/8 hover:border-rose-500/20 text-black hover:text-rose-400 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2"
         >
           <LogOut size={14} /> Sign Out
         </button>

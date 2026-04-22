@@ -113,7 +113,7 @@ export default function HqRehabPatientsPage() {
               <Activity className="text-black dark:text-white" size={40} />
               Rehab Registry
             </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">Clinical Command Hub • Patient Metadata • Financial Integrity</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-black dark:text-black mt-2 italic">Clinical Command Hub • Patient Metadata • Financial Integrity</p>
           </div>
           <div className="flex items-center gap-4 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-2xl shadow-xl">
             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Hq Sovereignty Access</span>
@@ -126,20 +126,20 @@ export default function HqRehabPatientsPage() {
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
             <div className="relative w-full sm:w-96">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={18} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery && setSearchOpen(true)}
                   placeholder="AUTHORIZE SUBJECT SEARCH..."
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-12 py-4 text-black dark:text-white text-[11px] font-black uppercase tracking-widest outline-none focus:border-black dark:focus:border-white transition-all shadow-sm placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-12 py-4 text-black dark:text-white text-[11px] font-black uppercase tracking-widest outline-none focus:border-black dark:focus:border-white transition-all shadow-sm placeholder:text-black dark:placeholder:text-black"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-black hover:text-black dark:hover:text-white transition-colors"
                   >
                     <X size={16} />
                   </button>
@@ -156,14 +156,14 @@ export default function HqRehabPatientsPage() {
                         setSearchQuery(p.name || p.inpatientNumber || p.id);
                         setSearchOpen(false);
                       }}
-                      className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left border-b border-gray-100 dark:border-white/5 last:border-0"
+                      className="w-full flex items-center gap-4 px-6 py-4 hover:bg-white dark:hover:bg-white/5 transition-colors text-left border-b border-gray-100 dark:border-white/5 last:border-0"
                     >
                       <div className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-xs">
                         {String(p.name || '?')[0]?.toUpperCase()}
                       </div>
                       <div>
                         <p className="text-black dark:text-white text-sm font-black uppercase tracking-tight">{p.name}</p>
-                        <p className="text-gray-400 dark:text-gray-500 text-[9px] font-black uppercase tracking-widest">
+                        <p className="text-black dark:text-black text-[9px] font-black uppercase tracking-widest">
                           {p.inpatientNumber || p.patientId || p.id}
                         </p>
                       </div>
@@ -177,7 +177,7 @@ export default function HqRehabPatientsPage() {
               )}
             </div>
             <div className="relative group w-full sm:w-56">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors" size={18} />
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-black transition-colors" size={18} />
               <select 
                 className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-10 py-4 outline-none font-black text-[10px] uppercase tracking-widest text-black dark:text-white transition-all appearance-none cursor-pointer"
                 value={statusFilter}
@@ -190,7 +190,7 @@ export default function HqRehabPatientsPage() {
             </div>
           </div>
           <div className="bg-white dark:bg-black px-6 py-3 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-end">
-            <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-1">Subject Population</p>
+            <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-[0.2em] mb-1">Subject Population</p>
             <p className="text-2xl font-black text-black dark:text-white tracking-tighter">{patients.length}</p>
           </div>
         </div>
@@ -201,12 +201,12 @@ export default function HqRehabPatientsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10">
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Subject Profile</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Clinical Vector</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Admittance</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Operational Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Responsible Node</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]"></th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Subject Profile</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Clinical Vector</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Admittance</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Operational Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Responsible Node</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-white/5">
@@ -227,7 +227,7 @@ export default function HqRehabPatientsPage() {
                       <tr 
                         key={patient.id} 
                         onClick={() => handleExpand(patient.id)}
-                        className={`cursor-pointer transition-all ${expandedPatient === patient.id ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-gray-50 dark:hover:bg-white/5 shadow-sm hover:translate-x-1'}`}
+                        className={`cursor-pointer transition-all ${expandedPatient === patient.id ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-white dark:hover:bg-white/5 shadow-sm hover:translate-x-1'}`}
                       >
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
@@ -236,7 +236,7 @@ export default function HqRehabPatientsPage() {
                             </div>
                             <div>
                               <p className="font-black text-black dark:text-white uppercase tracking-tight">{patient.name}</p>
-                              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{patient.age || 'Unknown'} CYCLES</p>
+                              <p className="text-[10px] font-bold text-black dark:text-black uppercase tracking-widest">{patient.age || 'Unknown'} CYCLES</p>
                             </div>
                           </div>
                         </td>
@@ -247,7 +247,7 @@ export default function HqRehabPatientsPage() {
                           </span>
                         </td>
                         <td className="px-8 py-6">
-                          <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest">
+                          <div className="flex items-center gap-3 text-[10px] text-black dark:text-black font-black uppercase tracking-widest">
                             <Calendar size={16} />
                             {formatDateDMY(patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : patient.admissionDate)}
                           </div>
@@ -256,19 +256,19 @@ export default function HqRehabPatientsPage() {
                           <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
                             patient.isActive !== false 
                               ? 'bg-black dark:bg-white text-white dark:text-black' 
-                              : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500'
+                              : 'bg-gray-100 dark:bg-white/10 text-black dark:text-black'
                           }`}>
                             {patient.isActive !== false ? 'Active Node' : 'Decommissioned'}
                           </span>
                         </td>
                         <td className="px-8 py-6">
-                          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3 italic">
+                          <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest flex items-center gap-3 italic">
                             <User size={16} />
                             {staffMap[patient.assignedStaffId] || 'Unassigned'}
                           </p>
                         </td>
                         <td className="px-8 py-6 text-right">
-                          {expandedPatient === patient.id ? <ChevronUp size={24} className="text-black dark:text-white" /> : <ChevronDown size={24} className="text-gray-300 dark:text-gray-700" />}
+                          {expandedPatient === patient.id ? <ChevronUp size={24} className="text-black dark:text-white" /> : <ChevronDown size={24} className="text-black dark:text-black" />}
                         </td>
                       </tr>
                       {expandedPatient === patient.id && (
@@ -277,17 +277,17 @@ export default function HqRehabPatientsPage() {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                               {/* Medical Info */}
                               <div className="space-y-6">
-                                <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                                <h4 className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.3em] flex items-center gap-3">
                                   <Stethoscope size={18} />
                                   Clinical Summary
                                 </h4>
                                 <div className="bg-white dark:bg-black p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm space-y-6 transition-all hover:scale-[1.02]">
                                   <div>
-                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-2">Diagnosis Vector</p>
+                                    <p className="text-[9px] text-black font-black uppercase tracking-widest mb-2">Diagnosis Vector</p>
                                     <p className="text-xs font-black text-black dark:text-white uppercase leading-relaxed italic">{patient.diagnosis || 'No clinical records documented'}</p>
                                   </div>
                                   <div className="pt-4 border-t border-gray-50 dark:border-white/5">
-                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-2">Monthly Commitment</p>
+                                    <p className="text-[9px] text-black font-black uppercase tracking-widest mb-2">Monthly Commitment</p>
                                     <p className="text-lg font-black text-black dark:text-white tracking-widest">RS. {Number(patient.packageAmount).toLocaleString()}</p>
                                   </div>
                                 </div>
@@ -295,32 +295,32 @@ export default function HqRehabPatientsPage() {
 
                               {/* Fee Summary */}
                               <div className="space-y-6">
-                                <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                                <h4 className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.3em] flex items-center gap-3">
                                   <Wallet size={18} />
                                   Financial Ledger
                                 </h4>
                                 <div className="bg-white dark:bg-black p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02]">
                                   <div className="pb-6 mb-6 border-b border-gray-50 dark:border-white/5 flex flex-col gap-4">
                                     <div className="flex justify-between items-center">
-                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Outstanding Dues</p>
-                                      <p className={`text-xl font-black tracking-tighter ${patient.remaining > 0 ? 'text-black dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
+                                      <p className="text-[9px] text-black font-black uppercase tracking-widest">Outstanding Dues</p>
+                                      <p className={`text-xl font-black tracking-tighter ${patient.remaining > 0 ? 'text-black dark:text-white' : 'text-black dark:text-black'}`}>
                                         RS. {(patient.remaining || 0).toLocaleString()}
                                       </p>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Canteen Balance</p>
-                                      <p className={`text-xl font-black tracking-tighter ${(patient.canteenBalance || 0) < 0 ? 'text-black dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
+                                      <p className="text-[9px] text-black font-black uppercase tracking-widest">Canteen Balance</p>
+                                      <p className={`text-xl font-black tracking-tighter ${(patient.canteenBalance || 0) < 0 ? 'text-black dark:text-white' : 'text-black dark:text-black'}`}>
                                         RS. {(patient.canteenBalance || 0).toLocaleString()}
                                       </p>
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-2 gap-6">
                                     <div>
-                                      <p className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1">Total Billed</p>
+                                      <p className="text-[9px] text-black font-black uppercase tracking-widest mb-1">Total Billed</p>
                                       <p className="text-xs font-black text-black dark:text-white opacity-40 uppercase">RS. {(patient.totalDues || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="text-right">
-                                      <p className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1">Total Liquidated</p>
+                                      <p className="text-[9px] text-black font-black uppercase tracking-widest mb-1">Total Liquidated</p>
                                       <p className="text-xs font-black text-black dark:text-white uppercase tracking-widest">RS. {(patient.totalReceived || 0).toLocaleString()}</p>
                                     </div>
                                   </div>
@@ -329,7 +329,7 @@ export default function HqRehabPatientsPage() {
 
                               {/* Quick Actions */}
                               <div className="space-y-6">
-                                <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                                <h4 className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.3em] flex items-center gap-3">
                                   <Info size={18} />
                                   Administrative Flow
                                 </h4>

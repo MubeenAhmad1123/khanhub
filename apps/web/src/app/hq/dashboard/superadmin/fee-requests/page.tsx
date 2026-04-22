@@ -134,7 +134,7 @@ export default function SuperadminFeeRequestsPage() {
       <div className="space-y-10">
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl lg:text-4xl font-black text-black dark:text-white uppercase tracking-tighter">Protocol Requests</h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black italic">
             Manual Authorization Cascade • Global Ledger Injection
           </p>
         </div>
@@ -143,13 +143,13 @@ export default function SuperadminFeeRequestsPage() {
           <form onSubmit={createFeeRequest} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Subject Identification</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-4">Subject Identification</p>
                 <div className="flex gap-3">
                   <input
                     value={patientQuery}
                     onChange={(e) => setPatientQuery(e.target.value)}
                     placeholder="SEARCH SUBJECT NAME..."
-                    className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest text-[11px]"
+                    className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-black dark:placeholder:text-black uppercase tracking-widest text-[11px]"
                   />
                   <button
                     type="button"
@@ -184,7 +184,7 @@ export default function SuperadminFeeRequestsPage() {
                         className="w-full text-left p-5 rounded-3xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white transform hover:translate-x-1 transition-all"
                       >
                         <div className="text-sm font-black text-black dark:text-white uppercase tracking-tight">{p.name}</div>
-                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">{p.inpatientNumber || p.id}</div>
+                        <div className="text-[10px] font-bold text-black dark:text-black uppercase tracking-widest mt-1">{p.inpatientNumber || p.id}</div>
                       </button>
                     ))}
                   </div>
@@ -193,7 +193,7 @@ export default function SuperadminFeeRequestsPage() {
 
               <div className="space-y-4 min-w-0">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Authorization Node</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-4">Authorization Node</p>
                   <select
                     value={selectedCashierId}
                     onChange={(e) => setSelectedCashierId(e.target.value)}
@@ -213,7 +213,7 @@ export default function SuperadminFeeRequestsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Ledger Date</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-4">Ledger Date</p>
                     <input
                       type="date"
                       value={txDate}
@@ -222,25 +222,25 @@ export default function SuperadminFeeRequestsPage() {
                     />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Value (PKR)</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-4">Value (PKR)</p>
                     <input
                       type="number"
                       step="0.01"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 shadow-sm focus:border-black dark:focus:border-white/40"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-black dark:placeholder:text-black shadow-sm focus:border-black dark:focus:border-white/40"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Authorization Memo</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-4">Authorization Memo</p>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="ENTER AUTHORIZATION SUMMARY..."
-                    className="w-full min-h-[140px] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 resize-none uppercase tracking-widest text-[11px] shadow-sm focus:border-black dark:focus:border-white/40"
+                    className="w-full min-h-[140px] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-black dark:placeholder:text-black resize-none uppercase tracking-widest text-[11px] shadow-sm focus:border-black dark:focus:border-white/40"
                   />
                 </div>
               </div>

@@ -80,7 +80,7 @@ export default function SuperadminUsersPage() {
       <div className="flex items-start justify-between gap-3 mb-10">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">Identity Hub</h1>
-          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Central user directory • Global Authentication Control</p>
+          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black italic">Central user directory • Global Authentication Control</p>
         </div>
       </div>
 
@@ -92,7 +92,7 @@ export default function SuperadminUsersPage() {
             onClick={() => setTab(t)}
             className={`h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${tab === t
                 ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-105 z-10'
-                : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
+                : 'bg-white dark:bg-black text-black dark:text-black border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
               }`}
           >
             {t}
@@ -105,7 +105,7 @@ export default function SuperadminUsersPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search identity sequence…"
-          className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest text-[11px]"
+          className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none placeholder:text-black dark:placeholder:text-black uppercase tracking-widest text-[11px]"
         />
       </div>
 
@@ -134,14 +134,14 @@ export default function SuperadminUsersPage() {
                       <div className="flex justify-between items-start">
                         <button type="button" onClick={() => setSelected(u)} className="flex items-center gap-4 group/btn">
                           <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-white/5 flex items-center justify-center border border-gray-100 dark:border-white/10 group-hover/btn:border-black dark:group-hover/btn:border-white transition-colors shadow-inner">
-                            <User className="h-8 w-8 text-gray-400 dark:text-gray-500 group-hover/btn:text-black dark:group-hover/btn:text-white transition-colors" />
+                            <User className="h-8 w-8 text-black dark:text-black group-hover/btn:text-black dark:group-hover/btn:text-white transition-colors" />
                           </div>
                           <div className="text-left">
                             <p className="text-xl font-black text-black dark:text-white uppercase tracking-tight leading-none">{u.name}</p>
                             <div className="flex items-center gap-2 mt-2">
-                              <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-white/10 text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{u.role}</span>
-                              <span className="text-[9px] font-bold text-gray-300 dark:text-gray-700">/</span>
-                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 tracking-wider truncate max-w-[100px]">{u.customId || u.uid.slice(0, 8)}</span>
+                              <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-white/10 text-[9px] font-black text-black dark:text-black uppercase tracking-widest">{u.role}</span>
+                              <span className="text-[9px] font-bold text-black dark:text-black">/</span>
+                              <span className="text-[9px] font-bold text-black dark:text-black tracking-wider truncate max-w-[100px]">{u.customId || u.uid.slice(0, 8)}</span>
                             </div>
                           </div>
                         </button>
@@ -189,16 +189,16 @@ export default function SuperadminUsersPage() {
         {selected ? (
           <div className="space-y-4">
             <div className="rounded-[2rem] border border-gray-50 bg-white p-6 dark:border-white/5 dark:bg-black shadow-sm">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Authenticated Name</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Authenticated Name</div>
               <div className="text-xl font-black text-black dark:text-white uppercase tracking-tight">{selected.name}</div>
             </div>
             <div className="rounded-[2rem] border border-gray-50 bg-white p-6 dark:border-white/5 dark:bg-black shadow-sm">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Access Role</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Access Role</div>
               <div className="text-lg font-black text-black dark:text-white uppercase">{selected.role}</div>
             </div>
             <div className="rounded-[2rem] border border-gray-50 bg-white p-6 dark:border-white/5 dark:bg-black shadow-sm">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">System Identifier</div>
-              <div className="text-xs font-mono font-bold text-gray-600 dark:text-gray-400 break-all">{selected.uid}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-black mb-2">System Identifier</div>
+              <div className="text-xs font-mono font-bold text-black dark:text-black break-all">{selected.uid}</div>
             </div>
           </div>
         ) : null}
@@ -206,7 +206,7 @@ export default function SuperadminUsersPage() {
 
       <ProfileDrawer open={!!resetTarget} onClose={() => setResetTarget(null)} title="Credential Reset">
         <div className="space-y-6">
-          <p className="text-sm font-bold text-gray-400 dark:text-gray-500 italic">
+          <p className="text-sm font-bold text-black dark:text-black italic">
             Override security credentials. Minimum 6 characters required for compliance.
           </p>
           <div className="rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black px-6 py-4 transition-all shadow-sm focus-within:border-black dark:focus-within:border-white/40">
@@ -214,7 +214,7 @@ export default function SuperadminUsersPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Set new credentials…"
-              className="w-full bg-transparent text-sm font-black text-black outline-none placeholder:text-gray-300 dark:text-white"
+              className="w-full bg-transparent text-sm font-black text-black outline-none placeholder:text-black dark:text-white"
             />
           </div>
           <button

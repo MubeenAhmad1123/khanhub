@@ -38,9 +38,9 @@ export default function SuperadminDepartmentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8 mb-12">
         <div>
           <h1 className="text-5xl font-black tracking-tighter text-black dark:text-white uppercase mb-4">
-            Intelligence <span className="text-gray-400 dark:text-gray-500 italic">Hubs</span>
+            Intelligence <span className="text-black dark:text-black italic">Hubs</span>
           </h1>
-          <p className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] leading-relaxed max-w-xl">
+          <p className="text-sm font-black text-black dark:text-black uppercase tracking-[0.2em] leading-relaxed max-w-xl">
             Access specialized management portals for each department. All global operations are unified at HQ Command.
           </p>
         </div>
@@ -55,13 +55,13 @@ export default function SuperadminDepartmentsPage() {
 
       <div className="mb-12 group relative max-w-2xl">
         <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-          <Building2 className="h-5 w-5 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
+          <Building2 className="h-5 w-5 text-black group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
         </div>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="SEARCH DEPARTMENT SEQUENCE..."
-          className="w-full bg-white dark:bg-black border border-gray-100 dark:border-white/10 pl-14 pr-6 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest text-black dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-600 outline-none focus:border-black dark:focus:border-white/40 transition-all shadow-sm"
+          className="w-full bg-white dark:bg-black border border-gray-100 dark:border-white/10 pl-14 pr-6 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest text-black dark:text-white placeholder:text-black dark:placeholder:text-black outline-none focus:border-black dark:focus:border-white/40 transition-all shadow-sm"
         />
       </div>
 
@@ -81,13 +81,13 @@ export default function SuperadminDepartmentsPage() {
                 <h3 className="text-3xl font-black text-black dark:text-white uppercase tracking-tighter transition-colors">
                   {d.name}
                 </h3>
-                <p className="text-xs font-bold leading-relaxed text-gray-400 dark:text-gray-500 uppercase tracking-widest italic group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+                <p className="text-xs font-bold leading-relaxed text-black dark:text-black uppercase tracking-widest italic group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
                   {d.description}
                 </p>
               </div>
               
               <div className="pt-6 border-t border-gray-50 dark:border-white/5 flex items-center justify-between">
-                <div className="flex items-center text-[10px] font-black text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white group-hover:gap-3 transition-all uppercase tracking-[0.2em]">
+                <div className="flex items-center text-[10px] font-black text-black dark:text-black group-hover:text-black dark:group-hover:text-white group-hover:gap-3 transition-all uppercase tracking-[0.2em]">
                   <span>Launch Module</span>
                   <span className="opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0">→</span>
                 </div>
@@ -105,7 +105,7 @@ export default function SuperadminDepartmentsPage() {
           </div>
           <div className="text-center md:text-left">
             <h4 className="text-xl font-black text-black dark:text-white uppercase tracking-tight mb-3">Governance Architecture</h4>
-            <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.2em] max-w-3xl italic">
+            <p className="text-[10px] leading-relaxed text-black dark:text-black font-black uppercase tracking-[0.2em] max-w-3xl italic">
               CENTRAL HQ COMMAND EXERCISES SOVEREIGN OVERSIGHT OVER ALL SUBORDINATE MODULES. FINANCIAL INTEGRITY, ACCESS ESCALATION, AND AUDIT SURVEILLANCE ARE UNIFIED HERE. DEPARTMENTAL HUBS SERVE AS SPECIALIZED DATA EXECUTION LAYERS.
             </p>
           </div>

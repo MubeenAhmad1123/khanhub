@@ -124,7 +124,7 @@ export default function ManagerStaffPage() {
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${darkMode ? 'bg-[#0A0A0A]' : 'bg-gray-50'}`}>
-        <Loader2 className={`w-10 h-10 animate-spin ${darkMode ? 'text-teal-400' : 'text-gray-800'}`} />
+        <Loader2 className={`w-10 h-10 animate-spin ${darkMode ? 'text-teal-400' : 'text-black'}`} />
       </div>
     );
   }
@@ -141,18 +141,18 @@ export default function ManagerStaffPage() {
               </div>
               <div className="min-w-0">
                 <h1 className={`text-lg md:text-2xl font-black tracking-tight truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>Staff Management</h1>
-                <p className={`${darkMode ? 'text-slate-500' : 'text-gray-500'} text-[9px] font-black uppercase tracking-widest`}>Global Directory</p>
+                <p className={`${darkMode ? 'text-slate-500' : 'text-black'} text-[9px] font-black uppercase tracking-widest`}>Global Directory</p>
               </div>
             </div>
 
             <div className={`rounded-xl px-3 py-2 flex items-center gap-3 border flex-shrink-0 transition-colors ${darkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
                <div className="text-right">
-                  <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Staff</p>
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-black'}`}>Staff</p>
                   <p className={`text-base font-black transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.total}</p>
                </div>
                <div className={`w-px h-6 ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`} />
                <div className="text-right">
-                  <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Present</p>
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-black'}`}>Present</p>
                   <p className="text-base font-black text-teal-600">{stats.present}</p>
                </div>
             </div>
@@ -199,7 +199,7 @@ export default function ManagerStaffPage() {
           darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100'
         }`}>
           <div className="flex-1 relative group">
-            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-teal-500' : 'text-gray-400 group-focus-within:text-gray-900'}`} size={16} />
+            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-teal-500' : 'text-black group-focus-within:text-gray-900'}`} size={16} />
             <input 
               type="text" 
               placeholder="Search by Name, ID, or Designation..."
@@ -213,7 +213,7 @@ export default function ManagerStaffPage() {
           <div className="flex gap-2 overflow-x-auto scrollbar-none">
             <select 
               className={`border-none rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer transition-colors flex-shrink-0 ${
-                darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-gray-700 focus:ring-2 focus:ring-gray-900'
+                darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-black focus:ring-2 focus:ring-gray-900'
               }`}
               value={deptFilter}
               onChange={e => setDeptFilter(e.target.value)}
@@ -229,7 +229,7 @@ export default function ManagerStaffPage() {
             </select>
             <select 
               className={`border-none rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer transition-colors flex-shrink-0 ${
-                darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-gray-700 focus:ring-2 focus:ring-gray-900'
+                darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-black focus:ring-2 focus:ring-gray-900'
               }`}
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
@@ -264,7 +264,7 @@ export default function ManagerStaffPage() {
                   {s.photoUrl ? (
                     <img src={s.photoUrl} className={`w-20 h-20 rounded-[1.5rem] object-cover ring-4 transition-all duration-500 group-hover:scale-105 shadow-lg ${darkMode ? 'ring-white/5' : 'ring-gray-50'}`} />
                   ) : (
-                    <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center text-2xl font-black shadow-inner transition-colors ${darkMode ? 'bg-white/5 text-slate-700' : 'bg-gray-100 text-gray-400'}`}>
+                    <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center text-2xl font-black shadow-inner transition-colors ${darkMode ? 'bg-white/5 text-slate-700' : 'bg-gray-100 text-black'}`}>
                       {s.name?.[0]}
                     </div>
                   )}
@@ -274,18 +274,18 @@ export default function ManagerStaffPage() {
                 </div>
                 
                 <h3 className={`text-base font-black transition-colors ${darkMode ? 'text-white group-hover:text-teal-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{s.name}</h3>
-                <p className={`text-[9px] font-black uppercase tracking-widest mt-1 mb-3 transition-colors ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{s.designation || 'Staff Member'}</p>
+                <p className={`text-[9px] font-black uppercase tracking-widest mt-1 mb-3 transition-colors ${darkMode ? 'text-slate-500' : 'text-black'}`}>{s.designation || 'Staff Member'}</p>
                 
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                    <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-widest transition-colors ${
-                     darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-gray-500 border-gray-100'
+                     darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-black border-gray-100'
                    }`}>
                      {s.employeeId || 'N/A'}
                    </span>
                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
                      s.dept === 'rehab' ? (darkMode ? 'bg-blue-400/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-100') :
                      s.dept === 'spims' ? (darkMode ? 'bg-green-400/10 text-green-400 border-green-500/20' : 'bg-green-50 text-green-600 border-green-100') :
-                     (darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-gray-600 border-gray-100')
+                     (darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-black border-gray-100')
                    }`}>
                      {s.dept}
                    </span>
@@ -295,11 +295,11 @@ export default function ManagerStaffPage() {
               {/* Stats Footer */}
               <div className={`grid grid-cols-2 gap-2 mt-auto pt-4 border-t transition-colors ${darkMode ? 'border-white/5' : 'border-gray-50'}`}>
                 <div className={`rounded-xl p-2.5 flex flex-col items-center transition-colors ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
-                   <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>Growth</p>
+                   <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-black'}`}>Growth</p>
                    <p className={`text-sm font-black transition-colors ${darkMode ? 'text-slate-200' : 'text-gray-900'}`}>{s.growthPointsTotal} pts</p>
                 </div>
                 <div className={`rounded-xl p-2.5 flex flex-col items-center transition-colors ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
-                   <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>Attendance</p>
+                   <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-black'}`}>Attendance</p>
                    <p className="text-sm font-black text-teal-600">{(s.presentCount / 30 * 100).toFixed(0)}%</p>
                 </div>
               </div>
@@ -318,11 +318,11 @@ export default function ManagerStaffPage() {
           <div className={`rounded-3xl py-20 border-2 border-dashed flex flex-col items-center justify-center text-center transition-colors ${
             darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100'
           }`}>
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${darkMode ? 'bg-white/5 text-slate-700' : 'bg-gray-50 text-gray-300'}`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${darkMode ? 'bg-white/5 text-slate-700' : 'bg-gray-50 text-black'}`}>
               <Users size={32} />
             </div>
             <h4 className={`text-lg font-black mb-2 transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>No Staff Members Found</h4>
-            <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-sm max-w-xs mx-auto`}>Try adjusting your search filters.</p>
+            <p className={`${darkMode ? 'text-slate-500' : 'text-black'} text-sm max-w-xs mx-auto`}>Try adjusting your search filters.</p>
           </div>
         )}
       </div>

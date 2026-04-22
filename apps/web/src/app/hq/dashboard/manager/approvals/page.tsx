@@ -177,7 +177,7 @@ export default function ManagerApprovalsPage() {
   if (sessionLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0A0A0A]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-600 dark:text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-black dark:text-black" />
       </div>
     );
   }
@@ -186,7 +186,7 @@ export default function ManagerApprovalsPage() {
     <div className="space-y-8 pb-32 p-4 md:p-8 bg-gray-50 dark:bg-[#0A0A0A] min-h-screen overflow-x-hidden w-full max-w-full">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Staff Contribs</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Review and approve employee contributions</p>
+        <p className="text-black dark:text-black text-sm font-medium">Review and approve employee contributions</p>
       </div>
 
       {message.text && (
@@ -207,7 +207,7 @@ export default function ManagerApprovalsPage() {
             className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap ${
               filter === f
                 ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-md scale-[1.02]'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-white/5'
+                : 'text-black dark:text-black hover:bg-white dark:hover:bg-white/5'
             }`}
           >
             <Filter size={10} />
@@ -226,7 +226,7 @@ export default function ManagerApprovalsPage() {
           <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
             <span className="text-3xl">🎉</span>
           </div>
-          <p className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-xs">No pending contributions found</p>
+          <p className="text-black dark:text-black font-bold uppercase tracking-widest text-xs">No pending contributions found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -258,24 +258,24 @@ export default function ManagerApprovalsPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-black text-xl text-gray-900 dark:text-white tracking-tight">{t.title}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">{t.createdAt?.seconds ? timeAgo(new Date(t.createdAt.seconds * 1000).toISOString()) : 'Just now'}</p>
+                      <p className="text-[10px] text-black dark:text-black font-bold uppercase tracking-wider">{t.createdAt?.seconds ? timeAgo(new Date(t.createdAt.seconds * 1000).toISOString()) : 'Just now'}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 p-5 bg-gray-50 dark:bg-white/5 rounded-3xl mb-6">
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Contributor</p>
+                      <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest mb-1">Contributor</p>
                       <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{t.staffName}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Submission Date</p>
+                      <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest mb-1">Submission Date</p>
                       <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.createdAt?.seconds ? formatDateDMY(new Date(t.createdAt.seconds * 1000).toISOString()) : '—'}</p>
                     </div>
                   </div>
 
                   {t.content && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-white/5 p-4 rounded-3xl mb-6 border border-gray-100 dark:border-white/5">
-                      <p className="font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-[9px] mb-1">Description</p>
+                    <div className="text-sm text-black dark:text-black bg-gray-50 dark:bg-white/5 p-4 rounded-3xl mb-6 border border-gray-100 dark:border-white/5">
+                      <p className="font-black text-black dark:text-black uppercase tracking-widest text-[9px] mb-1">Description</p>
                       <p className="font-medium leading-relaxed">{t.content}</p>
                     </div>
                   )}
@@ -285,7 +285,7 @@ export default function ManagerApprovalsPage() {
                       <input
                         type="text"
                         placeholder="Type rejection reason..."
-                        className="w-full bg-white dark:bg-[#1A1A1A] border border-red-100 dark:border-red-500/20 rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-4 focus:ring-red-500/10 placeholder:text-gray-400"
+                        className="w-full bg-white dark:bg-[#1A1A1A] border border-red-100 dark:border-red-500/20 rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-4 focus:ring-red-500/10 placeholder:text-black"
                         value={rejectReason}
                         onChange={e => setRejectReason(e.target.value)}
                         autoFocus
@@ -300,7 +300,7 @@ export default function ManagerApprovalsPage() {
                         </button>
                         <button
                           onClick={() => { setRejectingId(null); setRejectReason(''); }}
-                          className="px-8 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
+                          className="px-8 bg-gray-100 dark:bg-white/10 text-black dark:text-black py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
                         >
                           Cancel
                         </button>

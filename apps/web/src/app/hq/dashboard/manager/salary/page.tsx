@@ -215,7 +215,7 @@ export default function SalarySlipsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Salary Slips</h1>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Monthly payroll management — All Departments</p>
+            <p className="text-black text-xs font-bold uppercase tracking-widest mt-1">Monthly payroll management — All Departments</p>
           </div>
           <input
             type="month"
@@ -228,13 +228,13 @@ export default function SalarySlipsPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: 'Total Payroll', value: `Rs${totalPayroll.toLocaleString()}`, color: 'text-amber-500' },
-            { label: 'Draft', value: monthSlips.filter(s => s.status === 'draft').length, color: 'text-gray-300' },
+            { label: 'Draft', value: monthSlips.filter(s => s.status === 'draft').length, color: 'text-black' },
             { label: 'Approved', value: monthSlips.filter(s => s.status === 'approved').length, color: 'text-blue-400' },
             { label: 'Paid', value: monthSlips.filter(s => s.status === 'paid').length, color: 'text-emerald-400' },
           ].map(item => (
             <div key={item.label} className="bg-white/5 border border-white/8 rounded-2xl p-4">
               <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
-              <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest mt-1">{item.label}</p>
+              <p className="text-black text-[10px] font-black uppercase tracking-widest mt-1">{item.label}</p>
             </div>
           ))}
         </div>
@@ -262,7 +262,7 @@ export default function SalarySlipsPage() {
                     </div>
                     <div>
                       <p className="text-white font-bold text-sm">{member.name}</p>
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{member.designation} · {member.department}</p>
+                      <p className="text-black text-[10px] font-black uppercase tracking-widest">{member.designation} · {member.department}</p>
                     </div>
                   </div>
 
@@ -271,7 +271,7 @@ export default function SalarySlipsPage() {
                       <>
                         <div className="text-right">
                           <p className="text-white font-black text-sm">Rs{slip.netSalary?.toLocaleString()}</p>
-                          <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest min-w-[120px]">
+                          <p className="text-black text-[10px] font-black uppercase tracking-widest min-w-[120px]">
                             {slip.presentDays} days · {slip.bonus > 0 ? `+Rs${slip.bonus} bonus` : slip.otherDeductions > 0 ? `-Rs${slip.otherDeductions} ded.` : 'No adj.'}
                           </p>
                         </div>
@@ -292,7 +292,7 @@ export default function SalarySlipsPage() {
                                 deductionReason: slip.deductionReason || ''
                               });
                             }}
-                            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all"
+                            className="p-2 rounded-xl bg-white/5 border border-white/10 text-black hover:text-white transition-all"
                           >
                             <Plus size={14} />
                           </button>
@@ -313,7 +313,7 @@ export default function SalarySlipsPage() {
                       <button
                         disabled={generating === member.id}
                         onClick={() => { void generateSlip(member); }}
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white font-black text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2"
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 text-black hover:text-white font-black text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2"
                       >
                         {generating === member.id ? <Loader2 size={10} className="animate-spin" /> : <FileText size={10} />}
                         Generate Slip
@@ -334,9 +334,9 @@ export default function SalarySlipsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">Adjust Salary</h2>
-                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">For {editingSlip.staffName} · {editingSlip.month}</p>
+                  <p className="text-black text-[10px] font-black uppercase tracking-widest mt-1">For {editingSlip.staffName} · {editingSlip.month}</p>
                 </div>
-                <button onClick={() => setEditingSlip(null)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
+                <button onClick={() => setEditingSlip(null)} className="p-2 hover:bg-white/5 rounded-full text-black transition-colors">
                   <Plus className="rotate-45" size={20} />
                 </button>
               </div>
@@ -344,7 +344,7 @@ export default function SalarySlipsPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Bonus (PKR)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Bonus (PKR)</label>
                     <input
                       type="number"
                       value={editValues.bonus}
@@ -353,7 +353,7 @@ export default function SalarySlipsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Deduction (PKR)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Deduction (PKR)</label>
                     <input
                       type="number"
                       value={editValues.otherDeductions}
@@ -364,7 +364,7 @@ export default function SalarySlipsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Bonus Reason</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Bonus Reason</label>
                   <textarea
                     value={editValues.bonusReason}
                     onChange={(e) => setEditValues({ ...editValues, bonusReason: e.target.value })}
@@ -374,7 +374,7 @@ export default function SalarySlipsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Deduction Reason</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Deduction Reason</label>
                   <textarea
                     value={editValues.deductionReason}
                     onChange={(e) => setEditValues({ ...editValues, deductionReason: e.target.value })}

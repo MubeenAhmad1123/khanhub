@@ -341,8 +341,8 @@ export default function DailyReportPage() {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className={`w-10 h-10 animate-spin ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 animate-pulse">Syncing Matrix</p>
+          <Loader2 className={`w-10 h-10 animate-spin ${isDark ? 'text-black' : 'text-black'}`} />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black animate-pulse">Syncing Matrix</p>
         </div>
       </div>
     );
@@ -357,13 +357,13 @@ export default function DailyReportPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/hq/dashboard/manager"
-              className={`p-3 rounded-2xl border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800' : 'bg-white border-gray-100 hover:shadow-lg'}`}
+              className={`p-3 rounded-2xl border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-black/90' : 'bg-white border-gray-100 hover:shadow-lg'}`}
             >
               <ArrowLeft size={20} />
             </Link>
             <div>
               <h1 className="text-3xl font-[1000] tracking-tight text-gray-900 dark:text-white">Staff Performance</h1>
-              <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+              <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
                 <Shield size={12} className="text-indigo-500" /> Operational Assessment & Audit
               </p>
             </div>
@@ -404,11 +404,11 @@ export default function DailyReportPage() {
             <div>
               <h1 className="text-4xl font-[1000] uppercase tracking-tighter text-gray-900">Khan Hub HQ</h1>
               <p className="text-lg font-black text-indigo-600 uppercase tracking-[0.2em] mt-1">Performance Intelligence Ledger</p>
-              <p className="text-sm font-bold text-gray-400 mt-4 italic">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p className="text-sm font-bold text-black mt-4 italic">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
             <div className="text-right">
               <div className="inline-block px-4 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-xl">Verified Audit</div>
-              <p className="text-[10px] font-bold text-gray-400 mt-2">Document Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
+              <p className="text-[10px] font-bold text-black mt-2">Document Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
             </div>
           </div>
         </div>
@@ -416,7 +416,7 @@ export default function DailyReportPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Total Points Earned</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Total Points Earned</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-[1000] text-gray-900 dark:text-white">
                 {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
@@ -426,7 +426,7 @@ export default function DailyReportPage() {
           </div>
 
           <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Total Deductions (Fine)</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Total Deductions (Fine)</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-[1000] text-rose-600">
                 ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
@@ -436,7 +436,7 @@ export default function DailyReportPage() {
           </div>
 
           <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Performance Index</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Performance Index</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-[1000] text-indigo-600">
                 {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 100) * 100).toFixed(0) : 0}%
@@ -450,7 +450,7 @@ export default function DailyReportPage() {
         <div className="space-y-6 print:hidden">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative group">
-              <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} size={18} />
+              <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-black' : 'text-black'}`} size={18} />
               <input
                 type="text"
                 placeholder="Search staff by name or role..."
@@ -462,7 +462,7 @@ export default function DailyReportPage() {
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className={`px-6 py-4 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-sm ${isDark ? 'bg-white/5 text-zinc-400' : 'bg-white text-gray-500'}`}
+              className={`px-6 py-4 rounded-2xl border-none outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-sm ${isDark ? 'bg-white/5 text-black' : 'bg-white text-black'}`}
             >
               <option value="all">Global Matrix</option>
               {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].map(d => (
@@ -478,7 +478,7 @@ export default function DailyReportPage() {
                 onClick={() => setActiveFilter(f)}
                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === f
                     ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-black dark:border-white'
-                    : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 dark:bg-white/5 dark:border-zinc-800'
+                    : 'bg-white text-black border-gray-100 hover:border-gray-200 dark:bg-white/5 dark:border-zinc-800'
                   }`}
               >
                 {f}
@@ -493,27 +493,27 @@ export default function DailyReportPage() {
             <table className="w-full text-left border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr className={`${isDark ? 'bg-zinc-900' : 'bg-gray-50'} border-b border-gray-100 dark:border-zinc-800`}>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Staff Identity</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Attendance</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Uniform</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Duties</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">GP</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Score</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Fine</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-right print:hidden">Action</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black">Staff Identity</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Attendance</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Uniform</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Duties</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">GP</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Score</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Fine</th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-right print:hidden">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                 {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
-                  <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-amber-500/5' : 'hover:bg-gray-50/50 dark:hover:bg-white/5'}`}>
+                  <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-amber-500/5' : 'hover:bg-white/50 dark:hover:bg-white/5'}`}>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500 group-hover:border-indigo-500' : 'bg-gray-50 border-white text-gray-400 shadow-sm group-hover:border-indigo-200'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-black group-hover:border-indigo-500' : 'bg-gray-50 border-white text-black shadow-sm group-hover:border-indigo-200'}`}>
                           {row.name[0]}
                         </div>
                         <div>
                           <p className="font-black text-xs text-gray-900 dark:text-black truncate max-w-[120px]">{row.name}</p>
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{row.designation}</p>
+                          <p className="text-[9px] font-bold text-black uppercase tracking-widest">{row.designation}</p>
                         </div>
                       </div>
                     </td>
@@ -522,7 +522,7 @@ export default function DailyReportPage() {
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${row.attendance === 'present' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                           row.attendance === 'absent' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
                             row.attendance === 'late' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              'bg-gray-100 text-gray-400 border-gray-200'
+                              'bg-gray-100 text-black border-gray-200'
                         }`}>
                         {row.attendance === 'present' ? <CheckCircle size={10} /> :
                           row.attendance === 'absent' ? <XCircle size={10} /> :
@@ -535,7 +535,7 @@ export default function DailyReportPage() {
                       <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.uniformStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                           row.uniformStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
                             row.uniformStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              'bg-gray-100 text-gray-400 border-gray-200'
+                              'bg-gray-100 text-black border-gray-200'
                         }`}>
                         {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
                         {row.uniformStatus}
@@ -546,7 +546,7 @@ export default function DailyReportPage() {
                       <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.dutyStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                           row.dutyStatus === 'no' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
                             row.dutyStatus === 'incomplete' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              'bg-gray-100 text-gray-400 border-gray-200'
+                              'bg-gray-100 text-black border-gray-200'
                         }`}>
                         {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
                         {row.dutyStatus}
@@ -556,7 +556,7 @@ export default function DailyReportPage() {
                     <td className="px-6 py-5 text-center">
                       <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${row.gpStatus === 'yes' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                           row.gpStatus === 'invalid' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-                            'bg-gray-100 text-gray-400 border-gray-200'
+                            'bg-gray-100 text-black border-gray-200'
                         }`}>
                         {row.gpStatus}
                       </div>
@@ -569,7 +569,7 @@ export default function DailyReportPage() {
                     </td>
 
                     <td className="px-6 py-5 text-center">
-                      <span className={`text-xs font-black ${row.fines > 0 ? 'text-rose-600' : 'text-gray-300'}`}>
+                      <span className={`text-xs font-black ${row.fines > 0 ? 'text-rose-600' : 'text-black'}`}>
                         {row.fines > 0 ? `₨${row.fines}` : '0'}
                       </span>
                       {row.fines > 0 && row.fineReason && (
@@ -600,17 +600,17 @@ export default function DailyReportPage() {
           {filteredData.length === 0 && (
             <div className="py-24 text-center">
               <div className="w-20 h-20 bg-gray-50 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                <Search size={32} className="text-gray-300" />
+                <Search size={32} className="text-black" />
               </div>
               <h3 className="font-black text-xl">No Analytics Data</h3>
-              <p className="text-gray-400 text-sm font-medium mt-1 uppercase tracking-widest">Adjust filters or search criteria</p>
+              <p className="text-black text-sm font-medium mt-1 uppercase tracking-widest">Adjust filters or search criteria</p>
             </div>
           )}
         </div>
 
         {/* Legal Disclaimer for Image */}
         <div className="hidden print:flex items-center justify-between pt-8 border-t border-gray-100">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub Operations • AI Generated Audit</p>
+          <p className="text-[9px] font-bold text-black uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub Operations • AI Generated Audit</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Secure Report Integrity Verified</p>

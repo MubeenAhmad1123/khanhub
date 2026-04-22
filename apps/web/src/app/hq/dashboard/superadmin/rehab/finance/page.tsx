@@ -123,7 +123,7 @@ export default function HqRehabFinancePage() {
               <BarChart3 className="text-black dark:text-white" size={40} />
               Rehab Ledger
             </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">Chrono-Financial Audit • Authorization Matrix • Flow Control</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-black dark:text-black mt-2 italic">Chrono-Financial Audit • Authorization Matrix • Flow Control</p>
           </div>
           <button className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95">
             <Download size={18} />
@@ -163,7 +163,7 @@ export default function HqRehabFinancePage() {
         {/* Chart Section */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mb-12">
           <div className="xl:col-span-2 bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[3rem] shadow-2xl">
-            <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] mb-12 flex items-center gap-3">
+            <h3 className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.3em] mb-12 flex items-center gap-3">
               <PieChart size={18} />
               QUARTERLY FLOW PROJECTION
             </h3>
@@ -191,7 +191,7 @@ export default function HqRehabFinancePage() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{d.month}</p>
+                  <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest">{d.month}</p>
                 </div>
               ))}
             </div>
@@ -199,21 +199,21 @@ export default function HqRehabFinancePage() {
             <div className="mt-10 flex items-center justify-center gap-8 pt-8 border-t border-gray-50 dark:border-white/5">
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded-full bg-black dark:bg-white shadow-sm" />
-                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Primary Revenue</span>
+                <span className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Primary Revenue</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-white/20 shadow-sm" />
-                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">System Expenses</span>
+                <span className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">System Expenses</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between">
             <div className="space-y-8">
-              <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">Operational Filters</h3>
+              <h3 className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.3em]">Operational Filters</h3>
               <div className="space-y-6">
                 <div className="relative group">
-                  <p className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest mb-2 px-2">Lifecycle State</p>
+                  <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest mb-2 px-2">Lifecycle State</p>
                   <select 
                     className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 outline-none font-black text-[10px] uppercase tracking-widest text-black dark:text-white transition-all appearance-none cursor-pointer"
                     value={statusFilter}
@@ -227,7 +227,7 @@ export default function HqRehabFinancePage() {
                 </div>
 
                 <div className="relative group">
-                  <p className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest mb-2 px-2">Flow Categorization</p>
+                  <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest mb-2 px-2">Flow Categorization</p>
                   <select 
                     className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 outline-none font-black text-[10px] uppercase tracking-widest text-black dark:text-white transition-all appearance-none cursor-pointer"
                     value={typeFilter}
@@ -259,12 +259,12 @@ export default function HqRehabFinancePage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10">
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Transaction Description</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Type</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Authority</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Temporal Node</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Transaction Description</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Amount</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Type</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Authority</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em]">Temporal Node</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-white/5">
@@ -277,29 +277,29 @@ export default function HqRehabFinancePage() {
                   </tr>
                 ) : filteredTransactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center text-[10px] font-black uppercase tracking-widest text-gray-300 dark:text-gray-600 italic">No historical nodes found in filtered stream</td>
+                    <td colSpan={6} className="px-8 py-20 text-center text-[10px] font-black uppercase tracking-widest text-black dark:text-black italic">No historical nodes found in filtered stream</td>
                   </tr>
                 ) : (
                   filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-all group">
+                    <tr key={tx.id} className="hover:bg-white dark:hover:bg-white/5 transition-all group">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${tx.type === 'income' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500'}`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${tx.type === 'income' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-gray-100 dark:bg-white/10 text-black dark:text-black'}`}>
                             {tx.type === 'income' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
                           </div>
                           <div>
                             <p className="font-black text-black dark:text-white text-sm uppercase tracking-tight group-hover:translate-x-1 transition-transform">{tx.description}</p>
-                            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">{tx.category}</p>
+                            <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] mt-1">{tx.category}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <p className={`font-black text-lg tracking-tighter ${tx.type === 'income' ? 'text-black dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                        <p className={`font-black text-lg tracking-tighter ${tx.type === 'income' ? 'text-black dark:text-white' : 'text-black dark:text-black'}`}>
                           {tx.type === 'income' ? '+' : '-'} {Number(tx.amount).toLocaleString()}
                         </p>
                       </td>
                       <td className="px-8 py-6">
-                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${tx.type === 'income' ? 'text-black dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${tx.type === 'income' ? 'text-black dark:text-white' : 'text-black dark:text-black'}`}>
                           {tx.type}
                         </span>
                       </td>
@@ -308,19 +308,19 @@ export default function HqRehabFinancePage() {
                           tx.status === 'approved' 
                             ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' 
                             : tx.status === 'pending'
-                            ? 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 border-transparent'
+                            ? 'bg-gray-100 dark:bg-white/10 text-black dark:text-black border-transparent'
                             : 'bg-rose-500 text-white border-transparent'
                         }`}>
                           {tx.status}
                         </span>
                       </td>
                       <td className="px-8 py-6">
-                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest italic">
+                        <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest italic">
                           {tx.approvedBy || tx.rejectedBy || 'System Alpha'}
                         </p>
                       </td>
                       <td className="px-8 py-6">
-                        <p className="text-[10px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">
+                        <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest">
                           {formatDateDMY(tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : tx.createdAt)}
                         </p>
                       </td>
@@ -349,12 +349,12 @@ function FinanceCard({ label, value, icon, trend, highlight }: {
         <div className="w-12 h-12 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-sm">
           {icon}
         </div>
-        <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${highlight ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' : 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500'}`}>
+        <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${highlight ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' : 'bg-gray-50 dark:bg-white/5 text-black dark:text-black'}`}>
           {trend}
         </span>
       </div>
       <p className="text-3xl font-black text-black dark:text-white mb-2 tracking-tighter">RS. {value.toLocaleString()}</p>
-      <p className="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">{label}</p>
+      <p className="text-black dark:text-black text-[10px] font-black uppercase tracking-[0.3em]">{label}</p>
       
       {/* Decorative pulse if highlighted */}
       {highlight && (

@@ -200,7 +200,7 @@ export default function HqPasswordsPage() {
         {/* Back Navigation */}
         <Link 
           href="/hq/dashboard/superadmin" 
-          className="inline-flex items-center gap-2 mb-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 hover:text-black dark:hover:text-white transition-all hover:gap-3"
+          className="inline-flex items-center gap-2 mb-8 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black hover:text-black dark:hover:text-white transition-all hover:gap-3"
         >
           <ArrowLeft size={14} />
           Back to Command Hub
@@ -215,7 +215,7 @@ export default function HqPasswordsPage() {
               </div>
               Credential Hub
             </h1>
-            <p className="mt-4 font-black text-[10px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">
+            <p className="mt-4 font-black text-[10px] uppercase tracking-[0.2em] text-black dark:text-black italic">
               Global Authorization Control System
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function HqPasswordsPage() {
             <Lock className="w-5 h-5 text-rose-500 shrink-0" />
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Security Protocol Active</p>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Extraction of sensitive data is restricted</p>
+              <p className="text-[9px] font-bold text-black uppercase tracking-widest mt-1">Extraction of sensitive data is restricted</p>
             </div>
           </div>
         </div>
@@ -233,11 +233,11 @@ export default function HqPasswordsPage() {
         <div className="p-6 md:p-10 rounded-[3rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black mb-10 flex flex-col gap-6 shadow-sm">
           <div className="flex flex-col lg:flex-row items-center gap-6">
             <div className="relative group w-full lg:max-w-xl">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={20} />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-black group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={20} />
               <input 
                 type="text"
                 placeholder="SEARCH CREDENTIAL SEQUENCE..."
-                className="w-full border border-gray-100 dark:border-white/10 rounded-[2rem] pl-16 pr-8 py-5 outline-none font-black text-[11px] transition-all bg-gray-50 dark:bg-white/5 text-black dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest shadow-sm focus:border-black dark:focus:border-white/40"
+                className="w-full border border-gray-100 dark:border-white/10 rounded-[2rem] pl-16 pr-8 py-5 outline-none font-black text-[11px] transition-all bg-gray-50 dark:bg-white/5 text-black dark:text-white placeholder:text-black dark:placeholder:text-black uppercase tracking-widest shadow-sm focus:border-black dark:focus:border-white/40"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -252,7 +252,7 @@ export default function HqPasswordsPage() {
                     className={`px-5 py-2.5 rounded-[1.5rem] text-[9px] whitespace-nowrap font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
                       activeRole === f
                         ? 'bg-black text-white dark:bg-white dark:text-black border-black transform scale-105 z-10'
-                        : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
+                        : 'bg-white dark:bg-black text-black dark:text-black border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
                     }`}
                   >
                     {f === 'all' ? 'All Roles' : f}
@@ -271,7 +271,7 @@ export default function HqPasswordsPage() {
                   className={`px-5 py-2.5 rounded-[1.5rem] text-[9px] whitespace-nowrap font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
                     activePortal === p
                       ? 'bg-black text-white dark:bg-white dark:text-black border-black transform scale-105 z-10'
-                      : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
+                      : 'bg-white dark:bg-black text-black dark:text-black border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
                   }`}
                 >
                   {p === 'all' ? 'All Portals' : PORTAL_LABELS[p]}
@@ -286,7 +286,7 @@ export default function HqPasswordsPage() {
           <div className="overflow-x-auto w-full scrollbar-none">
             <table className="min-w-[700px] w-full text-left border-collapse">
               <thead>
-                <tr className="text-[10px] font-black uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-gray-400 dark:text-gray-500 italic">
+                <tr className="text-[10px] font-black uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-black dark:text-black italic">
                   <th className="px-10 py-8">Operator Node</th>
                   <th className="px-10 py-8 text-center">Portal</th>
                   <th className="px-10 py-8 text-center">Security Rank</th>
@@ -307,7 +307,7 @@ export default function HqPasswordsPage() {
                       </div>
                     </td>
                     <td className="px-10 py-6 text-center">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                      <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">
                         {PORTAL_LABELS[u.portal]}
                       </span>
                     </td>
@@ -317,7 +317,7 @@ export default function HqPasswordsPage() {
                       </span>
                     </td>
                     <td className="px-10 py-6">
-                      <div className="flex items-center gap-3 font-black text-[10px] text-gray-400 uppercase tracking-widest">
+                      <div className="flex items-center gap-3 font-black text-[10px] text-black uppercase tracking-widest">
                         <Shield size={14} className="opacity-40" />
                         {u.customId}
                       </div>
@@ -329,7 +329,7 @@ export default function HqPasswordsPage() {
                         </span>
                         <button
                           onClick={() => togglePassword(u.id)}
-                          className="p-3 rounded-2xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
+                          className="p-3 rounded-2xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-black hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
                         >
                           {visiblePasswords[u.id] ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -359,7 +359,7 @@ export default function HqPasswordsPage() {
                         <button
                           onClick={() => handleResetPassword(u)}
                           disabled={resettingId === u.id}
-                          className="px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[10px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
+                          className="px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[10px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-white dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
                         >
                           {resettingId === u.id ? <Loader2 size={16} className="animate-spin" /> : 'Reset'}
                         </button>
@@ -389,31 +389,31 @@ export default function HqPasswordsPage() {
                 <div className="flex-1">
                   <h3 className="text-base font-black text-black dark:text-white uppercase tracking-tight">{u.name}</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{PORTAL_LABELS[u.portal]}</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-[0.2em]">{PORTAL_LABELS[u.portal]}</span>
                     <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{u.role}</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-[0.2em]">{u.role}</span>
                   </div>
                 </div>
               </div>
               
               <div className="flex flex-col gap-3 p-4 rounded-[1.5rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Access ID</span>
-                  <div className="flex items-center gap-2 font-black text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-widest">
+                  <span className="text-[9px] font-black text-black uppercase tracking-widest">Access ID</span>
+                  <div className="flex items-center gap-2 font-black text-[10px] text-black dark:text-black uppercase tracking-widest">
                     <Shield size={12} className="opacity-40" />
                     {u.customId}
                   </div>
                 </div>
                 <div className="h-px w-full bg-gray-100 dark:bg-white/5" />
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Key</span>
+                  <span className="text-[9px] font-black text-black uppercase tracking-widest">Key</span>
                   <div className="flex items-center gap-2 group">
                     <span className="font-mono text-xs font-black tracking-widest text-black dark:text-white">
                       {visiblePasswords[u.id] ? u.password : '••••••••'}
                     </span>
                     <button
                       onClick={() => togglePassword(u.id)}
-                      className="p-2 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
+                      className="p-2 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-black hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
                     >
                       {visiblePasswords[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
@@ -444,7 +444,7 @@ export default function HqPasswordsPage() {
                 <button
                   onClick={() => handleResetPassword(u)}
                   disabled={resettingId === u.id}
-                  className="col-span-2 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[9px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
+                  className="col-span-2 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[9px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-white dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {resettingId === u.id ? <Loader2 size={14} className="animate-spin" /> : 'Reset Password'}
                 </button>

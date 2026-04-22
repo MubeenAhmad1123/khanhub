@@ -31,13 +31,13 @@ const DEPT_LABELS: Record<string, string> = {
 
 const SOURCE_BADGE_STYLES: Record<string, string> = {
   hq:          'bg-black dark:bg-white text-white dark:text-black font-black',
-  rehab:       'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
-  spims:       'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
-  hospital:    'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold border border-black/5 dark:border-white/5',
-  sukoon:      'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
-  welfare:     'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
-  job_center:  'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
-  'job-center':'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
+  rehab:       'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
+  spims:       'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
+  hospital:    'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold border border-black/5 dark:border-white/5',
+  sukoon:      'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
+  welfare:     'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
+  job_center:  'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
+  'job-center':'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ export default function HqSuperadminPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-black dark:text-white">HQ Superadmin</h1>
-          <p className="mt-1 text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Global Governance Hub</p>
+          <p className="mt-1 text-sm font-bold text-black dark:text-black uppercase tracking-widest">Global Governance Hub</p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -283,7 +283,7 @@ export default function HqSuperadminPage() {
               >
                 Refresh
               </button>
-              <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+              <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-black hover:text-black dark:hover:text-white transition-colors">
                 View All
               </Link>
             </div>
@@ -306,16 +306,16 @@ export default function HqSuperadminPage() {
                         {a.readableMessage}
                       </p>
                       <div className="mt-2 flex items-center flex-wrap gap-2">
-                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border ${SOURCE_BADGE_STYLES[a.source] || 'bg-white/5 text-gray-400'}`}>
+                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border ${SOURCE_BADGE_STYLES[a.source] || 'bg-white/5 text-black'}`}>
                           {a.source}
                         </span>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase">
-                          by <span className="text-gray-600 dark:text-gray-300">{a.actorName}</span>
+                        <span className="text-[9px] font-bold text-black uppercase">
+                          by <span className="text-black dark:text-black">{a.actorName}</span>
                         </span>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <span className="text-[9px] font-black uppercase text-gray-400 italic">
+                      <span className="text-[9px] font-black uppercase text-black italic">
                         {getRelativeTime(a.whenMs)}
                       </span>
                     </div>

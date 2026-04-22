@@ -101,22 +101,22 @@ export default function SuperadminReconciliationPage() {
         </div>
         <div>
           <h1 className="text-3xl font-black uppercase tracking-tight">Ledger Verification</h1>
-          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] italic">Governance Node Audit Hub</p>
+          <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] italic">Governance Node Audit Hub</p>
         </div>
       </div>
 
       {/* Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
         <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-           <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Pending Verification</p>
+           <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-3">Pending Verification</p>
            <p className="text-4xl font-black text-black dark:text-white">{stats.pending}</p>
         </div>
         <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-           <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Cleared Today</p>
+           <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-3">Cleared Today</p>
            <p className="text-4xl font-black text-black dark:text-white">{stats.verifiedToday}</p>
         </div>
         <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-           <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Aggregate Variance</p>
+           <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-3">Aggregate Variance</p>
            <p className="text-4xl font-black text-black dark:text-white">{formatPKR(stats.totalVariance)}</p>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function SuperadminReconciliationPage() {
                 "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                 filterStatus === s 
                   ? "bg-black text-white dark:bg-white dark:text-black shadow-lg" 
-                  : "text-gray-400 dark:text-gray-500 hover:text-black dark:hover:text-white"
+                  : "text-black dark:text-black hover:text-black dark:hover:text-white"
               )}
             >
               {s}
@@ -140,7 +140,7 @@ export default function SuperadminReconciliationPage() {
           ))}
         </div>
         <div className="relative w-full md:w-72 group">
-           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
+           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-black group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
            <input 
              value={q}
              onChange={(e) => setQ(e.target.value)}
@@ -171,19 +171,19 @@ export default function SuperadminReconciliationPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex gap-4">
                        <div className="rounded-2xl bg-white/5 p-4 border border-white/5 hidden sm:block">
-                          <BadgePercent className="h-5 w-5 text-gray-400" />
+                          <BadgePercent className="h-5 w-5 text-black" />
                        </div>
                        <div>
                          <div className="flex items-center gap-2 mb-1">
                            <h3 className="text-lg font-black uppercase leading-none">{r.date || r.dateStr || '—'}</h3>
                            <span className={cn(
                              "text-[9px] font-black uppercase px-3 py-1 rounded-lg border",
-                             r.portal === 'rehab' ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-xl" : "bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 border-transparent"
+                             r.portal === 'rehab' ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-xl" : "bg-gray-100 dark:bg-white/10 text-black dark:text-black border-transparent"
                            )}>
                              {r.portal || 'hq'}
                            </span>
                          </div>
-                         <div className="flex items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                         <div className="flex items-center gap-3 text-[10px] font-bold text-black uppercase tracking-widest">
                             <span className="flex items-center gap-1"><User size={12}/> {r.cashierName}</span>
                             <span className="flex items-center gap-1"><Clock size={12}/> {r.totalTransactions || 0} TX</span>
                          </div>
@@ -195,8 +195,8 @@ export default function SuperadminReconciliationPage() {
                         <span className={cn(
                          "text-[10px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-2xl border transition-all shadow-sm",
                          (r.status || 'pending') === 'verified' ? "bg-black dark:bg-white text-white dark:text-black border-transparent" : 
-                         (r.status || 'pending') === 'flagged' ? "bg-gray-100 dark:bg-white/5 text-gray-400 border-gray-100 dark:border-white/10 italic" : 
-                         "bg-white dark:bg-black text-gray-300 border-dashed border-gray-100 dark:border-white/10"
+                         (r.status || 'pending') === 'flagged' ? "bg-gray-100 dark:bg-white/5 text-black border-gray-100 dark:border-white/10 italic" : 
+                         "bg-white dark:bg-black text-black border-dashed border-gray-100 dark:border-white/10"
                        )}>
                          {r.status || 'pending'}
                        </span>
@@ -207,21 +207,21 @@ export default function SuperadminReconciliationPage() {
                     <div className="mt-8 border-t border-white/5 pt-6 animate-in slide-in-from-top-4 duration-300">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                          <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-gray-500 uppercase mb-1">Expected</p>
+                            <p className="text-[9px] font-black text-black uppercase mb-1">Expected</p>
                             <p className="text-sm font-black text-white">{formatPKR(r.expectedBalance || 0)}</p>
                          </div>
                          <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-gray-500 uppercase mb-1">Actual</p>
+                            <p className="text-[9px] font-black text-black uppercase mb-1">Actual</p>
                             <p className="text-sm font-black text-white">{formatPKR(r.actualClosing || 0)}</p>
                          </div>
                          <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-gray-500 uppercase mb-1">Variance</p>
-                            <p className={cn("text-sm font-black", (r.variance || 0) !== 0 ? "text-white dark:text-black bg-black dark:bg-white px-3 py-1 rounded-xl shadow-2xl" : "text-gray-400 dark:text-gray-600 italic")}>
+                            <p className="text-[9px] font-black text-black uppercase mb-1">Variance</p>
+                            <p className={cn("text-sm font-black", (r.variance || 0) !== 0 ? "text-white dark:text-black bg-black dark:bg-white px-3 py-1 rounded-xl shadow-2xl" : "text-black dark:text-black italic")}>
                                {formatPKR(r.variance || r.difference || 0)}
                             </p>
                          </div>
                          <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-gray-500 uppercase mb-1">Inflow/Outflow</p>
+                            <p className="text-[9px] font-black text-black uppercase mb-1">Inflow/Outflow</p>
                             <p className="text-sm font-black text-white">{formatPKR(r.incomeTotal || 0)} / {formatPKR(r.expenseTotal || 0)}</p>
                          </div>
                       </div>
@@ -229,7 +229,7 @@ export default function SuperadminReconciliationPage() {
                       {r.varianceNote && (
                         <div className="bg-gray-50 dark:bg-white/5 border border-dashed border-black/10 dark:border-white/10 p-8 rounded-[2rem] mb-6 shadow-inner">
                            <p className="text-[10px] font-black text-black dark:text-white uppercase mb-4 tracking-[0.2em] italic opacity-40">Cashier Remark Node</p>
-                           <p className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-relaxed italic border-l-4 border-black dark:border-white pl-6">"{r.note || r.varianceNote}"</p>
+                           <p className="text-sm font-bold text-black dark:text-black leading-relaxed italic border-l-4 border-black dark:border-white pl-6">"{r.note || r.varianceNote}"</p>
                         </div>
                       )}
 
@@ -239,7 +239,7 @@ export default function SuperadminReconciliationPage() {
                             type="button"
                             disabled={!!busyId}
                             onClick={(e) => { e.stopPropagation(); act(r, 'flagged'); }}
-                            className="flex-1 h-16 rounded-2xl border border-gray-100 bg-white dark:bg-white/5 dark:border-white/10 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-center gap-3 active:scale-95 shadow-sm"
+                            className="flex-1 h-16 rounded-2xl border border-gray-100 bg-white dark:bg-white/5 dark:border-white/10 text-[11px] font-black uppercase tracking-[0.3em] text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-center gap-3 active:scale-95 shadow-sm"
                           >
                             <XCircle size={20} /> Terminate Flow
                           </button>
@@ -256,7 +256,7 @@ export default function SuperadminReconciliationPage() {
                     </div>
                   )}
                   
-                  <div className="mt-4 flex justify-center text-gray-600">
+                  <div className="mt-4 flex justify-center text-black">
                     {expandedId === r.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </div>
                 </div>

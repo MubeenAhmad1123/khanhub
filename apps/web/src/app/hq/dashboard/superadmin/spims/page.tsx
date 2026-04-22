@@ -10,7 +10,7 @@ export default function SuperadminSpimsHubPage() {
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-10 min-h-screen transition-colors duration-300">
       <div className="mb-10">
         <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">SPIMS Architecture</h1>
-        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Academic Governance • Lifecycle Tracking • Financial Integrity</p>
+        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black italic">Academic Governance • Lifecycle Tracking • Financial Integrity</p>
       </div>
 
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -24,7 +24,7 @@ export default function SuperadminSpimsHubPage() {
             </div>
             <div>
               <p className="text-sm font-black text-black dark:text-white uppercase tracking-widest">Students</p>
-              <p className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Subject Directory</p>
+              <p className="mt-2 text-[10px] font-bold text-black dark:text-black uppercase tracking-widest">Subject Directory</p>
             </div>
           </div>
         </Link>
@@ -39,7 +39,7 @@ export default function SuperadminSpimsHubPage() {
             </div>
             <div>
               <p className="text-sm font-black text-black dark:text-white uppercase tracking-widest">Educationists</p>
-              <p className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Personnel Matrix</p>
+              <p className="mt-2 text-[10px] font-bold text-black dark:text-black uppercase tracking-widest">Personnel Matrix</p>
             </div>
           </div>
         </Link>
@@ -54,7 +54,7 @@ export default function SuperadminSpimsHubPage() {
             </div>
             <div>
               <p className="text-sm font-black text-black dark:text-white uppercase tracking-widest">Treasury</p>
-              <p className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Revenue Streams</p>
+              <p className="mt-2 text-[10px] font-bold text-black dark:text-black uppercase tracking-widest">Revenue Streams</p>
             </div>
           </div>
         </Link>

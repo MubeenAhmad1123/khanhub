@@ -732,7 +732,7 @@ export default function CashierStationPage() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight truncate uppercase">Cashier Station</h1>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
+            <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -759,7 +759,7 @@ export default function CashierStationPage() {
             </Link>
             <Link 
               href="/hq/dashboard/cashier/day-close"
-              className="flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-zinc-800 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-black/20 transition-all active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-black/90 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-black/20 transition-all active:scale-95"
             >
               <Lock size={14} />
               <span className="hidden md:inline">Day Close</span>
@@ -788,9 +788,9 @@ export default function CashierStationPage() {
             ) : incomingFeeReqs.length === 0 ? (
               <div className="p-10 rounded-2xl bg-surface-subtle border border-border-subtle text-center">
                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border-subtle">
-                  <FileText className="text-gray-300" size={24} />
+                  <FileText className="text-black" size={24} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Queue empty</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-black">Queue empty</p>
               </div>
             ) : (
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -807,14 +807,14 @@ export default function CashierStationPage() {
                           <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
                             {formatDateDMY(tx.createdAt)}
                           </span>
-                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
+                          <span className="text-[9px] font-black text-black uppercase tracking-widest">
                             {tx.departmentCode}
                           </span>
                         </div>
                         <div className="text-sm font-black text-black truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
-                        <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
+                        <div className="text-[10px] font-bold text-black truncate">{tx.patientId || tx.donorId || tx.id}</div>
                         <div className="text-xs font-black text-black mt-2">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-semibold text-gray-500 mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
+                        <div className="text-[10px] font-semibold text-black mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
                         <span className={cn('mt-2.5 inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200')}>
                           {tx.status || 'pending_cashier'}
                         </span>
@@ -824,7 +824,7 @@ export default function CashierStationPage() {
                           type="button"
                           disabled={incomingActionId === tx.id}
                           onClick={(e) => { e.stopPropagation(); openForwardModal(tx); }}
-                          className="px-3 py-2 rounded-lg bg-black hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95 shadow-lg shadow-black/10"
+                          className="px-3 py-2 rounded-lg bg-black hover:bg-black/90 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95 shadow-lg shadow-black/10"
                         >
                           {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Process'}
                         </button>
@@ -842,7 +842,7 @@ export default function CashierStationPage() {
                 ))}
               </div>
             )}
-            <p className="mt-4 text-[10px] font-bold text-gray-400">
+            <p className="mt-4 text-[10px] font-bold text-black">
               Clicking <span className="text-black font-black">Process</span> sends request to superadmin approvals.
             </p>
           </div>
@@ -854,14 +854,14 @@ export default function CashierStationPage() {
                 <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-4 border border-green-100">
                   <TrendingUp size={20} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Income Today</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-black mb-1">Income Today</p>
                 <p className="text-xl font-black text-black">Rs {totals.income.toLocaleString()}</p>
               </div>
               <div className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 shadow-sm">
                 <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600 mb-4 border border-red-100">
                   <TrendingDown size={20} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Expense Today</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-black mb-1">Expense Today</p>
                 <p className="text-xl font-black text-black">Rs {totals.expense.toLocaleString()}</p>
               </div>
             </div>
@@ -869,7 +869,7 @@ export default function CashierStationPage() {
 
           {/* Search Section */}
           <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-black mb-5 flex items-center gap-2">
               <Search size={14} className="text-black" /> {isStaffMode ? 'Search Staff' : 'Search Account'}
             </h2>
             <div className="space-y-4">
@@ -883,20 +883,20 @@ export default function CashierStationPage() {
               
               <div className="relative w-full">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={18} />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery && setSearchOpen(true)}
                     placeholder="Search by name or ID..."
-                    className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-12 pr-10 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-gray-400"
+                    className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-12 pr-10 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-black"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-black hover:text-black transition-colors"
                     >
                       <X size={16} />
                     </button>
@@ -940,7 +940,7 @@ export default function CashierStationPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-black text-sm font-black truncate">{p.name || p.fullName || 'Unknown'}</p>
-                          <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest truncate">
+                          <p className="text-black text-[10px] font-bold uppercase tracking-widest truncate">
                             {p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id}
                           </p>
                         </div>
@@ -964,7 +964,7 @@ export default function CashierStationPage() {
                     )}
                   >
                     <div className="text-sm font-black truncate">{e.name || e.fullName || 'Unknown'}</div>
-                    <div className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", selectedEntity?.id === e.id ? "text-gray-400" : "text-gray-500")}>
+                    <div className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", selectedEntity?.id === e.id ? "text-black" : "text-black")}>
                       {e.customId || e.rollNumber || e.id?.slice(0, 10)}
                     </div>
                   </button>
@@ -1021,12 +1021,12 @@ export default function CashierStationPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="min-w-0">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Field / Category</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Field / Category</label>
                   <input 
                     value={categorySearch} 
                     onChange={(e) => setCategorySearch(e.target.value)} 
                     placeholder="Search or create field..." 
-                    className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-gray-400" 
+                    className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-black" 
                   />
                   <div className="mt-3 border border-border-subtle rounded-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar bg-white shadow-inner">
                     {visibleCategories.map((c) => (
@@ -1150,7 +1150,7 @@ export default function CashierStationPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Amount (Rs)</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Amount (Rs)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1163,7 +1163,7 @@ export default function CashierStationPage() {
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</label>
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Date</label>
                           <input
                             type="date"
                             value={txDate}
@@ -1172,7 +1172,7 @@ export default function CashierStationPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Method</label>
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Method</label>
                           <select
                             value={paymentMethod}
                             onChange={(e) => setPaymentMethod(e.target.value as any)}
@@ -1190,16 +1190,16 @@ export default function CashierStationPage() {
 
                     <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Reference / Bill No</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Reference / Bill No</label>
                         <input 
                           value={referenceNo} 
                           onChange={(e) => setReferenceNo(e.target.value)} 
                           placeholder="Internal or bank reference..." 
-                          className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-5 text-sm font-black text-black outline-none focus:border-black transition-all placeholder:text-gray-300" 
+                          className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-5 text-sm font-black text-black outline-none focus:border-black transition-all placeholder:text-black" 
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proof Upload</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Proof Upload</label>
                         <div className="relative mt-2">
                           <input
                             type="file"
@@ -1223,22 +1223,22 @@ export default function CashierStationPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="min-w-0">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Missing Proof Reason</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Missing Proof Reason</label>
                       <textarea
                         value={proofReason}
                         onChange={(e) => setProofReason(e.target.value)}
                         placeholder="Explain if receipt is not available..."
-                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-gray-300"
+                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-black"
                         disabled={processing}
                       />
                     </div>
                     <div className="min-w-0">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Purpose / Details</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Purpose / Details</label>
                       <textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
                         placeholder="Additional details about this transaction..." 
-                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-gray-300" 
+                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-black" 
                       />
                     </div>
                   </div>
@@ -1255,7 +1255,7 @@ export default function CashierStationPage() {
               <button 
                 type="submit" 
                 disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                className="w-full bg-black hover:bg-zinc-800 active:scale-[0.98] text-white font-black text-xs uppercase tracking-[0.2em] px-10 py-6 rounded-2xl transition-all shadow-2xl shadow-black/20 disabled:opacity-30 flex items-center justify-center gap-4"
+                className="w-full bg-black hover:bg-black/90 active:scale-[0.98] text-white font-black text-xs uppercase tracking-[0.2em] px-10 py-6 rounded-2xl transition-all shadow-2xl shadow-black/20 disabled:opacity-30 flex items-center justify-center gap-4"
               >
                 {processing ? (
                   <>
@@ -1281,7 +1281,7 @@ export default function CashierStationPage() {
             </div>
             <div>
               <h2 className="text-2xl sm:text-4xl font-[1000] text-black uppercase tracking-tight">Terminal History</h2>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Live Transaction Ledger</p>
+              <p className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Live Transaction Ledger</p>
             </div>
           </div>
           <button 
@@ -1297,7 +1297,7 @@ export default function CashierStationPage() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Timeframe</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Timeframe</span>
             <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
               <option value="today">Today's Transactions</option>
               <option value="range">Custom Date Range</option>
@@ -1305,7 +1305,7 @@ export default function CashierStationPage() {
             </select>
           </div>
           <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Transaction Status</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Transaction Status</span>
             <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
               <option value="all">All Statuses</option>
               <option value="pending">Awaiting Approval</option>
@@ -1314,7 +1314,7 @@ export default function CashierStationPage() {
             </select>
           </div>
           <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Flow Type</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Flow Type</span>
             <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
               <option value="all">All Cash Flows</option>
               <option value="income">Inbound Payments</option>
@@ -1322,7 +1322,7 @@ export default function CashierStationPage() {
             </select>
           </div>
           <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Department Origin</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Department Origin</span>
             <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
               <option value="all">All Portals</option>
               {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
@@ -1333,7 +1333,7 @@ export default function CashierStationPage() {
         {historyDateMode === 'range' && (
           <div className="grid grid-cols-2 gap-4 mb-8 animate-in slide-in-from-top-2 duration-300">
             <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Start Date</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Start Date</span>
               <input
                 type="text"
                 placeholder="DD MM YYYY"
@@ -1347,7 +1347,7 @@ export default function CashierStationPage() {
               />
             </div>
             <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">End Date</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">End Date</span>
               <input
                 type="text"
                 placeholder="DD MM YYYY"
@@ -1365,19 +1365,19 @@ export default function CashierStationPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border-l-8 border-l-black border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Income</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black">Total Income</p>
             <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.income.toLocaleString()}</p>
           </div>
           <div className="bg-white border-l-8 border-l-red-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Expense</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black">Total Expense</p>
             <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.expense.toLocaleString()}</p>
           </div>
           <div className="bg-white border-l-8 border-l-gray-300 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Transactions</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black">Transactions</p>
             <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">{historyFiltered.length}</p>
           </div>
           <div className="bg-white border-l-8 border-l-emerald-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Net Balance</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black">Net Balance</p>
             <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.net.toLocaleString()}</p>
           </div>
         </div>
@@ -1390,14 +1390,14 @@ export default function CashierStationPage() {
             </div>
           ) : historyFiltered.length === 0 ? (
             <div className="bg-white rounded-[2rem] p-8 border border-border-subtle text-center shadow-sm">
-              <p className="text-sm font-black text-gray-400">No records found for this selection.</p>
+              <p className="text-sm font-black text-black">No records found for this selection.</p>
             </div>
           ) : historyFiltered.map((tx) => (
             <div key={tx.id} onClick={() => setDetailModalTx(tx)} className="bg-white rounded-[2rem] p-6 border border-border-subtle shadow-sm active:scale-[0.98] transition-all">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="text-sm font-black text-black truncate">{tx.patientName || tx.staffName || 'General Tx'}</div>
-                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{tx.departmentCode} • {tx.categoryName || tx.category}</div>
+                  <div className="text-[9px] font-black text-black uppercase tracking-widest mt-1">{tx.departmentCode} • {tx.categoryName || tx.category}</div>
                 </div>
                 <div className={cn('text-sm font-black shrink-0', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
                   {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
@@ -1411,7 +1411,7 @@ export default function CashierStationPage() {
                 )}>
                   {tx.status || 'pending'}
                 </span>
-                <span className="text-[10px] font-bold text-gray-400">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</span>
+                <span className="text-[10px] font-bold text-black">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</span>
               </div>
             </div>
           ))}
@@ -1422,12 +1422,12 @@ export default function CashierStationPage() {
             <table className="w-full min-w-[860px] text-left border-separate border-spacing-0">
               <thead>
                 <tr className="bg-surface-subtle">
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Date</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Dept</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Account / Detail</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Category</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle">Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-border-subtle text-right">Amount</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Dept</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Account / Detail</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Category</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle text-right">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
@@ -1435,12 +1435,12 @@ export default function CashierStationPage() {
                   <tr>
                     <td colSpan={6} className="px-8 py-20 text-center">
                       <Loader2 className="w-12 h-12 animate-spin text-black mx-auto" />
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-6">Securing Live Data Stream...</p>
+                      <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-6">Securing Live Data Stream...</p>
                     </td>
                   </tr>
                 ) : historyFiltered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center text-sm font-black text-gray-300 uppercase tracking-widest">No entries found for this query.</td>
+                    <td colSpan={6} className="px-8 py-20 text-center text-sm font-black text-black uppercase tracking-widest">No entries found for this query.</td>
                   </tr>
                 ) : historyFiltered.map((tx) => (
                   <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-surface-subtle transition-colors cursor-pointer group">
@@ -1450,9 +1450,9 @@ export default function CashierStationPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="text-sm font-black text-black group-hover:underline underline-offset-4">{tx.patientName || tx.staffName || 'General Account'}</div>
-                      <div className="text-[9px] font-bold text-gray-400 tracking-wider uppercase mt-0.5">{tx.id?.slice(0, 12)}</div>
+                      <div className="text-[9px] font-bold text-black tracking-wider uppercase mt-0.5">{tx.id?.slice(0, 12)}</div>
                     </td>
-                    <td className="px-8 py-6 text-xs font-black text-gray-500 uppercase tracking-widest">{tx.categoryName || tx.category}</td>
+                    <td className="px-8 py-6 text-xs font-black text-black uppercase tracking-widest">{tx.categoryName || tx.category}</td>
                     <td className="px-8 py-6">
                       <span className={cn('px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border', 
                         tx.status === 'approved' ? 'bg-black text-white border-black' : 
@@ -1480,7 +1480,7 @@ export default function CashierStationPage() {
             <div className="bg-surface-subtle px-8 py-6 border-b border-border-subtle flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-[1000] text-black uppercase tracking-tight">Authorization Proof</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">
                   {forwardModalTx.patientName || forwardModalTx.patientId || 'Account Holder'} • Rs {Number(forwardModalTx.amount || 0).toLocaleString()}
                 </p>
               </div>
@@ -1496,7 +1496,7 @@ export default function CashierStationPage() {
 
             <div className="p-8 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">Digital Evidence (Image/PDF)</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black px-1">Digital Evidence (Image/PDF)</label>
                 <div className="relative">
                   <input
                     type="file"
@@ -1509,13 +1509,13 @@ export default function CashierStationPage() {
                     <p className="text-sm font-black text-black">
                       {forwardProofFile ? forwardProofFile.name : 'Click or Drop Proof File'}
                     </p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-2">Maximum file size: 5MB</p>
+                    <p className="text-[9px] font-bold text-black uppercase tracking-widest mt-2">Maximum file size: 5MB</p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black px-1">
                   Compliance Note (Required if no proof)
                 </label>
                 <textarea
@@ -1572,12 +1572,12 @@ export default function CashierStationPage() {
 
             <div className="p-8 space-y-6">
               <div className="p-5 bg-surface-subtle border border-border-subtle rounded-2xl flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase text-gray-400">Claim Amount</span>
+                <span className="text-[10px] font-black uppercase text-black">Claim Amount</span>
                 <span className="text-lg font-[1000] text-black">Rs {Number(rejectModalTx.amount || 0).toLocaleString()}</span>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">Reason for Rejection</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black px-1">Reason for Rejection</label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
@@ -1626,41 +1626,41 @@ export default function CashierStationPage() {
                   <FileText size={32} />
                 </div>
                 <h3 className="text-2xl font-[1000] text-black uppercase tracking-tight">Audit Record</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Log Reference: {detailModalTx.id}</p>
+                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Log Reference: {detailModalTx.id}</p>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-5 rounded-2xl bg-surface-subtle border border-border-subtle">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Timestamp</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Timestamp</p>
                     <p className="text-sm font-black text-black">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
                   </div>
                   <div className="p-5 rounded-2xl bg-surface-subtle border border-border-subtle">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Portal Source</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Portal Source</p>
                     <p className="text-sm font-black text-black uppercase">{detailModalTx.departmentCode || 'HQ'}</p>
                   </div>
                 </div>
 
                 <div className="p-6 rounded-2xl bg-white border-2 border-black/5 shadow-inner">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Account Entity</p>
+                  <p className="text-[9px] font-black text-black uppercase tracking-widest mb-2">Account Entity</p>
                   <p className="text-lg font-black text-black">{detailModalTx.patientName || detailModalTx.staffName || 'General Account'}</p>
-                  <p className="text-[11px] font-bold text-gray-400 mt-1">{detailModalTx.patientId || detailModalTx.staffId || 'ID UNKNOWN'}</p>
+                  <p className="text-[11px] font-bold text-black mt-1">{detailModalTx.patientId || detailModalTx.staffId || 'ID UNKNOWN'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="px-1">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Ledger Category</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Ledger Category</p>
                     <p className="text-sm font-black text-black">{detailModalTx.categoryName || detailModalTx.category || 'Uncategorized'}</p>
                   </div>
                   <div className="text-right px-1">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Value Transacted</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Value Transacted</p>
                     <p className="text-xl font-[1000] text-black">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {detailModalTx.description && (
                   <div className="p-5 rounded-2xl bg-surface-subtle border border-dashed border-border-subtle">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center">Transaction Memo</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-2 text-center">Transaction Memo</p>
                     <p className="text-xs font-bold text-black text-center leading-relaxed italic">
                       "{detailModalTx.description}"
                     </p>

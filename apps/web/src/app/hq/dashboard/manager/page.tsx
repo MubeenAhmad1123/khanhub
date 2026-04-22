@@ -246,7 +246,7 @@ export default function ManagerOverviewPage() {
   if (sessionLoading || loading || !mounted) {
     return (
       <div className={`min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950`}>
-        <Loader2 className={`w-8 h-8 animate-spin text-gray-400 dark:text-zinc-500`} />
+        <Loader2 className={`w-8 h-8 animate-spin text-black dark:text-black`} />
       </div>
     );
   }
@@ -257,7 +257,7 @@ export default function ManagerOverviewPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent">Manager Overview</h1>
-          <p className="text-gray-500 text-sm font-medium mt-1">Global Departmental Oversight & Real-time Metrics</p>
+          <p className="text-black text-sm font-medium mt-1">Global Departmental Oversight & Real-time Metrics</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <Link 
@@ -274,7 +274,7 @@ export default function ManagerOverviewPage() {
               <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
             </div>
             <div className="w-px h-4 bg-gray-200" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
           </div>
         </div>
       </div>
@@ -285,7 +285,7 @@ export default function ManagerOverviewPage() {
         <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" onClick={() => setSelectedMetric('present')} />
         <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" onClick={() => setSelectedMetric('absent')} />
         <StatCard isDark={isDark} label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={18} />} color="bg-amber-500/10 text-amber-500" onClick={() => setSelectedMetric('leave')} />
-        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-zinc-500" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-black" onClick={() => setSelectedMetric('notMarked')} />
         <StatCard isDark={isDark} label="Pending Tasks" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
 
@@ -299,7 +299,7 @@ export default function ManagerOverviewPage() {
                  selectedMetric === 'present' ? 'Present Staff' :
                  selectedMetric === 'absent' ? 'Absent Staff' :
                  selectedMetric === 'leave' ? 'Staff on Leave' : 'Staff List'}
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black'}`}>
                   {allStaff.filter(s => {
                     const status = attMap.get(s.id);
                     if (selectedMetric === 'notMarked') return !status;
@@ -311,7 +311,7 @@ export default function ManagerOverviewPage() {
                 </span>
               </h2>
             </div>
-            <button onClick={() => setSelectedMetric(null)} className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-rose-500 transition-colors">Close List</button>
+            <button onClick={() => setSelectedMetric(null)} className="text-xs font-black uppercase tracking-widest text-black hover:text-rose-500 transition-colors">Close List</button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -324,18 +324,18 @@ export default function ManagerOverviewPage() {
               if (selectedMetric === 'total') return true;
               return false;
             }).map(s => (
-              <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
+              <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-black/90' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
                 <Link 
                   href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} 
                   className="flex items-center gap-3 hover:opacity-75 transition-opacity"
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
-                    ${isDark ? 'bg-zinc-700 text-zinc-300' : 'bg-white text-gray-400 shadow-sm'}`}>
+                    ${isDark ? 'bg-zinc-700 text-black' : 'bg-white text-black shadow-sm'}`}>
                     {s.name?.[0] || 'S'}
                   </div>
                   <div>
                     <p className="text-sm font-black text-blue-500 hover:underline">{s.name}</p>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{s.department}</p>
+                    <p className="text-[10px] font-bold text-black uppercase tracking-widest">{s.department}</p>
                   </div>
                 </Link>
                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -406,7 +406,7 @@ export default function ManagerOverviewPage() {
                       {attMap.get(s.id)}
                     </span>
                   )}
-                  <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+                  <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="p-2 text-black hover:text-blue-500 transition-colors">
                     <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -423,9 +423,9 @@ export default function ManagerOverviewPage() {
           <div className="flex items-center justify-between mb-10">
             <div>
               <h3 className="text-xl font-black uppercase tracking-tight italic">Institutional Status Breakdown</h3>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Real-time attendance velocity by department</p>
+              <p className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Real-time attendance velocity by department</p>
             </div>
-            <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${isDark ? 'bg-zinc-800 text-zinc-500' : 'bg-gray-50 text-gray-400'}`}>
+            <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${isDark ? 'bg-zinc-800 text-black' : 'bg-gray-50 text-black'}`}>
               Today Snapshot
             </div>
           </div>
@@ -436,7 +436,7 @@ export default function ManagerOverviewPage() {
                 <div className="flex items-center justify-between px-2 mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-500 group-hover:text-blue-500 transition-colors">{dept}</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.15em] text-black group-hover:text-blue-500 transition-colors">{dept}</span>
                   </div>
                   <div className="flex gap-6">
                     <div className="flex flex-col items-end">
@@ -462,7 +462,7 @@ export default function ManagerOverviewPage() {
                     </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                       <span className="text-[8px] font-bold text-gray-400 uppercase italic">No active staff registered</span>
+                       <span className="text-[8px] font-bold text-black uppercase italic">No active staff registered</span>
                     </div>
                   )}
                 </div>
@@ -476,26 +476,26 @@ export default function ManagerOverviewPage() {
           
           {/* Quick Actions */}
           <section>
-            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Quick Operations</h2>
+            <h2 className="text-[11px] font-black text-black uppercase tracking-[0.2em] mb-4">Quick Operations</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { href: '/hq/dashboard/manager/staff/attendance', label: 'Mark Attendance', sub: "Daily check-in logs", icon: <CheckCircle className="text-emerald-500" /> },
                 { href: '/hq/dashboard/manager/approvals', label: 'Handle Approvals', sub: 'Contributions & Requests', icon: <FileText className="text-purple-500" /> },
                 { href: '/hq/dashboard/manager/staff', label: 'Global Staff Roster', sub: 'Manage all departments', icon: <Users className="text-blue-500" /> },
-                { href: '/hq/dashboard/manager/users', label: 'User Provisioning', sub: 'Create staff accounts', icon: <ArrowRight className="text-zinc-400" /> }
+                { href: '/hq/dashboard/manager/users', label: 'User Provisioning', sub: 'Create staff accounts', icon: <ArrowRight className="text-black" /> }
               ].map((link, idx) => (
                 <Link key={idx} href={link.href}
                   className={`flex items-center gap-4 p-5 rounded-3xl border transition-all group hover:shadow-2xl hover:-translate-y-1 ${
-                    isDark ? 'bg-zinc-900/40 border-zinc-800/60 hover:bg-zinc-800' : 'bg-white border-gray-100/80 hover:border-blue-100 shadow-sm'
+                    isDark ? 'bg-zinc-900/40 border-zinc-800/60 hover:bg-black/90' : 'bg-white border-gray-100/80 hover:border-blue-100 shadow-sm'
                   }`}>
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isDark ? 'bg-zinc-800' : 'bg-gray-50'}`}>
                     {link.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-black text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>{link.label}</p>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide mt-0.5">{link.sub}</p>
+                    <p className="text-black text-[10px] font-bold uppercase tracking-wide mt-0.5">{link.sub}</p>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-black group-hover:text-blue-500 transition-colors" />
                 </Link>
               ))}
             </div>
@@ -505,7 +505,7 @@ export default function ManagerOverviewPage() {
           {pendingList.length > 0 && (
             <section>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <h2 className="text-[11px] font-black text-black uppercase tracking-[0.2em] flex items-center gap-2">
                   <AlertTriangle size={14} className="text-amber-500" /> Critical Pending Items
                 </h2>
                 <Link href="/hq/dashboard/manager/approvals" className="text-[10px] font-black text-blue-500 hover:underline uppercase tracking-widest">View All</Link>
@@ -522,15 +522,15 @@ export default function ManagerOverviewPage() {
                         <div className="min-w-0">
                           <p className={`font-black text-sm md:text-base truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{p.title}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full uppercase">{p.dept}</span>
+                            <span className="text-[10px] font-bold text-black bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full uppercase">{p.dept}</span>
                             <span className="w-1 h-1 rounded-full bg-gray-300" />
-                            <p className="text-gray-500 text-[10px] font-bold truncate">By {p.staffName}</p>
+                            <p className="text-black text-[10px] font-bold truncate">By {p.staffName}</p>
                           </div>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
                         <p className={`font-black text-sm ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>+1 Unit</p>
-                        <p className="text-gray-400 text-[10px] font-bold mt-0.5 italic">{timeAgo(p.createdAt)}</p>
+                        <p className="text-black text-[10px] font-bold mt-0.5 italic">{timeAgo(p.createdAt)}</p>
                       </div>
                     </div>
                 ))}
@@ -542,7 +542,7 @@ export default function ManagerOverviewPage() {
         {/* Right Column: Recent Activity Log */}
         <div className="space-y-8">
           <section>
-            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">System Activity</h2>
+            <h2 className="text-[11px] font-black text-black uppercase tracking-[0.2em] mb-4">System Activity</h2>
             <div className={`rounded-[2.5rem] border overflow-hidden ${isDark ? 'bg-zinc-900/30 border-zinc-800' : 'bg-white border-gray-100 shadow-xl'}`}>
               <div className="p-6 space-y-6">
                 {activities.length > 0 ? activities.map((act, idx) => (
@@ -550,7 +550,7 @@ export default function ManagerOverviewPage() {
                     <div className="flex flex-col items-center shrink-0">
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
                         act.action === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : 
-                        act.action === 'user_created' ? 'bg-blue-500/10 text-blue-500' : 'bg-zinc-100 text-zinc-500'
+                        act.action === 'user_created' ? 'bg-blue-500/10 text-blue-500' : 'bg-zinc-100 text-black'
                       }`}>
                         {act.action === 'approval' ? <CheckCircle size={14} /> : 
                          act.action === 'user_created' ? <Users size={14} /> : <Clock size={14} />}
@@ -558,25 +558,25 @@ export default function ManagerOverviewPage() {
                       {idx !== activities.length - 1 && <div className="w-px h-full bg-gray-100 dark:bg-zinc-800 mt-2" />}
                     </div>
                     <div className="pb-4">
-                      <p className={`text-xs font-black uppercase tracking-wider mb-0.5 ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>
+                      <p className={`text-xs font-black uppercase tracking-wider mb-0.5 ${isDark ? 'text-zinc-200' : 'text-black'}`}>
                         {act.action?.replace('_', ' ')}
                       </p>
-                      <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                      <p className="text-[11px] text-black font-medium leading-relaxed">
                         {act.details?.name || act.details?.customId || 'System task'} processed by {act.performedBy?.split('@')[0] || 'Admin'}
                       </p>
-                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mt-2 bg-gray-100 dark:bg-zinc-800/50 inline-block px-2 py-0.5 rounded-lg">
+                      <p className="text-[9px] text-black font-black uppercase tracking-widest mt-2 bg-gray-100 dark:bg-zinc-800/50 inline-block px-2 py-0.5 rounded-lg">
                         {timeAgo(act.createdAt)}
                       </p>
                     </div>
                   </div>
                 )) : (
                   <div className="text-center py-8">
-                    <p className="text-gray-500 text-xs font-black italic">No recent activity found</p>
+                    <p className="text-black text-xs font-black italic">No recent activity found</p>
                   </div>
                 )}
               </div>
               <div className={`p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800`}>
-                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest hover:text-blue-500 transition-colors">
+                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-black dark:text-black uppercase tracking-widest hover:text-blue-500 transition-colors">
                     View Full Audit Trail
                  </Link>
               </div>
@@ -604,14 +604,14 @@ function StatCard({ label, value, icon, color, urgent, isDark, onClick }: {
     <div 
       onClick={onClick}
       className={`rounded-3xl p-5 border transition-all duration-500 relative overflow-hidden group cursor-pointer ${
-      isDark ? 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800/80 shadow-2xl shadow-black/50' : 'bg-white border-gray-100/80 hover:shadow-2xl shadow-sm'
+      isDark ? 'bg-zinc-900/50 border-zinc-800 hover:bg-black/90/80 shadow-2xl shadow-black/50' : 'bg-white border-gray-100/80 hover:shadow-2xl shadow-sm'
     } ${urgent ? 'ring-2 ring-rose-500 ring-offset-2 ring-offset-zinc-950 shadow-rose-900/20' : ''} active:scale-95`}>
       <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-10 rounded-full -mr-8 -mt-8 ${color.split(' ')[0]}`} />
       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-inner ${color}`}>
         {icon}
       </div>
       <p className={`text-4xl font-[1000] tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-60 group-hover:opacity-100 transition-opacity">{label}</p>
+      <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-60 group-hover:opacity-100 transition-opacity">{label}</p>
       {urgent && <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />}
     </div>
   );

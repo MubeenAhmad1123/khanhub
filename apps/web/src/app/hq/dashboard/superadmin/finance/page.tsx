@@ -124,7 +124,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
         </div>
         <div className="flex items-center gap-6">
           <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Collected</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-black mb-0.5">Collected</p>
             <p className="text-xl font-bold text-black dark:text-white">
               Rs. {dept.income.toLocaleString()}
             </p>
@@ -138,11 +138,11 @@ function DeptDayCard({ dept, expanded, onToggle }: {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-400">{dept.txCount} tx</span>
+            <span className="text-xs font-bold text-black">{dept.txCount} tx</span>
             {expanded ? (
               <ChevronUp className={cn("w-4 h-4", accent.text)} />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-black" />
             )}
           </div>
         </div>
@@ -173,7 +173,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                   {/* Category Breakdown */}
                   {Object.keys(dept.categories).length > 0 && (
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-black mb-3">
                         Category Breakdown
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -184,7 +184,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                               key={cat}
                               className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-white/[0.04] border border-border/30"
                             >
-                              <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate pr-2">
+                              <span className="text-xs font-semibold text-black dark:text-black truncate pr-2">
                                 {cat}
                               </span>
                               <span className="text-xs font-black text-black dark:text-white whitespace-nowrap">
@@ -198,7 +198,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
 
                   {/* Transaction List */}
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-black mb-3">
                       Transactions ({dept.txCount})
                     </p>
                     <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -215,7 +215,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                               <p className="text-xs font-bold text-black dark:text-white truncate">
                                 {tx.patientName || tx.studentName || tx.seekerName || tx.name || tx.description || "—"}
                               </p>
-                              <p className="text-[10px] text-gray-400 mt-0.5">
+                              <p className="text-[10px] text-black mt-0.5">
                                 {tx.categoryName || tx.category || tx.type || "General"}{" "}
                                 · {tx.status?.toUpperCase()}
                               </p>
@@ -362,7 +362,7 @@ export default function SuperadminFinancePage() {
           <div className="text-xs font-black uppercase tracking-[0.5em] text-primary mb-2 animate-pulse font-bold">
             Constructing Financial Data Hub
           </div>
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-50">
+          <div className="text-[10px] font-bold text-black uppercase tracking-widest opacity-50">
             Establishing secure departmental tunnels...
           </div>
         </div>
@@ -431,7 +431,7 @@ export default function SuperadminFinancePage() {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
             <Sparkles className="w-12 h-12 text-primary" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
             Today's Collection
           </span>
           <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
@@ -448,7 +448,7 @@ export default function SuperadminFinancePage() {
 
         {/* 2. Today's Pending */}
         <div className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
             Today's Pending
           </span>
           <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
@@ -461,7 +461,7 @@ export default function SuperadminFinancePage() {
 
         {/* 3. Remaining Balance */}
         <div className="p-8 rounded-[2.5rem] bg-rose-500/5 border border-rose-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
             Remaining Balance
           </span>
           <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
@@ -474,7 +474,7 @@ export default function SuperadminFinancePage() {
 
         {/* 4. Need Approval */}
         <div className="p-8 rounded-[2.5rem] bg-muted/20 border border-border/50 backdrop-blur-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-lg">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
             Need Approval
           </span>
           <div className="text-3xl font-bold tracking-tight text-black dark:text-white uppercase tracking-tighter">
@@ -648,7 +648,7 @@ export default function SuperadminFinancePage() {
             </div>
 
             {/* Per-department cards */}
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 px-1 flex items-center gap-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-4 px-1 flex items-center gap-2">
               <Building2 className="w-3 h-3" />
               Department Breakdown — {formatDateDisplay(dailyResult.date)}
             </p>
@@ -702,7 +702,7 @@ export default function SuperadminFinancePage() {
                             <Database className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Terminal: {dept.deptId}</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-black">Terminal: {dept.deptId}</p>
                             <p className="text-base font-bold text-black dark:text-white uppercase tracking-tight">{dept.deptName}</p>
                           </div>
                         </div>
