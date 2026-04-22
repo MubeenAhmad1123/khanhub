@@ -29,7 +29,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com.pk',
-    legacyDomains: ['@hq.khanhub.com', '@khanhub.io', '@hq.KhanHub'],
+    legacyDomains: ['@hq.khanhub.com', '@khanhub.io', '@hq.KhanHub', '@hq.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -39,7 +39,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Rehab',
     collection: 'rehab_users',
     domain: '@rehab.khanhub.com.pk',
-    legacyDomains: ['@rehab.khanhub.com', '@rehab.KhanHub'],
+    legacyDomains: ['@rehab.khanhub.com', '@rehab.KhanHub', '@rehab.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -49,7 +49,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'SPIMS',
     collection: 'spims_users',
     domain: '@spims.khanhub.com.pk',
-    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk', '@spims.KhanHub'],
+    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk', '@spims.KhanHub', '@spims.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
     prefixes: ['SPIMS', 'STU', 'STUDENT']
@@ -59,7 +59,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Hospital',
     collection: 'hospital_users',
     domain: '@hospital.khanhub.com.pk',
-    legacyDomains: ['@hospital.khanhub.com', '@hospital.KhanHub'],
+    legacyDomains: ['@hospital.khanhub.com', '@hospital.KhanHub', '@hospital.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -69,7 +69,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Sukoon',
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub.com.pk',
-    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.KhanHub'],
+    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.KhanHub', '@sukoon.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -79,7 +79,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Welfare',
     collection: 'welfare_users',
     domain: '@welfare.khanhub.com.pk',
-    legacyDomains: ['@welfare.khanhub.com', '@welfare.KhanHub'],
+    legacyDomains: ['@welfare.khanhub.com', '@welfare.KhanHub', '@welfare.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -89,7 +89,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub.com.pk',
-    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.KhanHub', '@job-center.khanhub.com.pk'],
+    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.KhanHub', '@jobcenter.Khan Hub', '@job-center.khanhub.com.pk', '@jobcenter.khanhub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -99,7 +99,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Social Media',
     collection: 'media_users',
     domain: '@media.khanhub.com.pk',
-    legacyDomains: ['@media.khanhub.com', '@media.KhanHub'],
+    legacyDomains: ['@media.khanhub.com', '@media.KhanHub', '@media.Khan Hub', '@media.khanhub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -109,7 +109,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'IT',
     collection: 'it_users',
     domain: '@it.khanhub',
-    legacyDomains: ['@it.khanhub.com.pk', '@it.khanhub.com', '@it.KhanHub'],
+    legacyDomains: ['@it.khanhub.com.pk', '@it.khanhub.com', '@it.KhanHub', '@it.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']
@@ -269,14 +269,27 @@ export async function loginUniversal(customId: string, password: string, deptHin
       dept = discovery.dept;
       finalData = discovery.data;
       uid = discovery.uid;
+      
       // Collect potential email prefixes to try
       const prefixes = Array.from(new Set([
         customId.trim().toLowerCase(),
+        customId.trim(), // Try exact case
         finalData.customId?.toLowerCase(),
-        finalData.employeeId?.toLowerCase()
+        finalData.customId,
+        finalData.employeeId?.toLowerCase(),
+        finalData.employeeId,
+        finalData.patientId?.toLowerCase(),
+        finalData.seekerId?.toLowerCase(),
+        finalData.studentId?.toLowerCase(),
+        finalData.childId?.toLowerCase()
       ].filter(Boolean) as string[]));
       
-      const domains = Array.from(new Set([dept.domain, ...(dept.legacyDomains || [])])).filter(Boolean) as string[];
+      const domains = Array.from(new Set([
+        dept.domain, 
+        ...(dept.legacyDomains || []),
+        '@khanhub.com.pk',
+        '@khanhub'
+      ])).filter(Boolean) as string[];
       
       let lastError: any;
       console.log('[UniversalAuth] Attempting robust auth for discovered user');
@@ -296,7 +309,9 @@ export async function loginUniversal(customId: string, password: string, deptHin
       if (!cred) {
         for (const prefix of prefixes) {
           for (const domain of domains) {
-            const email = `${prefix}${domain}`.replace(/\s+/g, '');
+            // We use trim() but NOT global replace of spaces, 
+            // as some legacy domains like "@jobcenter.Khan Hub" literally have a space.
+            const email = `${prefix.trim()}${domain.trim()}`;
             try {
               console.log('[UniversalAuth] Trying generated email:', email);
               cred = await signInWithEmailAndPassword(auth, email, password);

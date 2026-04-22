@@ -268,9 +268,9 @@ export default function SignInPage() {
 
                 {/* Secondary Links */}
                 <div className="mt-8 flex justify-center gap-8">
-                    <Link href="/" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Home</Link>
+                    <Link href="/about" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">About Us</Link>
                     <Link href="/terms" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Terms</Link>
-                    <Link href="/privacy" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Privacy</Link>
+                    <Link href="/privacy-policy" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Privacy</Link>
                 </div>
             </div>
         </div>

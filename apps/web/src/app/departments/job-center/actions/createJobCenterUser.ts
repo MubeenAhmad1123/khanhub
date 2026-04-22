@@ -205,7 +205,7 @@ export async function createJobCenterStaffMemberServer(
   customId: string,
   password: string,
   displayName: string,
-  emailDomain: string = '@jobcenter.Khan Hub',
+  emailDomain: string = '@jobcenter.khanhub',
   userCollection: string = 'jobcenter_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
