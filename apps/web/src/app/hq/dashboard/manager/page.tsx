@@ -539,59 +539,6 @@ export default function ManagerOverviewPage() {
           )}
         </div>
 
-        {/* Right Column: Recent Activity Log */}
-        <div className="space-y-8">
-          <section>
-            <h2 className="text-[11px] font-black text-black uppercase tracking-[0.2em] mb-4">System Activity</h2>
-            <div className={`rounded-[2.5rem] border overflow-hidden ${isDark ? 'bg-zinc-900/30 border-zinc-800' : 'bg-white border-gray-100 shadow-xl'}`}>
-              <div className="p-6 space-y-6">
-                {activities.length > 0 ? activities.map((act, idx) => (
-                  <div key={idx} className="flex gap-4 group">
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
-                        act.action === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : 
-                        act.action === 'user_created' ? 'bg-blue-500/10 text-blue-500' : 'bg-zinc-100 text-black'
-                      }`}>
-                        {act.action === 'approval' ? <CheckCircle size={14} /> : 
-                         act.action === 'user_created' ? <Users size={14} /> : <Clock size={14} />}
-                      </div>
-                      {idx !== activities.length - 1 && <div className="w-px h-full bg-gray-100 dark:bg-zinc-800 mt-2" />}
-                    </div>
-                    <div className="pb-4">
-                      <p className={`text-xs font-black uppercase tracking-wider mb-0.5 ${isDark ? 'text-zinc-200' : 'text-black'}`}>
-                        {act.action?.replace('_', ' ')}
-                      </p>
-                      <p className="text-[11px] text-black font-medium leading-relaxed">
-                        {act.details?.name || act.details?.customId || 'System task'} processed by {act.performedBy?.split('@')[0] || 'Admin'}
-                      </p>
-                      <p className="text-[9px] text-black font-black uppercase tracking-widest mt-2 bg-gray-100 dark:bg-zinc-800/50 inline-block px-2 py-0.5 rounded-lg">
-                        {timeAgo(act.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-8">
-                    <p className="text-black text-xs font-black italic">No recent activity found</p>
-                  </div>
-                )}
-              </div>
-              <div className={`p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800`}>
-                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-black dark:text-black uppercase tracking-widest hover:text-blue-500 transition-colors">
-                    View Full Audit Trail
-                 </Link>
-              </div>
-            </div>
-          </section>
-
-          {/* Quick Tip / Status */}
-          <div className="p-6 rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-500/20">
-            <h3 className="font-black text-sm mb-2">Manager Insight</h3>
-            <p className="text-[11px] leading-relaxed opacity-90 font-medium italic">
-              "Total staff visibility is now optimized across all 7 departments. Ensure all staff members have their unique User IDs for the new Universal Sign-In system."
-            </p>
-          </div>
-        </div>
-
       </div>
     </div>
   );

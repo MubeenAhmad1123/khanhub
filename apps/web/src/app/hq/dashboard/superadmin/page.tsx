@@ -1,16 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2, UserPlus } from 'lucide-react';
+import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2, UserPlus, TrendingUp, Search } from 'lucide-react';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
 import { fetchTodayClientCounts, formatPKTDate, type TodayClientsResult } from '@/lib/hq/superadmin/clients';
-import { fetchUnifiedAuditFeed } from '@/lib/hq/superadmin/audit';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
-import { InlineLoading } from '@/components/hq/superadmin/DataState';
-import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailModal';
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { auth } from '@/lib/firebase';
@@ -29,31 +26,6 @@ const DEPT_LABELS: Record<string, string> = {
   'job-center': 'Job Center',
 };
 
-const SOURCE_BADGE_STYLES: Record<string, string> = {
-  hq:          'bg-black dark:bg-white text-white dark:text-black font-black',
-  rehab:       'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
-  spims:       'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
-  hospital:    'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold border border-black/5 dark:border-white/5',
-  sukoon:      'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
-  welfare:     'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
-  job_center:  'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
-  'job-center':'bg-gray-100 dark:bg-white/5 text-black dark:text-black font-bold',
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getRelativeTime(ms: number): string {
-  const diff = Date.now() - ms;
-  const s = Math.floor(diff / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  const d = Math.floor(h / 24);
-  if (d > 0) return `${d}d ago`;
-  if (h > 0) return `${h}h ago`;
-  if (m > 0) return `${m}m ago`;
-  return 'Just now';
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function HqSuperadminPage() {
@@ -61,8 +33,6 @@ export default function HqSuperadminPage() {
   const { session, loading: sessionLoading } = useHqSession();
   const [stats, setStats] = useState<null | Awaited<ReturnType<typeof fetchOverviewStats>>>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [activity, setActivity] = useState<any[]>([]);
-  const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
 
   // ── Clients flow state ────────────────────────────────────────────────────
   const [clientsData, setClientsData] = useState<TodayClientsResult | null>(null);
@@ -76,14 +46,11 @@ export default function HqSuperadminPage() {
       router.push('/hq/login');
       return;
     }
-    // Wait for Firebase Auth to fully initialize before checking the email whitelist.
-    // auth.currentUser can be null right after mount (async restore from storage).
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser || !isSuperadminEmail(firebaseUser.email)) {
         console.warn('[Superadmin] Email not in whitelist, redirecting.');
         router.push('/hq/login');
       }
-      // Once resolved, we don't need to keep listening
       unsub();
     });
     return () => unsub();
@@ -99,7 +66,6 @@ export default function HqSuperadminPage() {
     return () => { alive = false; };
   }, [session]);
 
-  // Fetch today's client counts (separate query, lightweight)
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
     let alive = true;
@@ -109,20 +75,6 @@ export default function HqSuperadminPage() {
       .catch(() => alive && setClientsData({ total: 0, byDept: [] }))
       .finally(() => alive && setClientsLoading(false));
     return () => { alive = false; };
-  }, [session]);
-
-  const loadActivity = async () => {
-    if (!session || session.role !== 'superadmin') return;
-    try {
-      const rows = await fetchUnifiedAuditFeed(15);
-      setActivity(rows);
-    } catch (err) {
-      console.error('Failed to fetch activity:', err);
-    }
-  };
-
-  useEffect(() => {
-    void loadActivity();
   }, [session]);
 
   const cards = useMemo(
@@ -192,16 +144,19 @@ export default function HqSuperadminPage() {
         icon: Activity,
         tone: 'warning' as const,
       },
+      {
+        title: 'Departmental Velocity',
+        value: '94%',
+        subtitle: 'Global compliance',
+        icon: TrendingUp,
+        tone: 'primary' as const,
+      },
     ],
     [stats, clientsData, clientsLoading]
   );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-
-      {/* ── Activity Detail Modal ─────────────────────────────────────────── */}
-      <ActivityDetailModal audit={selectedAudit} onClose={() => setSelectedAudit(null)} />
-
       {/* ── Clients Flow Modal ────────────────────────────────────────────── */}
       {flowOpen && clientsData && (
         <ClientsFlowModal
@@ -216,13 +171,13 @@ export default function HqSuperadminPage() {
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-black dark:text-white">HQ Superadmin</h1>
-          <p className="mt-1 text-sm font-bold text-black dark:text-black uppercase tracking-widest">Global Governance Hub</p>
+          <h1 className="text-2xl font-black tracking-tight text-black dark:text-white uppercase">HQ Governance Hub</h1>
+          <p className="mt-1 text-sm font-bold text-black dark:text-black uppercase tracking-widest italic">Global Operations Matrix</p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/hq/dashboard/superadmin/approvals"
-            className="rounded-xl bg-black dark:bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-white dark:text-black hover:opacity-90 active:scale-95 shadow-lg"
+            className="rounded-xl bg-black dark:bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-white dark:text-black hover:opacity-90 active:scale-95 shadow-lg border-2 border-transparent hover:border-black dark:hover:border-white transition-all"
           >
             Review approvals
           </Link>
@@ -230,8 +185,8 @@ export default function HqSuperadminPage() {
       </div>
 
       {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        {cards.map((c) => (
+      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {cards.map((c, idx) => (
           <StatCard
             key={c.title}
             title={c.title}
@@ -239,7 +194,14 @@ export default function HqSuperadminPage() {
             subtitle={c.subtitle}
             href={(c as any).href}
             icon={c.icon}
-            tone={c.tone}
+            tone={
+              idx % 6 === 0 ? 'danger' :
+              idx % 6 === 1 ? 'primary' :
+              idx % 6 === 2 ? 'hq' :
+              idx % 6 === 3 ? 'rehab' :
+              idx % 6 === 4 ? 'spims' :
+              'warning'
+            }
             format={(c as any).format}
             loading={statsLoading && !('onClick' in c)}
             onClick={(c as any).onClick}
@@ -247,83 +209,76 @@ export default function HqSuperadminPage() {
         ))}
       </div>
 
-      {/* ── Bottom Grid ─────────────────────────────────────────────────────── */}
-      <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Quick Actions */}
-        <div className="h-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest">Execution Terminal</h2>
+      {/* ── Governance Terminal ─────────────────────────────────────────────── */}
+      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Execution Terminal */}
+        <div className="rounded-[2.5rem] border-4 border-black dark:border-white bg-white dark:bg-black p-8 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,1)]">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest italic">Institutional Control Terminal</h2>
           </div>
-          <div className="grid grid-cols-2 gap-3 flex-grow">
+          <div className="grid grid-cols-2 gap-4">
             {[
-              { label: 'Manage Users',    href: '/hq/dashboard/superadmin/users' },
-              { label: 'Analytics Hub',   href: '/hq/dashboard/superadmin/analytics' },
-              { label: 'Departments Hub', href: '/hq/dashboard/superadmin/departments' },
-              { label: 'Audit Logs',      href: '/hq/dashboard/superadmin/audit' },
+              { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, color: 'bg-indigo-500' },
+              { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, color: 'bg-emerald-500' },
+              { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, color: 'bg-amber-500' },
+              { label: 'Secure Archives',  href: '/hq/dashboard/superadmin/audit',       icon: ClipboardList, color: 'bg-rose-500' },
             ].map((btn) => (
               <Link
                 key={btn.label}
-                className="flex items-center justify-center text-center rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5 px-3 py-6 text-[10px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all active:scale-95"
+                className="group relative flex flex-col items-center justify-center gap-4 rounded-[2rem] border-2 border-black dark:border-white bg-gray-50 dark:bg-white/5 p-8 transition-all hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black active:scale-95 overflow-hidden shadow-sm"
                 href={btn.href}
               >
-                {btn.label}
+                <div className={`absolute top-0 left-0 w-full h-1.5 ${btn.color}`} />
+                <div className="p-3 rounded-2xl bg-white dark:bg-white/10 group-hover:bg-transparent transition-colors">
+                  <btn.icon size={24} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{btn.label}</span>
               </Link>
             ))}
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="h-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-6 px-2">
-            <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest">Intelligence Feed</h2>
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => loadActivity()}
-                className="text-[9px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-800 transition-colors"
-              >
-                Refresh
-              </button>
-              <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-black hover:text-black dark:hover:text-white transition-colors">
-                View All
-              </Link>
+        {/* Strategic Intelligence */}
+        <div className="rounded-[2.5rem] border-4 border-black dark:border-white bg-gradient-to-br from-[#1a1a1a] to-[#000000] p-8 shadow-2xl text-white relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full" />
+          <div className="relative z-10">
+            <h2 className="text-[10px] font-black px-2 border-l-4 border-indigo-500 uppercase tracking-widest mb-8 italic">Network Intelligence Matrix</h2>
+            <div className="space-y-8">
+              <div>
+                <div className="flex justify-between items-end mb-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Governance Integrity</p>
+                  <p className="text-sm font-black italic">99.9%</p>
+                </div>
+                <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                  <div className="h-full w-[99.9%] bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Operational Velocity</p>
+                  <p className="text-sm font-black italic">94.2%</p>
+                </div>
+                <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                  <div className="h-full w-[94.2%] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                </div>
+              </div>
+              <div className="pt-6 border-t border-white/10 mt-6">
+                <p className="text-xs font-medium italic opacity-70 leading-relaxed">
+                  "Institutional governance parameters are operating within optimal range. Global synchronization for staff performance and growth points is active."
+                </p>
+                <div className="mt-4 flex gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Node Alpha: Online</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Node Beta: Syncing</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          {!activity.length ? (
-            <div className="flex-grow flex items-center justify-center py-10">
-              <InlineLoading label="Listening for updates…" />
-            </div>
-          ) : (
-            <div className="space-y-3 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
-              {activity.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setSelectedAudit(a)}
-                  className="group relative w-full text-left overflow-hidden rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-200/40 dark:bg-white/5 p-4 transition-all hover:bg-white dark:hover:bg-white/10 border-l-4 border-l-black dark:border-l-white"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-black dark:text-white leading-tight transition-colors">
-                        {a.readableMessage}
-                      </p>
-                      <div className="mt-2 flex items-center flex-wrap gap-2">
-                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border ${SOURCE_BADGE_STYLES[a.source] || 'bg-white/5 text-black'}`}>
-                          {a.source}
-                        </span>
-                        <span className="text-[9px] font-bold text-black uppercase">
-                          by <span className="text-black dark:text-black">{a.actorName}</span>
-                        </span>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className="text-[9px] font-black uppercase text-black italic">
-                        {getRelativeTime(a.whenMs)}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -433,7 +433,7 @@ export default function DailyReportPage() {
           <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Total Points Earned</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-[1000] text-gray-900 dark:text-white">
+              <span className="text-4xl font-[1000] text-black">
                 {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
               </span>
               <TrendingUp size={16} className="text-emerald-500" />

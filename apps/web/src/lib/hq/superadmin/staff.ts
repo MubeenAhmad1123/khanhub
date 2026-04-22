@@ -40,6 +40,7 @@ export type StaffCardRow = {
   lastDutyLabel?: string;
   emergencyContactName?: string;
   emergencyPhone?: string;
+  seniority?: string;
 };
 
 function normalizeRole(raw: any): StaffRole {
@@ -165,6 +166,7 @@ export async function listStaffCards({
         photoUrl: s.photoUrl || s.photoURL,
         monthlySalary: Number(s.monthlySalary || 0),
         lastDutyLabel: lastDuty,
+        seniority: s.seniority || 'Staff',
       } as StaffCardRow;
     })
   );
