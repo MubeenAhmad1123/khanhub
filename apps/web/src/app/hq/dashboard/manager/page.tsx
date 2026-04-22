@@ -67,7 +67,7 @@ export default function ManagerOverviewPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'manager') {
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
       router.push('/hq/login');
       return;
     }
@@ -89,7 +89,12 @@ export default function ManagerOverviewPage() {
           staffQueries.push({ dept: d, q: query(collection(db, getDeptCollection(d)), where('isActive', '==', true)) });
         });
 
-        const staffSnaps = await Promise.all(staffQueries.map(sq => getDocs(sq.q)));
+        const staffSnaps = await Promise.all(
+          staffQueries.map(sq => getDocs(sq.q).catch(err => {
+            console.warn(`Permission denied for ${sq.dept} staff:`, err);
+            return { docs: [] } as any;
+          }))
+        );
         const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor'];
 
         let allStaffDocs: any[] = [];
@@ -117,7 +122,10 @@ export default function ManagerOverviewPage() {
 
         // 2. Fetch Attendance
         const attSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))).catch(err => {
+            console.warn(`Permission denied for ${d} attendance:`, err);
+            return { docs: [] } as any;
+          }))
         );
 
         const attendanceMap = new Map<string, string>();
@@ -158,7 +166,10 @@ export default function ManagerOverviewPage() {
 
         // 3. Fetch Contributions
         const contribSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))))
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))).catch(err => {
+            console.warn(`Permission denied for ${d} contributions:`, err);
+            return { docs: [] } as any;
+          }))
         );
 
         let allContribs: any[] = [];
@@ -247,12 +258,12 @@ export default function ManagerOverviewPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-        <StatCard label="Total Staff" value={stats.totalStaff} icon={<Users size={20} />} color="bg-blue-50" textColor="text-blue-600" onClick={() => setSelectedMetric('total')} />
-        <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-emerald-50" textColor="text-emerald-600" onClick={() => setSelectedMetric('present')} />
-        <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-rose-50" textColor="text-rose-600" onClick={() => setSelectedMetric('absent')} />
-        <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-amber-50" textColor="text-amber-600" onClick={() => setSelectedMetric('leave')} />
-        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-gray-100" textColor="text-gray-600" onClick={() => setSelectedMetric('notMarked')} />
-        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-purple-50" textColor="text-purple-600" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
+        <StatCard label="Total Staff" value={stats.totalStaff} icon={<Users size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('total')} />
+        <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('present')} />
+        <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('absent')} />
+        <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('leave')} />
+        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-white" textColor="text-black" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
 
       {/* Metric Detail View */}
@@ -343,9 +354,9 @@ export default function ManagerOverviewPage() {
                 <div className="h-4 w-full rounded-full bg-gray-50 border-2 border-black overflow-hidden flex p-0.5">
                   {data.total > 0 ? (
                     <>
-                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 rounded-full mr-0.5 transition-all duration-1000" />
-                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-500 rounded-full mr-0.5 transition-all duration-1000" />
-                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-500 rounded-full transition-all duration-1000" />
+                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-black rounded-full mr-0.5 transition-all duration-1000" />
+                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-black/40 rounded-full mr-0.5 transition-all duration-1000" />
+                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-black/10 rounded-full transition-all duration-1000" />
                     </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-50 italic text-[8px] font-bold opacity-30 uppercase tracking-widest">Registry Empty</div>
@@ -362,9 +373,9 @@ export default function ManagerOverviewPage() {
             <h3 className="text-xl font-black uppercase tracking-tight mb-8">Priority Operations</h3>
             <div className="grid grid-cols-1 gap-4">
               {[
-                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-emerald-500" /> },
-                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-purple-500" /> },
-                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-blue-500" /> },
+                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-black" /> },
+                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-black" /> },
+                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-black" /> },
                 { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-black" /> }
               ].map((op, i) => (
                 <Link key={i} href={op.href} className="flex items-center justify-between p-6 rounded-2xl border-2 border-black hover:bg-black hover:text-white transition-all group">

@@ -239,10 +239,10 @@ export default function HqSuperadminPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, color: 'from-indigo-600 to-blue-700', desc: 'Staff registry & compliance' },
-                { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, color: 'from-emerald-500 to-teal-600', desc: 'Real-time data visualization' },
-                { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, color: 'from-amber-500 to-orange-600', desc: 'Institutional structure' },
-                { label: 'Finance Center',   href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, color: 'from-rose-500 to-pink-600', desc: 'Global financial ledger' },
+                { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, color: 'from-black to-black/80', desc: 'Staff registry & compliance' },
+                { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, color: 'from-black to-black/80', desc: 'Real-time data visualization' },
+                { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, color: 'from-black to-black/80', desc: 'Institutional structure' },
+                { label: 'Finance Center',   href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, color: 'from-black to-black/80', desc: 'Global financial ledger' },
               ].map((btn) => (
                 <Link
                   key={btn.label}

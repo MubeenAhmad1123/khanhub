@@ -108,8 +108,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'it',
     name: 'IT',
     collection: 'it_users',
-    domain: '@it.khanhub.com.pk',
-    legacyDomains: ['@it.khanhub.com', '@it.KhanHub', '@it.khanhub'],
+    domain: '@it.khanhub',
+    legacyDomains: ['@it.khanhub.com.pk', '@it.khanhub.com', '@it.KhanHub'],
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']

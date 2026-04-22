@@ -176,44 +176,44 @@ export default function ManagerApprovalsPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0A0A0A]">
-        <Loader2 className="w-8 h-8 animate-spin text-black dark:text-black" />
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+        <Loader2 className="w-8 h-8 animate-spin text-black" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 pb-32 p-4 md:p-8 bg-gray-50 dark:bg-[#0A0A0A] min-h-screen overflow-x-hidden w-full max-w-full">
+    <div className="space-y-8 pb-32 p-4 md:p-8 bg-[#FCFBF8] min-h-screen overflow-x-hidden w-full max-w-full text-black">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Staff Contribs</h1>
         <p className="text-black dark:text-black text-sm font-medium">Review and approve employee contributions</p>
       </div>
 
       {message.text && (
-        <div className={`p-6 rounded-3xl border font-bold animate-in fade-in slide-in-from-top-4 duration-300 ${
+        <div className={`p-6 rounded-3xl border-2 font-black animate-in fade-in slide-in-from-top-4 duration-300 ${
           message.type === 'success' 
-            ? 'bg-green-50/50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-100 dark:border-green-500/20' 
-            : 'bg-red-50/50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-100 dark:border-red-500/20'
+            ? 'bg-black text-white border-black' 
+            : 'bg-white text-black border-red-600'
         }`}>
           {message.text}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 p-1 bg-white/50 dark:bg-white/5 rounded-2xl w-full">
+      <div className="flex flex-wrap gap-2 p-2 bg-black/5 rounded-2xl w-full border border-black/10">
         {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'urgent'] as FilterType[]).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap border-2 ${
               filter === f
-                ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-md scale-[1.02]'
-                : 'text-black dark:text-black hover:bg-white dark:hover:bg-white/5'
+                ? 'bg-black text-white border-black shadow-lg scale-[1.02]'
+                : 'bg-white text-black border-black/10 hover:border-black'
             }`}
           >
             <Filter size={10} />
             {f === 'job-center' ? 'Job Center' : f.charAt(0).toUpperCase() + f.slice(1)}
             <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[8px] ${
-              filter === f ? 'bg-white/20 dark:bg-black/10' : 'bg-gray-100 dark:bg-white/10'
+              filter === f ? 'bg-white/20' : 'bg-black/10'
             }`}>
               {counts[f]}
             </span>
@@ -222,11 +222,11 @@ export default function ManagerApprovalsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-[#111111] rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm">
-          <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
-            <span className="text-3xl">🎉</span>
+        <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[2.5rem] border-4 border-black shadow-2xl">
+          <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mb-6 text-white text-3xl font-black">
+            !
           </div>
-          <p className="text-black dark:text-black font-bold uppercase tracking-widest text-xs">No pending contributions found</p>
+          <p className="text-black font-black uppercase tracking-[0.3em] text-sm">Clear Horizon — No Pending Tasks</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -235,93 +235,89 @@ export default function ManagerApprovalsPage() {
             const isRejecting = rejectingId === t.id;
 
             return (
-              <div key={t.id} className={`group bg-white dark:bg-[#111111] rounded-[2.5rem] border transition-all duration-300 hover:shadow-xl hover:shadow-black/5 ${
+              <div key={t.id} className={`group bg-white rounded-[2.5rem] border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
                 isUrgent 
-                  ? 'border-red-200 dark:border-red-500/30 ring-2 ring-red-50 dark:ring-red-500/10' 
-                  : 'border-gray-100 dark:border-white/5'
+                  ? 'border-black ring-4 ring-black/5' 
+                  : 'border-black/10 hover:border-black'
               }`}>
-                <div className="p-7">
-                  <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+                <div className="p-8">
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
                     <div className="flex flex-wrap gap-2">
-                      <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
-                        t.dept === 'rehab' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-500/20' :
-                        t.dept === 'spims' ? 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-100 dark:border-green-500/20' :
-                        'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-500/20'
-                      }`}>
+                      <span className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 border-black bg-black text-white">
                         {t.dept}
                       </span>
                       {isUrgent && (
-                        <span className="px-3 py-1 rounded-xl bg-red-500 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg shadow-red-500/20">
-                          <AlertTriangle size={10} strokeWidth={3} /> Urgent
+                        <span className="px-4 py-1.5 rounded-full bg-white border-2 border-black text-black text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                          <AlertTriangle size={10} strokeWidth={3} /> Critical
                         </span>
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-xl text-gray-900 dark:text-white tracking-tight">{t.title}</p>
-                      <p className="text-[10px] text-black dark:text-black font-bold uppercase tracking-wider">{t.createdAt?.seconds ? timeAgo(new Date(t.createdAt.seconds * 1000).toISOString()) : 'Just now'}</p>
+                      <p className="font-black text-2xl text-black tracking-tight">{t.title}</p>
+                      <p className="text-[10px] text-black font-black uppercase tracking-[0.15em] opacity-40">{t.createdAt?.seconds ? timeAgo(new Date(t.createdAt.seconds * 1000).toISOString()) : 'Just now'}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 p-5 bg-gray-50 dark:bg-white/5 rounded-3xl mb-6">
+                  <div className="grid grid-cols-2 gap-4 p-6 bg-black/5 rounded-3xl mb-8 border border-black/5">
                     <div>
-                      <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest mb-1">Contributor</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{t.staffName}</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1 opacity-50">Contributor</p>
+                      <p className="font-black text-black text-sm truncate">{t.staffName}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest mb-1">Submission Date</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.createdAt?.seconds ? formatDateDMY(new Date(t.createdAt.seconds * 1000).toISOString()) : '—'}</p>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1 opacity-50">Date Submitted</p>
+                      <p className="font-black text-black text-sm">{t.createdAt?.seconds ? formatDateDMY(new Date(t.createdAt.seconds * 1000).toISOString()) : '—'}</p>
                     </div>
                   </div>
 
                   {t.content && (
-                    <div className="text-sm text-black dark:text-black bg-gray-50 dark:bg-white/5 p-4 rounded-3xl mb-6 border border-gray-100 dark:border-white/5">
-                      <p className="font-black text-black dark:text-black uppercase tracking-widest text-[9px] mb-1">Description</p>
-                      <p className="font-medium leading-relaxed">{t.content}</p>
+                    <div className="text-sm text-black bg-white p-6 rounded-3xl mb-8 border-2 border-black/10">
+                      <p className="font-black text-black uppercase tracking-widest text-[9px] mb-2 opacity-40">Description</p>
+                      <p className="font-bold leading-relaxed">{t.content}</p>
                     </div>
                   )}
 
                   {isRejecting ? (
-                    <div className="space-y-3 animate-in slide-in-from-bottom-2 duration-300">
+                    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
                       <input
                         type="text"
-                        placeholder="Type rejection reason..."
-                        className="w-full bg-white dark:bg-[#1A1A1A] border border-red-100 dark:border-red-500/20 rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-4 focus:ring-red-500/10 placeholder:text-black"
+                        placeholder="State rejection criteria..."
+                        className="w-full bg-black/5 border-2 border-black rounded-2xl px-6 py-4 text-sm font-black text-black outline-none focus:ring-8 focus:ring-black/5 placeholder:text-black/30"
                         value={rejectReason}
                         onChange={e => setRejectReason(e.target.value)}
                         autoFocus
                       />
-                      <div className="flex gap-2">
+                      <div className="flex gap-3">
                         <button
                           onClick={() => handleReject(t.id, t.dept)}
                           disabled={actionLoading === t.id || !rejectReason.trim()}
-                          className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg shadow-red-500/20"
+                          className="flex-1 bg-black text-white py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-95"
                         >
-                          Confirm Rejection
+                          Confirm Denial
                         </button>
                         <button
                           onClick={() => { setRejectingId(null); setRejectReason(''); }}
-                          className="px-8 bg-gray-100 dark:bg-white/10 text-black dark:text-black py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
+                          className="px-10 bg-white text-black border-2 border-black py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all"
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                       <button
                         onClick={() => handleApprove(t.id, t.dept)}
                         disabled={actionLoading === t.id}
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-95"
+                        className="flex-1 bg-black hover:bg-black/90 text-white py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-2xl shadow-black/20 active:scale-95 hover:scale-[1.02]"
                       >
-                        {actionLoading === t.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} strokeWidth={3} />}
+                        {actionLoading === t.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} strokeWidth={3} />}
                         Approve
                       </button>
                       <button
                         onClick={() => setRejectingId(t.id)}
                         disabled={actionLoading === t.id}
-                        className="flex-1 bg-white dark:bg-white/5 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-500/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+                        className="flex-1 bg-white border-2 border-black text-black py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-3 active:scale-95"
                       >
-                        <XCircle size={14} strokeWidth={3} /> Reject
+                        <XCircle size={16} strokeWidth={3} /> Deny
                       </button>
                     </div>
                   )}

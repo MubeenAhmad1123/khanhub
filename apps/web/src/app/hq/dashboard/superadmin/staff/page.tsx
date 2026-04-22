@@ -50,8 +50,8 @@ export default function SuperadminStaffPage() {
     if (!session || session.role !== 'superadmin') return;
     let alive = true;
     setLoading(true);
-    // Explicitly filter for 'staff' role as requested
-    listStaffCards({ dept, status, role: 'staff' })
+    // Explicitly fetch all personnel (admins, managers, staff, etc.)
+    listStaffCards({ dept, status, role: 'personnel' })
       .then((r) => alive && setRows(r))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };

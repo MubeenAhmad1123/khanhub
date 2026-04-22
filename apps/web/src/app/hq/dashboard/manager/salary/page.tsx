@@ -204,81 +204,85 @@ export default function SalarySlipsPage() {
   };
 
   if (sessionLoading || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-950"><Loader2 className="animate-spin text-amber-500" size={32} /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+        <Loader2 className="animate-spin text-black" size={32} />
+      </div>
+    );
   }
 
   const totalPayroll = monthSlips.reduce((s, slip) => s + (slip.netSalary || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-8 pb-24">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#FCFBF8] p-4 md:p-8 pb-32 text-black">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white border-4 border-black p-8 rounded-[2.5rem] shadow-2xl">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Salary Slips</h1>
-            <p className="text-black text-xs font-bold uppercase tracking-widest mt-1">Monthly payroll management — All Departments</p>
+            <h1 className="text-3xl md:text-4xl font-black text-black uppercase tracking-tight">Payroll Engine</h1>
+            <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-50">Unified Fiscal Disbursement Control</p>
           </div>
           <input
             type="month"
             value={selectedMonth}
             onChange={e => setSelectedMonth(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 [color-scheme:dark]"
+            className="bg-black text-white border-2 border-black rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-widest outline-none transition-all hover:scale-105 active:scale-95 cursor-pointer"
           />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Payroll', value: `Rs${totalPayroll.toLocaleString()}`, color: 'text-amber-500' },
-            { label: 'Draft', value: monthSlips.filter(s => s.status === 'draft').length, color: 'text-black' },
-            { label: 'Approved', value: monthSlips.filter(s => s.status === 'approved').length, color: 'text-blue-400' },
-            { label: 'Paid', value: monthSlips.filter(s => s.status === 'paid').length, color: 'text-emerald-400' },
+            { label: 'Total Liability', value: `Rs ${totalPayroll.toLocaleString()}`, color: 'text-black', bg: 'bg-white border-4 border-black' },
+            { label: 'Drafted', value: monthSlips.filter(s => s.status === 'draft').length, color: 'text-black', bg: 'bg-white border-2 border-black/10' },
+            { label: 'Authorized', value: monthSlips.filter(s => s.status === 'approved').length, color: 'text-white', bg: 'bg-black border-2 border-black shadow-xl shadow-black/10' },
+            { label: 'Disbursed', value: monthSlips.filter(s => s.status === 'paid').length, color: 'text-black', bg: 'bg-white border-4 border-black border-dashed' },
           ].map(item => (
-            <div key={item.label} className="bg-white/5 border border-white/8 rounded-2xl p-4">
-              <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
-              <p className="text-black text-[10px] font-black uppercase tracking-widest mt-1">{item.label}</p>
+            <div key={item.label} className={`${item.bg} rounded-[2rem] p-6 flex flex-col justify-center items-center text-center transition-all hover:-translate-y-1`}>
+              <p className={`text-2xl font-black ${item.color} uppercase tracking-tighter`}>{item.value}</p>
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] mt-2 ${item.color === 'text-white' ? 'opacity-60' : 'opacity-40'}`}>{item.label}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-white/5 border border-white/8 rounded-3xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
-            <h3 className="text-white font-black text-xs uppercase tracking-widest">Staff — {selectedMonth}</h3>
+        <div className="bg-white border-4 border-black rounded-[2.5rem] overflow-hidden shadow-2xl">
+          <div className="px-8 py-6 border-b-2 border-black/10 flex items-center justify-between bg-black/5">
+            <h3 className="text-black font-black text-xs uppercase tracking-[0.3em]">Operational Register — {selectedMonth}</h3>
             {session?.role === 'manager' && (
               <button
                 onClick={() => { staff.forEach(m => { void generateSlip(m); }); }}
-                className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all flex items-center gap-2"
+                className="bg-black hover:bg-white border-2 border-black text-white hover:text-black font-black text-[10px] uppercase tracking-[0.2em] px-6 py-3 rounded-xl transition-all flex items-center gap-2 active:scale-95"
               >
-                <Plus size={12} /> Generate All
+                <Plus size={12} strokeWidth={4} /> Batch Process
               </button>
             )}
           </div>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y-2 divide-black/5">
             {staff.map((member, index) => {
               const slip = monthSlips.find(s => s.staffId === member.id);
               return (
-                <div key={member.id} style={{ animationDelay: `${index * 40}ms` }} className="animate-in fade-in duration-300 flex flex-col md:flex-row md:items-center justify-between gap-4 px-5 py-4 hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-black text-sm flex-shrink-0">
+                <div key={member.id} style={{ animationDelay: `${index * 40}ms` }} className="animate-in fade-in duration-300 flex flex-col md:flex-row md:items-center justify-between gap-6 px-8 py-6 hover:bg-black/5 transition-colors group">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-black border-2 border-black flex items-center justify-center text-white font-black text-lg flex-shrink-0 shadow-lg transition-transform group-hover:scale-110">
                       {member.name?.[0] || '?'}
                     </div>
                     <div>
-                      <p className="text-white font-bold text-sm">{member.name}</p>
-                      <p className="text-black text-[10px] font-black uppercase tracking-widest">{member.designation} · {member.department}</p>
+                      <p className="text-black font-black text-base uppercase tracking-tight">{member.name}</p>
+                      <p className="text-black text-[10px] font-black uppercase tracking-[0.15em] opacity-40">{member.designation} · {member.department}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     {slip ? (
                       <>
                         <div className="text-right">
-                          <p className="text-white font-black text-sm">Rs{slip.netSalary?.toLocaleString()}</p>
-                          <p className="text-black text-[10px] font-black uppercase tracking-widest min-w-[120px]">
-                            {slip.presentDays} days · {slip.bonus > 0 ? `+Rs${slip.bonus} bonus` : slip.otherDeductions > 0 ? `-Rs${slip.otherDeductions} ded.` : 'No adj.'}
+                          <p className="text-black font-black text-lg tracking-tighter">Rs {slip.netSalary?.toLocaleString()}</p>
+                          <p className="text-black text-[9px] font-black uppercase tracking-[0.1em] opacity-40 min-w-[140px]">
+                            {slip.presentDays} Days Active · {slip.bonus > 0 ? `+ Rs ${slip.bonus}` : slip.otherDeductions > 0 ? `- Rs ${slip.otherDeductions}` : 'Standard'}
                           </p>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                          slip.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                          slip.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                          'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border-2 ${
+                          slip.status === 'paid' ? 'bg-white text-black border-black border-dashed' :
+                          slip.status === 'approved' ? 'bg-black text-white border-black' :
+                          'bg-white text-black border-black/20 opacity-60'
                         }`}>{slip.status}</span>
 
                         {['manager', 'cashier'].includes(session?.role || '') && slip.status === 'draft' && (
@@ -292,20 +296,20 @@ export default function SalarySlipsPage() {
                                 deductionReason: slip.deductionReason || ''
                               });
                             }}
-                            className="p-2 rounded-xl bg-white/5 border border-white/10 text-black hover:text-white transition-all"
+                            className="p-3 rounded-xl bg-white border-2 border-black text-black hover:bg-black hover:text-white transition-all active:scale-90"
                           >
-                            <Plus size={14} />
+                            <Plus size={16} strokeWidth={4} />
                           </button>
                         )}
 
                         {session?.role === 'superadmin' && slip.status === 'draft' && (
-                          <button disabled={!!actionLoading} onClick={() => { void handleApprove(slip); }} className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                            {actionLoading === slip.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />} Approve
+                          <button disabled={!!actionLoading} onClick={() => { void handleApprove(slip); }} className="bg-black hover:bg-white border-2 border-black text-white hover:text-black font-black text-[10px] uppercase tracking-[0.2em] px-5 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2">
+                            {actionLoading === slip.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} strokeWidth={4} />} Authorize
                           </button>
                         )}
                         {slip.status === 'approved' && (
-                          <button disabled={!!actionLoading} onClick={() => { void handleMarkPaid(slip); }} className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-blue-500/20 text-emerald-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                            {actionLoading === slip.id ? <Loader2 size={10} className="animate-spin" /> : <DollarSign size={10} />} Mark Paid
+                          <button disabled={!!actionLoading} onClick={() => { void handleMarkPaid(slip); }} className="bg-white hover:bg-black border-2 border-black text-black hover:text-white font-black text-[10px] uppercase tracking-[0.2em] px-5 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2">
+                            {actionLoading === slip.id ? <Loader2 size={12} className="animate-spin" /> : <DollarSign size={12} strokeWidth={4} />} Disburse
                           </button>
                         )}
                       </>
@@ -313,10 +317,10 @@ export default function SalarySlipsPage() {
                       <button
                         disabled={generating === member.id}
                         onClick={() => { void generateSlip(member); }}
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 text-black hover:text-white font-black text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2"
+                        className="bg-white hover:bg-black border-2 border-black text-black hover:text-white font-black text-[10px] uppercase tracking-[0.2em] px-6 py-4 rounded-xl transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-black/5"
                       >
-                        {generating === member.id ? <Loader2 size={10} className="animate-spin" /> : <FileText size={10} />}
-                        Generate Slip
+                        {generating === member.id ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} strokeWidth={3} />}
+                        Draft Record
                       </button>
                     )}
                   </div>
@@ -328,76 +332,76 @@ export default function SalarySlipsPage() {
       </div>
 
       {editingSlip && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-zinc-900 border border-white/10 rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="p-8 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-in fade-in duration-500">
+          <div className="bg-white border-4 border-black rounded-[3rem] w-full max-w-2xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.3)]">
+            <div className="p-10 space-y-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-tight">Adjust Salary</h2>
-                  <p className="text-black text-[10px] font-black uppercase tracking-widest mt-1">For {editingSlip.staffName} · {editingSlip.month}</p>
+                  <h2 className="text-3xl font-black text-black uppercase tracking-tight">Fiscal Adjustment</h2>
+                  <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-50">Personnel ID: {editingSlip.employeeId} · Cycle: {editingSlip.month}</p>
                 </div>
-                <button onClick={() => setEditingSlip(null)} className="p-2 hover:bg-white/5 rounded-full text-black transition-colors">
-                  <Plus className="rotate-45" size={20} />
+                <button onClick={() => setEditingSlip(null)} className="p-4 bg-black text-white hover:bg-white hover:text-black border-2 border-black rounded-2xl transition-all active:scale-90">
+                  <Plus className="rotate-45" size={24} strokeWidth={4} />
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Bonus (PKR)</label>
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-black ml-1">Incentive Credit (PKR)</label>
                     <input
                       type="number"
                       value={editValues.bonus}
                       onChange={(e) => setEditValues({ ...editValues, bonus: Number(e.target.value) })}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all"
+                      className="w-full bg-black/5 border-2 border-black/10 rounded-2xl px-6 py-4 text-black text-sm font-black outline-none focus:border-black transition-all"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Deduction (PKR)</label>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-black ml-1">Account Debit (PKR)</label>
                     <input
                       type="number"
                       value={editValues.otherDeductions}
                       onChange={(e) => setEditValues({ ...editValues, otherDeductions: Number(e.target.value) })}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all"
+                      className="w-full bg-black/5 border-2 border-black/10 rounded-2xl px-6 py-4 text-black text-sm font-black outline-none focus:border-black transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Bonus Reason</label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-black ml-1">Adjustment Rationale (Bonus)</label>
                   <textarea
                     value={editValues.bonusReason}
                     onChange={(e) => setEditValues({ ...editValues, bonusReason: e.target.value })}
-                    placeholder="Why is this bonus being given?"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all min-h-[80px] resize-none"
+                    placeholder="Enter official justification..."
+                    className="w-full bg-black/5 border-2 border-black/10 rounded-2xl px-6 py-4 text-black text-sm font-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-black/20"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Deduction Reason</label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-black ml-1">Correction Rationale (Deduction)</label>
                   <textarea
                     value={editValues.deductionReason}
                     onChange={(e) => setEditValues({ ...editValues, deductionReason: e.target.value })}
-                    placeholder="Reason for deduction/fine?"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all min-h-[80px] resize-none"
+                    placeholder="Enter official justification..."
+                    className="w-full bg-black/5 border-2 border-black/10 rounded-2xl px-6 py-4 text-black text-sm font-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-black/20"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-4 pt-4">
                 <button
                   onClick={() => setEditingSlip(null)}
-                  className="flex-1 px-6 py-4 rounded-2xl border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/5 transition-all"
+                  className="flex-1 px-8 py-5 rounded-2xl border-2 border-black text-black font-black text-xs uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all"
                 >
-                  Cancel
+                  Discard
                 </button>
                 <button
                   onClick={handleUpdateAdjustments}
                   disabled={!!actionLoading}
-                  className="flex-[2] bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2"
+                  className="flex-[2] bg-black hover:bg-black/90 disabled:opacity-50 text-white font-black text-xs uppercase tracking-[0.3em] px-8 py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-2xl shadow-black/20"
                 >
-                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  Save Adjustments
+                  {actionLoading ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} strokeWidth={4} />}
+                  Commit Changes
                 </button>
               </div>
             </div>

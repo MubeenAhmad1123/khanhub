@@ -158,70 +158,70 @@ export default function ManagerAttendancePage() {
 
   if (sessionLoading || (loading && staff.length === 0)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
-          <p className="text-black text-xs font-black uppercase tracking-[0.2em]">Synchronizing</p>
+          <Loader2 className="w-10 h-10 animate-spin text-black" />
+          <p className="text-black text-[10px] font-black uppercase tracking-[0.3em]">Calibrating</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] pb-20">
+    <div className="min-h-screen bg-[#FCFBF8] pb-32 text-black">
       {/* Header Section */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-30 px-4 md:px-8 py-6">
+      <div className="bg-white border-b-4 border-black sticky top-0 z-30 px-4 md:px-8 py-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-100">
-                  <Calendar size={20} />
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shadow-2xl">
+                  <Calendar size={24} />
                 </div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Staff Attendance</h1>
+                <h1 className="text-3xl font-black text-black tracking-tight uppercase">Attendance Register</h1>
               </div>
-              <p className="text-black text-sm font-medium">Manage and monitor headquarter employee presence</p>
+              <p className="text-black text-xs font-black uppercase tracking-[0.2em] opacity-40">Administrative Personnel Oversight</p>
             </div>
 
             {/* Date Selector */}
-            <div className="flex items-center bg-gray-50 rounded-2xl p-1 border border-gray-100 shadow-sm">
+            <div className="flex items-center bg-black/5 rounded-3xl p-1.5 border-2 border-black/10 transition-all hover:border-black">
               <button 
                 onClick={() => changeDate(-1)}
-                className="p-3 hover:bg-white hover:shadow-sm rounded-xl transition-all text-black"
+                className="p-4 hover:bg-black hover:text-white rounded-2xl transition-all text-black active:scale-90"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={24} />
               </button>
-              <div className="px-6 flex flex-col items-center min-w-[200px]">
-                <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest leading-none mb-1">Entry Date</span>
+              <div className="px-8 flex flex-col items-center min-w-[220px]">
+                <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] opacity-40 mb-1">Operational Date</span>
                 <input 
                   type="date" 
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-sm font-bold text-gray-900 focus:ring-0 p-0 text-center uppercase"
+                  className="bg-transparent border-none text-sm font-black text-black focus:ring-0 p-0 text-center uppercase tracking-widest cursor-pointer"
                 />
               </div>
               <button 
                 onClick={() => changeDate(1)}
-                className="p-3 hover:bg-white hover:shadow-sm rounded-xl transition-all text-black"
+                className="p-4 hover:bg-black hover:text-white rounded-2xl transition-all text-black active:scale-90"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={24} />
               </button>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-8">
-            <div className="bg-teal-50/50 border border-teal-100/50 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-2xl font-black text-teal-700">{stats.present}</span>
-              <span className="text-[10px] font-black text-teal-600/60 uppercase tracking-wider">Present</span>
+          <div className="grid grid-cols-3 gap-6 mt-10">
+            <div className="bg-white border-2 border-black rounded-[2rem] p-6 flex flex-col items-center shadow-xl shadow-black/5">
+              <span className="text-3xl font-black text-black">{stats.present}</span>
+              <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Confirmed Present</span>
             </div>
-            <div className="bg-red-50/50 border border-red-100/50 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-2xl font-black text-red-700">{stats.absent}</span>
-              <span className="text-[10px] font-black text-red-600/60 uppercase tracking-wider">Absent</span>
+            <div className="bg-white border-2 border-black rounded-[2rem] p-6 flex flex-col items-center shadow-xl shadow-black/5">
+              <span className="text-3xl font-black text-black">{stats.absent}</span>
+              <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Noted Absent</span>
             </div>
-            <div className="bg-gray-50/50 border border-gray-200/50 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-2xl font-black text-black">{stats.unmarked}</span>
-              <span className="text-[10px] font-black text-black uppercase tracking-wider">Unmarked</span>
+            <div className="bg-black border-2 border-black rounded-[2rem] p-6 flex flex-col items-center shadow-2xl shadow-black/20">
+              <span className="text-3xl font-black text-white">{stats.unmarked}</span>
+              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] mt-1">Pending Entry</span>
             </div>
           </div>
         </div>
@@ -229,30 +229,30 @@ export default function ManagerAttendancePage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
         {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-black w-5 h-5" />
+        <div className="flex flex-col md:flex-row gap-6 mb-10">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-black w-5 h-5 transition-transform group-focus-within:scale-110" />
             <input 
               type="text" 
-              placeholder="Search employee by name or ID..."
+              placeholder="Query operative by identity..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-teal-50 outline-none transition-all placeholder:text-black"
+              className="w-full bg-white border-2 border-black/10 rounded-2xl pl-16 pr-6 py-5 text-sm font-black shadow-xl shadow-black/5 focus:border-black outline-none transition-all placeholder:text-black/30 placeholder:uppercase placeholder:tracking-widest"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-4">
             <select 
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="bg-white border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-teal-50 outline-none transition-all appearance-none min-w-[160px]"
+              className="bg-white border-2 border-black/10 rounded-2xl px-8 py-5 text-sm font-black shadow-xl shadow-black/5 focus:border-black outline-none transition-all appearance-none min-w-[200px] uppercase tracking-widest cursor-pointer"
             >
-              <option value="all">All Depts</option>
-              <option value="hq">HQ Administration</option>
-              <option value="rehab">Rehab Center</option>
-              <option value="spims">SPIMS College</option>
+              <option value="all">Global Fleet</option>
+              <option value="hq">HQ Admin</option>
+              <option value="rehab">Rehab Fleet</option>
+              <option value="spims">SPIMS Fleet</option>
             </select>
-            <button className="bg-white border-gray-100 rounded-2xl px-4 py-4 shadow-sm hover:bg-white transition-all text-black">
-              <FileSpreadsheet size={20} />
+            <button className="bg-black text-white border-2 border-black rounded-2xl px-6 py-5 shadow-2xl hover:bg-white hover:text-black transition-all active:scale-95">
+              <FileSpreadsheet size={24} />
             </button>
           </div>
         </div>
@@ -291,30 +291,30 @@ export default function ManagerAttendancePage() {
                         {s.department || 'General'}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-8 py-6 text-center">
                       {!att ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-100">
-                          <Clock size={10} /> Unmarked
+                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] bg-black/5 text-black border border-black/10">
+                          <Clock size={10} /> Pending
                         </span>
                       ) : att.status === 'present' ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-600 border border-teal-100">
-                          <CheckCircle2 size={10} /> Present
+                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] bg-black text-white border border-black shadow-lg shadow-black/10">
+                          <CheckCircle2 size={10} /> Confirmed
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
-                          <XCircle size={10} /> Absent
+                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] bg-white text-black border-2 border-black">
+                          <XCircle size={10} /> Absentee
                         </span>
                       )}
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-3">
                         <button 
                           onClick={() => toggleAttendance(s.id, att?.status)}
                           className={cn(
-                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            "px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border-2",
                             att?.status === 'present' 
-                              ? "bg-red-500 text-white shadow-lg shadow-red-100 hover:bg-red-600"
-                              : "bg-teal-500 text-white shadow-lg shadow-teal-100 hover:bg-teal-600"
+                              ? "bg-white text-black border-black hover:bg-black hover:text-white"
+                              : "bg-black text-white border-black hover:bg-white hover:text-black shadow-xl shadow-black/10"
                           )}
                         >
                           {att?.status === 'present' ? 'Mark Absent' : 'Mark Present'}

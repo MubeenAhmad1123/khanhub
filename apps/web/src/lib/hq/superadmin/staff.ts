@@ -111,11 +111,11 @@ async function loadTodayStats(dept: StaffDept, staffId: string, date: string, s:
   const prefix = getDeptPrefix(dept);
   
   const [attSnap, dressSnap, dutySnap, contribSnap] = await Promise.all([
-    getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId), where('date', '==', date))),
-    getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId), where('date', '==', date))),
-    getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId), where('date', '==', date))),
-    getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', staffId), where('date', '==', date), where('isApproved', '==', true))),
-  ]).catch(() => [null, null, null, null]);
+    getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', staffId), where('date', '==', date), where('isApproved', '==', true))).catch(() => ({ docs: [] } as any)),
+  ]);
 
   const att = attSnap?.docs[0]?.data();
   const dress = dressSnap?.docs[0]?.data();

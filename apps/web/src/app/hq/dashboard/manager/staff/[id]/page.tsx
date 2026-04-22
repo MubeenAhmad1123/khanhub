@@ -108,7 +108,6 @@ export default function StaffProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processingConfig, setProcessingConfig] = useState(false);
-  const [isDark, setIsDark] = useState(false);
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -140,10 +139,8 @@ export default function StaffProfilePage() {
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
 
-  useEffect(() => {
-    const saved = localStorage.getItem('hq_dark_mode') === 'true';
-    setIsDark(saved);
-  }, []);
+  // UI standard - forced light theme
+  const isDark = false;
 
   // Data States
   const [attendance, setAttendance] = useState<AttendanceLog[]>([]);

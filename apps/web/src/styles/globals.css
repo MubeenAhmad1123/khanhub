@@ -43,18 +43,18 @@
   --color-error-800: #8e0000;
   --color-error-900: #6a0000;
 
-  /* Colors - Neutral (Light Gray #F5F5F5 + Professional Grays) */
-  --color-neutral-50: #fafafa;
-  --color-neutral-100: #F5F5F5;
-  --color-neutral-200: #eeeeee;
-  --color-neutral-300: #e0e0e0;
-  --color-neutral-400: #bdbdbd;
-  --color-neutral-500: #9e9e9e;
-  --color-neutral-600: #757575;
-  --color-neutral-700: #616161;
-  --color-neutral-800: #424242;
-  --color-neutral-900: #212121;
-  --color-neutral-950: #0a0a0a;
+  /* Colors - Neutral (High Contrast Brutalist) */
+  --color-neutral-50: #FFFFFF;
+  --color-neutral-100: #FDFCF7; /* Creamy white base */
+  --color-neutral-200: #F5F5F5;
+  --color-neutral-300: #D4D4D4;
+  --color-neutral-400: #000000; /* Force black from here up */
+  --color-neutral-500: #000000;
+  --color-neutral-600: #000000;
+  --color-neutral-700: #000000;
+  --color-neutral-800: #000000;
+  --color-neutral-900: #000000;
+  --color-neutral-950: #000000;
 
   /* Aliasing gray to neutral for compatibility with existing code */
   --color-gray-50: var(--color-neutral-50);

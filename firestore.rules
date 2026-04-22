@@ -141,6 +141,28 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ── IT PORTAL HELPERS ─────────────────────────────
+    function isItAuth() {
+      return isAuth() && exists(/databases/$(database)/documents/it_users/$(request.auth.uid));
+    }
+    function itRole() {
+      return get(/databases/$(database)/documents/it_users/$(request.auth.uid)).data.role;
+    }
+    function isItAdminOrManager() {
+      return isItAuth() && (itRole() == 'admin' || itRole() == 'manager' || itRole() == 'superadmin');
+    }
+
+    // ── SOCIAL MEDIA PORTAL HELPERS ───────────────────
+    function isMediaAuth() {
+      return isAuth() && exists(/databases/$(database)/documents/media_users/$(request.auth.uid));
+    }
+    function mediaRole() {
+      return get(/databases/$(database)/documents/media_users/$(request.auth.uid)).data.role;
+    }
+    function isMediaAdminOrManager() {
+      return isMediaAuth() && (mediaRole() == 'admin' || mediaRole() == 'manager' || mediaRole() == 'superadmin');
+    }
+
     // ── Admin Settings ────────────────────────────────
     match /adminSettings/{doc} {
       allow read, write: if isAdmin();
@@ -719,7 +741,7 @@ service cloud.firestore {
     //  - superadmin/manager can update users (e.g. isActive)
     //  - owner can update limited profile fields only
     match /hq_users/{docId} {
-      allow read: if (isHqAuth() && (request.auth.uid == docId || isHqTier1()))
+      allow read: if (request.auth != null && (request.auth.uid == docId || isHqTier1()))
         || isDiscoveryQuery();
       allow create, delete: if false;
       allow update: if isHqSuperOrManager()
@@ -732,7 +754,7 @@ service cloud.firestore {
         );
 
       match /fcmTokens/{tokenId} {
-        allow read, write: if isHqAuth() && request.auth.uid == docId;
+        allow read, write: if request.auth != null && request.auth.uid == docId;
       }
     }
 
@@ -852,6 +874,38 @@ service cloud.firestore {
     match /hq_attendance/{docId} { 
       allow read, create, update, delete: if isHqSuperOrManager(); 
     } 
+
+    // ── IT & Social Media (Integrated) ───────────────
+    match /it_users/{uid} {
+      allow read: if (isAuth() && (request.auth.uid == uid || isItAdminOrManager()))
+        || isHqTier1() || isDiscoveryQuery();
+      allow create, delete: if isItAdminOrManager() || isHqSuperOrManager();
+      allow update: if (isAuth() && request.auth.uid == uid)
+        || isItAdminOrManager() || isHqSuperOrManager();
+    }
+    match /media_users/{uid} {
+      allow read: if (isAuth() && (request.auth.uid == uid || isMediaAdminOrManager() || isItAdminOrManager()))
+        || isHqTier1() || isDiscoveryQuery();
+      allow create, delete: if isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
+      allow update: if (isAuth() && request.auth.uid == uid)
+        || isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
+    }
+
+    match /it_staff/{docId} {
+      allow read: if isItAdminOrManager() || isHqTier1();
+      allow write: if isItAdminOrManager() || isHqSuperOrManager();
+    }
+    match /media_staff/{docId} {
+      allow read: if isMediaAdminOrManager() || isItAdminOrManager() || isHqTier1();
+      allow write: if isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
+    }
+    
+    match /{collectionId}/{docId} {
+      allow read: if (collectionId.matches('^it_.*') && (isItAdminOrManager() || isHqTier1()))
+        || (collectionId.matches('^media_.*') && (isMediaAdminOrManager() || isItAdminOrManager() || isHqTier1()));
+      allow write: if (collectionId.matches('^it_.*') && (isItAdminOrManager() || isHqSuperOrManager()))
+        || (collectionId.matches('^media_.*') && (isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager()));
+    }
 
     // ── Future departments staff-management (manager/superadmin only) ────────
     // Any new department that follows naming:

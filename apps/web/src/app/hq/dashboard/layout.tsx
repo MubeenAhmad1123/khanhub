@@ -55,25 +55,27 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ROLE_COLORS: Record<HqRole, string> = {
-  superadmin: 'bg-purple-100 text-purple-700',
-  manager: 'bg-blue-100 text-blue-700',
-  cashier: 'bg-amber-100 text-amber-700',
+  superadmin: 'bg-black text-white border-2 border-black',
+  manager: 'bg-white text-black border-2 border-black font-bold',
+  cashier: 'bg-[#FDFCF7] text-black border-2 border-black italic',
 };
 
 const ROLE_LABELS: Record<HqRole, string> = {
-  superadmin: 'Super Admin',
-  manager: 'Manager',
-  cashier: 'Cashier',
+  superadmin: 'SUPER ADMIN',
+  manager: 'MANAGER',
+  cashier: 'CASHIER',
 };
 
 // Dept label map for sidebar shortcuts
 const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string; icon: React.ReactNode }> = {
-  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
-  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
-  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
-  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
-  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
-  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
+  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-black',   icon: <Heart size={16} /> },
+  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-black',   icon: <GraduationCap size={16} /> },
+  it:           { label: 'IT',         adminUrl: '/departments/it/dashboard/admin',          color: 'text-black',   icon: <Shield size={16} /> },
+  'social-media': { label: 'Media',    adminUrl: '/departments/social-media/dashboard/admin', color: 'text-black',   icon: <Eye size={16} /> },
+  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-black', icon: <Heart size={16} /> },
+  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-black',  icon: <Heart size={16} /> },
+  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-black',   icon: <Building2 size={16} /> },
+  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-black', icon: <User size={16} /> },
 };
 
 const DEPARTMENT_NAV: Record<string, NavItem[]> = {
@@ -182,6 +184,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           handleSignOut();
         }
       }
+    }, (err) => {
+      console.warn("Real-time session listener permission issue (likely session expired):", err);
     });
     return () => unsub();
   }, [user]);

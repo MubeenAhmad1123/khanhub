@@ -45,12 +45,9 @@ export default function DailyReportPage() {
   const [reportData, setReportData] = useState<DailyReportRow[]>([]);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
-  const [isDark, setIsDark] = useState(false);
   const [downloading, setDownloading] = useState(false);
-
-  useEffect(() => {
-    setIsDark(localStorage.getItem('hq_dark_mode') === 'true');
-  }, []);
+  // UI standard - forced light theme
+  const isDark = false;
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -86,7 +83,8 @@ export default function DailyReportPage() {
       // Fetch all unpaid fines for these departments to show total debt
       const fineSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('status', '==', 'unpaid')))));
       const contribSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))));
-      const gpSnaps = await Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_growth_points`))));
+      
+      // Removed full growth_points fetch to prevent 429 - GP status now driven by today's contributions
 
       // Maps for fast lookup
       const attMap = new Map();
@@ -108,14 +106,6 @@ export default function DailyReportPage() {
         const sid = d.data().staffId || d.id;
         const existing = contribMap.get(sid) || 0;
         contribMap.set(sid, existing + 1);
-      }));
-      gpSnaps.forEach(snap => snap.docs.forEach(d => {
-        const data = d.data();
-        const sid = data.staffId;
-        if (sid) {
-          const existing = gpMap.get(sid) || 0;
-          gpMap.set(sid, existing + (data.points || 0));
-        }
       }));
 
       // 3. Process Report Rows
@@ -379,9 +369,9 @@ export default function DailyReportPage() {
               <ArrowLeft size={20} />
             </Link>
             <div>
-              <h1 className="text-3xl font-[1000] tracking-tight text-gray-900 dark:text-white">Staff Performance</h1>
+              <h1 className="text-3xl font-[1000] tracking-tight text-black">Daily Performance Report</h1>
               <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                <Shield size={12} className="text-indigo-500" /> Operational Assessment & Audit
+                <Shield size={12} className="text-black" /> Operational Assessment & Audit Log
               </p>
             </div>
           </div>

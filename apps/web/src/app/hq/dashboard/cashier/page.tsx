@@ -717,63 +717,58 @@ export default function CashierStationPage() {
 
   if (sessionLoading || !mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-default">
-        <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+        <Loader2 className="w-10 h-10 animate-spin text-black" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-surface-default text-black pb-24 md:pb-8">
-      <div className="sticky top-0 z-20 backdrop-blur-md bg-surface-overlay border-b border-border-subtle px-4 py-4 md:px-8 md:py-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-black/10">
-            <CreditCard size={20} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight truncate uppercase">Cashier Station</h1>
-            <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
+    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-[#FCFBF8] text-black pb-32 md:pb-8">
+      <div className="sticky top-0 z-30 bg-white border-b-4 border-black px-4 py-6 md:px-8 md:py-8 shadow-xl shadow-black/5">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6 min-w-0">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shrink-0 shadow-2xl">
+              <CreditCard size={24} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl md:text-4xl font-black text-black tracking-tight truncate uppercase">Cashier Terminal</h1>
+              <p className="text-[10px] text-black font-black uppercase tracking-[0.2em] mt-1 opacity-50">Active Session: {session?.customId || 'HQ-DELTA'}</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Link 
-              href="/hq/dashboard/cashier/history"
-              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-surface-subtle rounded-xl border border-border-subtle text-[10px] md:text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-sm"
-            >
-              <History size={14} className="text-purple-600" />
-              <span className="hidden md:inline">History</span>
-            </Link>
-            <Link 
-              href="/hq/dashboard/cashier/daily-report"
-              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-surface-subtle rounded-xl border border-border-subtle text-[10px] md:text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-sm"
-            >
-              <LayoutDashboard size={14} className="text-indigo-600" />
-              <span className="hidden md:inline">Report</span>
-            </Link>
-            <Link 
-              href="/hq/dashboard/cashier/reconciliation"
-              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-surface-subtle rounded-xl border border-border-subtle text-[10px] md:text-xs font-black uppercase tracking-widest text-black transition-all active:scale-95 shadow-sm"
-            >
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <span className="hidden md:inline">Audit</span>
-            </Link>
+          <div className="flex items-center gap-3 shrink-0">
+            {[
+              { href: "/hq/dashboard/cashier/history", icon: History, label: "Logs" },
+              { href: "/hq/dashboard/cashier/daily-report", icon: LayoutDashboard, label: "Sheet" },
+              { href: "/hq/dashboard/cashier/reconciliation", icon: ShieldCheck, label: "Audit" }
+            ].map(link => (
+              <Link 
+                key={link.label}
+                href={link.href}
+                className="flex items-center gap-2 px-6 py-3.5 bg-white hover:bg-black hover:text-white rounded-2xl border-2 border-black text-[10px] font-black uppercase tracking-[0.2em] text-black transition-all active:scale-95 shadow-xl shadow-black/5"
+              >
+                <link.icon size={16} />
+                <span className="hidden lg:inline">{link.label}</span>
+              </Link>
+            ))}
             <Link 
               href="/hq/dashboard/cashier/day-close"
-              className="flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-black/90 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-black/20 transition-all active:scale-95"
+              className="flex items-center gap-2 px-8 py-3.5 bg-black hover:bg-white hover:text-black border-2 border-black rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xl shadow-black/20 transition-all active:scale-95"
             >
-              <Lock size={14} />
-              <span className="hidden md:inline">Day Close</span>
+              <Lock size={16} />
+              <span className="hidden lg:inline">Terminal Lock</span>
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-6 min-w-0">
-          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black flex items-center gap-2">
-              <Plus size={14} className="text-purple-600" /> Pending Requests
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="lg:col-span-4 space-y-10 min-w-0">
+          <div className="bg-white border-4 border-black rounded-[3rem] p-8 md:p-10 shadow-2xl">
+            <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-black flex items-center gap-3">
+              <Plus size={16} strokeWidth={4} /> Incoming Queue
             </h2>
             </div>
             {incomingError ? (
@@ -811,12 +806,12 @@ export default function CashierStationPage() {
                             {tx.departmentCode}
                           </span>
                         </div>
-                        <div className="text-sm font-black text-black truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
-                        <div className="text-[10px] font-bold text-black truncate">{tx.patientId || tx.donorId || tx.id}</div>
-                        <div className="text-xs font-black text-black mt-2">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-semibold text-black mt-1 line-clamp-1 italic">{tx.description || tx.note || 'No description provided'}</div>
-                        <span className={cn('mt-2.5 inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200')}>
-                          {tx.status || 'pending_cashier'}
+                        <div className="text-sm font-black text-black truncate uppercase tracking-tight">{tx.patientName || tx.donorName || 'Entity'}</div>
+                        <div className="text-[10px] font-black text-black truncate opacity-40">{tx.patientId || tx.donorId || tx.id}</div>
+                        <div className="text-sm font-black text-black mt-3">Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                        <div className="text-[10px] font-bold text-black mt-1 line-clamp-1 italic opacity-60">{tx.description || tx.note || 'No manifest provided'}</div>
+                        <span className="mt-4 inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border-2 border-black bg-black text-white">
+                          {tx.status?.replace('_', ' ') || 'QUEUED'}
                         </span>
                       </div>
                       <div className="shrink-0 flex flex-col gap-2">
@@ -848,29 +843,29 @@ export default function CashierStationPage() {
           </div>
 
           {/* Quick Statistics */}
-          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 shadow-sm">
-                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-4 border border-green-100">
-                  <TrendingUp size={20} />
+          <div className="bg-white border-4 border-black rounded-[3rem] p-8 md:p-10 shadow-2xl">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-black/5 border-2 border-black/10 rounded-[2rem] p-8 transition-all hover:border-black">
+                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white mb-6 shadow-xl">
+                  <TrendingUp size={24} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-black mb-1">Income Today</p>
-                <p className="text-xl font-black text-black">Rs {totals.income.toLocaleString()}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black mb-1 opacity-40">Revenue Today</p>
+                <p className="text-2xl font-black text-black">Rs {totals.income.toLocaleString()}</p>
               </div>
-              <div className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 shadow-sm">
-                <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600 mb-4 border border-red-100">
-                  <TrendingDown size={20} />
+              <div className="bg-black/5 border-2 border-black/10 rounded-[2rem] p-8 transition-all hover:border-black">
+                <div className="w-12 h-12 bg-white border-2 border-black rounded-2xl flex items-center justify-center text-black mb-6 shadow-xl">
+                  <TrendingDown size={24} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-black mb-1">Expense Today</p>
-                <p className="text-xl font-black text-black">Rs {totals.expense.toLocaleString()}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black mb-1 opacity-40">Payout Today</p>
+                <p className="text-2xl font-black text-black">Rs {totals.expense.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
           {/* Search Section */}
-          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-8 shadow-sm">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-black mb-5 flex items-center gap-2">
-              <Search size={14} className="text-black" /> {isStaffMode ? 'Search Staff' : 'Search Account'}
+          <div className="bg-white border-4 border-black rounded-[3rem] p-8 md:p-10 shadow-2xl">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-black mb-8 flex items-center gap-3">
+              <Search size={16} strokeWidth={4} /> {isStaffMode ? 'Fleet Directory' : 'Global Accounts'}
             </h2>
             <div className="space-y-4">
               <select 
