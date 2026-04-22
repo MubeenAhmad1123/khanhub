@@ -8,7 +8,8 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
-  ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon
+  ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon,
+  ChevronRight, KeyRound
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
