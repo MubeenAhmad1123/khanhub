@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
-export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'other';
+export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'personnel' | 'student' | 'other';
 export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated';
 
 export function getDeptCollection(dept: StaffDept): string {
@@ -51,7 +51,7 @@ export type StaffCardRow = {
 
 function normalizeRole(raw: any): StaffRole {
   const r = String(raw || '').toLowerCase();
-  const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor'];
+  const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'student'];
   if (STAFF_WHITELIST.includes(r)) return r as StaffRole;
   return 'other';
 }
@@ -169,7 +169,7 @@ export async function listStaffCards({
   const base = await Promise.all(
     targetDepts.map(async (d) => {
       const col = getDeptCollection(d);
-      const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(100))).catch(() => ({ docs: [] } as any));
+      const snap = await getDocs(query(collection(db, col), limit(100))).catch(() => ({ docs: [] } as any));
       return snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
     })
   );

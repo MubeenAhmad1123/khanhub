@@ -369,14 +369,33 @@ export default function Navbar() {
 
             {/* Mobile Icons Row - Compact to fit all 7 items */}
             <div className="md:hidden flex items-center gap-0 sm:gap-1 flex-1 justify-end mr-0.5 sm:mr-1">
+              {/* Download App - Compact Icon only Animates (Moved to Far Left) */}
+              <a
+                href="/download-app"
+                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[24px] group"
+                aria-label="Download Mobile App"
+              >
+                <div className="animate-flip">
+                  <Image
+                    src="/app-download.webp"
+                    alt="Download App"
+                    width={12}
+                    height={12}
+                    className="rounded-md shadow-sm"
+                    priority
+                  />
+                </div>
+                <span className="text-[6px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">App</span>
+              </a>
+
               {/* Search Toggle (Mobile) */}
               <button
                 onClick={() => setSearchOpen(true)}
-                className="p-1.5 rounded-lg text-neutral-700 hover:text-primary-600 transition-colors flex flex-col items-center justify-center gap-0.5 min-w-[32px]"
+                className="p-1 rounded-lg text-neutral-700 hover:text-primary-600 transition-colors flex flex-col items-center justify-center gap-0.5 min-w-[28px]"
                 aria-label="Open Search"
               >
-                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-[7px] font-black uppercase tracking-tighter leading-none">Search</span>
+                <Search className="w-3.5 h-3.5" />
+                <span className="text-[6px] font-black uppercase tracking-tighter leading-none">Search</span>
               </button>
 
               {Object.entries(SITE.social).map(([platform, url]) => {
@@ -393,46 +412,29 @@ export default function Navbar() {
                     href={url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-0.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                    className="p-0.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[24px] min-h-[24px] flex items-center justify-center"
                     aria-label={`Visit our ${platform} page`}
                   >
-                    <Icon className="w-[15px] h-[15px] sm:w-4 sm:h-4" />
+                    <Icon className="w-[13px] h-[13px]" />
                   </a>
                 );
               })}
 
-              {/* Login / Dashboard Mobile Icon */}
+              {/* Login / Dashboard Mobile Icon (Far Right) */}
               <Link
                 href={dashboardHref}
-                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px] group"
+                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[24px] group"
                 aria-label={user ? "My Dashboard" : "Login to Portal"}
               >
                 <div className="animate-bounce transition-transform group-hover:scale-110">
-                  <CgLogIn className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+                  <div className="rotate-90 flex items-center justify-center">
+                    <CgLogIn className="w-[14px] h-[14px]" />
+                  </div>
                 </div>
-                <span className="text-[7px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">
-                  {user ? "Dashboard" : "Login"}
+                <span className="text-[6px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">
+                  {user ? "Dash" : "Login"}
                 </span>
               </Link>
-
-              {/* Download App - Compact Icon only Animates */}
-              <a
-                href="/download-app"
-                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px]"
-                aria-label="Download Mobile App"
-              >
-                <div className="animate-flip">
-                  <Image
-                    src="/app-download.webp"
-                    alt="Download App"
-                    width={16}
-                    height={16}
-                    className="rounded-md shadow-sm"
-                    priority
-                  />
-                </div>
-                <span className="text-[6.5px] font-bold uppercase tracking-tighter leading-none whitespace-nowrap">Mobile App</span>
-              </a>
             </div>
 
             {/* Mobile Hamburger Button */}

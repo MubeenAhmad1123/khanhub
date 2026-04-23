@@ -713,12 +713,12 @@ service cloud.firestore {
         ); 
     } 
     function hqRole() { 
-      return exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role
+      return isHqAuth()
+        ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('role', '')
         : (isSystemAdmin() ? 'superadmin' : ''); 
     } 
     function hqCustomId() {
-      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
+      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('customId', '');
     }
     function isHqRole(role) { 
       return isHqAuth() && hqRole() == role; 
@@ -846,7 +846,7 @@ service cloud.firestore {
     // Nobody edits or deletes.
     match /hq_reconciliation/{docId} {
       allow read: if isHqSuperOrManager()
-        || (isHqCashier() && resource.data.cashierId.upper() == hqCustomId().upper());
+        || (isHqCashier() && resource.data.get('cashierId', '').toUpper() == hqCustomId().toUpper());
       allow create: if isHqCashier() || isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if false;

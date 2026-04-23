@@ -171,7 +171,7 @@ export const DEPARTMENT_THEMES = {
 export const DEPARTMENTS: Department[] = [
   {
     slug: 'medical-center',
-    name: 'khanhub.com.pk Medical Center',
+    name: 'Medical Center',
     shortName: 'Medical Center',
     icon: '🏥',
     image: '/images/medical-center.webp',
@@ -244,11 +244,11 @@ export const DEPARTMENTS: Department[] = [
       'Patient Wards'
     ],
     contactPhone: '0300-6395220',
-    contactEmail: 'emergency@medicalcenter.khanhub.com.pk.pk'
+    contactEmail: 'emergency@medicalcenter.khanhub.com.pk'
   },
   {
     slug: 'rehabilitation',
-    name: 'khanhub.com.pk Rehabilitation Center',
+    name: 'Rehabilitation Center',
     shortName: 'Rehabilitation',
     icon: '♿',
     image: '/images/rehab.webp',
@@ -419,11 +419,11 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['Therapy Rooms', 'Counseling Centers', 'Residential Units', 'Exercise Areas', 'Group Therapy Halls'],
     contactPhone: '0300-6395220',
-    contactEmail: 'rehab@khanhub.com.pk.pk'
+    contactEmail: 'rehab@khanhub.com.pk'
   },
   {
     slug: 'education',
-    name: 'khanhub.com.pk Education Center',
+    name: 'Education Center',
     shortName: 'Education',
     icon: '🎓',
     image: '/images/education.webp',
@@ -496,11 +496,11 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['District Offices', 'Training Centers', 'Assessment Centers', 'Resource Libraries'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@education.khanhub.com.pk.pk'
+    contactEmail: 'info@education.khanhub.com.pk'
   },
   {
     slug: 'sukoon-center',
-    name: 'khanhub.com.pk Sukoon Center',
+    name: 'Sukoon Center',
     shortName: 'Sukoon',
     icon: '🧘',
     image: '/images/sukoon.webp',
@@ -517,11 +517,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Individual Counseling', 'Group Therapy', 'Mindfulness Workshops', 'Yoga & Meditation'],
     facilities: ['Meditation Rooms', 'Therapy Suites', 'Relaxation Gardens'],
     contactPhone: '0300-6395220',
-    contactEmail: 'sukoon@khanhub.com.pk.pk'
+    contactEmail: 'sukoon@khanhub.com.pk'
   },
   {
     slug: 'job-placement',
-    name: 'khanhub.com.pk Job Center',
+    name: 'Job Center',
     shortName: 'Job Center',
     icon: '💼',
     image: '/images/job.webp',
@@ -583,12 +583,12 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['Career Centers', 'Computer Labs', 'Interview Rooms', 'Resource Libraries'],
     contactPhone: '0300-6395220',
-    contactEmail: 'jobs@khanhub.com.pk.pk',
+    contactEmail: 'jobs@khanhub.com.pk',
     externalUrl: 'https://job.khanhub.com.pk/'
   },
   {
     slug: 'skill-development',
-    name: 'khanhub.com.pk Skills Center',
+    name: 'Skills Center',
     shortName: 'Skills Center',
     icon: '🛠️',
     image: '/images/skill.webp',
@@ -605,11 +605,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['IT Training', 'Welding & Fabrication', 'Electrical Work', 'Plumbing', 'Beautician Courses', 'Tailoring'],
     facilities: ['Training Workshops', 'Computer Labs', 'Practice Areas', 'Certification Centers'],
     contactPhone: '0300-6395220',
-    contactEmail: 'skills@khanhub.com.pk.pk'
+    contactEmail: 'skills@khanhub.com.pk'
   },
   {
     slug: 'surgical-repair',
-    name: 'khanhub.com.pk Surgical Repair Center',
+    name: 'Surgical Repair Center',
     shortName: 'Surgical Repair',
     icon: '🔧',
     image: '/images/surgical-repair.webp',
@@ -626,11 +626,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Reconstructive Surgery', 'Cosmetic Surgery', 'Burn Unit', 'Trauma Surgery', 'Microsurgery'],
     facilities: ['Specialized Operating Theaters', 'Burn Unit', 'Recovery Rooms', 'Physiotherapy', 'Counseling Center'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@surgicalrepair.khanhub.com.pk.pk'
+    contactEmail: 'info@surgicalrepair.khanhub.com.pk'
   },
   {
     slug: 'transport',
-    name: 'khanhub.com.pk Transport Services',
+    name: 'Transport Services',
     shortName: 'Transport',
     icon: '🚐',
     image: '/images/transport.webp',
@@ -681,11 +681,11 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['License Centers', 'Registration Offices', 'Testing Tracks', 'Customer Service Centers'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@transport.khanhub.com.pk.pk'
+    contactEmail: 'info@transport.khanhub.com.pk'
   },
   {
     slug: 'surgical-services',
-    name: 'khanhub.com.pk Surgical Services',
+    name: 'Surgical Services',
     shortName: 'Surgical Services',
     icon: '🏨',
     image: '/images/surgical-services.webp',
@@ -702,11 +702,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['General Surgery', 'Orthopedic Surgery', 'Cardiac Surgery', 'Neurosurgery', 'Laparoscopic Surgery'],
     facilities: ['Modern Operating Rooms', 'Recovery Wards', 'ICU', 'Surgical Equipment', 'Sterilization Units'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@surgical.khanhub.com.pk.pk'
+    contactEmail: 'info@surgical.khanhub.com.pk'
   },
   {
     slug: 'prosthetic-services',
-    name: 'khanhub.com.pk Prosthetic Services',
+    name: 'Prosthetic Services',
     shortName: 'Prosthetics',
     icon: '🦾',
     image: '/images/prosthetic.webp',
@@ -723,11 +723,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Custom Prosthetics', 'Orthotic Solutions', 'Adaptive Technology', 'Mobility Training'],
     facilities: ['Prosthetic Labs', 'Assessment Rooms', 'Training Centers'],
     contactPhone: '0300-6395220',
-    contactEmail: 'prosthetics@khanhub.com.pk.pk'
+    contactEmail: 'prosthetics@khanhub.com.pk'
   },
   {
     slug: 'residential-services',
-    name: 'khanhub.com.pk Residential Services',
+    name: 'Residential Services',
     shortName: 'Residential',
     icon: '🏡',
     image: '/images/residential.webp',
@@ -744,11 +744,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Affordable Housing', 'Urban Development', 'Building Permits', 'Infrastructure Development'],
     facilities: ['Planning Offices', 'Approval Centers', 'Display Centers', 'Customer Service'],
     contactPhone: '0300-6395220',
-    contactEmail: 'housing@khanhub.com.pk.pk'
+    contactEmail: 'housing@khanhub.com.pk'
   },
   {
     slug: 'tourism',
-    name: 'khanhub.com.pk Travel & Tours',
+    name: 'Travel & Tours',
     shortName: 'Tourism',
     icon: '✈️',
     image: '/images/travel-and-tour.webp',
@@ -765,11 +765,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Tourist Guides', 'Heritage Conservation', 'Tourism Promotion', 'Hospitality Training'],
     facilities: ['Information Centers', 'Tourist Facilitation Centers', 'Heritage Museums', 'Rest Areas'],
     contactPhone: '0300-6395220',
-    contactEmail: 'tourism@khanhub.com.pk.pk'
+    contactEmail: 'tourism@khanhub.com.pk'
   },
   {
     slug: 'marketing',
-    name: 'khanhub.com.pk Marketing Agency',
+    name: 'Marketing Agency',
     shortName: 'Marketing',
     icon: '📱',
     image: '/images/marketing.webp',
@@ -786,11 +786,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Digital Marketing', 'Trade Fairs', 'Export Support', 'Brand Development', 'Market Analysis'],
     facilities: ['Marketing Centers', 'Exhibition Halls', 'Conference Rooms', 'Media Studios'],
     contactPhone: '0300-6395220',
-    contactEmail: 'marketing@khanhub.com.pk.pk'
+    contactEmail: 'marketing@khanhub.com.pk'
   },
   {
     slug: 'enterprises',
-    name: 'khanhub.com.pk Enterprises',
+    name: 'Enterprises',
     shortName: 'Enterprises',
     icon: '🏢',
     image: '/images/enterprises.webp',
@@ -807,11 +807,11 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Startup Incubator', 'SME Support', 'Investment Network', 'Business Training'],
     facilities: ['Co-working Spaces', 'Meeting Rooms', 'Innovation Hubs'],
     contactPhone: '0300-6395220',
-    contactEmail: 'enterprises@khanhub.com.pk.pk'
+    contactEmail: 'enterprises@khanhub.com.pk'
   },
   {
     slug: 'institute-health-sciences',
-    name: 'khanhub.com.pk Medical Institute',
+    name: 'Medical Institute',
     shortName: 'Medical Institute',
     icon: '🩺',
     image: '/images/institute-health-sciences.webp',
@@ -829,7 +829,7 @@ export const DEPARTMENTS: Department[] = [
     programs: ['Pharmacy Technician', 'LHV', 'CNA', 'OTT', 'MLT'],
     facilities: ['Modern Labs', 'Hostel Facility', 'Digital Library', 'Clinical Training'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@ihs.khanhub.com.pk.pk',
+    contactEmail: 'info@ihs.khanhub.com.pk',
     features: [
       'Less Fee Structure',
       'Better Educational Standards',
@@ -1119,7 +1119,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'social-welfare',
-    name: 'khanhub.com.pk Welfare Org',
+    name: 'Welfare Org',
     shortName: 'Welfare Org',
     icon: '❤️',
     image: '/images/welfare-organization.webp',
@@ -1181,7 +1181,7 @@ export const DEPARTMENTS: Department[] = [
     ],
     facilities: ['Welfare Centers', 'Community Halls', 'Support Offices', 'Distribution Points'],
     contactPhone: '0300-6395220',
-    contactEmail: 'info@welfare.khanhub.com.pk.pk'
+    contactEmail: 'info@welfare.khanhub.com.pk'
   }
 ];
 
