@@ -189,15 +189,15 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+      <div className="flex flex-col h-full bg-white text-black">
         {/* Header */}
-        <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className="px-6 pt-10 pb-6 border-b border-black/5">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
-            className="flex items-center gap-2 text-gray-400 hover:text-orange-600 text-[10px] font-bold mb-4 transition-colors group uppercase tracking-widest"
+            className="flex items-center gap-2 text-gray-400 hover:text-black text-[10px] font-black mb-6 transition-colors group uppercase tracking-[0.2em]"
           >
-            <ArrowLeft size={10} className="group-hover:-translate-x-1 transition-transform" />
-            {viewMode === 'hq' ? 'Back to HQ' : 'Back to Home'}
+            <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
+            {viewMode === 'hq' ? 'Back to HQ' : 'Exit Portal'}
           </Link>
 
           <div className="flex items-center gap-3 mb-6">
@@ -304,7 +304,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar font-bold">
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar font-black">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -312,26 +312,26 @@ export default function JobCenterDashboardLayout({ children }: { children: React
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all group ${
-                  isActive ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-500 hover:text-orange-600')
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-[13px] transition-all group ${
+                  isActive 
+                    ? 'bg-black text-white shadow-xl shadow-black/10 translate-x-1' 
+                    : 'text-gray-500 hover:text-black hover:bg-gray-50'
                 }`}
               >
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />}
+                <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                  {item.icon}
+                </div>
+                <span className="flex-1 tracking-tight">{item.label}</span>
+                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />}
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom */}
-        <div className={`p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <button onClick={toggleDark} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold mb-1 ${darkMode ? 'text-yellow-400' : 'text-gray-500 hover:bg-gray-100'}`}>
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            {darkMode ? 'Light' : 'Dark'}
-          </button>
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50">
-            <LogOut size={16} />
+        <div className="p-6 border-t border-black/5">
+          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black text-red-500 hover:bg-red-50 transition-all active:scale-95">
+            <LogOut size={18} />
             Sign Out
           </button>
         </div>
@@ -340,14 +340,14 @@ export default function JobCenterDashboardLayout({ children }: { children: React
   };
 
   return (
-    <div className={`min-h-screen flex overflow-x-hidden ${darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
-      <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+    <div className="min-h-screen flex overflow-x-hidden bg-[#FDFCFB] text-black selection:bg-pink-100">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-black/5 fixed left-0 top-0 h-screen z-30 bg-white">
         <SidebarContent />
       </aside>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-white border-r border-black/10`}>
         <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100">
           <X size={16} />
         </button>
@@ -355,25 +355,27 @@ export default function JobCenterDashboardLayout({ children }: { children: React
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
+        <header className="lg:hidden sticky top-0 z-20 backdrop-blur-md border-b border-black/5 px-4 py-3 flex items-center justify-between bg-white/80">
           <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400"><Menu size={20} /></button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center text-white"><Shield size={14} /></div>
-            <span className="font-black text-sm">Job Center</span>
+            <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white"><Shield size={14} /></div>
+            <span className="font-black text-sm tracking-tight">Job Center</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
         </header>
 
-        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Khan Hub Job Center Portal</div>
-          <div className="flex items-center gap-3">
-             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
-             <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
-             <span className="text-sm font-bold">{user?.displayName}</span>
+        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b border-black/5 px-8 py-4 items-center justify-between bg-white/80">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Khan Hub • Job Center Portal</div>
+          <div className="flex items-center gap-6">
+             <div className="flex items-center gap-3">
+               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+               <div className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center font-black text-sm">{user?.displayName?.[0]}</div>
+               <span className="text-sm font-black text-black">{user?.displayName}</span>
+             </div>
           </div>
         </header>
 
-        <main className={`flex-1 p-4 lg:p-8 transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <main className={`flex-1 p-4 lg:p-10 transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-6xl mx-auto">{children}</div>
         </main>
       </div>

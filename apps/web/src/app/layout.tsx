@@ -140,6 +140,8 @@ export const metadata: Metadata = {
 
 
 
+import { AuthProvider } from '@/components/providers/AuthProvider'
+
 // ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout({
   children,
@@ -154,9 +156,11 @@ export default function RootLayout({
           forcedTheme="light"
           disableTransitionOnChange
         >
-          <ConditionalShell>
-            {children}
-          </ConditionalShell>
+          <AuthProvider>
+            <ConditionalShell>
+              {children}
+            </ConditionalShell>
+          </AuthProvider>
           <Toaster position="bottom-right" />
           <Analytics />
           <SpeedInsights />

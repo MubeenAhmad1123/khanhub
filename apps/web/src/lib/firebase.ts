@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { browserLocalPersistence, getAuth, GoogleAuthProvider, setPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -17,11 +17,20 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Ensure auth persists across tabs/browser restarts (prevents HQ session from
-// getting cleared on new tabs before Auth rehydrates).
+// Enable offline persistence for Firestore
 if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time.
+      console.warn('[Firestore] Persistence failed (multiple tabs open)');
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support all of the features required to enable persistence
+      console.warn('[Firestore] Persistence not supported by browser');
+    }
+  });
+
+  // Ensure auth persists across tabs/browser restarts
   setPersistence(auth, browserLocalPersistence).catch((err) => {
-    // Persistence can fail in restricted environments (e.g. blocked storage).
-    console.warn('[firebase] setPersistence failed', err);
+    console.warn('[Auth] setPersistence failed', err);
   });
 }

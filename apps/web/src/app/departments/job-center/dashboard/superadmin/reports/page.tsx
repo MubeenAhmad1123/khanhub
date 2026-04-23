@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, getCountFromServer, getAggregateFromServer, sum } from 'firebase/firestore';
 import { formatDateDMY } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
@@ -49,7 +49,54 @@ export default function SuperAdminReportsPage() {
       const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
       const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
 
-      // === FINANCIAL TRANSACTIONS ===
+      // === OPTIMIZED COUNTS & SUMS (Server-Side) ===
+      
+      // 1. Total Income Sum
+      const incomeQ = query(
+        collection(db, 'jobcenter_transactions'),
+        where('date', '>=', Timestamp.fromDate(firstDay)),
+        where('date', '<=', Timestamp.fromDate(lastDay)),
+        where('status', '==', 'approved'),
+        where('type', '==', 'income')
+      );
+      const incomeAggr = await getAggregateFromServer(incomeQ, { total: sum('amount') });
+      const totalIncome = incomeAggr.data().total || 0;
+
+      // 2. Total Expense Sum
+      const expenseQ = query(
+        collection(db, 'jobcenter_transactions'),
+        where('date', '>=', Timestamp.fromDate(firstDay)),
+        where('date', '<=', Timestamp.fromDate(lastDay)),
+        where('status', '==', 'approved'),
+        where('type', '==', 'expense')
+      );
+      const expenseAggr = await getAggregateFromServer(expenseQ, { total: sum('amount') });
+      const totalExpenses = expenseAggr.data().total || 0;
+
+      // 3. Pending Transactions Count
+      const pendingQ = query(
+        collection(db, 'jobcenter_transactions'),
+        where('date', '>=', Timestamp.fromDate(firstDay)),
+        where('date', '<=', Timestamp.fromDate(lastDay)),
+        where('status', '==', 'pending')
+      );
+      const pendingSnap = await getCountFromServer(pendingQ);
+      const pendingCount = pendingSnap.data().count;
+
+      // 4. Seeker Stats
+      const activeSeekersQ = query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true));
+      const activeSeekersSnap = await getCountFromServer(activeSeekersQ);
+      const totalActiveSeekers = activeSeekersSnap.data().count;
+
+      const newAdmissionsQ = query(
+        collection(db, 'jobcenter_seekers'),
+        where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
+        where('admissionDate', '<=', Timestamp.fromDate(lastDay))
+      );
+      const newAdmissionsSnap = await getCountFromServer(newAdmissionsQ);
+      const newAdmissions = newAdmissionsSnap.data().count;
+
+      // === DETAILED DATA (Fetched for UI breakdown) ===
       const txnQ = query(
         collection(db, 'jobcenter_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
@@ -60,20 +107,8 @@ export default function SuperAdminReportsPage() {
       const txnSnap = await getDocs(txnQ);
       const txns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Pending count
-      const pendingQ = query(
-        collection(db, 'jobcenter_transactions'),
-        where('date', '>=', Timestamp.fromDate(firstDay)),
-        where('date', '<=', Timestamp.fromDate(lastDay)),
-        where('status', '==', 'pending')
-      );
-      const pendingSnap = await getDocs(pendingQ);
-      const pendingCount = pendingSnap.size;
-
       const income = txns.filter((t: any) => t.type === 'income');
       const expense = txns.filter((t: any) => t.type === 'expense');
-      const totalIncome = income.reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      const totalExpenses = expense.reduce((s: number, t: any) => s + (t.amount || 0), 0);
 
       const byCategory = (list: any[]) => {
         const map: Record<string, number> = {};
@@ -112,17 +147,6 @@ export default function SuperAdminReportsPage() {
       });
 
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
-
-      // === SEEKERS ===
-      const activeSeekersSnap = await getDocs(query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true)));
-      const totalActiveSeekers = activeSeekersSnap.size;
-
-      const newAdmissionsSnap = await getDocs(query(
-        collection(db, 'jobcenter_seekers'),
-        where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
-        where('admissionDate', '<=', Timestamp.fromDate(lastDay))
-      ));
-      const newAdmissions = newAdmissionsSnap.size;
 
       setReportData({
         txns, income, expense,
