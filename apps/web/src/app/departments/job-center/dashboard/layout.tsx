@@ -1,6 +1,6 @@
 // d:\Khan Hub\apps\web\src\app\departments\job-center\dashboard\layout.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -82,6 +82,21 @@ export default function JobCenterDashboardLayout({ children }: { children: React
   const darkMode = mounted && resolvedTheme === 'dark';
   const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
+  const handleSignOut = useCallback(() => {
+    localStorage.removeItem('jobcenter_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession?.role === 'superadmin') {
+           router.push('/hq/dashboard/superadmin');
+           return;
+        }
+      } catch(e) {}
+    }
+    router.push('/departments/job-center/login');
+  }, [router]);
+
   useEffect(() => {
     setMounted(true);
     let session = localStorage.getItem('jobcenter_session');
@@ -134,7 +149,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     };
 
     performAuthCheck();
-  }, [router]);
+  }, [router, handleSignOut]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
@@ -152,22 +167,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
       }
     });
     return () => unsub();
-  }, [user]);
-
-  const handleSignOut = () => {
-    localStorage.removeItem('jobcenter_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-           router.push('/hq/dashboard/superadmin');
-           return;
-        }
-      } catch(e) {}
-    }
-    router.push('/departments/job-center/login');
-  };
+  }, [user, handleSignOut]);
 
   if (isChecking) {
     return (

@@ -137,7 +137,20 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   // FCM push notifications
   const { permission, isRequesting, requestPermission } = useFcmNotifications(user);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(true); // Default true for SSR, check in useEffect
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('hq_fcm_banner_dismissed');
+      if (!dismissed) setBannerDismissed(false);
+    }
+  }, []);
+
+  const handleDismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem('hq_fcm_banner_dismissed', 'true');
+  };
+
   const showNotifBanner = mounted && !bannerDismissed && permission === 'default' && !!user;
 
   const normalizeRole = (role: unknown): HqRole | null => {
@@ -475,7 +488,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <HqNotificationPermissionBanner
               isRequesting={isRequesting}
               onAllow={requestPermission}
-              onDismiss={() => setBannerDismissed(true)}
+              onDismiss={handleDismissBanner}
             />
           )}
           <div className="p-4 lg:p-8">
