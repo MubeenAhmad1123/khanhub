@@ -846,8 +846,15 @@ service cloud.firestore {
     // Nobody edits or deletes.
     match /hq_reconciliation/{docId} {
       allow read: if isHqSuperOrManager()
-        || (isHqCashier() && resource.data.cashierId == hqCustomId());
+        || (isHqCashier() && resource.data.cashierId.upper() == hqCustomId().upper());
       allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if false;
+    }
+
+    match /cashierTransactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqTier1();
       allow update: if isHqSuperOrManager();
       allow delete: if false;
     }

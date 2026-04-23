@@ -22,11 +22,23 @@ export default function ReconciliationAuditPage() {
     if (!session) return;
     setLoading(true);
     try {
-      const q = query(
+      let q = query(
         collection(db, 'hq_reconciliation'),
         orderBy('createdAt', 'desc'),
         limit(50)
       );
+
+      // If cashier, only show their own records to satisfy security rules
+      if (session.role === 'cashier') {
+        const cashierId = (session.customId || '').toUpperCase();
+        q = query(
+          collection(db, 'hq_reconciliation'),
+          where('cashierId', '==', cashierId),
+          orderBy('createdAt', 'desc'),
+          limit(50)
+        );
+      }
+
       const snap = await getDocs(q);
       setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {

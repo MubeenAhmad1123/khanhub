@@ -104,11 +104,19 @@ export default function DailyReportPage() {
       const fetchPromises = DEPARTMENTS.map(async (dept) => {
         try {
           // Optimized query using the new composite indexes (date ASC/DESC)
-          const q = query(
-            collection(db, dept.txCollection),
+          const qConstraints: any[] = [
             where('date', '>=', startTimestamp),
             where('date', '<=', endTimestamp),
             orderBy('date', 'desc')
+          ];
+
+          if (session.role === 'cashier') {
+            qConstraints.push(where('cashierId', '==', (session.customId || '').toUpperCase()));
+          }
+
+          const q = query(
+            collection(db, dept.txCollection),
+            ...qConstraints
           );
           const snap = await getDocs(q);
           return snap.docs.map(doc => ({
@@ -138,10 +146,18 @@ export default function DailyReportPage() {
       // Also fetch from legacy/generic cashierTransactions if it exists
       const genericPromise = (async () => {
         try {
-          const q = query(
-            collection(db, 'cashierTransactions'),
+          const qConstraints: any[] = [
             where('date', '>=', startTimestamp),
             where('date', '<=', endTimestamp)
+          ];
+
+          if (session.role === 'cashier') {
+            qConstraints.push(where('cashierId', '==', (session.customId || '').toUpperCase()));
+          }
+
+          const q = query(
+            collection(db, 'cashierTransactions'),
+            ...qConstraints
           );
           const snap = await getDocs(q);
           return snap.docs.map(doc => ({ id: doc.id, departmentCode: 'other', departmentName: 'General', ...doc.data() })) as Transaction[];
@@ -160,11 +176,23 @@ export default function DailyReportPage() {
       setTransactions(flattened);
 
       // Check if already closed for this specific date
-      const closedQ = query(
+      let closedQ = query(
         collection(db, 'hq_reconciliation'),
         where('date', '==', formatDateDMY(new Date(reportDate))),
         limit(1)
       );
+
+      // If cashier, also filter by their ID
+      if (session.role === 'cashier') {
+        const cashierId = (session.customId || '').toUpperCase();
+        closedQ = query(
+          collection(db, 'hq_reconciliation'),
+          where('date', '==', formatDateDMY(new Date(reportDate))),
+          where('cashierId', '==', cashierId),
+          limit(1)
+        );
+      }
+
       const closedSnap = await getDocs(closedQ);
       setIsDayClosed(!closedSnap.empty);
 
@@ -188,11 +216,22 @@ export default function DailyReportPage() {
 
   async function fetchOpeningBalance() {
     try {
-      const q = query(
+      let q = query(
         collection(db, 'hq_reconciliation'),
         orderBy('createdAt', 'desc'),
         limit(1)
       );
+
+      if (session?.role === 'cashier') {
+        const cashierId = (session.customId || '').toUpperCase();
+        q = query(
+          collection(db, 'hq_reconciliation'),
+          where('cashierId', '==', cashierId),
+          orderBy('createdAt', 'desc'),
+          limit(1)
+        );
+      }
+
       const snap = await getDocs(q);
       if (!snap.empty) {
         setOpeningBalance(snap.docs[0].data().actualClosing || snap.docs[0].data().actualCash || 0);
@@ -220,7 +259,7 @@ export default function DailyReportPage() {
         actualCash: actual, // for compatibility
         variance,
         varianceNote: closingNote,
-        cashierId: session?.customId || session?.uid,
+        cashierId: (session?.customId || session?.uid || '').toUpperCase(),
         cashierName: session?.name || session?.displayName,
         status: 'submitted',
         createdAt: serverTimestamp(),
