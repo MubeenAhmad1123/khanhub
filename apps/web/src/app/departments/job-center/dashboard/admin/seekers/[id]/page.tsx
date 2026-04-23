@@ -12,7 +12,7 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, Settings
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -623,6 +623,16 @@ export default function SeekerDetailPage() {
                 {seeker.diagnosis}
               </p>
             )}
+
+            <div className="mt-4 flex justify-center">
+              <Link 
+                href={`/departments/job-center/dashboard/admin/employers/${seekerId}/edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg active:scale-95"
+              >
+                <Settings className="w-3 h-3" />
+                Advanced Edit
+              </Link>
+            </div>
           </div>
         </div>
 
