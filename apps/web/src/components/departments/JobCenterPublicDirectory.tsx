@@ -16,6 +16,7 @@ import {
   User,
   Globe,
   Check,
+  Building,
   X
 } from 'lucide-react';
 import Link from 'next/link';
@@ -51,7 +52,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
   const [seekers, setSeekers] = useState<PublicJobSeeker[]>([]);
   const [companies, setCompanies] = useState<PublicEmployer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProfile, setSelectedProfile] = useState<PublicJobSeeker | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<PublicJobSeeker | PublicEmployer | null>(null);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -393,7 +394,8 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
           displayCompanies.map(c => (
             <div 
               key={c.id} 
-              className="group bg-white rounded-2xl sm:rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col"
+              onClick={() => setSelectedProfile(c)}
+              className="cursor-pointer group bg-white rounded-2xl sm:rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col"
             >
               <div className="relative h-40 sm:h-56 w-full bg-neutral-50 flex items-center justify-center p-8 sm:p-12 transition-colors group-hover:bg-white">
                 {/* Hiring Status Badge */}
@@ -525,30 +527,63 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
             <div className="p-8 sm:p-12">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 mb-8 text-center sm:text-left">
                 <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-[2rem] bg-neutral-100 overflow-hidden shadow-lg flex-shrink-0">
-                  {selectedProfile.photoUrl ? (
-                    <Image
-                      src={selectedProfile.photoUrl}
-                      alt={selectedProfile.name}
-                      fill
-                      className="object-cover"
-                    />
+                  {'name' in selectedProfile ? (
+                    selectedProfile.photoUrl ? (
+                      <Image
+                        src={selectedProfile.photoUrl}
+                        alt={selectedProfile.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-neutral-300">
+                        <User size={64} strokeWidth={1} />
+                      </div>
+                    )
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-neutral-300">
-                      <User size={64} strokeWidth={1} />
-                    </div>
+                    selectedProfile.logoUrl ? (
+                      <Image
+                        src={selectedProfile.logoUrl}
+                        alt={selectedProfile.companyName}
+                        fill
+                        className="object-contain p-4"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-neutral-300">
+                        <Building size={64} strokeWidth={1} />
+                      </div>
+                    )
                   )}
                 </div>
                 
                 <div className="flex-1 mt-2">
                   <div className="inline-block px-4 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-black uppercase tracking-widest rounded-full mb-4">
-                    {selectedProfile.isEmployed ? 'Placed / Hired' : 'Actively Looking'}
+                    {'name' in selectedProfile ? (
+                      selectedProfile.isEmployed ? 'Placed / Hired' : 'Actively Looking'
+                    ) : (
+                      `${selectedProfile.openJobsCount} Open Positions`
+                    )}
                   </div>
-                  <h2 className="text-3xl sm:text-4xl font-black text-neutral-900 mb-2">{selectedProfile.name}</h2>
+                  <h2 className="text-3xl sm:text-4xl font-black text-neutral-900 mb-2">
+                    {'name' in selectedProfile ? selectedProfile.name : selectedProfile.companyName}
+                  </h2>
                   <div className="flex items-center justify-center sm:justify-start gap-3 text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">
-                    <span className="flex items-center gap-1.5"><GraduationCap size={16} style={{ color: theme.primary }} /> {selectedProfile.education}</span>
+                    <span className="flex items-center gap-1.5">
+                      {'name' in selectedProfile ? (
+                        <>
+                          <GraduationCap size={16} style={{ color: theme.primary }} /> 
+                          {selectedProfile.education}
+                        </>
+                      ) : (
+                        <>
+                          <Briefcase size={16} style={{ color: theme.primary }} /> 
+                          {selectedProfile.industry}
+                        </>
+                      )}
+                    </span>
                   </div>
                   <div className="text-sm font-medium text-neutral-500">
-                    <span className="font-bold text-neutral-900">ID:</span> {selectedProfile.seekerNumber || `S-${selectedProfile.id.slice(-4).toUpperCase()}`}
+                    <span className="font-bold text-neutral-900">ID:</span> {'name' in selectedProfile ? (selectedProfile.seekerNumber || `S-${selectedProfile.id.slice(-4).toUpperCase()}`) : `C-${selectedProfile.id.slice(-4).toUpperCase()}`}
                   </div>
                 </div>
               </div>
@@ -556,56 +591,104 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
               <hr className="border-neutral-100 mb-8" />
 
               <div className="space-y-8">
-                <div>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
-                    <Briefcase className="w-5 h-5" style={{ color: theme.primary }} />
-                    Experience & Availability
-                  </h4>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                      <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
-                      <p className="font-bold text-neutral-900">{selectedProfile.experience || 'Not specified'}</p>
+                {'name' in selectedProfile ? (
+                  <>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Briefcase className="w-5 h-5" style={{ color: theme.primary }} />
+                        Experience & Availability
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                          <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
+                          <p className="font-bold text-neutral-900">{selectedProfile.experience || 'Not specified'}</p>
+                        </div>
+                        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                          <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Availability</p>
+                          <p className="font-bold text-neutral-900">{selectedProfile.availability || 'Not specified'}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                      <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Availability</p>
-                      <p className="font-bold text-neutral-900">{selectedProfile.availability || 'Not specified'}</p>
+
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Cpu className="w-5 h-5" style={{ color: theme.primary }} />
+                        Professional Skills
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProfile.skills.map(skill => (
+                          <span key={skill} className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-black rounded-xl">
+                            {skill}
+                          </span>
+                        ))}
+                        {(!selectedProfile.skills || selectedProfile.skills.length === 0) && (
+                          <span className="text-neutral-400 italic">No skills listed</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <div>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
-                    <Cpu className="w-5 h-5" style={{ color: theme.primary }} />
-                    Professional Skills
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProfile.skills.map(skill => (
-                      <span key={skill} className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-black rounded-xl">
-                        {skill}
-                      </span>
-                    ))}
-                    {(!selectedProfile.skills || selectedProfile.skills.length === 0) && (
-                      <span className="text-neutral-400 italic">No skills listed</span>
-                    )}
-                  </div>
-                </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Search className="w-5 h-5" style={{ color: theme.primary }} />
+                        Job Interests
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProfile.jobInterests.map(interest => (
+                          <span key={interest} className="px-4 py-2 border-2 border-neutral-100 text-neutral-600 text-xs font-bold rounded-xl">
+                            {interest}
+                          </span>
+                        ))}
+                        {(!selectedProfile.jobInterests || selectedProfile.jobInterests.length === 0) && (
+                          <span className="text-neutral-400 italic">No interests listed</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Building className="w-5 h-5" style={{ color: theme.primary }} />
+                        About Company
+                      </h4>
+                      <div className="p-6 bg-neutral-50 rounded-2xl border border-neutral-100">
+                        <p className="text-neutral-700 leading-relaxed">
+                          {selectedProfile.description || "No description provided."}
+                        </p>
+                        <div className="mt-6 flex flex-wrap gap-6">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Industry</p>
+                            <p className="font-bold text-neutral-900">{selectedProfile.industry}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Size</p>
+                            <p className="font-bold text-neutral-900">{selectedProfile.companySize || "N/A"}</p>
+                          </div>
+                          {selectedProfile.website && (
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Website</p>
+                              <a href={selectedProfile.website} target="_blank" rel="noopener noreferrer" className="font-bold text-primary-600 hover:underline flex items-center gap-1">
+                                {selectedProfile.website.replace(/^https?:\/\//, '')}
+                                <ExternalLink size={12} />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                <div>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
-                    <Search className="w-5 h-5" style={{ color: theme.primary }} />
-                    Job Interests
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProfile.jobInterests.map(interest => (
-                      <span key={interest} className="px-4 py-2 border-2 border-neutral-100 text-neutral-600 text-xs font-bold rounded-xl">
-                        {interest}
-                      </span>
-                    ))}
-                    {(!selectedProfile.jobInterests || selectedProfile.jobInterests.length === 0) && (
-                      <span className="text-neutral-400 italic">No interests listed</span>
-                    )}
-                  </div>
-                </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <User className="w-5 h-5" style={{ color: theme.primary }} />
+                        Contact Person
+                      </h4>
+                      <div className="p-6 bg-neutral-50 rounded-2xl border border-neutral-100">
+                        <p className="font-black text-lg text-neutral-900">{selectedProfile.contactPerson.name}</p>
+                        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">{selectedProfile.contactPerson.position || "Representative"}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mt-10 pt-8 border-t border-neutral-100 flex justify-end gap-4">
@@ -616,7 +699,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                   Close
                 </button>
                 <button
-                  onClick={() => handleContact(selectedProfile, 'seeker')}
+                  onClick={() => handleContact(selectedProfile, 'name' in selectedProfile ? 'seeker' : 'employer')}
                   className="px-8 py-3 rounded-xl bg-neutral-900 text-white font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2"
                 >
                   <MessageSquare className="w-4 h-4" />

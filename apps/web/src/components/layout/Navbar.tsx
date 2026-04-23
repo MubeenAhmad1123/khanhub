@@ -19,10 +19,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
-import { Menu, X, ChevronDown, Facebook, Instagram, Youtube } from 'lucide-react';
+import { Menu, X, ChevronDown, Facebook, Instagram, Youtube, Search } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { CgLogIn } from 'react-icons/cg';
 import { SITE } from '@/data/site';
+import GlobalSearch from './GlobalSearch';
 
 import { useDashboardPath } from '@/hooks/useDashboardPath';
 
@@ -111,6 +112,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [deptOpen, setDeptOpen] = useState(false);
   const [mobileDeptOpen, setMobileDeptOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
@@ -140,6 +142,18 @@ export default function Navbar() {
     setMobileOpen(false);
     setMobileDeptOpen(false);
   }, [pathname]);
+
+  // Keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -302,6 +316,19 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Search Button (Desktop/Tablet) */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-neutral-500 hover:text-primary-600 hover:bg-primary-50/50 transition-all group"
+              aria-label="Open Search"
+            >
+              <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-bold uppercase tracking-widest hidden lg:inline">Search</span>
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 border border-neutral-200 rounded text-[10px] text-neutral-400 font-sans ml-1">
+                ⌘ K
+              </kbd>
+            </button>
+
             {/* Desktop/Tablet CTAs */}
             <div className="hidden md:flex items-center gap-1.5 lg:gap-2.5 flex-shrink-0">
               {user && (
@@ -342,6 +369,16 @@ export default function Navbar() {
 
             {/* Mobile Icons Row - Compact to fit all 7 items */}
             <div className="md:hidden flex items-center gap-0 sm:gap-1 flex-1 justify-end mr-0.5 sm:mr-1">
+              {/* Search Toggle (Mobile) */}
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="p-1.5 rounded-lg text-neutral-700 hover:text-primary-600 transition-colors flex flex-col items-center justify-center gap-0.5 min-w-[32px]"
+                aria-label="Open Search"
+              >
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-[7px] font-black uppercase tracking-tighter leading-none">Search</span>
+              </button>
+
               {Object.entries(SITE.social).map(([platform, url]) => {
                 if (!url) return null;
                 const Icon = platform === 'facebook' ? Facebook :
@@ -604,6 +641,9 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
+
+      {/* Global Search Overlay */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Custom animations */}
       <style jsx global>{`
