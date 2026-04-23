@@ -548,7 +548,7 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                             {/* Public Directory for Job Center */}
                             {department.slug === 'job-placement' && (
                                 <div className="animate-fade-in mt-12">
-                                    <JobCenterPublicDirectory theme={theme} />
+                                    <JobCenterPublicDirectory theme={theme} previewMode={true} />
                                 </div>
                             )}
 
