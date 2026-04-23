@@ -1,6 +1,6 @@
 // src/app/departments/rehab/dashboard/layout.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -78,6 +78,22 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const darkMode = mounted && resolvedTheme === 'dark';
   const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
+  const handleSignOut = useCallback(() => {
+    console.log('[RehabLayout] Signing out and clearing session');
+    localStorage.removeItem('rehab_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession?.role === 'superadmin') {
+           router.push('/hq/dashboard/superadmin');
+           return;
+        }
+      } catch(e) {}
+    }
+    router.push('/departments/rehab/login');
+  }, [router]);
+
   useEffect(() => {
     setMounted(true);
     let session = localStorage.getItem('rehab_session');
@@ -108,7 +124,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       return; 
     }
 
-    const performAuthCheck = async () => {
+    const performAuthCheck = () => {
       console.log('[RehabLayout] Performing auth check. Session exists:', !!session);
       try {
         const parsed = JSON.parse(session!);
@@ -117,31 +133,6 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         if (!parsed.uid || !parsed.role) {
           console.warn('[RehabLayout] Invalid session structure');
           throw new Error('Invalid session');
-        }
-
-        const loginTime = localStorage.getItem('rehab_login_time');
-        if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
-          console.warn('[RehabLayout] Session expired (>12h)');
-          handleSignOut();
-          return;
-        }
-
-        if (parsed.role !== 'superadmin') {
-          console.log('[RehabLayout] Verifying user in Firestore (rehab_users)...');
-          const userDoc = await getDoc(doc(db, 'rehab_users', parsed.uid));
-          if (!userDoc.exists()) {
-            console.error('[RehabLayout] User document not found in rehab_users');
-            handleSignOut();
-            return;
-          }
-          const userData = userDoc.data();
-          if (userData?.isActive === false || userData?.role !== parsed.role) {
-            console.error('[RehabLayout] User inactive or role mismatch', userData);
-            handleSignOut();
-            return;
-          }
-        } else {
-          console.log('[RehabLayout] Bypassing Firestore check for Superadmin');
         }
 
         console.log('[RehabLayout] Auth Check SUCCESS');
@@ -154,14 +145,22 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     };
 
     performAuthCheck();
-  }, [router]);
+  }, [router, handleSignOut]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'rehab_users', user.uid), (snap) => {
+      if (!snap.exists()) {
+        handleSignOut();
+        return;
+      }
       const data = snap.data();
+      if (data?.isActive === false || data?.role !== user.role) {
+        handleSignOut();
+        return;
+      }
       if (data?.forceLogoutAt) {
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('rehab_login_time');
@@ -172,23 +171,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       }
     });
     return () => unsub();
-  }, [user]);
-
-  const handleSignOut = () => {
-    console.log('[RehabLayout] Signing out and clearing session');
-    localStorage.removeItem('rehab_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-           router.push('/hq/dashboard/superadmin');
-           return;
-        }
-      } catch(e) {}
-    }
-    router.push('/departments/rehab/login');
-  };
+  }, [user, handleSignOut]);
 
   if (isChecking) {
     return (

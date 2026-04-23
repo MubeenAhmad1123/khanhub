@@ -297,8 +297,6 @@ export default function SuperadminFinancePage() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
   }, [loadData]);
 
   // ── Fetch breakdown for selected date ─────────────────────────────────────

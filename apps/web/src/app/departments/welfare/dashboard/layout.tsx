@@ -1,6 +1,6 @@
 // src/app/departments/welfare/dashboard/layout.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -81,6 +81,21 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
   const darkMode = mounted && resolvedTheme === 'dark';
   const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
+  const handleSignOut = useCallback(() => {
+    localStorage.removeItem('welfare_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession?.role === 'superadmin') {
+           router.push('/hq/dashboard/superadmin');
+           return;
+        }
+      } catch(e) {}
+    }
+    router.push('/departments/welfare/login');
+  }, [router]);
+
   useEffect(() => {
     setMounted(true);
     let session = localStorage.getItem('welfare_session');
@@ -106,24 +121,10 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
 
     if (!session) { router.push('/departments/welfare/login'); return; }
 
-    const performAuthCheck = async () => {
+    const performAuthCheck = () => {
       try {
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
-
-        const loginTime = localStorage.getItem('welfare_login_time');
-        if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
-          handleSignOut();
-          return;
-        }
-
-        if (parsed.role !== 'superadmin') {
-          const userDoc = await getDoc(doc(db, 'welfare_users', parsed.uid));
-          if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
-            handleSignOut();
-            return;
-          }
-        }
 
         setUser(parsed);
         setIsChecking(false);
@@ -133,14 +134,22 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
     };
 
     performAuthCheck();
-  }, [router]);
+  }, [router, handleSignOut]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'welfare_users', user.uid), (snap) => {
+      if (!snap.exists()) {
+        handleSignOut();
+        return;
+      }
       const data = snap.data();
+      if (data?.isActive === false || data?.role !== user.role) {
+        handleSignOut();
+        return;
+      }
       if (data?.forceLogoutAt) {
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('welfare_login_time');
@@ -151,22 +160,7 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
       }
     });
     return () => unsub();
-  }, [user]);
-
-  const handleSignOut = () => {
-    localStorage.removeItem('welfare_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-           router.push('/hq/dashboard/superadmin');
-           return;
-        }
-      } catch(e) {}
-    }
-    router.push('/departments/welfare/login');
-  };
+  }, [user, handleSignOut]);
 
   if (isChecking) {
     return (

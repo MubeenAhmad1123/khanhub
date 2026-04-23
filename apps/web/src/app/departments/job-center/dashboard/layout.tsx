@@ -122,24 +122,10 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
     if (!session) { router.push('/departments/job-center/login'); return; }
 
-    const performAuthCheck = async () => {
+    const performAuthCheck = () => {
       try {
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
-
-        const loginTime = localStorage.getItem('jobcenter_login_time');
-        if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
-          handleSignOut();
-          return;
-        }
-
-        if (parsed.role !== 'superadmin') {
-          const userDoc = await getDoc(doc(db, 'jobcenter_users', parsed.uid));
-          if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
-            handleSignOut();
-            return;
-          }
-        }
 
         setUser(parsed);
         setIsChecking(false);
@@ -156,7 +142,15 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'jobcenter_users', user.uid), (snap) => {
+      if (!snap.exists()) {
+        handleSignOut();
+        return;
+      }
       const data = snap.data();
+      if (data?.isActive === false || data?.role !== user.role) {
+        handleSignOut();
+        return;
+      }
       if (data?.forceLogoutAt) {
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('jobcenter_login_time');

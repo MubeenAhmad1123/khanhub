@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -72,6 +72,17 @@ export default function HospitalDashboardLayout({
     setMounted(true);
   }, []);
 
+  const handleSignOut = useCallback(async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem('hospital_session');
+      localStorage.removeItem('hospital_login_time');
+      router.push('/departments/hospital/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  }, [router]);
+
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -102,14 +113,7 @@ export default function HospitalDashboardLayout({
         }
 
         const parsed = JSON.parse(sessionData);
-        // Verify user still exists and is active
-        const userDoc = await getDoc(doc(db, 'hospital_users', parsed.uid));
-        if (!userDoc.exists() || !userDoc.data().isActive) {
-          handleSignOut();
-          return;
-        }
-
-        setUser({ uid: userDoc.id, ...userDoc.data() });
+        setUser(parsed);
       } catch (error) {
         console.error('Session check error:', error);
         router.push('/departments/hospital/login');
@@ -119,14 +123,22 @@ export default function HospitalDashboardLayout({
     };
 
     checkSession();
-  }, [router]);
+  }, [router, handleSignOut]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'hospital_users', user.uid), (snap) => {
+      if (!snap.exists()) {
+        handleSignOut();
+        return;
+      }
       const data = snap.data();
+      if (data?.isActive === false || data?.role !== user.role) {
+        handleSignOut();
+        return;
+      }
       if (data?.forceLogoutAt) {
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('hospital_login_time');
@@ -137,18 +149,7 @@ export default function HospitalDashboardLayout({
       }
     });
     return () => unsub();
-  }, [user]);
-
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut();
-      localStorage.removeItem('hospital_session');
-      localStorage.removeItem('hospital_login_time');
-      router.push('/departments/hospital/login');
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
+  }, [user, handleSignOut]);
 
   const filteredNavItems = NAV_ITEMS.filter(item => 
     user && item.roles.includes(user.role as HospitalRole)

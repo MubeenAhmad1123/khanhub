@@ -52,7 +52,7 @@ export function subscribePortalUsers(
   onError?: (err: unknown) => void
 ) {
   const col = getDeptCollection(portal);
-  const q = query(collection(db, col), orderBy('createdAt', 'desc'), limit(500));
+  const q = query(collection(db, col), orderBy('createdAt', 'desc'), limit(100));
   return onSnapshot(
     q,
     (snap) => onData(snap.docs.map((d) => normalizeUser(portal, d.id, d.data()))),

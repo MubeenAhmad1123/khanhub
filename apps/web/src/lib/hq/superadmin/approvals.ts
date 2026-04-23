@@ -245,7 +245,7 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
         collection(db, col),
         where('status', 'in', [...PENDING_STATUSES]),
         orderBy('createdAt', 'desc'),
-        limit(500)
+        limit(50)
       ),
     ];
   }
@@ -255,7 +255,7 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
         collection(db, col),
         where('status', '==', 'approved'),
         orderBy('createdAt', 'desc'),
-        limit(400)
+        limit(50)
       ),
     ];
   }
@@ -265,12 +265,12 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
         collection(db, col),
         where('status', 'in', [...REJECT_STATUSES]),
         orderBy('createdAt', 'desc'),
-        limit(400)
+        limit(50)
       ),
     ];
   }
   // history — broad pull; filters applied client-side
-  return [query(collection(db, col), orderBy('createdAt', 'desc'), limit(800))];
+  return [query(collection(db, col), orderBy('createdAt', 'desc'), limit(100))];
 }
 
 function tabFilterClient(
@@ -483,7 +483,7 @@ export function subscribePendingApprovalsCount({
       collection(db, col),
       where('status', 'in', [...PENDING_STATUSES]),
       orderBy('createdAt', 'desc'),
-      limit(500)
+      limit(50)
     );
     
     return onSnapshot(

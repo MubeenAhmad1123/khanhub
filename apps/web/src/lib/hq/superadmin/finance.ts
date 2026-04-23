@@ -10,7 +10,8 @@ import {
   Timestamp, 
   doc, 
   updateDoc, 
-  getDoc 
+  getDoc,
+  getCountFromServer
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
@@ -97,7 +98,7 @@ export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hos
       collection(db, col), 
       where('status', 'in', statuses), 
       orderBy('createdAt', 'desc'), 
-      limit(days * 100)
+      limit(Math.min(days * 50, 400))
     );
 
     const snap = await getDocs(q);
@@ -220,11 +221,11 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   // Load last 40 days to calculate trends, including pending for today's real-time accuracy
   const statuses = ['approved', 'pending', 'pending_cashier'];
   const [rehab, spims, jobcenter, hospital, hq] = await Promise.all([
-    loadRecentTx('rehab', 40, statuses),
-    loadRecentTx('spims', 40, statuses),
-    loadRecentTx('job-center', 40, statuses),
-    loadRecentTx('hospital' as any, 40, statuses),
-    loadRecentTx('hq', 40, statuses)
+    loadRecentTx('rehab', 7, statuses),
+    loadRecentTx('spims', 7, statuses),
+    loadRecentTx('job-center', 7, statuses),
+    loadRecentTx('hospital' as any, 7, statuses),
+    loadRecentTx('hq', 7, statuses)
   ]);
 
   const allTx = [...rehab, ...spims, ...jobcenter, ...hospital, ...hq];
@@ -248,16 +249,16 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   const pendingCountToday = pendingTodayTx.length;
 
   const [rehabPending, spimsPending, jcPending, hosPending, hqPending, recPending, rehabPat, spimsStu, jcSeek, hospitalPat] = await Promise.all([
-    getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
+    getCountFromServer(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(50))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(50))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(50))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(50))).catch(() => ({ docs: [] })),
   ]);
 
   const outstandingTotal = [...rehabPat.docs, ...spimsStu.docs, ...jcSeek.docs, ...hospitalPat.docs].reduce((acc, d: any) => {
@@ -538,10 +539,10 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
 
   // 4. Top Outstanding
   const [rehabEntities, spimsEntities, jcEntities, hospitalEntities] = await Promise.all([
-    tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
-    tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
-    tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
-    tab !== 'hospital' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'hospital' }))),
+    tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
+    tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
+    tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
+    tab !== 'hospital' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'hospital' }))),
   ]);
 
   const top: TopOutstandingRow[] = [...rehabEntities, ...spimsEntities, ...jcEntities, ...hospitalEntities]
