@@ -606,7 +606,6 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
 
 
 
-                        </div>
 
                         {/* Sidebar */}
                         <div className="space-y-6">
