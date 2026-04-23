@@ -249,11 +249,22 @@ export default function CashierStationPage() {
         const allTx = DEPARTMENTS.flatMap((dept) =>
           rowsMap[dept.txCollection].map((tx: any) => ({ ...tx, _txCollection: dept.txCollection }))
         );
+        
+        console.log(`[HQ Cashier] Merging ${allTx.length} total pending transactions from ${DEPARTMENTS.length} departments.`);
+        
         const visible = allTx.filter((tx: any) => {
-          const txCashier = String(tx.cashierId || '').trim();
-          if (!txCashier) return true;
-          return txCashier.toUpperCase() === cashierCustomId;
+          const txCashier = String(tx.cashierId || '').trim().toUpperCase();
+          if (!txCashier || txCashier === 'CASHIER') return true; // Show universal or explicitly assigned
+          
+          const match = txCashier === cashierCustomId;
+          if (!match) {
+            console.debug(`[HQ Cashier] Filtering out TX ${tx.id} - assigned to ${txCashier}, current is ${cashierCustomId}`);
+          }
+          return match;
         });
+
+        console.log(`[HQ Cashier] Visible transactions for ${cashierCustomId}: ${visible.length}`);
+
         const createdMs = (row: any) => {
           const c = row.createdAt;
           if (!c) return 0;
