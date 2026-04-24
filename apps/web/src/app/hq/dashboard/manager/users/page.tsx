@@ -74,15 +74,15 @@ import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS, UNIFORM_RULES } from '@/data/hqConfi
 type TabType = 'admin' | 'staff' | 'client';
 
 const DEPARTMENTS = [
-  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@Khan Hub.io', prefix: 'HQ' },
-  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.Khan Hub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
-  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.Khan Hub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
-  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.Khan Hub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
-  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.Khan Hub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
-  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.Khan Hub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
-  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.Khan Hub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
-  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.Khan Hub', prefix: 'MED' },
-  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.Khan Hub', prefix: 'IT' },
+  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', prefix: 'HQ' },
+  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
+  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
+  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
+  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
+  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
+  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.khanhub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
+  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', prefix: 'MED' },
+  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', prefix: 'IT' },
 ];
 
 const DOCUMENT_TYPES = [

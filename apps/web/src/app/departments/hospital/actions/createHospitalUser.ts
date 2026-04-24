@@ -194,7 +194,7 @@ export async function createStaffMemberServer(
   customId: string,
   password: string,
   displayName: string,
-  emailDomain: string = '@hospital.Khan Hub',
+  emailDomain: string = '@hospital.khanhub',
   userCollection: string = 'hospital_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;

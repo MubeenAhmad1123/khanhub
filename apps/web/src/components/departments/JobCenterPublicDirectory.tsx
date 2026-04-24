@@ -318,7 +318,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Interests</p>
                   <div className="flex flex-wrap gap-2 mb-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
-                    {s.jobInterests.slice(0, 3).map(interest => (
+                    {(s.jobInterests || []).slice(0, 3).map(interest => (
                       <span key={interest} className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
                         {interest}
                       </span>
@@ -369,7 +369,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Experience</span>
                       </div>
                       <div className="text-[10px] sm:text-xs text-neutral-700 font-bold leading-relaxed line-clamp-2">
-                        {(s.experience || []).map((exp, idx) => (
+                        {(s.experience || []).map((exp: any, idx: number) => (
                           <div key={idx} className={idx > 0 ? "mt-1 pt-1 border-t border-neutral-200/50" : ""}>
                             {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
                           </div>
@@ -605,7 +605,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                           <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
                           <div className="font-bold text-neutral-900">
                             {selectedProfile.experience?.length ? (
-                            {(selectedProfile.experience || []).map((exp, i) => (
+                            (selectedProfile.experience || []).map((exp: any, i: number) => (
                                 <div key={i} className={i > 0 ? "mt-1" : ""}>
                                   • {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
                                 </div>
@@ -626,7 +626,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         Professional Skills
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {(selectedProfile.skills || []).map(skill => (
+                        {(selectedProfile.skills || []).map((skill: string) => (
                           <span key={skill} className="px-4 py-2 bg-neutral-100 text-neutral-700 text-[10px] font-black rounded-xl">
                             {skill}
                           </span>
@@ -643,7 +643,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         Job Interests
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {(selectedProfile.jobInterests || []).map(interest => (
+                        {(selectedProfile.jobInterests || []).map((interest: string) => (
                           <span key={interest} className="px-4 py-2 border-2 border-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl">
                             {interest}
                           </span>
