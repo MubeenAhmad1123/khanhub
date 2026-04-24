@@ -144,7 +144,7 @@ const ImageCarousel = memo(function ImageCarousel() {
           className="absolute inset-0 rounded-full"
         >
           {!imageErrors.has(currentIndex) ? (
-            <div className="relative w-full h-full rounded-full overflow-hidden filter drop-shadow-xl">
+            <div className="w-full h-full rounded-full overflow-hidden relative filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.15)]">
               <Image
                 src={DEPARTMENT_IMAGES[currentIndex].src}
                 alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
@@ -371,19 +371,21 @@ export default function HeroSection() {
                 </motion.div>
               </div>
 
-              {/* Optimized Pulsing Glow */}
-              <motion.div
-                className="absolute inset-0 -m-8 sm:-m-12 bg-gradient-to-br from-primary-200/40 via-success-200/40 to-primary-200/40 rounded-full blur-3xl"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.4, 0.6, 0.4],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
+              {/* Optimized Pulsing Glow - Wrapped in circular mask to prevent square blur bleed */}
+              <div className="absolute inset-0 -m-8 sm:-m-12 rounded-full overflow-hidden">
+                <motion.div
+                  className="w-full h-full bg-gradient-to-br from-primary-200/40 via-success-200/40 to-primary-200/40 blur-3xl"
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.4, 0.6, 0.4],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </div>
 
               {/* Main Logo Carousel with Float Animation */}
               <motion.div
@@ -396,7 +398,7 @@ export default function HeroSection() {
                 className="relative z-10"
               >
                 {/* Logo Backdrop */}
-                <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20 filter drop-shadow-xl" />
+                <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20" />
 
                 {/* Image Carousel */}
                 <ImageCarousel />
