@@ -269,7 +269,7 @@ export default function HeroSection() {
           }}
         />
         <motion.div
-          className="absolute -bottom-40 -left-40 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-success-100/30 rounded-full blur-3xl"
+          className="absolute -bottom-40 -left-40 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary-50/20 rounded-full blur-3xl"
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -375,7 +375,7 @@ export default function HeroSection() {
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 >
                   <div className="absolute inset-0 rounded-full border-2 border-primary-200/30" />
-                  <div className="absolute inset-8 rounded-full border-2 border-success-200/30" />
+                  <div className="absolute inset-8 rounded-full border-2 border-primary-100/20" />
                   <div className="absolute inset-16 rounded-full border-2 border-primary-100/30" />
                 </motion.div>
               </div>
@@ -383,7 +383,7 @@ export default function HeroSection() {
               {/* Optimized Pulsing Glow - Wrapped in circular mask to prevent square blur bleed */}
               <div className="absolute inset-0 -m-8 sm:-m-12 rounded-full overflow-hidden">
                 <motion.div
-                  className="w-full h-full bg-gradient-to-br from-primary-200/40 via-success-200/40 to-primary-200/40 blur-3xl"
+                  className="w-full h-full bg-gradient-to-br from-primary-200/40 via-primary-100/20 to-primary-200/40 blur-3xl"
                   animate={isMobile ? {
                     scale: [1, 1.1, 1],
                     opacity: [0.3, 0.4, 0.3],
