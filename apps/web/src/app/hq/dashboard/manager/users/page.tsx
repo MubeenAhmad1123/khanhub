@@ -49,6 +49,7 @@ import {
   Mail,
   Lock,
   Unlock,
+  X,
   Calendar,
   ClipboardList,
   Scissors,
@@ -125,7 +126,7 @@ function generateEmployeeId(): string {
 export default function ManagerUsersPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
-  const [activeTab, setActiveTab] = useState<TabType>('admin');
+  const [activeTab, setActiveTab] = useState<TabType | 'tasks'>('admin');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -161,6 +162,7 @@ export default function ManagerUsersPage() {
     dressCodeConfig: [] as { key: string; label: string }[],
     education: [] as { degree: string; institution: string; year: string }[],
     experience: [] as { title: string; company: string; duration: string }[],
+    skills: [] as string[],
     documents: [] as { type: string; url: string; name: string }[],
     createAccount: true,
     patientId: '',
@@ -168,6 +170,7 @@ export default function ManagerUsersPage() {
 
   const [newEdu, setNewEdu] = useState({ degree: '', institution: '', year: '' });
   const [newExp, setNewExp] = useState({ title: '', company: '', duration: '' });
+  const [newSkill, setNewSkill] = useState('');
 
   const [uploading, setUploading] = useState<string | null>(null);
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -300,15 +303,10 @@ export default function ManagerUsersPage() {
   };
 
   const addEdu = () => {
-    if (!newEdu.degree || !newEdu.institution || !newEdu.year) {
-      toast.error('Fill all education fields');
-      return;
+    if (newEdu.degree && newEdu.institution) {
+      setFormData({ ...formData, education: [...formData.education, newEdu] });
+      setNewEdu({ degree: '', institution: '', year: '' });
     }
-    setFormData(prev => ({
-      ...prev,
-      education: [...prev.education, newEdu]
-    }));
-    setNewEdu({ degree: '', institution: '', year: '' });
   };
 
   const removeEdu = (index: number) => {
@@ -319,21 +317,31 @@ export default function ManagerUsersPage() {
   };
 
   const addExp = () => {
-    if (!newExp.title || !newExp.company || !newExp.duration) {
-      toast.error('Fill all experience fields');
-      return;
+    if (newExp.title && newExp.company) {
+      setFormData({ ...formData, experience: [...formData.experience, newExp] });
+      setNewExp({ title: '', company: '', duration: '' });
     }
-    setFormData(prev => ({
-      ...prev,
-      experience: [...prev.experience, newExp]
-    }));
-    setNewExp({ title: '', company: '', duration: '' });
   };
 
   const removeExp = (index: number) => {
     setFormData(prev => ({
       ...prev,
       experience: prev.experience.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addSkill = () => {
+    const s = newSkill.trim();
+    if (s && !formData.skills.includes(s)) {
+      setFormData({ ...formData, skills: [...formData.skills, s] });
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (skill: string) => {
+    setFormData(prev => ({
+      ...prev,
+      skills: prev.skills.filter(s => s !== skill)
     }));
   };
 
@@ -469,7 +477,7 @@ export default function ManagerUsersPage() {
   };
 
   const handleStaffSubmit = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.fatherName || !formData.phone || !formData.joiningDate || !formData.department) {
+    if (!formData.firstName || !formData.fatherName || !formData.phone || !formData.joiningDate || !formData.department) {
       setMessage({ type: 'error', text: 'Please fill all required fields marked with *' });
       toast.error('Missing required fields (Name, Father Name, Phone, etc.)');
       return;
@@ -543,6 +551,7 @@ export default function ManagerUsersPage() {
         dressCodeConfig: formData.dressCodeConfig,
         education: formData.education,
         experience: formData.experience,
+        skills: formData.skills,
         documents: formData.documents,
         loginUserId: loginUserId,
         isActive: true,
@@ -565,7 +574,7 @@ export default function ManagerUsersPage() {
       setFormData(prev => ({
         ...prev,
         firstName: '', lastName: '', fatherName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
-        designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], education: [], experience: [], documents: [], patientId: '',
+        designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], education: [], experience: [], skills: [], documents: [], patientId: '',
         userId: '', employeeId: ''
       }));
 
@@ -941,7 +950,7 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Last Name*</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Last Name</label>
                             <input
                               type="text"
                               placeholder="Enter last name"
@@ -979,50 +988,12 @@ export default function ManagerUsersPage() {
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Date of Birth*</label>
-                            <div className="grid grid-cols-3 gap-2">
-                              <select 
-                                className={`h-14 px-3 rounded-2xl outline-none transition-all font-bold text-xs ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5' : 'bg-gray-50 focus:bg-white border-gray-100'}`}
-                                value={formData.dateOfBirth ? formData.dateOfBirth.split('-')[2] : ''}
-                                onChange={(e) => {
-                                  const day = e.target.value;
-                                  const parts = formData.dateOfBirth ? formData.dateOfBirth.split('-') : ['1990', '01', '01'];
-                                  setFormData({ ...formData, dateOfBirth: `${parts[0]}-${parts[1]}-${day.padStart(2, '0')}` });
-                                }}
-                              >
-                                <option value="">Day</option>
-                                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                                  <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
-                                ))}
-                              </select>
-                              <select 
-                                className={`h-14 px-3 rounded-2xl outline-none transition-all font-bold text-xs ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5' : 'bg-gray-50 focus:bg-white border-gray-100'}`}
-                                value={formData.dateOfBirth ? formData.dateOfBirth.split('-')[1] : ''}
-                                onChange={(e) => {
-                                  const month = e.target.value;
-                                  const parts = formData.dateOfBirth ? formData.dateOfBirth.split('-') : ['1990', '01', '01'];
-                                  setFormData({ ...formData, dateOfBirth: `${parts[0]}-${month}-${parts[2]}` });
-                                }}
-                              >
-                                <option value="">Month</option>
-                                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
-                                  <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>
-                                ))}
-                              </select>
-                              <select 
-                                className={`h-14 px-3 rounded-2xl outline-none transition-all font-bold text-xs ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5' : 'bg-gray-50 focus:bg-white border-gray-100'}`}
-                                value={formData.dateOfBirth ? formData.dateOfBirth.split('-')[0] : ''}
-                                onChange={(e) => {
-                                  const year = e.target.value;
-                                  const parts = formData.dateOfBirth ? formData.dateOfBirth.split('-') : ['1990', '01', '01'];
-                                  setFormData({ ...formData, dateOfBirth: `${year}-${parts[1]}-${parts[2]}` });
-                                }}
-                              >
-                                <option value="">Year</option>
-                                {Array.from({ length: 60 }, (_, i) => new Date().getFullYear() - 15 - i).map(y => (
-                                  <option key={y} value={String(y)}>{y}</option>
-                                ))}
-                              </select>
-                            </div>
+                            <input
+                              type="date"
+                              value={formData.dateOfBirth}
+                              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                            />
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">CNIC Number (00000-0000000-0)</label>
@@ -1483,6 +1454,32 @@ export default function ManagerUsersPage() {
                                   <Trash2 size={14} />
                                 </button>
                               </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Skills Builder */}
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Key Skills & Expertises</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Add a skill (e.g. Accounting, Nursing, IT Support)"
+                              value={newSkill}
+                              onChange={(e) => setNewSkill(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                              className={`flex-1 h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-amber-500' : 'bg-gray-50 border-gray-100 focus:border-amber-500'}`}
+                            />
+                            <button onClick={addSkill} className="px-6 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20">Add</button>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {formData.skills.length === 0 && <p className="text-[10px] text-black font-bold uppercase tracking-tight opacity-40">No skills listed</p>}
+                            {formData.skills.map(s => (
+                              <span key={s} className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                {s}
+                                <button onClick={() => removeSkill(s)} className="hover:text-red-500"><X size={12} /></button>
+                              </span>
                             ))}
                           </div>
                         </div>

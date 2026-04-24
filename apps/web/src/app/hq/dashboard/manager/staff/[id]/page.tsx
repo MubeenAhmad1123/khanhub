@@ -104,7 +104,7 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processingConfig, setProcessingConfig] = useState(false);
@@ -1199,8 +1199,8 @@ export default function StaffProfilePage() {
               {[
                 { id: 'profile', label: 'View Profile', icon: <User size={12} /> },
                 { id: 'edit', label: 'Edit Profile', icon: <Lock size={12} /> },
-                { id: 'overview', label: 'Audit', icon: <Activity size={12} /> },
-                { id: 'action', label: 'Action', icon: <ClipboardList size={12} /> },
+                { id: 'action', label: 'Action & Logs', icon: <Activity size={12} /> },
+                { id: 'tasks', label: 'Special Tasks', icon: <Target size={12} /> },
                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} /> },
                 { id: 'payroll', label: 'Finance', icon: <DollarSign size={12} /> },
                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12} /> },
@@ -1532,10 +1532,35 @@ export default function StaffProfilePage() {
                     {markingDuty ? 'Recording...' : 'Finalize Assessment'}
                   </button>
                 </div>
+
+                {/* Duty Logs (Audit) moved to Action tab */}
+                {dutyLogs.length === 0 ? <div className="p-20 text-center text-black font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
+                  dutyLogs.map(log => (
+                    <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
+                      }`}>
+                      <div className={`p-3 rounded-2xl ${log.status === 'completed' ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                        <Award size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className={`font-black capitalize text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
+                            <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${log.status === 'completed' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
+                            }`}>
+                            {log.status}
+                          </span>
+                        </div>
+                        <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-black' : 'text-black'}`}>{log.comment || 'No assessment recorded'}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
-            {activeTab === 'overview' && (
+            {activeTab === 'tasks' && (
               <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Special Tasks */}
                 <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
@@ -1607,30 +1632,6 @@ export default function StaffProfilePage() {
                     )}
                   </div>
                 </div>
-
-                {dutyLogs.length === 0 ? <div className="p-20 text-center text-black font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
-                  dutyLogs.map(log => (
-                    <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
-                      }`}>
-                      <div className={`p-3 rounded-2xl ${log.status === 'completed' ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                        <Award size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className={`font-black capitalize text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
-                            <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${log.status === 'completed' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
-                            }`}>
-                            {log.status}
-                          </span>
-                        </div>
-                        <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-black' : 'text-black'}`}>{log.comment || 'No assessment recorded'}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
             )}
 

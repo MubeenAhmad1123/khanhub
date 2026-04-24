@@ -168,9 +168,9 @@ export default function DailyReportPage() {
         const rawStatus = att?.status || 'unmarked';
         let attendanceStatus: DailyReportRow['attendance'] = 'unmarked';
 
-        if (rawStatus === 'paid_leave' || rawStatus === 'unpaid_leave') {
+        if (rawStatus === 'paid_leave' || rawStatus === 'unpaid_leave' || rawStatus === 'leave') {
           attendanceStatus = 'leave';
-        } else if (['present', 'absent', 'late', 'unmarked'].includes(rawStatus)) {
+        } else if (['present', 'absent', 'late', 'unmarked', 'leave'].includes(rawStatus)) {
           attendanceStatus = rawStatus as any;
         }
 
@@ -546,6 +546,7 @@ export default function DailyReportPage() {
                       <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${row.attendance === 'present' ? 'bg-emerald-400 text-black' :
                           row.attendance === 'absent' ? 'bg-rose-400 text-black' :
                             row.attendance === 'late' ? 'bg-amber-400 text-black' :
+                            row.attendance === 'leave' ? 'bg-cyan-400 text-black' :
                               'bg-white text-black'
                         }`}>
                         {row.attendance === 'present' ? <CheckCircle size={12} /> :

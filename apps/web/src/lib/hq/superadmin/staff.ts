@@ -51,6 +51,12 @@ export type StaffCardRow = {
 
 function normalizeRole(raw: any): StaffRole {
   const r = String(raw || '').toLowerCase();
+  
+  if (r.includes('internee')) return 'internee' as any;
+  if (r.includes('trial')) return 'trial' as any;
+  if (r.includes('contract')) return 'contract' as any;
+  if (r.includes('worker') || r.includes('junior')) return 'worker' as any;
+
   const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
   if (STAFF_WHITELIST.includes(r)) return r as StaffRole;
   return 'other';

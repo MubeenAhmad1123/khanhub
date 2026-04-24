@@ -357,53 +357,13 @@ return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 col-span-full">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <select 
-                    required 
-                    className={inputStyle}
-                    value={dateOfBirth ? dateOfBirth.split('-')[2] : ''}
-                    onChange={(e) => {
-                      const day = e.target.value;
-                      const parts = dateOfBirth ? dateOfBirth.split('-') : ['', '', ''];
-                      setDateOfBirth(`${parts[0] || '1990'}-${parts[1] || '01'}-${day.padStart(2, '0')}`);
-                    }}
-                  >
-                    <option value="">Day</option>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                      <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
-                    ))}
-                  </select>
-                  <select 
-                    required 
-                    className={inputStyle}
-                    value={dateOfBirth ? dateOfBirth.split('-')[1] : ''}
-                    onChange={(e) => {
-                      const month = e.target.value;
-                      const parts = dateOfBirth ? dateOfBirth.split('-') : ['', '', ''];
-                      setDateOfBirth(`${parts[0] || '1990'}-${month}-${parts[2] || '01'}`);
-                    }}
-                  >
-                    <option value="">Month</option>
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
-                      <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>
-                    ))}
-                  </select>
-                  <select 
-                    required 
-                    className={inputStyle}
-                    value={dateOfBirth ? dateOfBirth.split('-')[0] : ''}
-                    onChange={(e) => {
-                      const year = e.target.value;
-                      const parts = dateOfBirth ? dateOfBirth.split('-') : ['', '', ''];
-                      setDateOfBirth(`${year}-${parts[1] || '01'}-${parts[2] || '01'}`);
-                    }}
-                  >
-                    <option value="">Year</option>
-                    {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                      <option key={y} value={String(y)}>{y}</option>
-                    ))}
-                  </select>
-                </div>
+                <input 
+                  type="date"
+                  required 
+                  className={inputStyle}
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">CNIC Number *</label>
