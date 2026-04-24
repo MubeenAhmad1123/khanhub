@@ -51,7 +51,7 @@ export type StaffCardRow = {
 
 function normalizeRole(raw: any): StaffRole {
   const r = String(raw || '').toLowerCase();
-  const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'student'];
+  const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
   if (STAFF_WHITELIST.includes(r)) return r as StaffRole;
   return 'other';
 }
@@ -169,7 +169,7 @@ export async function listStaffCards({
   const base = await Promise.all(
     targetDepts.map(async (d) => {
       const col = getDeptCollection(d);
-      const snap = await getDocs(query(collection(db, col), limit(100))).catch(() => ({ docs: [] } as any));
+      const snap = await getDocs(query(collection(db, col), limit(500))).catch(() => ({ docs: [] } as any));
       return snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
     })
   );
@@ -244,6 +244,7 @@ export type StaffProfile = StaffCardRow & {
   cnic?: string;
   dob?: string;
   gender?: string;
+  fatherName?: string;
   bloodGroup?: string;
   emergencyContact?: string;
   emergencyContactName?: string;
@@ -301,6 +302,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     cnic: data.cnic,
     dob: data.dob,
     gender: data.gender,
+    fatherName: data.fatherName,
     bloodGroup: data.bloodGroup,
     emergencyContact: data.emergencyContact,
     emergencyContactName: data.emergencyContactName || data.emergencyContact,

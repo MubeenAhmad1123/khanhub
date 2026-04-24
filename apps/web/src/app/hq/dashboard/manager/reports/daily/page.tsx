@@ -73,7 +73,8 @@ export default function DailyReportPage() {
         snap.docs.forEach((doc: any) => {
           const data = doc.data();
           const role = String(data.role || '').toLowerCase();
-          if (staffRoles.includes(role)) {
+          const status = String(data.status || (data.isActive !== false ? 'active' : 'inactive')).toLowerCase();
+          if (staffRoles.includes(role) && status === 'active') {
             allStaff.push({ id: doc.id, department: depts[i], ...data });
           }
         });
@@ -93,7 +94,7 @@ export default function DailyReportPage() {
           .catch(() => ({ docs: [] } as any))
       ));
       const fineSnaps = await Promise.all(depts.map(d => 
-        getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('status', '==', 'unpaid')))
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('date', '==', reportDate)))
           .catch(() => ({ docs: [] } as any))
       ));
       const contribSnaps = await Promise.all(depts.map(d => 
@@ -350,7 +351,6 @@ export default function DailyReportPage() {
           });
         }
       }
-
       setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
       toast.success("Assessment saved successfully!", { id: 'save-assessment' });
     } catch (err) {

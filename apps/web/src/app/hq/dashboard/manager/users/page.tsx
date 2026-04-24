@@ -116,6 +116,12 @@ function getDressCodeKey(department: string, gender: string, designation: string
   return `${dept}_${gen}_default`;
 }
 
+function generateEmployeeId(): string {
+  const prefix = 'STAFF';
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}-${num}`;
+}
+
 export default function ManagerUsersPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -136,6 +142,7 @@ export default function ManagerUsersPage() {
     password: '',
     firstName: '',
     lastName: '',
+    fatherName: '',
     gender: 'male',
     dateOfBirth: '',
     cnic: '',
@@ -152,10 +159,15 @@ export default function ManagerUsersPage() {
     dutyEndTime: '20:00',
     dutyConfig: [] as { key: string; label: string }[],
     dressCodeConfig: [] as { key: string; label: string }[],
-    documents: [] as { type: string, url: string, name: string }[],
+    education: [] as { degree: string; institution: string; year: string }[],
+    experience: [] as { title: string; company: string; duration: string }[],
+    documents: [] as { type: string; url: string; name: string }[],
     createAccount: true,
     patientId: '',
   });
+
+  const [newEdu, setNewEdu] = useState({ degree: '', institution: '', year: '' });
+  const [newExp, setNewExp] = useState({ title: '', company: '', duration: '' });
 
   const [uploading, setUploading] = useState<string | null>(null);
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -287,11 +299,42 @@ export default function ManagerUsersPage() {
     setProcessingConfig(false);
   };
 
-  const generateEmployeeId = () => {
-    const nextIdx = employeeCount + 1;
-    const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-    const prefix = deptDetails ? deptDetails.prefix : 'UNK';
-    return `${prefix}-STF-${nextIdx.toString().padStart(3, '0')}`;
+  const addEdu = () => {
+    if (!newEdu.degree || !newEdu.institution || !newEdu.year) {
+      toast.error('Fill all education fields');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      education: [...prev.education, newEdu]
+    }));
+    setNewEdu({ degree: '', institution: '', year: '' });
+  };
+
+  const removeEdu = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      education: prev.education.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addExp = () => {
+    if (!newExp.title || !newExp.company || !newExp.duration) {
+      toast.error('Fill all experience fields');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      experience: [...prev.experience, newExp]
+    }));
+    setNewExp({ title: '', company: '', duration: '' });
+  };
+
+  const removeExp = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      experience: prev.experience.filter((_, i) => i !== index)
+    }));
   };
 
   const handleFileUpload = async (file: File, type: string = 'profile') => {
@@ -426,9 +469,9 @@ export default function ManagerUsersPage() {
   };
 
   const handleStaffSubmit = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.joiningDate || !formData.department) {
+    if (!formData.firstName || !formData.lastName || !formData.fatherName || !formData.phone || !formData.joiningDate || !formData.department) {
       setMessage({ type: 'error', text: 'Please fill all required fields marked with *' });
-      toast.error('Missing required fields');
+      toast.error('Missing required fields (Name, Father Name, Phone, etc.)');
       return;
     }
 
@@ -481,6 +524,7 @@ export default function ManagerUsersPage() {
         loginEmail: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        fatherName: formData.fatherName,
         name: `${formData.firstName} ${formData.lastName}`,
         gender: formData.gender,
         dateOfBirth: formData.dateOfBirth,
@@ -497,6 +541,8 @@ export default function ManagerUsersPage() {
         dutyEndTime: formData.dutyEndTime,
         dutyConfig: formData.dutyConfig,
         dressCodeConfig: formData.dressCodeConfig,
+        education: formData.education,
+        experience: formData.experience,
         documents: formData.documents,
         loginUserId: loginUserId,
         isActive: true,
@@ -518,8 +564,8 @@ export default function ManagerUsersPage() {
       // Reset Form (except for credentials view)
       setFormData(prev => ({
         ...prev,
-        firstName: '', lastName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
-        designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], documents: [], patientId: '',
+        firstName: '', lastName: '', fatherName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
+        designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], education: [], experience: [], documents: [], patientId: '',
         userId: '', employeeId: ''
       }));
 
@@ -905,6 +951,16 @@ export default function ManagerUsersPage() {
                             />
                           </div>
                           <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Father's Name*</label>
+                            <input
+                              type="text"
+                              placeholder="Enter father's name"
+                              value={formData.fatherName}
+                              onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Gender*</label>
                             <div className="flex gap-2 p-1 bg-gray-100 dark:bg-white/5 rounded-2xl">
                               {['male', 'female'].map(g => (
@@ -922,13 +978,51 @@ export default function ManagerUsersPage() {
                             </div>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Date of Birth</label>
-                            <input
-                              type="date"
-                              value={formData.dateOfBirth}
-                              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
-                            />
+                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Date of Birth*</label>
+                            <div className="grid grid-cols-3 gap-2">
+                              <select 
+                                className={`h-14 px-3 rounded-2xl outline-none transition-all font-bold text-xs ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5' : 'bg-gray-50 focus:bg-white border-gray-100'}`}
+                                value={formData.dateOfBirth ? formData.dateOfBirth.split('-')[2] : ''}
+                                onChange={(e) => {
+                                  const day = e.target.value;
+                                  const parts = formData.dateOfBirth ? formData.dateOfBirth.split('-') : ['1990', '01', '01'];
+                                  setFormData({ ...formData, dateOfBirth: `${parts[0]}-${parts[1]}-${day.padStart(2, '0')}` });
+                                }}
+                              >
+                                <option value="">Day</option>
+                                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                  <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                                ))}
+                              </select>
+                              <select 
+                                className={`h-14 px-3 rounded-2xl outline-none transition-all font-bold text-xs ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5' : 'bg-gray-50 focus:bg-white border-gray-100'}`}
+                                value={formData.dateOfBirth ? formData.dateOfBirth.split('-')[1] : ''}
+                                onChange={(e) => {
+                                  const month = e.target.value;
+                                  const parts = formData.dateOfBirth ? formData.dateOfBirth.split('-') : ['1990', '01', '01'];
+                                  setFormData({ ...formData, dateOfBirth: `${parts[0]}-${month}-${parts[2]}` });
+                                }}
+                              >
+                                <option value="">Month</option>
+                                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                                  <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                                ))}
+                              </select>
+                              <select 
+                                className={`h-14 px-3 rounded-2xl outline-none transition-all font-bold text-xs ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5' : 'bg-gray-50 focus:bg-white border-gray-100'}`}
+                                value={formData.dateOfBirth ? formData.dateOfBirth.split('-')[0] : ''}
+                                onChange={(e) => {
+                                  const year = e.target.value;
+                                  const parts = formData.dateOfBirth ? formData.dateOfBirth.split('-') : ['1990', '01', '01'];
+                                  setFormData({ ...formData, dateOfBirth: `${year}-${parts[1]}-${parts[2]}` });
+                                }}
+                              >
+                                <option value="">Year</option>
+                                {Array.from({ length: 60 }, (_, i) => new Date().getFullYear() - 15 - i).map(y => (
+                                  <option key={y} value={String(y)}>{y}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">CNIC Number (00000-0000000-0)</label>
@@ -936,7 +1030,13 @@ export default function ManagerUsersPage() {
                               type="text"
                               placeholder="42101-XXXXXXX-X"
                               value={formData.cnic}
-                              onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '').substring(0, 13);
+                                let formatted = val;
+                                if (val.length > 5) formatted = val.substring(0, 5) + '-' + val.substring(5, 12);
+                                if (val.length > 12) formatted = formatted + '-' + val.substring(12, 13);
+                                setFormData({ ...formData, cnic: formatted });
+                              }}
                               className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
                             />
                           </div>
@@ -1284,7 +1384,112 @@ export default function ManagerUsersPage() {
                       </div>
                     </div>
 
-                    {/* SECTION 5: LOGIN ACCOUNT */}
+                    {/* SECTION 5: EDUCATION & EXPERIENCE */}
+                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                          <BookOpen className="text-blue-500" size={20} />
+                        </div>
+                        <div>
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-black">SECTION 5 — Education & Experience</h3>
+                          <p className="text-sm font-bold opacity-60">Academic background and professional history</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-8">
+                        {/* Education Builder */}
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Academic Background</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input
+                              type="text"
+                              placeholder="Degree (e.g. Matric)"
+                              value={newEdu.degree}
+                              onChange={(e) => setNewEdu({ ...newEdu, degree: e.target.value })}
+                              className={`h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-blue-500' : 'bg-gray-50 border-gray-100 focus:border-blue-500'}`}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Institution"
+                              value={newEdu.institution}
+                              onChange={(e) => setNewEdu({ ...newEdu, institution: e.target.value })}
+                              className={`h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-blue-500' : 'bg-gray-50 border-gray-100 focus:border-blue-500'}`}
+                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Year"
+                                value={newEdu.year}
+                                onChange={(e) => setNewEdu({ ...newEdu, year: e.target.value })}
+                                className={`flex-1 h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-blue-500' : 'bg-gray-50 border-gray-100 focus:border-blue-500'}`}
+                              />
+                              <button onClick={addEdu} className="px-4 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20">Add</button>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                            {formData.education.map((edu, idx) => (
+                              <div key={idx} className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-center justify-between group">
+                                <div>
+                                  <p className="text-xs font-black uppercase tracking-wider">{edu.degree}</p>
+                                  <p className="text-[10px] font-bold opacity-50 uppercase">{edu.institution} • {edu.year}</p>
+                                </div>
+                                <button onClick={() => removeEdu(idx)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-500/10 rounded-lg">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Experience Builder */}
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Professional Experience</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input
+                              type="text"
+                              placeholder="Job Title"
+                              value={newExp.title}
+                              onChange={(e) => setNewExp({ ...newExp, title: e.target.value })}
+                              className={`h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-emerald-500' : 'bg-gray-50 border-gray-100 focus:border-emerald-500'}`}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Company"
+                              value={newExp.company}
+                              onChange={(e) => setNewExp({ ...newExp, company: e.target.value })}
+                              className={`h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-emerald-500' : 'bg-gray-50 border-gray-100 focus:border-emerald-500'}`}
+                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Duration"
+                                value={newExp.duration}
+                                onChange={(e) => setNewExp({ ...newExp, duration: e.target.value })}
+                                className={`flex-1 h-12 px-4 rounded-xl outline-none font-bold text-xs ${darkMode ? 'bg-white/5 border-white/5 focus:border-emerald-500' : 'bg-gray-50 border-gray-100 focus:border-emerald-500'}`}
+                              />
+                              <button onClick={addExp} className="px-4 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20">Add</button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                            {formData.experience.map((exp, idx) => (
+                              <div key={idx} className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between group">
+                                <div>
+                                  <p className="text-xs font-black uppercase tracking-wider">{exp.title}</p>
+                                  <p className="text-[10px] font-bold opacity-50 uppercase">{exp.company} • {exp.duration}</p>
+                                </div>
+                                <button onClick={() => removeExp(idx)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-500/10 rounded-lg">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 6: LOGIN ACCOUNT */}
                     <div className={`p-8 rounded-[2.5rem] border-2 transition-all duration-500 ${formData.createAccount ? 'border-indigo-500/50 bg-indigo-500/5 shadow-2xl shadow-indigo-500/10' : (darkMode ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-white')}`}>
                       <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                         <div className="flex items-center gap-6">

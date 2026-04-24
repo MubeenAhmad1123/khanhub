@@ -104,7 +104,7 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processingConfig, setProcessingConfig] = useState(false);
@@ -134,7 +134,8 @@ export default function StaffProfilePage() {
     dutyConfig: [] as { key: string; label: string }[],
     basicInfoExtras: {} as Record<string, string>,
     joiningDate: '',
-    seniority: ''
+    seniority: '',
+    fatherName: ''
   });
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
@@ -285,7 +286,8 @@ export default function StaffProfilePage() {
         dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : []),
         basicInfoExtras: profile.basicInfoExtras || {},
         joiningDate: profile.joiningDate ? toDate(profile.joiningDate).toISOString().slice(0, 10) : '',
-        seniority: profile.seniority || ''
+        seniority: profile.seniority || '',
+        fatherName: profile.fatherName || ''
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -849,9 +851,12 @@ export default function StaffProfilePage() {
       };
       const salaryPrefix = getDeptPrefix(staff.dept);
       await addDoc(collection(db, `${salaryPrefix}_salary_records`), slip);
-      toast.success("Salary Slip Generated");
+      toast.success("Financial Ledger Updated & Finalized");
       setShowPayrollModal(false);
-      fetchData();
+      
+      setTimeout(() => {
+        router.push('/hq/dashboard/manager/staff');
+      }, 1000);
     } catch (e) {
       toast.error("Failed to generate slip");
     }
@@ -873,6 +878,8 @@ export default function StaffProfilePage() {
       const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
 
+      const todayStr = new Date().toISOString().split('T')[0];
+
       // 1. Record Duty Log
       await addDoc(collection(db, `${slug}_duty_logs`), {
         staffId: uid,
@@ -880,7 +887,7 @@ export default function StaffProfilePage() {
         status: dutyForm.status,
         comment: dutyForm.comment || (dutyForm.status === 'not_completed' ? `Fine: ${dutyForm.fineReason}` : ''),
         points: dutyForm.status === 'completed' ? 10 : -5, // Penalty points
-        date: serverTimestamp(),
+        date: todayStr, // Use string for daily report consistency
         createdAt: serverTimestamp(),
         markedBy: session?.uid,
         fineAmount: dutyForm.status === 'not_completed' ? Number(dutyForm.fineAmount) || 0 : 0,
@@ -894,22 +901,19 @@ export default function StaffProfilePage() {
           amount: Number(dutyForm.fineAmount),
           reason: dutyForm.fineReason || `Fine for ${dutyForm.type.replace(/_/g, ' ')}`,
           status: 'unpaid',
-          date: serverTimestamp(),
+          date: todayStr, // Match daily report query
           createdAt: serverTimestamp(),
           markedBy: session?.uid,
           source: 'duty_assessment'
         });
       }
 
-      toast.success(dutyForm.status === 'completed' ? "Duty marked successfully" : "Fine recorded successfully");
-      setDutyForm({
-        type: 'morning_shift',
-        status: 'completed',
-        comment: '',
-        fineAmount: '',
-        fineReason: ''
-      });
-      fetchData();
+      toast.success(dutyForm.status === 'completed' ? "Duty assessment finalized" : "Fine recorded and finalized");
+      
+      // Delay redirect slightly to allow toast to be seen
+      setTimeout(() => {
+        router.push('/hq/dashboard/manager/staff');
+      }, 1000);
     } catch (error) {
       toast.error("Failed to record assessment");
     } finally {
@@ -1195,9 +1199,10 @@ export default function StaffProfilePage() {
               {[
                 { id: 'profile', label: 'View Profile', icon: <User size={12} /> },
                 { id: 'edit', label: 'Edit Profile', icon: <Lock size={12} /> },
-                { id: 'overview', label: 'Actions', icon: <Activity size={12} /> },
+                { id: 'overview', label: 'Audit', icon: <Activity size={12} /> },
+                { id: 'action', label: 'Action', icon: <ClipboardList size={12} /> },
                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} /> },
-                { id: 'payroll', label: 'Payroll', icon: <DollarSign size={12} /> },
+                { id: 'payroll', label: 'Finance', icon: <DollarSign size={12} /> },
                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12} /> },
                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} /> },
                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} /> },
@@ -1240,6 +1245,10 @@ export default function StaffProfilePage() {
                     <div>
                       <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Full Identity Name</p>
                       <p className="text-sm font-black">{staff?.name || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Guardian / Father</p>
+                      <p className="text-sm font-black">{staff?.fatherName || '—'}</p>
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Professional Designation</p>
@@ -1332,76 +1341,9 @@ export default function StaffProfilePage() {
               </div>
             )}
 
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
 
-                {/* Special Tasks Module */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                  }`}>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <Sparkles className="text-purple-500" /> Special Tasks & Missions
-                    </h3>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                    <input
-                      type="text"
-                      className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
-                        }`}
-                      placeholder="Describe the temporary task..."
-                      value={newTaskText}
-                      onChange={e => setNewTaskText(e.target.value)}
-                    />
-                    <select
-                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-none ${isDark ? 'bg-zinc-800 text-purple-400' : 'bg-gray-50 text-purple-600'}`}
-                      value={newTaskRecurrence}
-                      onChange={e => setNewTaskRecurrence(e.target.value as any)}
-                    >
-                      <option value="once">Once</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
-                    <button
-                      onClick={handleCreateSpecialTask}
-                      disabled={creatingTask || !newTaskText.trim()}
-                      className="px-6 py-3 rounded-2xl bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-50"
-                    >
-                      Assign Task
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {specialTasks.length === 0 ? (
-                      <div className="py-6 text-center text-black font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
-                    ) : (
-                      specialTasks.map(task => (
-                        <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') :
-                          isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
-                          }`}>
-                          <div>
-                            <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-[10px] text-black font-bold uppercase tracking-widest">By {task.assignedByName}</p>
-                              {task.recurrence && task.recurrence !== 'once' && (
-                                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-tighter border border-purple-500/20">
-                                  {task.recurrence}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :
-                              task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
-                              }`}>
-                              {task.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
+            {activeTab === 'action' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Today's Quick Operations Assessment */}
                 <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
                   }`}>
@@ -1476,29 +1418,29 @@ export default function StaffProfilePage() {
                   <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                     <span className="text-[10px] font-black text-black uppercase tracking-widest">Attendance</span>
                     <div className="flex flex-wrap gap-3">
-                      <button 
-                        onClick={() => toggleAttendance(todayStr, 'present')} 
+                      <button
+                        onClick={() => toggleAttendance(todayStr, 'present')}
                         className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'present' ? 'bg-emerald-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Present
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           toggleAttendance(todayStr, 'late');
                           handleAttendanceCell(todayStr);
-                        }} 
+                        }}
                         className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'late' ? 'bg-amber-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Late Entry
                       </button>
-                      <button 
-                        onClick={() => toggleAttendance(todayStr, 'absent')} 
+                      <button
+                        onClick={() => toggleAttendance(todayStr, 'absent')}
                         className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Absent
                       </button>
-                      <button 
-                        onClick={() => toggleAttendance(todayStr, 'leave')} 
+                      <button
+                        onClick={() => toggleAttendance(todayStr, 'leave')}
                         className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'leave' || attendanceMap[todayStr]?.status === 'paid_leave' || attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-blue-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Leave
@@ -1589,6 +1531,81 @@ export default function StaffProfilePage() {
                   >
                     {markingDuty ? 'Recording...' : 'Finalize Assessment'}
                   </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'overview' && (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                {/* Special Tasks */}
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                  <div className="flex flex-col sm:flex-row justify-between mb-8">
+                    <div>
+                      <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <Target className="text-purple-500" /> Administrative Task Matrix
+                      </h3>
+                      <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Assign one-off operational missions</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-4 mb-8">
+                    <input
+                      type="text"
+                      className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
+                        }`}
+                      placeholder="Describe the temporary task..."
+                      value={newTaskText}
+                      onChange={e => setNewTaskText(e.target.value)}
+                    />
+                    <select
+                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-none ${isDark ? 'bg-zinc-800 text-purple-400' : 'bg-gray-50 text-purple-600'}`}
+                      value={newTaskRecurrence}
+                      onChange={e => setNewTaskRecurrence(e.target.value as any)}
+                    >
+                      <option value="once">Once</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                    <button
+                      onClick={handleCreateSpecialTask}
+                      disabled={creatingTask || !newTaskText.trim()}
+                      className="px-6 py-3 rounded-2xl bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-50"
+                    >
+                      Assign Task
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {specialTasks.length === 0 ? (
+                      <div className="py-6 text-center text-black font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
+                    ) : (
+                      specialTasks.map(task => (
+                        <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') :
+                          isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
+                          }`}>
+                          <div>
+                            <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[10px] text-black font-bold uppercase tracking-widest">By {task.assignedByName}</p>
+                              {task.recurrence && task.recurrence !== 'once' && (
+                                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-tighter border border-purple-500/20">
+                                  {task.recurrence}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :
+                              task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
+                              }`}>
+                              {task.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 {dutyLogs.length === 0 ? <div className="p-20 text-center text-black font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
@@ -1915,15 +1932,31 @@ export default function StaffProfilePage() {
                       />
                       <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                      />
+
+                    {/* Name & Father Name */}
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="space-y-2">
+                        <label className={`text-[10px] font-black uppercase tracking-widest px-1 ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>Legal Name</label>
+                        <input
+                          type="text"
+                          value={editForm.name}
+                          onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl border-2 text-sm font-black uppercase outline-none transition-all ${isDark ? 'bg-[#1A1A1A] text-white' : 'bg-white text-black'}`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className={`text-[10px] font-black uppercase tracking-widest px-1 ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>Father's Name</label>
+                        <input
+                          type="text"
+                          value={editForm.fatherName}
+                          onChange={e => setEditForm({ ...editForm, fatherName: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl border-2 text-sm font-black uppercase outline-none transition-all ${isDark ? 'bg-[#1A1A1A] text-white' : 'bg-white text-black'}`}
+                        />
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div>
                       <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Professional Designation</label>
                       <input
@@ -2488,9 +2521,9 @@ export default function StaffProfilePage() {
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                        <DollarSign size={16} /> Payroll History
+                        <DollarSign size={16} /> Financial Ledger
                       </h3>
-                      <p className="text-[10px] font-black text-black uppercase tracking-widest">Financial Performance Audit</p>
+                      <p className="text-[10px] font-black text-black uppercase tracking-widest">Personnel Economic Audit</p>
                     </div>
                     <button
                       onClick={() => {

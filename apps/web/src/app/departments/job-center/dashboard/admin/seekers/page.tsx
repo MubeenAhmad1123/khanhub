@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
@@ -266,7 +267,13 @@ export default function SeekersListPage() {
                 <div className="flex items-center gap-4 mb-5">
                     <div className="relative flex-shrink-0">
                         {seeker.photoUrl ? (
-                            <img src={seeker.photoUrl} alt={seeker.name} className="w-16 h-16 rounded-[1.25rem] object-cover border-2 border-white shadow-lg" />
+                            <Image 
+                                src={seeker.photoUrl} 
+                                alt={seeker.name} 
+                                width={64}
+                                height={64}
+                                className="w-16 h-16 rounded-[1.25rem] object-cover border-2 border-white shadow-lg" 
+                            />
                         ) : (
                             <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-orange-50 to-orange-100 text-orange-700 flex items-center justify-center font-black text-2xl border border-orange-200/50">
                                 {seeker.name.charAt(0).toUpperCase()}

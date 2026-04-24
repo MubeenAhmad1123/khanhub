@@ -93,7 +93,11 @@ export default function HireHistoryTab({ employerId }: HireHistoryTabProps) {
               <div className="space-y-2 mt-auto">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
                   <GraduationCap size={12} className="text-gray-300" />
-                  <span>{seeker.education}</span>
+                  <span>
+                    {seeker.education && seeker.education.length > 0
+                      ? (typeof seeker.education[0] === 'object' ? seeker.education[0].degree : String(seeker.education[0]))
+                      : 'Not specified'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
                   <Award size={12} className="text-gray-300" />

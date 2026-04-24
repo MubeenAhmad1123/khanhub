@@ -15,9 +15,17 @@ export interface PublicJobSeeker {
   name: string;
   gender: 'male' | 'female' | 'other';
   photoUrl?: string | null;
-  education: string;
+  education: {
+    degree: string;
+    institution: string;
+    year: string;
+  }[];
   skills: string[];
-  experience?: string | null;
+  experience: {
+    title: string;
+    company: string;
+    duration: string;
+  }[];
   jobInterests: string[];
   availability: string;
   isActive: boolean;
@@ -59,9 +67,9 @@ export async function fetchPublicSeekers(): Promise<PublicJobSeeker[]> {
       name: data.name,
       gender: data.gender,
       photoUrl: data.photoUrl,
-      education: data.education,
+      education: data.education || [],
       skills: data.skills || [],
-      experience: data.experience,
+      experience: data.experience || [],
       jobInterests: data.jobInterests || [],
       availability: data.availability,
       isActive: data.isActive,

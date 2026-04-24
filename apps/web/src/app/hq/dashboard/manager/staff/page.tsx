@@ -22,7 +22,7 @@ export default function ManagerStaffPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
 
   // Stats
   const [stats, setStats] = useState({
@@ -82,16 +82,17 @@ export default function ManagerStaffPage() {
           });
         });
 
-        const presentToday = unified.filter(s => attendanceMap.get(s.staffId) === 'present').length;
+        const activeStaff = unified.filter(s => s.status === 'active' && s.isActive !== false);
+        const presentToday = activeStaff.filter(s => attendanceMap.get(s.staffId) === 'present').length;
 
         setStats({
-          total: unified.length,
+          total: activeStaff.length,
           present: presentToday,
-          multiRole: unified.filter(s => s.role === 'admin' || s.role === 'manager').length
+          multiRole: activeStaff.filter(s => s.role === 'admin' || s.role === 'manager').length
         });
 
         // Duty Mapping (Last Activity)
-        const unmarked = unified.filter(s => s.isActive && !s.lastDutyLabel);
+        const unmarked = activeStaff.filter(s => !s.lastDutyLabel);
         setUnmarkedStaff(unmarked);
 
       } catch (err) {
@@ -113,8 +114,8 @@ export default function ManagerStaffPage() {
         (s.designation || '').toLowerCase().includes(search.toLowerCase());
 
       const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
-      const matchesStatus = statusFilter === 'all' ||
-        (statusFilter === 'active' && s.status === 'active') ||
+      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.isActive !== false)) ||
+        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false)) ||
         (statusFilter === 'inactive' && s.status === 'inactive') ||
         (statusFilter === 'resigned' && s.status === 'resigned') ||
         (statusFilter === 'terminated' && s.status === 'terminated');
@@ -126,7 +127,7 @@ export default function ManagerStaffPage() {
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${darkMode ? 'bg-[#0A0A0A]' : 'bg-gray-50'}`}>
-        <Loader2 className={`w-10 h-10 animate-spin ${darkMode ? 'text-teal-400' : 'text-black'}`} />
+        <Loader2 className={`w-10 h-10 animate-spin ${darkMode ? 'text-blue-400' : 'text-black'}`} />
       </div>
     );
   }
@@ -138,7 +139,7 @@ export default function ManagerStaffPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${darkMode ? 'bg-teal-500/10 text-teal-400' : 'bg-gray-900 text-white'}`}>
+              <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${darkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-900 text-white'}`}>
                 <Users size={20} />
               </div>
               <div className="min-w-0">
@@ -155,7 +156,7 @@ export default function ManagerStaffPage() {
               <div className={`w-px h-6 ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`} />
               <div className="text-right">
                 <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-black'}`}>Present</p>
-                <p className="text-base font-black text-teal-600">{stats.present}</p>
+                <p className="text-base font-black text-blue-600">{stats.present}</p>
               </div>
             </div>
           </div>
@@ -232,10 +233,10 @@ export default function ManagerStaffPage() {
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="resigned">Resigned</option>
+              <option value="all">Active & Inactive</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+              <option value="resigned">Resigned / Left</option>
               <option value="terminated">Terminated</option>
             </select>
           </div>

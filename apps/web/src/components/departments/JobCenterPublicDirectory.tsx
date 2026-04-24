@@ -41,8 +41,8 @@ function getCompleteness(s: PublicJobSeeker) {
   let score = 0;
   if (s.photoUrl) score += 10;
   if (s.skills && s.skills.length > 0) score += s.skills.length * 2;
-  if (s.experience) score += 5;
-  if (s.education) score += 5;
+  if (s.experience && s.experience.length > 0) score += 5;
+  if (s.education && s.education.length > 0) score += 5;
   if (s.jobInterests && s.jobInterests.length > 0) score += s.jobInterests.length * 2;
   return score;
 }
@@ -91,10 +91,10 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
     // Experience Filter logic
     let matchesExp = true;
     if (selectedExp !== 'all') {
-      const years = parseInt(s.experience || '0');
-      if (selectedExp === '<1') matchesExp = years < 1;
-      else if (selectedExp === '1-3') matchesExp = years >= 1 && years <= 3;
-      else if (selectedExp === '3+') matchesExp = years > 3;
+      const expCount = s.experience?.length || 0;
+      if (selectedExp === '<1') matchesExp = expCount < 1;
+      else if (selectedExp === '1-3') matchesExp = expCount >= 1 && expCount <= 3;
+      else if (selectedExp === '3+') matchesExp = expCount > 3;
     }
 
     // Status Filter
@@ -337,7 +337,11 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                   </h3>
                   <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-neutral-400 uppercase tracking-wide">
                     <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-500 flex-shrink-0" style={{ color: theme.primary }} />
-                    <span className="truncate">{s.education}</span>
+                    <span className="truncate">
+                      {s.education && s.education.length > 0
+                        ? (typeof s.education[0] === 'object' ? s.education[0].degree : String(s.education[0]))
+                        : 'N/A'}
+                    </span>
                   </div>
                 </div>
 
@@ -358,20 +362,18 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                     </div>
                   </div>
                   
-                  {s.experience && (
+                  {s.experience && s.experience.length > 0 && (
                     <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 bg-neutral-100 border-neutral-200 group-hover:bg-white group-hover:border-primary-100">
                       <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
                         <Briefcase size={14} className="text-primary-500 sm:w-4 sm:h-4" style={{ color: theme.primary }} />
                         <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Experience</span>
                       </div>
                       <div className="text-[10px] sm:text-xs text-neutral-700 font-bold leading-relaxed line-clamp-2">
-                        {/^\d+$/.test(s.experience) ? (
-                          <span className="text-xs sm:text-sm font-black text-neutral-900">
-                             {s.experience} Years Exp
-                          </span>
-                        ) : (
-                          <span className="italic text-neutral-600">&ldquo;{s.experience}&rdquo;</span>
-                        )}
+                        {s.experience.map((exp, idx) => (
+                          <div key={idx} className={idx > 0 ? "mt-1 pt-1 border-t border-neutral-200/50" : ""}>
+                            {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -572,7 +574,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                       {'name' in selectedProfile ? (
                         <>
                           <GraduationCap size={16} style={{ color: theme.primary }} /> 
-                          {selectedProfile.education}
+                          {selectedProfile.education?.[0] || 'N/A'}
                         </>
                       ) : (
                         <>
@@ -601,7 +603,15 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                           <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
-                          <p className="font-bold text-neutral-900">{selectedProfile.experience || 'Not specified'}</p>
+                          <div className="font-bold text-neutral-900">
+                            {selectedProfile.experience?.length ? (
+                              selectedProfile.experience.map((exp, i) => (
+                                <div key={i} className={i > 0 ? "mt-1" : ""}>
+                                  • {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
+                                </div>
+                              ))
+                            ) : 'Not specified'}
+                          </div>
                         </div>
                         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                           <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Availability</p>

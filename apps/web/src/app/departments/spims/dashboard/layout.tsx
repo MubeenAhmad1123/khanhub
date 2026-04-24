@@ -12,6 +12,7 @@ import {
 import { useTheme } from 'next-themes';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import NotificationRegister from '@/components/hq/NotificationRegister';
 
 type SpimsDashRole = 'admin' | 'staff' | 'student' | 'cashier' | 'superadmin';
 
@@ -379,6 +380,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
 
         <main className={`flex-1 p-4 lg:p-8 transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-6xl mx-auto">{children}</div>
+          {user?.uid && <NotificationRegister userId={user.uid} userName={user.displayName} />}
         </main>
       </div>
     </div>

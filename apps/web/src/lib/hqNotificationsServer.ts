@@ -33,6 +33,7 @@ function getAdminApp(): App {
 export async function sendHqPushServer(params: {
   recipientId: string;
   recipientUid?: string;
+  userCollection?: string; // Default to hq_users
   type: string;
   title: string;
   body: string;
@@ -58,9 +59,10 @@ export async function sendHqPushServer(params: {
       createdAt: new Date().toISOString(),
     });
 
-    // 2. Fetch FCM tokens - Use recipientUid if provided, otherwise fallback to recipientId (for backward compatibility if IDs match)
+    // 2. Fetch FCM tokens
     const tokenPathId = params.recipientUid || params.recipientId;
-    const tokensSnap = await adminDb.collection(`hq_users/${tokenPathId}/fcmTokens`).get();
+    const userCol = params.userCollection || 'hq_users';
+    const tokensSnap = await adminDb.collection(`${userCol}/${tokenPathId}/fcmTokens`).get();
     const tokens = tokensSnap.docs.map((d) => d.id);
 
     if (tokens.length === 0) return;
@@ -93,6 +95,14 @@ export async function sendHqPushServer(params: {
           tag: params.tag || params.type,
           renotify: true,
           requireInteraction: true,
+          vibrate: [200, 100, 200],
+          actions: params.actionUrl ? [
+            {
+              action: 'open_url',
+              title: 'View Details',
+              icon: '/icons/icon-72x72.png'
+            }
+          ] : []
         },
         fcmOptions: {
           link: params.actionUrl || '/hq/dashboard'
