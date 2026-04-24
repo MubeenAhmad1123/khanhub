@@ -185,10 +185,12 @@ export async function listStaffCards({
     if (normalizedRole === 'superadmin') return false;
 
     if (role === 'personnel') {
-      if (normalizedRole === 'other') return false;
+      // Personnel should exclude students, api tests, and clients
+      if (normalizedRole === 'other' || normalizedRole === 'student') return false;
     } else if (role !== 'all' && normalizedRole !== role) {
       return false;
     }
+
     return true;
   });
 
