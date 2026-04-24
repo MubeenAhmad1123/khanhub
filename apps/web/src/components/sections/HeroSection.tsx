@@ -133,7 +133,7 @@ const ImageCarousel = memo(function ImageCarousel() {
   };
 
   return (
-    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12">
+    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12 rounded-full">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -141,10 +141,10 @@ const ImageCarousel = memo(function ImageCarousel() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.5 }}
-          className="absolute inset-0"
+          className="absolute inset-0 rounded-full"
         >
           {!imageErrors.has(currentIndex) ? (
-            <div className="relative w-full h-full rounded-full overflow-hidden filter drop-shadow-2xl">
+            <div className="relative w-full h-full rounded-full overflow-hidden filter drop-shadow-xl">
               <Image
                 src={DEPARTMENT_IMAGES[currentIndex].src}
                 alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
@@ -152,7 +152,7 @@ const ImageCarousel = memo(function ImageCarousel() {
                 className="object-cover"
                 priority={currentIndex === 0}
                 loading={currentIndex === 0 ? "eager" : "lazy"}
-                // @ts-ignore - fetchPriority is supported in Next.js 14+ but might not be in the types yet
+                // @ts-ignore - fetchPriority is supported in Next.js 14+
                 fetchPriority={currentIndex === 0 ? "high" : "auto"}
                 sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
                 onError={() => handleImageError(currentIndex)}
@@ -160,7 +160,7 @@ const ImageCarousel = memo(function ImageCarousel() {
               />
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-2xl">
+            <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-full">
               <span className="text-slate-400 text-sm">Image unavailable</span>
             </div>
           )}
@@ -396,7 +396,7 @@ export default function HeroSection() {
                 className="relative z-10"
               >
                 {/* Logo Backdrop */}
-                <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20 shadow-xl" />
+                <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20 filter drop-shadow-xl" />
 
                 {/* Image Carousel */}
                 <ImageCarousel />
