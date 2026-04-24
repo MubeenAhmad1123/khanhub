@@ -25,7 +25,7 @@ export default function EmployerDetailPage() {
   
   const [loading, setLoading] = useState(true);
   const [employer, setEmployer] = useState<Employer | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'history' | 'billing'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'history' | 'actions' | 'billing'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('all');
 
   useEffect(() => {
@@ -73,7 +73,8 @@ export default function EmployerDetailPage() {
     { id: 'overview', label: 'Company Overview', icon: Building },
     { id: 'jobs', label: 'Job Postings', icon: Briefcase },
     { id: 'history', label: 'Hire History', icon: Users },
-    { id: 'billing', label: 'Billing & Support', icon: DollarSign },
+    { id: 'actions', label: 'Actions & Logs', icon: Settings },
+    { id: 'billing', label: 'Financials', icon: DollarSign },
   ];
 
   return (
@@ -167,11 +168,87 @@ export default function EmployerDetailPage() {
             {activeTab === 'overview' && <OverviewTab employer={employer} />}
             {activeTab === 'jobs' && <JobPostingsTab employerId={id} employer={employer} />}
             {activeTab === 'history' && <HireHistoryTab employerId={id} />}
+            {activeTab === 'actions' && (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                {/* Status Management Card */}
+                <div className="bg-indigo-50 border border-indigo-100 p-8 rounded-[2.5rem] shadow-sm">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                      <Settings size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-gray-900 uppercase">Operational Status</h3>
+                      <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">Manage Employer Visibility & Permissions</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Company Account Status</label>
+                      <select 
+                        value={employer.isActive ? 'active' : 'inactive'}
+                        onChange={async (e) => {
+                          const newStatus = e.target.value === 'active';
+                          try {
+                            setLoading(true);
+                            await updateDoc(doc(db, 'jobcenter_employers', id), { isActive: newStatus });
+                            setEmployer((prev: any) => ({ ...prev, isActive: newStatus }));
+                            toast.success(`Employer status set to ${e.target.value.toUpperCase()}`);
+                          } catch (err) {
+                            toast.error('Failed to update status');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        className="w-full bg-white border border-indigo-200 rounded-2xl px-5 py-4 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none shadow-inner"
+                      >
+                        <option value="active">ACTIVE / VERIFIED</option>
+                        <option value="inactive">INACTIVE / DISABLED</option>
+                        <option value="restricted">RESTRICTED ACCESS</option>
+                        <option value="pending">PENDING VERIFICATION</option>
+                        <option value="blacklisted">BLACKLISTED</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-4 p-5 rounded-2xl bg-white/50 border border-indigo-100">
+                       <div className={`w-3 h-3 rounded-full ${employer.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                       <div>
+                          <p className="text-xs font-black text-gray-900 uppercase">{employer.isActive ? 'Active Partner' : 'Account Disabled'}</p>
+                          <p className="text-[10px] text-gray-500 font-bold">Updated on: {new Date().toLocaleDateString()}</p>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interaction Logs */}
+                <div className="space-y-6">
+                   <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600">
+                          <History size={20} />
+                        </div>
+                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Interaction & Meeting Log</h2>
+                      </div>
+                      <button className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline">Download Report</button>
+                   </div>
+                   
+                   <div className="bg-white rounded-[2.5rem] p-12 text-center border border-gray-100 shadow-sm">
+                      <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300">
+                         <Users size={32} />
+                      </div>
+                      <h3 className="text-lg font-black text-gray-900 mb-2 uppercase">No Meetings Logged</h3>
+                      <p className="text-sm text-gray-500 max-w-sm mx-auto font-medium">Interviews and company meetings recorded by staff will appear in this centralized timeline.</p>
+                      <button className="mt-8 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-900/10 hover:scale-105 transition-all active:scale-95">
+                         Log Company Interaction
+                      </button>
+                   </div>
+                </div>
+              </div>
+            )}
             {activeTab === 'billing' && (
-              <div className="bg-white rounded-3xl p-16 text-center shadow-sm border border-gray-100">
-                <DollarSign className="w-16 h-16 text-gray-200 mx-auto mb-6" />
-                <h2 className="text-xl font-black text-gray-900 mb-2">Billing & Ledger</h2>
-                <p className="text-gray-500 text-sm max-w-xs mx-auto">Financial records and service billing for this employer will appear here in the next update.</p>
+              <div className="bg-white rounded-[2.5rem] p-20 text-center shadow-sm border border-gray-100">
+                <DollarSign className="w-20 h-20 text-gray-100 mx-auto mb-8" />
+                <h2 className="text-2xl font-black text-gray-900 mb-4 uppercase">Financial Ledger</h2>
+                <p className="text-gray-500 text-base max-w-sm mx-auto font-medium">Invoices, commission tracking (30% first salary), and payment history for {employer.companyName} will be available here.</p>
               </div>
             )}
           </div>

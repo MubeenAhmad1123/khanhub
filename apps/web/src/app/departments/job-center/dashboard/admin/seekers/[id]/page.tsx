@@ -12,17 +12,14 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, Settings
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, Settings, CheckCircle
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import RegistrationTab from '@/components/job-center/seeker-profile/RegistrationTab';
-import ActivityLogTab from '@/components/job-center/seeker-profile/ActivityLogTab';
-import CareerProgressTab from '@/components/job-center/seeker-profile/CareerProgressTab';
 import JobTrainingTab from '@/components/job-center/seeker-profile/JobTrainingTab';
-import SupportRecordTab from '@/components/job-center/seeker-profile/SupportRecordTab';
 
 export default function SeekerDetailPage() {
   const router = useRouter();
@@ -39,7 +36,7 @@ export default function SeekerDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'activity' | 'progress' | 'training' | 'support' | 'fees' | 'meetings' | 'videos'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'training' | 'fees' | 'actions'>('profile');
   const [meetings, setMeetings] = useState<any[]>([]);
   const [showAddMeetingModal, setShowAddMeetingModal] = useState(false);
   const [isSavingMeeting, setIsSavingMeeting] = useState(false);
@@ -733,6 +730,32 @@ export default function SeekerDetailPage() {
           </div>
         </div>
 
+        {/* Status Quick Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Interviews</p>
+            <p className="text-xl font-black text-gray-900">{meetings.length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Status</p>
+            <p className={`text-xl font-black ${
+              seeker.status === 'hired' || seeker.status === 'placed' ? 'text-green-600' :
+              seeker.status === 'interviewing' ? 'text-blue-600' :
+              seeker.status === 'blacklisted' ? 'text-red-600' : 'text-orange-600'
+            }`}>
+              {seeker.status ? seeker.status.replace('_', ' ').toUpperCase() : 'ACTIVE'}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Job Ready</p>
+            <p className="text-xl font-black text-gray-900">{seeker.isRegistrationPaid ? 'YES' : 'NO'}</p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Portfolio Items</p>
+            <p className="text-xl font-black text-gray-900">{videos.length}</p>
+          </div>
+        </div>
+
         {/* Tabs Navigation */}
         <div className="w-full -mx-4 px-4">
           <div className="flex flex-wrap gap-1 border-b border-gray-100 bg-white rounded-t-2xl p-1">
@@ -753,60 +776,12 @@ export default function SeekerDetailPage() {
             <ClipboardList className="w-4 h-4" /> Registration
           </button>
           <button
-            onClick={() => setActiveTab('activity')}
+            onClick={() => setActiveTab('actions')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'activity' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'actions' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Activity className="w-4 h-4" /> Activity Log
-          </button>
-          <button
-            onClick={() => setActiveTab('progress')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'progress' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" /> Career Progress
-          </button>
-          <button
-            onClick={() => setActiveTab('training')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'training' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Brain className="w-4 h-4" /> Job Training
-          </button>
-          <button
-            onClick={() => setActiveTab('support')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'support' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Heart className="w-4 h-4" /> Support Log
-          </button>
-          <button
-            onClick={() => setActiveTab('fees')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'fees' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <DollarSign className="w-4 h-4" /> Financials
-          </button>
-          <button
-            onClick={() => setActiveTab('videos')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'videos' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Video className="w-4 h-4" /> Portfolio ({videos.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('meetings')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'meetings' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Users className="w-4 h-4" /> Meeting Log
+            <Settings className="w-4 h-4" /> Actions & Interviews
           </button>
           </div>
         </div>
@@ -978,24 +953,9 @@ export default function SeekerDetailPage() {
             <RegistrationTab seeker={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
           )}
 
-          {/* TAB: ACTIVITY LOG */}
-          {activeTab === 'activity' && (
-            <ActivityLogTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: CAREER PROGRESS */}
-          {activeTab === 'progress' && (
-            <CareerProgressTab seekerId={seekerId} session={session} />
-          )}
-
           {/* TAB: JOB TRAINING */}
           {activeTab === 'training' && (
             <JobTrainingTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: SUPPORT */}
-          {activeTab === 'support' && (
-            <SupportRecordTab seekerId={seekerId} session={session} />
           )}
 
           {/* TAB: FEES */}
@@ -1131,168 +1091,157 @@ export default function SeekerDetailPage() {
           )}
 
 
-          {/* TAB: VIDEOS */}
-          {activeTab === 'videos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <Video className="w-6 h-6 text-orange-600" />
-                  <h2 className="text-xl font-bold text-gray-800">Files & Portfolio</h2>
+          {/* TAB: VIDEOS REMOVED */}
+
+          {/* TAB: ACTIONS & INTERVIEWS */}
+          {activeTab === 'actions' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              {/* Status Management Card */}
+              <div className="bg-orange-50 border border-orange-100 p-6 rounded-[2rem] shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                     <Activity size={20} />
+                   </div>
+                   <div>
+                     <h3 className="text-lg font-black text-gray-900">Status Management</h3>
+                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mt-0.5">Update Seeker Employment Stage</p>
+                   </div>
                 </div>
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" /> Upload
-                </button>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Select Current Status</label>
+                    <select 
+                      value={seeker.status || 'active'}
+                      onChange={async (e) => {
+                        const newStatus = e.target.value;
+                        if (newStatus === 'placed') {
+                          handlePlacement();
+                          return;
+                        }
+                        try {
+                          setLoading(true);
+                          await updateDoc(doc(db, 'jobcenter_seekers', seekerId), { status: newStatus });
+                          setSeeker((prev: any) => ({ ...prev, status: newStatus }));
+                          toast.success(`Status updated to ${newStatus.toUpperCase()}`);
+                        } catch (err) {
+                          toast.error('Failed to update status');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                    >
+                      <option value="active">LOOKING FOR JOB</option>
+                      <option value="training">IN TRAINING</option>
+                      <option value="interviewing">INTERVIEWING</option>
+                      <option value="hired">HIRED (MANUAL)</option>
+                      <option value="placed">PLACED (VIA PORTAL)</option>
+                      <option value="on_hold">ON HOLD</option>
+                      <option value="blacklisted">BLACKLISTED</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    {seeker.status === 'placed' && (
+                      <div className="w-full p-3 bg-green-100 border border-green-200 rounded-xl text-green-700 text-xs font-bold flex items-center gap-2">
+                        <CheckCircle size={14} /> Official Placement: {seeker.placementCompany || 'Unknown'}
+                      </div>
+                    )}
+                    {seeker.status === 'active' && (
+                      <div className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 text-xs font-bold flex items-center gap-2">
+                        <Users size={14} /> Active seeker available for interviews.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {videos.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
-                  <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No files uploaded yet</p>
+              {/* Interview Log Section */}
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Users size={20} />
+                    </div>
+                    <h2 className="text-xl font-black text-gray-900">Interview Log</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAddMeetingModal(true)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 w-full sm:w-auto"
+                  >
+                    <Plus size={16} /> Log New Interview
+                  </button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {videos.map(vid => {
-                    const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
-                    const isImage = vid.fileType?.startsWith('image/');
-                    const isPdf = vid.fileType === 'application/pdf';
 
-                    return (
-                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-orange-300 transition-colors shadow-sm relative">
-                        {session?.role === 'superadmin' && (
-                          <button
-                            onClick={() => handleDeleteVideo(vid.id)}
-                            className="absolute top-2 right-2 z-20 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
-                          {isImage ? (
-                            <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
-                          ) : isPdf ? (
-                            <FileText className="w-10 h-10 text-gray-600 z-0" />
-                          ) : (
-                            <Video className="w-10 h-10 text-gray-600 z-0" />
+                {meetings.length === 0 ? (
+                  <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                    <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No interviews recorded yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {meetings.map((meeting: any) => (
+                      <div key={meeting.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-orange-900/5 hover:border-orange-100 transition-all group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4">
+                           <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
+                              <span>{formatDateDMY(meeting.date?.toDate?.() ? meeting.date.toDate() : meeting.date)}</span>
+                           </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                          <div className="space-y-1 pr-16">
+                            <div className="flex items-center gap-2">
+                               <h4 className="font-black text-gray-900 text-xl tracking-tight">{meeting.representativeName}</h4>
+                               <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{meeting.organization}</span>
+                               {meeting.outcome && (
+                                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner ${
+                                   meeting.outcome === 'Hired' ? 'bg-green-100 text-green-700' : 
+                                   meeting.outcome === 'Rejected' ? 'bg-red-100 text-red-700' : 
+                                   meeting.outcome === 'Shortlisted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                                 }`}>
+                                   {meeting.outcome}
+                                 </span>
+                               )}
+                            </div>
+                            <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
+                              <span className="flex items-center gap-1.5"><Phone size={14} className="text-orange-500" /> {meeting.phone}</span>
+                              {meeting.purpose && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {meeting.purpose}</span>}
+                            </div>
+                          </div>
+
+                          {meeting.notes && (
+                            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
+                              <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Interview Notes</div>
+                              "{meeting.notes}"
+                            </div>
                           )}
                           
-                          <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-orange-600 transform scale-90 group-hover:scale-100 transition-transform">
-                              <Play className="w-5 h-5 ml-1" />
-                            </div>
-                          </a>
-                        </div>
-                        <div className="p-4">
-                          <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
-                          <div className="flex items-center justify-between mt-2">
-                             <p className="text-xs text-gray-500">
-                              {formatDateDMY(vid.createdAt)}
-                            </p>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                              isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                            }`}>
-                              {isVideo ? 'Video' : isPdf ? 'Document' : 'Image'}
-                            </span>
+                          <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Staff ID: {meeting.loggedBy}</p>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditMeetingModal(meeting);
+                                    setMName(meeting.representativeName);
+                                    setMOrganization(meeting.organization);
+                                    setMPhone(meeting.phone);
+                                    setMPurpose(meeting.purpose || '');
+                                    setMNotes(meeting.notes || '');
+                                    setMDate(meeting.date?.toDate?.() ? meeting.date.toDate().toISOString().split('T')[0] : meeting.date);
+                                  }}
+                                  className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-2 rounded-xl transition"
+                                >
+                                  Edit Record
+                                </button>
+                              </div>
                           </div>
-                          <p className="text-[10px] text-gray-400 mt-2 truncate">Uploaded by staff ({vid.uploadedBy})</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB: MEETINGS */}
-          {activeTab === 'meetings' && (
-            <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
-                    <Users size={20} />
+                    ))}
                   </div>
-                  <h2 className="text-xl font-black text-gray-900">Meeting & Interview Log</h2>
-                </div>
-                <button
-                  onClick={() => setShowAddMeetingModal(true)}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 w-full sm:w-auto"
-                >
-                  <Plus size={16} /> Log New Meeting
-                </button>
+                )}
               </div>
-
-              {meetings.length === 0 ? (
-                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
-                  <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                  <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No meetings recorded yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {meetings.map((meeting: any) => (
-                    <div key={meeting.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-orange-900/5 hover:border-orange-100 transition-all group relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4">
-                         <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
-                            <span>{formatDateDMY(meeting.date?.toDate?.() ? meeting.date.toDate() : meeting.date)}</span>
-                         </div>
-                      </div>
-
-                      <div className="flex flex-col gap-4">
-                        <div className="space-y-1 pr-16">
-                          <div className="flex items-center gap-2">
-                             <h4 className="font-black text-gray-900 text-xl tracking-tight">{meeting.representativeName}</h4>
-                             <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{meeting.organization}</span>
-                             {meeting.outcome && (
-                               <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner ${
-                                 meeting.outcome === 'Hired' ? 'bg-green-100 text-green-700' : 
-                                 meeting.outcome === 'Rejected' ? 'bg-red-100 text-red-700' : 
-                                 meeting.outcome === 'Shortlisted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                               }`}>
-                                 {meeting.outcome}
-                               </span>
-                             )}
-                          </div>
-                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
-                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-orange-500" /> {meeting.phone}</span>
-                            {meeting.purpose && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {meeting.purpose}</span>}
-                          </div>
-                        </div>
-
-                        {meeting.notes && (
-                          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
-                            <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Meeting Notes</div>
-                            "{meeting.notes}"
-                          </div>
-                        )}
-                        
-                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Staff: {meeting.loggedBy}</p>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditMeetingModal(meeting);
-                                  setMName(meeting.representativeName);
-                                  setMOrganization(meeting.organization);
-                                  setMPhone(meeting.phone);
-                                  setMPurpose(meeting.purpose || '');
-                                  setMNotes(meeting.notes || '');
-                                  setMDate(meeting.date?.toDate?.() ? meeting.date.toDate().toISOString().split('T')[0] : meeting.date);
-                                }}
-                                className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-2 rounded-xl transition"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
