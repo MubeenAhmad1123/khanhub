@@ -130,7 +130,7 @@ export default function FinanceLogPage() {
     } finally {
       setQueryLoading(false);
     }
-  }, [dateFrom, dateTo, typeFilter, statusFilter, categoryFilter]);
+  }, [dateFrom, dateTo, typeFilter, statusFilter, categoryFilter, filterBy]);
 
   useEffect(() => {
     if (!session) return;
