@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, getIdToken, signOut } from 'firebase/auth';
 import type { HqSession } from '@/types/hq';
 
 const SESSION_KEY = 'hq_session';
@@ -19,6 +19,7 @@ export function useHqSession() {
   };
 
   useEffect(() => {
+    // Restore session from localStorage
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
@@ -33,16 +34,14 @@ export function useHqSession() {
       }
     } catch {
       setSession(null);
-    } finally {
-      // Keep loading true until Firebase Auth confirms state.
     }
+
+    // Firebase Auth state listener with forced token refresh
     const unsub = onAuthStateChanged(auth, async (user) => {
       const raw = localStorage.getItem(SESSION_KEY);
       const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
 
-      // Only clear if there's a definite mismatch. 
-      // If user is null, it might just be initializing, so we don't clear immediately.
-      // The layout guard will handle redirection if the session remains null.
+      // Clear on UID mismatch
       if (user && parsed && user.uid !== parsed.uid) {
         console.warn('[useHqSession] UID mismatch, clearing session');
         localStorage.removeItem(SESSION_KEY);
@@ -51,9 +50,17 @@ export function useHqSession() {
         return;
       }
 
-      // If user is null but we have a parsed session, we might be in a transition.
-      // We'll let the session stay for now. If it's truly gone, the next check will catch it.
-      
+      // ── Force-refresh the ID token so Firestore rules see a valid auth ──
+      // Firebase tokens expire after 1 hour. Without this, prolonged sessions
+      // cause "Missing or insufficient permissions" on all Firestore reads.
+      if (user) {
+        try {
+          await getIdToken(user, true);
+        } catch (e) {
+          console.warn('[useHqSession] Token refresh failed:', e);
+        }
+      }
+
       setLoading(false);
     });
 
@@ -61,10 +68,10 @@ export function useHqSession() {
     let unsubDoc: (() => void) | undefined;
     const raw = localStorage.getItem(SESSION_KEY);
     const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
-    
+
     if (parsed?.uid) {
       unsubDoc = onSnapshot(
-        doc(db, 'hq_users', parsed.uid), 
+        doc(db, 'hq_users', parsed.uid),
         (snap) => {
           const data = snap.data();
           if (data?.forceLogoutAt) {
@@ -79,7 +86,10 @@ export function useHqSession() {
         },
         (err) => {
           console.error('[useHqSession] Snapshot error (likely permissions):', err);
-          // Don't logout on permission error, just stop listening.
+          // Attempt a silent token refresh on permission errors
+          if (auth.currentUser) {
+            getIdToken(auth.currentUser, true).catch(() => {});
+          }
         }
       );
     }
