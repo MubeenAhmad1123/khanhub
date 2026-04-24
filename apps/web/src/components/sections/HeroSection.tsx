@@ -144,19 +144,21 @@ const ImageCarousel = memo(function ImageCarousel() {
           className="absolute inset-0"
         >
           {!imageErrors.has(currentIndex) ? (
-            <Image
-              src={DEPARTMENT_IMAGES[currentIndex].src}
-              alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
-              fill
-              className="object-contain drop-shadow-2xl"
-              priority={currentIndex === 0}
-              loading={currentIndex === 0 ? "eager" : "lazy"}
-              // @ts-ignore - fetchPriority is supported in Next.js 14+ but might not be in the types yet
-              fetchPriority={currentIndex === 0 ? "high" : "auto"}
-              sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
-              onError={() => handleImageError(currentIndex)}
-              quality={95}
-            />
+            <div className="relative w-full h-full rounded-full overflow-hidden filter drop-shadow-2xl">
+              <Image
+                src={DEPARTMENT_IMAGES[currentIndex].src}
+                alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
+                fill
+                className="object-cover"
+                priority={currentIndex === 0}
+                loading={currentIndex === 0 ? "eager" : "lazy"}
+                // @ts-ignore - fetchPriority is supported in Next.js 14+ but might not be in the types yet
+                fetchPriority={currentIndex === 0 ? "high" : "auto"}
+                sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
+                onError={() => handleImageError(currentIndex)}
+                quality={95}
+              />
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-2xl">
               <span className="text-slate-400 text-sm">Image unavailable</span>
@@ -394,7 +396,7 @@ export default function HeroSection() {
                 className="relative z-10"
               >
                 {/* Logo Backdrop */}
-                <div className="absolute inset-0 -m-6 sm:-m-12 bg-white/40 backdrop-blur-[2px] rounded-full border border-white/20 shadow-xl" />
+                <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20 shadow-xl" />
 
                 {/* Image Carousel */}
                 <ImageCarousel />

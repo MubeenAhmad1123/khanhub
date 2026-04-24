@@ -65,6 +65,9 @@ export default function SeekerDetailPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [startingSalary, setStartingSalary] = useState('');
+  const [mOutcome, setMOutcome] = useState('Pending');
+  const [isUpdatingRegFee, setIsUpdatingRegFee] = useState(false);
 
   // Photo Upload State
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -380,7 +383,7 @@ export default function SeekerDetailPage() {
         ...prev, 
         ...updatedData
       }));
-      setEditForm(prev => ({ ...prev, photoUrl }));
+      setEditForm((prev: any) => ({ ...prev, photoUrl }));
       setPhotoFile(null);
       setIsEditing(false);
       toast.success('Profile updated');
@@ -422,14 +425,46 @@ export default function SeekerDetailPage() {
 
     try {
       setDeactivating(true);
+      const salary = Number(startingSalary) || 0;
+      const commission = salary * 0.3;
+
       await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
         isActive: false,
         status: 'placed',
         placementDate: Timestamp.now(),
         placementCompany: employer.companyName,
-        employerId: employer.id
+        employerId: employer.id,
+        startingSalary: salary,
+        placementCommission: commission
       });
-      toast.success('Seeker marked as Placed ✓');
+
+      // Create commission transaction
+      const setupSnap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
+      const setupData = setupSnap.data() as any;
+      const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
+
+      if (commission > 0 && cashierCustomId) {
+        await addDoc(collection(db, 'jobcenter_transactions'), {
+          type: 'income',
+          amount: commission,
+          category: 'commission_30_percent',
+          categoryName: '30% Placement Commission',
+          departmentCode: 'job-center',
+          departmentName: 'Job Center',
+          seekerId: seekerId,
+          seekerName: seeker?.name || '',
+          status: 'pending_cashier',
+          cashierId: cashierCustomId,
+          description: `Commission for placement at ${employer.companyName}`,
+          date: Timestamp.now(),
+          transactionDate: Timestamp.now(),
+          createdBy: session.uid,
+          createdByName: session?.displayName || 'Job Center Admin',
+          createdAt: Timestamp.now()
+        });
+      }
+
+      toast.success('Seeker marked as Placed & Commission Logged ✓');
       setShowPlacementModal(false);
       router.push('/departments/job-center/dashboard/admin/seekers');
     } catch (error) {
@@ -481,7 +516,7 @@ export default function SeekerDetailPage() {
     try {
       await deleteDoc(doc(db, 'jobcenter_videos', videoId));
       toast.success('Deleted');
-      setVideos(prev => prev.filter(v => v.id !== videoId));
+      setVideos((prev: any[]) => prev.filter(v => v.id !== videoId));
     } catch (error) {
       console.error("Delete error", error);
       toast.error('Failed to delete');
@@ -502,7 +537,8 @@ export default function SeekerDetailPage() {
         representativeName: mName,
         organization: mOrganization,
         phone: mPhone,
-        purpose: mPurpose || null,
+        purpose: mPurpose || 'Interview',
+        outcome: mOutcome || 'Pending',
         notes: mNotes || null,
         date: Timestamp.fromDate(new Date(`${mDate}T00:00:00`)),
         loggedBy: session.uid,
@@ -548,7 +584,8 @@ export default function SeekerDetailPage() {
         representativeName: mName,
         organization: mOrganization,
         phone: mPhone,
-        purpose: mPurpose || null,
+        purpose: mPurpose || 'Interview',
+        outcome: mOutcome || 'Pending',
         notes: mNotes || null,
         date: Timestamp.fromDate(new Date(`${mDate}T00:00:00`)),
         updatedAt: Timestamp.now(),
@@ -565,6 +602,55 @@ export default function SeekerDetailPage() {
       toast.error('Failed to update meeting');
     } finally {
       setIsUpdatingMeeting(false);
+    }
+  };
+
+  const toggleRegistrationFee = async () => {
+    if (isUpdatingRegFee) return;
+    try {
+      setIsUpdatingRegFee(true);
+      const newStatus = !seeker.isRegistrationPaid;
+      
+      await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
+        isRegistrationPaid: newStatus
+      });
+
+      if (newStatus) {
+        // Create 1000 PKR transaction
+        const setupSnap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
+        const setupData = setupSnap.data() as any;
+        const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
+
+        if (cashierCustomId) {
+          await addDoc(collection(db, 'jobcenter_transactions'), {
+            type: 'income',
+            amount: 1000,
+            category: 'seeker_fee',
+            categoryName: 'Registration Fee (1000)',
+            departmentCode: 'job-center',
+            departmentName: 'Job Center',
+            seekerId: seekerId,
+            seekerName: seeker?.name || '',
+            status: 'pending_cashier',
+            cashierId: cashierCustomId,
+            description: `Registration Fee for ${seeker.name}`,
+            date: Timestamp.now(),
+            transactionDate: Timestamp.now(),
+            createdBy: session.uid,
+            createdByName: session?.displayName || 'Job Center Admin',
+            createdAt: Timestamp.now()
+          });
+          toast.success('Registration Fee Logged & Sent to Cashier ✓');
+        }
+      }
+
+      setSeeker((prev: any) => ({ ...prev, isRegistrationPaid: newStatus }));
+      toast.success(newStatus ? 'Marked as Paid' : 'Marked as Unpaid');
+    } catch (error) {
+      console.error("Reg fee toggle error", error);
+      toast.error('Failed to update status');
+    } finally {
+      setIsUpdatingRegFee(false);
     }
   };
 
@@ -606,16 +692,27 @@ export default function SeekerDetailPage() {
           </div>
           
           <div className="relative z-10 flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{seeker.name}</h1>
-            <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
-              <span className="flex items-center justify-center gap-1 text-orange-700 font-medium bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
-                Registered: {formatDateDMY(seeker.registrationDate || seeker.admissionDate?.toDate?.() || seeker.admissionDate)}
-              </span>
-              <span className={`flex items-center justify-center gap-1 font-bold px-3 py-1 rounded-full shadow-sm border ${
-                seeker.status === 'placed' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-700 border-orange-100'
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{seeker.name}</h1>
+            <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">{seeker.jobTitle || 'Active Job Seeker'}</p>
+            
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+              <button 
+                onClick={toggleRegistrationFee}
+                disabled={isUpdatingRegFee}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-2 ${
+                  seeker.isRegistrationPaid 
+                  ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' 
+                  : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                }`}
+              >
+                <DollarSign size={14} />
+                Reg. Fee: {seeker.isRegistrationPaid ? 'Paid' : 'Unpaid'}
+              </button>
+              <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 ${
+                seeker.isActive ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-gray-50 border-gray-200 text-gray-400'
               }`}>
                 {seeker.status?.toUpperCase() || 'ACTIVE'}
-              </span>
+              </div>
             </div>
             {seeker.diagnosis && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
@@ -1148,6 +1245,15 @@ export default function SeekerDetailPage() {
                           <div className="flex items-center gap-2">
                              <h4 className="font-black text-gray-900 text-xl tracking-tight">{meeting.representativeName}</h4>
                              <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{meeting.organization}</span>
+                             {meeting.outcome && (
+                               <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner ${
+                                 meeting.outcome === 'Hired' ? 'bg-green-100 text-green-700' : 
+                                 meeting.outcome === 'Rejected' ? 'bg-red-100 text-red-700' : 
+                                 meeting.outcome === 'Shortlisted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                               }`}>
+                                 {meeting.outcome}
+                               </span>
+                             )}
                           </div>
                           <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
                             <span className="flex items-center gap-1.5"><Phone size={14} className="text-orange-500" /> {meeting.phone}</span>
@@ -1488,20 +1594,42 @@ export default function SeekerDetailPage() {
                 <p className="text-xs text-orange-700 font-bold leading-relaxed mb-3">
                   Select the company where <span className="underline decoration-orange-300 decoration-2">{seeker.name}</span> has been officially hired.
                 </p>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">Registered Employers</label>
-                  <select
-                    required
-                    value={selectedEmployerId}
-                    onChange={e => setSelectedEmployerId(e.target.value)}
-                    className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-700 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm appearance-none"
-                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23f97316\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                  >
-                    <option value="">Choose a company...</option>
-                    {employers.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.companyName}</option>
-                    ))}
-                  </select>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">Registered Employers</label>
+                    <select
+                      required
+                      value={selectedEmployerId}
+                      onChange={e => setSelectedEmployerId(e.target.value)}
+                      className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-700 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm appearance-none"
+                      style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23f97316\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
+                    >
+                      <option value="">Choose a company...</option>
+                      {employers.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.companyName}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">Starting Salary (Monthly)</label>
+                      <input 
+                        required 
+                        type="number" 
+                        value={startingSalary} 
+                        onChange={e => setStartingSalary(e.target.value)}
+                        className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="PKR"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">30% Commission</label>
+                      <div className="w-full bg-orange-100/50 border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-black text-orange-700">
+                        ₨{(Number(startingSalary) * 0.3).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -279,21 +279,79 @@ export default function Navbar() {
                         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-300/50 to-transparent" aria-hidden="true" />
 
                         <div className="relative z-10">
-                          {DEPARTMENT_CATEGORIES.map((cat) => (
-                            <DepartmentCategory key={cat.key} cat={cat} onClose={closeDeptDropdown} />
-                          ))}
-                          <div className="mt-4 pt-4 border-t border-neutral-200/60 text-center">
+                          <div className="grid grid-cols-2 gap-x-12 gap-y-2">
+                            {/* Left Column - First 8 Departments */}
+                            <div className="space-y-1">
+                              <div className="px-3 mb-4 flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Core Services</span>
+                              </div>
+                              {DEPARTMENTS.slice(0, 8).map((dept) => (
+                                <Link
+                                  key={dept.slug}
+                                  href={`/departments/${dept.slug}`}
+                                  onClick={closeDeptDropdown}
+                                  className="group flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-primary-50 transition-all duration-300 border border-transparent hover:border-primary-100"
+                                >
+                                  <div className="w-10 h-10 rounded-xl bg-neutral-50 group-hover:bg-white flex items-center justify-center text-xl shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3">
+                                    {dept.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="text-sm font-black text-neutral-900 group-hover:text-primary-700 transition-colors">
+                                      {dept.name}
+                                    </div>
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
+                                      {Array.isArray(dept.category) ? dept.category[0].replace('-', ' ') : dept.category.replace('-', ' ')}
+                                    </div>
+                                  </div>
+                                  <ChevronDown className="w-4 h-4 text-neutral-300 -rotate-90 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+                                </Link>
+                              ))}
+                            </div>
+
+                            {/* Right Column - Remaining 8 Departments */}
+                            <div className="space-y-1">
+                              <div className="px-3 mb-4 flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Community & Growth</span>
+                              </div>
+                              {DEPARTMENTS.slice(8, 16).map((dept) => (
+                                <Link
+                                  key={dept.slug}
+                                  href={`/departments/${dept.slug}`}
+                                  onClick={closeDeptDropdown}
+                                  className="group flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-primary-50 transition-all duration-300 border border-transparent hover:border-primary-100"
+                                >
+                                  <div className="w-10 h-10 rounded-xl bg-neutral-50 group-hover:bg-white flex items-center justify-center text-xl shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3">
+                                    {dept.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="text-sm font-black text-neutral-900 group-hover:text-primary-700 transition-colors">
+                                      {dept.name}
+                                    </div>
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
+                                      {Array.isArray(dept.category) ? dept.category[0].replace('-', ' ') : dept.category.replace('-', ' ')}
+                                    </div>
+                                  </div>
+                                  <ChevronDown className="w-4 h-4 text-neutral-300 -rotate-90 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="mt-8 pt-6 border-t border-neutral-100 flex items-center justify-between px-2">
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                              Empowering Through Professional Excellence
+                            </p>
                             <Link
                               href="/departments"
                               onClick={closeDeptDropdown}
-                              className="text-xs lg:text-sm text-primary-600 hover:text-primary-700 font-bold transition-colors inline-flex items-center gap-2 group/all px-4 py-2 rounded-lg hover:bg-primary-50/50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                              aria-label={`View all ${DEPARTMENTS.length} departments`}
-                              role="menuitem"
+                              className="text-xs font-black text-primary-600 hover:text-primary-700 transition-all flex items-center gap-2 group/all hover:underline"
                             >
-                              View All {DEPARTMENTS.length} Departments
-                              <svg className="w-4 h-4 group-hover/all:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                              </svg>
+                              Explore All Departments
+                              <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center group-hover/all:translate-x-1 transition-transform">
+                                <Search className="w-3 h-3" />
+                              </div>
                             </Link>
                           </div>
                         </div>

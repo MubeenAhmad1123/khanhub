@@ -97,7 +97,7 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
       sameSite: 'lax',
       secure: true,
       path: '/',
-      maxAge: 60 * 60 * 12, // 12 hours
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
     return { success: true, session: payload };
@@ -155,7 +155,7 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
       sameSite: 'lax',
       secure: true,
       path: '/',
-      maxAge: 60 * 60 * 12, // 12 hours
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
     return { success: true };

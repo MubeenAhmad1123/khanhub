@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const SESSION_KEY = 'hq_session';
-const SESSION_TIMEOUT = 43200000;
+const SESSION_TIMEOUT = 604800000; // 7 days in ms
 
 export default function HqEntryPage() {
   const router = useRouter();

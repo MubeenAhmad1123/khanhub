@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
 import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -15,7 +15,7 @@ import { toast } from 'react-hot-toast';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 
 type TxnType = 'income' | 'expense';
-type DateMode = 'today' | 'all' | 'range';
+type DateMode = 'today' | 'all' | 'range' | 'created_today';
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 type PaymentMethod = 'cash' | 'bank_transfer' | 'jazzcash' | 'easypaisa' | 'other';
 
@@ -102,6 +102,7 @@ export default function CashierStationPage() {
   const [historyStatus, setHistoryStatus] = useState<StatusFilter>('all');
   const [historyType, setHistoryType] = useState<'all' | TxnType>('all');
   const [historyDepartment, setHistoryDepartment] = useState<'all' | string>('all');
+  const [historyStats, setHistoryStats] = useState({ income: 0, expense: 0, count: 0, students: 0, patients: 0, clients: 0 });
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
 
   // Hospital Meta States
@@ -131,7 +132,7 @@ export default function CashierStationPage() {
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
 
-  // Optimized fetchHistory that uses filters
+  // Optimized fetchHistory that uses filters and aggregation
   const fetchHistory = useCallback(async () => {
     if (!session) return;
     try {
@@ -147,17 +148,25 @@ export default function CashierStationPage() {
       const todayTimestamp = Timestamp.fromDate(today);
       const tomorrowTimestamp = Timestamp.fromDate(new Date(today.getTime() + 24 * 60 * 60 * 1000));
 
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let totalCount = 0;
+      let studentsTouched = 0;
+      let patientsTouched = 0;
+      let clientsTouched = 0;
+
       for (const dept of targetDepts) {
         const constraints: QueryConstraint[] = [];
         
-        // Priority filter: Date
+        // Date Logic
         if (historyDateMode === 'today') {
-          // If department is hospital, we can use the 'date' field effectively with new indexes
-          // For others, we'll try 'date' but might hit index errors if they didn't add them.
-          // Fallback to createdAt if needed, but the objective is standardizing.
           constraints.push(where('date', '>=', todayTimestamp));
           constraints.push(where('date', '<', tomorrowTimestamp));
           constraints.push(orderBy('date', 'desc'));
+        } else if (historyDateMode === 'created_today') {
+          constraints.push(where('createdAt', '>=', todayTimestamp));
+          constraints.push(where('createdAt', '<', tomorrowTimestamp));
+          constraints.push(orderBy('createdAt', 'desc'));
         } else if (historyDateMode === 'range' && historyFrom) {
           const fromDate = new Date(`${historyFrom}T00:00:00`);
           const toDateVal = historyTo ? new Date(`${historyTo}T23:59:59`) : new Date();
@@ -180,7 +189,33 @@ export default function CashierStationPage() {
           constraints.push(where('type', '==', historyType));
         }
 
-        // Limit for initial load - pagination could be added later if needed
+        // --- Aggregation Step (Efficient Stats) ---
+        try {
+          const aggQ = query(collection(db, dept.txCollection), ...constraints);
+          const aggSnap = await getAggregateFromServer(aggQ, {
+            income: sum(where('type', '==', 'income') ? 'amount' : 0), // Note: Firestore sum doesn't take conditional, we need separate queries for complex ones
+            count: count()
+          });
+          
+          // Better Aggregation approach for Firestore:
+          const incomeAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'income')), { total: sum('amount') });
+          const expenseAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'expense')), { total: sum('amount') });
+          const countAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints), { total: count() });
+
+          totalIncome += incomeAgg.data().total || 0;
+          totalExpense += expenseAgg.data().total || 0;
+          totalCount += countAgg.data().total || 0;
+
+          // Unique entity estimation (approximate by transaction count for now, or separate queries)
+          if (dept.code === 'spims') studentsTouched += countAgg.data().total;
+          if (dept.code === 'rehab' || dept.code === 'hospital') patientsTouched += countAgg.data().total;
+          if (dept.code === 'job-center') clientsTouched += countAgg.data().total;
+
+        } catch (err) {
+          console.warn(`[HQ Cashier] Aggregation failed for ${dept.code}`, err);
+        }
+
+        // --- Fetch Step (List View) ---
         constraints.push(limit(200));
 
         try {
@@ -193,9 +228,9 @@ export default function CashierStationPage() {
             ...d.data() 
           })));
         } catch (err: any) {
-          console.warn(`[HQ Cashier] Failed to fetch optimized history for ${dept.code}. Falling back to basic fetch.`, err);
-          // Fallback to basic fetch if composite index missing
-          const qBasic = query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(100));
+          console.warn(`[HQ Cashier] List fetch failed for ${dept.code}.`, err);
+          // Simple fallback
+          const qBasic = query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(50));
           const snapBasic = await getDocs(qBasic);
           all.push(...snapBasic.docs.map((d) => ({ 
             id: d.id, 
@@ -205,6 +240,8 @@ export default function CashierStationPage() {
           })));
         }
       }
+
+      setHistoryStats({ income: totalIncome, expense: totalExpense, count: totalCount, students: studentsTouched, patients: patientsTouched, clients: clientsTouched });
 
       // Final unified sort for display
       all.sort((a, b) => {
@@ -710,21 +747,37 @@ export default function CashierStationPage() {
   // Client-side filtering as fallback/refinement
   const historyFiltered = useMemo(() => {
     return historyTxns.filter((tx) => {
-      // If we already filtered by collection and basic status/type on server, 
-      // we only need to refine by searchQuery if present.
+      // 1. Department Filter (Immediate UI responsiveness)
+      if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
+
+      // 2. Status Filter
+      if (historyStatus !== 'all') {
+        if (historyStatus === 'pending') {
+          if (!['pending', 'pending_cashier'].includes(tx.status)) return false;
+        } else if (tx.status !== historyStatus) return false;
+      }
+
+      // 3. Type Filter
+      if (historyType !== 'all' && tx.type !== historyType) return false;
+
+      // 4. Search Query Filter
       const q = searchQuery.trim().toLowerCase();
       if (!q) return true;
       
       const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.donorName || ''} ${tx.donorId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
       return searchStr.includes(q);
     });
-  }, [historyTxns, searchQuery]);
+  }, [historyTxns, searchQuery, historyDepartment, historyStatus, historyType]);
 
   const totals = useMemo(() => {
+    // We use historyStats if we just fetched, otherwise calculate from historyFiltered
+    if (historyStats.count > 0 && historyFiltered.length === historyTxns.length) {
+      return { income: historyStats.income, expense: historyStats.expense, net: historyStats.income - historyStats.expense };
+    }
     const income = historyFiltered.filter((x) => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
     const expense = historyFiltered.filter((x) => x.type === 'expense').reduce((s, x) => s + Number(x.amount || 0), 0);
     return { income, expense, net: income - expense };
-  }, [historyFiltered]);
+  }, [historyFiltered, historyStats, historyTxns.length]);
 
   if (sessionLoading || !mounted) {
     return (
@@ -1305,7 +1358,8 @@ export default function CashierStationPage() {
           <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Timeframe</span>
             <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
-              <option value="today">Today's Transactions</option>
+              <option value="today">Transaction Date: Today</option>
+              <option value="created_today">Entry Date: Added Today</option>
               <option value="range">Custom Date Range</option>
               <option value="all">Full Historical Log</option>
             </select>
@@ -1380,11 +1434,42 @@ export default function CashierStationPage() {
           </div>
           <div className="bg-white border-l-8 border-l-gray-300 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-widest text-black">Transactions</p>
-            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">{historyFiltered.length}</p>
+            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">{historyStats.count || historyFiltered.length}</p>
           </div>
           <div className="bg-white border-l-8 border-l-emerald-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-widest text-black">Net Balance</p>
             <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.net.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Operational Insights Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-black text-white rounded-[2rem] p-6 flex items-center justify-between shadow-2xl">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Patients Records</p>
+              <p className="text-3xl font-[1000] mt-1">{historyStats.patients}</p>
+            </div>
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+              <Plus size={20} />
+            </div>
+          </div>
+          <div className="bg-white border border-black rounded-[2rem] p-6 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Students Records</p>
+              <p className="text-3xl font-[1000] mt-1">{historyStats.students}</p>
+            </div>
+            <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center">
+              <TrendingUp size={20} />
+            </div>
+          </div>
+          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Client Records</p>
+              <p className="text-3xl font-[1000] mt-1">{historyStats.clients}</p>
+            </div>
+            <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center">
+              <ShieldCheck size={20} />
+            </div>
           </div>
         </div>
 
