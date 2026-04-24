@@ -557,41 +557,31 @@ export default function Navbar() {
                     />
                   </button>
 
-                  {/* Mobile Departments Submenu */}
+                  {/* Mobile Departments Submenu - Simplified List */}
                   {mobileDeptOpen && (
-                    <div id="mobile-departments" className="mt-2 ml-4 pl-4 border-l-2 border-primary-300/50 space-y-1.5 animate-fade-in">
-                      {DEPARTMENT_CATEGORIES.map((cat) => {
-                        const categoryDepts = DEPARTMENTS.filter((d) => d.category === cat.key);
-                        if (categoryDepts.length === 0) return null;
-
-                        return (
-                          <div key={cat.key} className="mb-4">
-                            <div className="flex items-center gap-2 mb-2 px-2">
-                              <span className="text-sm" aria-hidden="true">{cat.icon}</span>
-                              <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                                {cat.label} ({categoryDepts.length})
+                    <div id="mobile-departments" className="mt-2 ml-4 pl-4 border-l-2 border-primary-300/50 space-y-1 animate-fade-in">
+                      <div className="grid grid-cols-1 gap-1">
+                        {DEPARTMENTS.map((dept) => (
+                          <Link
+                            key={dept.slug}
+                            href={`/departments/${dept.slug}`}
+                            onClick={closeMobileMenu}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-primary-50/70 transition-all duration-300 group/dept border border-transparent hover:border-primary-200/50 touch-manipulation min-h-[44px]"
+                          >
+                            <span className="text-xl group-hover/dept:scale-110 transition-transform flex-shrink-0" aria-hidden="true">
+                              {dept.icon}
+                            </span>
+                            <div className="flex-1">
+                              <span className="text-sm text-neutral-800 group-hover/dept:text-primary-700 transition-colors font-bold leading-tight block">
+                                {dept.name}
+                              </span>
+                              <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">
+                                {Array.isArray(dept.category) ? dept.category[0].replace('-', ' ') : dept.category.replace('-', ' ')}
                               </span>
                             </div>
-                            <div className="space-y-1">
-                              {categoryDepts.map((dept) => (
-                                <Link
-                                  key={dept.slug}
-                                  href={`/departments/${dept.slug}`}
-                                  onClick={closeMobileMenu}
-                                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-primary-50/70 hover:scale-105 transition-all duration-300 group/dept border border-transparent hover:border-primary-200/50 touch-manipulation min-h-[44px]"
-                                >
-                                  <span className="text-base group-hover/dept:scale-110 transition-transform flex-shrink-0" aria-hidden="true">
-                                    {dept.icon}
-                                  </span>
-                                  <span className="text-sm text-neutral-800 group-hover/dept:text-primary-700 transition-colors font-semibold leading-tight">
-                                    {dept.name}
-                                  </span>
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          </Link>
+                        ))}
+                      </div>
                       <Link
                         href="/departments"
                         onClick={closeMobileMenu}
