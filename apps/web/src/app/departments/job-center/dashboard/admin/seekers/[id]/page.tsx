@@ -36,7 +36,10 @@ export default function SeekerDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'actions'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'actions' | 'finance'>('profile');
+  const [financeRecords, setFinanceRecords] = useState<any[]>([]);
+  const [loadingFinance, setLoadingFinance] = useState(false);
+
   const [meetings, setMeetings] = useState<any[]>([]);
   const [showAddMeetingModal, setShowAddMeetingModal] = useState(false);
   const [isSavingMeeting, setIsSavingMeeting] = useState(false);
@@ -150,6 +153,17 @@ export default function SeekerDetailPage() {
       setPhotoPreview(data.photoUrl || '');
       setVideos(vids.docs.map(v => ({ id: v.id, ...v.data() })));
       setMeetings(meets.docs.map(v => ({ id: v.id, ...v.data() })));
+
+      // 1.5 Finance Records
+      setLoadingFinance(true);
+      const financeSnap = await getDocs(query(
+        collection(db, 'jobcenter_finance'),
+        where('seekerId', '==', seekerId),
+        orderBy('createdAt', 'desc')
+      ));
+      setFinanceRecords(financeSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoadingFinance(false);
+
 
       const now = new Date();
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -651,6 +665,20 @@ export default function SeekerDetailPage() {
     }
   };
 
+  const handleUpdateFinanceStatus = async (recordId: string, newStatus: string) => {
+    try {
+      setLoadingFinance(true);
+      await updateDoc(doc(db, 'jobcenter_finance', recordId), { status: newStatus });
+      setFinanceRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: newStatus } : r));
+      toast.success(`Transaction marked as ${newStatus.toUpperCase()}`);
+    } catch (error) {
+      console.error("Update finance status error", error);
+      toast.error('Failed to update status');
+    } finally {
+      setLoadingFinance(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -785,6 +813,15 @@ export default function SeekerDetailPage() {
           >
             <Settings className="w-4 h-4" /> Actions & Interviews
           </button>
+          <button
+            onClick={() => setActiveTab('finance')}
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
+              activeTab === 'finance' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <DollarSign className="w-4 h-4" /> Finance
+          </button>
+
           </div>
         </div>
 
@@ -1107,7 +1144,113 @@ export default function SeekerDetailPage() {
                 )}
               </div>
             </div>
+          {/* TAB: FINANCE */}
+          {activeTab === 'finance' && (
+            <div className="space-y-8 w-full">
+              <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Financial Ledger</h3>
+                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mt-0.5">Registration & Commission Tracking</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Registration Status</p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xl font-black ${seeker.isRegistrationPaid ? 'text-green-600' : 'text-red-600'}`}>
+                      {seeker.isRegistrationPaid ? 'PAID' : 'PENDING'}
+                    </p>
+                    <button 
+                      onClick={toggleRegistrationFee}
+                      disabled={isUpdatingRegFee}
+                      className="text-[10px] font-black text-orange-600 hover:underline uppercase tracking-widest"
+                    >
+                      Toggle
+                    </button>
+                  </div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Paid (ledger)</p>
+                  <p className="text-xl font-black text-gray-900">
+                    ₨{financeRecords.filter(r => r.status === 'paid').reduce((sum, r) => sum + (Number(r.amount) || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pending Balance</p>
+                  <p className="text-xl font-black text-orange-600">
+                    ₨{financeRecords.filter(r => r.status === 'pending').reduce((sum, r) => sum + (Number(r.amount) || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest">Transaction History</h4>
+                {loadingFinance ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                  </div>
+                ) : financeRecords.length === 0 ? (
+                  <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl py-12 text-center">
+                    <DollarSign className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-400 font-bold">No financial records found for this seeker.</p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {financeRecords.map((record) => (
+                          <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-gray-900">
+                                {record.createdAt?.toDate ? formatDateDMY(record.createdAt.toDate().toISOString().split('T')[0]) : 'N/A'}
+                              </p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-gray-700">{record.type?.replace('_', ' ').toUpperCase() || 'GENERAL'}</p>
+                              {record.description && <p className="text-[10px] text-gray-400 font-medium">{record.description}</p>}
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-black text-gray-900">₨{Number(record.amount).toLocaleString()}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                                record.status === 'paid' ? 'bg-green-100 text-green-700' : 
+                                record.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {record.status || 'PENDING'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <select 
+                                value={record.status || 'pending'}
+                                onChange={(e) => handleUpdateFinanceStatus(record.id, e.target.value)}
+                                className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-orange-500"
+                              >
+                                <option value="pending">PENDING</option>
+                                <option value="paid">PAID</option>
+                                <option value="rejected">REJECTED</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
+
 
         </div>
       </div>

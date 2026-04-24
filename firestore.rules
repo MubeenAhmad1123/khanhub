@@ -2297,9 +2297,23 @@ service cloud.firestore {
 
     match /jobcenter_attendance/{docId} {
       allow read: if isJobCenterAuth() || isHqTier1();
-      allow write: if isJobCenterStaff() || isHqSuperOrManager();
+      allow create, update: if isJobCenterStaff() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdmin();
     }
 
+    match /jobcenter_meetings/{docId} {
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create: if isJobCenterStaff() || isHqSuperOrManager();
+      allow update: if isJobCenterStaff() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_finance/{docId} {
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create: if isJobCenterStaff() || isHqSuperOrManager() || isHqCashier();
+      allow update: if isJobCenterAdmin() || isHqSuperOrManager() || isHqCashier();
+      allow delete: if isJobCenterAdmin();
+    }
     match /jobcenter_daily_activities/{docId} {
       allow read: if isJobCenterAuth() || isHqTier1();
       allow write: if isJobCenterStaff() || isHqSuperOrManager();
@@ -2322,16 +2336,11 @@ service cloud.firestore {
       allow update, delete: if isJobCenterAdmin();
     }
 
-    match /jobcenter_meetings/{docId} {
-      allow read: if isJobCenterAuth() || isHqTier1();
-      allow create, update: if isJobCenterStaff() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdmin();
-    }
-
     match /jobcenter_staff/{docId} {
       allow read: if isJobCenterAuth() || isHqTier1();
       allow write: if isJobCenterAdmin() || isHqSuperOrManager();
     }
+
 
   }
 }
