@@ -191,12 +191,6 @@ export default function CashierStationPage() {
 
         // --- Aggregation Step (Efficient Stats) ---
         try {
-          const aggQ = query(collection(db, dept.txCollection), ...constraints);
-          const aggSnap = await getAggregateFromServer(aggQ, {
-            income: sum(where('type', '==', 'income') ? 'amount' : 0), // Note: Firestore sum doesn't take conditional, we need separate queries for complex ones
-            count: count()
-          });
-          
           // Better Aggregation approach for Firestore:
           const incomeAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'income')), { total: sum('amount') });
           const expenseAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'expense')), { total: sum('amount') });
