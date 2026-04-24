@@ -948,69 +948,6 @@ export default function SeekerDetailPage() {
             <RegistrationTab seeker={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
           )}
 
-                  <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-orange-500 h-full transition-all duration-700 ease-out"
-                      style={{ width: `${Math.min(100, Math.max(0, (feeRecord.amountPaid / feeRecord.packageAmount) * 100))}%` }}
-                    />
-                  </div>
-
-                  {feeRecord.amountRemaining <= 0 && (
-                     <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100 font-bold text-sm flex items-center gap-2">
-                       <Shield className="w-5 h-5" /> PAID IN FULL
-                     </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                      <h3 className="text-lg font-black text-gray-900">Payment History</h3>
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{feeRecord.payments?.length || 0} Entries</span>
-                    </div>
-                    
-                    {!feeRecord.payments || feeRecord.payments.length === 0 ? (
-                      <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                        <p className="text-gray-400 text-sm font-medium">No payments recorded for this month.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3">
-                        {feeRecord.payments
-                          ?.sort((a: any, b: any) => {
-                            const aT = a.date?.toDate?.()?.getTime() || new Date(a.date).getTime();
-                            const bT = b.date?.toDate?.()?.getTime() || new Date(b.date).getTime();
-                            return bT - aT;
-                          })
-                          .map((p: any) => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-orange-100 transition-colors">
-                            <div className="flex-1">
-                              <p className="font-black text-gray-900">
-                                PKR {Number(p.amount).toLocaleString('en-PK')}
-                              </p>
-                              {p.note && (
-                                <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
-                              )}
-                              <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Verified by {p.cashierId}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-700 font-bold">
-                                {formatDateDMY(p.date?.toDate?.() ? p.date.toDate() : p.date)}
-                              </p>
-                              <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
-                                APPROVED
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-
-          {/* TAB: VIDEOS REMOVED */}
-
           {/* TAB: ACTIONS & INTERVIEWS */}
           {activeTab === 'actions' && (
             <div className="space-y-8 animate-in fade-in duration-500">
