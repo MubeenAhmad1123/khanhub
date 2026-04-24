@@ -215,6 +215,14 @@ export default function HeroSection() {
   const springConfig = { damping: 25, stiffness: 150 };
   const x = useSpring(useMotionValue(0), springConfig);
   const y = useSpring(useMotionValue(0), springConfig);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile, { passive: true });
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Only enable mouse tracking on desktop
@@ -237,6 +245,7 @@ export default function HeroSection() {
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [x, y]);
+
 
   return (
     <section
@@ -375,12 +384,15 @@ export default function HeroSection() {
               <div className="absolute inset-0 -m-8 sm:-m-12 rounded-full overflow-hidden">
                 <motion.div
                   className="w-full h-full bg-gradient-to-br from-primary-200/40 via-success-200/40 to-primary-200/40 blur-3xl"
-                  animate={{
+                  animate={isMobile ? {
+                    scale: [1, 1.1, 1],
+                    opacity: [0.3, 0.4, 0.3],
+                  } : {
                     scale: [1, 1.2, 1],
                     opacity: [0.4, 0.6, 0.4],
                   }}
                   transition={{
-                    duration: 4,
+                    duration: isMobile ? 6 : 4,
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
@@ -389,9 +401,9 @@ export default function HeroSection() {
 
               {/* Main Logo Carousel with Float Animation */}
               <motion.div
-                animate={{ y: [0, -20, 0] }}
+                animate={isMobile ? { y: [0, -8, 0] } : { y: [0, -20, 0] }}
                 transition={{
-                  duration: 6,
+                  duration: isMobile ? 5 : 6,
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}

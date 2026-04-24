@@ -1144,6 +1144,7 @@ export default function SeekerDetailPage() {
                 )}
               </div>
             </div>
+          )}
           {/* TAB: FINANCE */}
           {activeTab === 'finance' && (
             <div className="space-y-8 w-full">
