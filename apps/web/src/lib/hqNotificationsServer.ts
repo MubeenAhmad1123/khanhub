@@ -38,6 +38,9 @@ export async function sendHqPushServer(params: {
   body: string;
   actionUrl?: string;
   relatedId?: string;
+  imageUrl?: string;
+  icon?: string;
+  tag?: string;
 }) {
   try {
     const app = getAdminApp();
@@ -62,14 +65,45 @@ export async function sendHqPushServer(params: {
 
     if (tokens.length === 0) return;
 
-    // 3. Send via FCM
+    // 3. Send via FCM with rich payload
     await messaging.sendEachForMulticast({
-      notification: { title: params.title, body: params.body },
+      notification: { 
+        title: params.title, 
+        body: params.body,
+        ...(params.imageUrl ? { imageUrl: params.imageUrl } : {}),
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          icon: params.icon || 'stock_ticker_update',
+          color: '#EA580C', // orange-600
+          sound: 'default',
+          tag: params.tag || params.type,
+          imageUrl: params.imageUrl,
+        }
+      },
+      webpush: {
+        headers: {
+          Urgency: 'high'
+        },
+        notification: {
+          icon: params.icon || '/icons/icon-192x192.png',
+          image: params.imageUrl,
+          badge: '/icons/badge-72x72.png',
+          tag: params.tag || params.type,
+          renotify: true,
+          requireInteraction: true,
+        },
+        fcmOptions: {
+          link: params.actionUrl || '/hq/dashboard'
+        }
+      },
       data: {
         type: params.type,
         route: params.actionUrl || '/hq/dashboard',
         title: params.title,
         body: params.body,
+        ...(params.imageUrl ? { image: params.imageUrl } : {}),
       },
       tokens,
     });

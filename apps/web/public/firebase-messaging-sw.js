@@ -24,14 +24,23 @@ messaging.onBackgroundMessage(function (payload) {
   const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.body || '',
-    icon: '/icons/icon-192x192.png',
+    icon: payload.notification?.icon || payload.data?.icon || '/icons/icon-192x192.png',
+    image: payload.notification?.image || payload.data?.image || payload.notification?.imageUrl || null,
+    badge: '/icons/badge-72x72.png',
+    tag: payload.notification?.tag || payload.data?.tag || payload.data?.type || 'default',
+    renotify: true,
+    vibrate: [200, 100, 200],
     data: {
       route: payload.data?.route || '/hq/dashboard'
-    }
+    },
+    actions: [
+      { action: 'open', title: 'View Details' }
+    ]
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
