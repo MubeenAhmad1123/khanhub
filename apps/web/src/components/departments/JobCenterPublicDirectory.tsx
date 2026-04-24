@@ -349,14 +349,14 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                   <div>
                     <span className="text-[8px] sm:text-[10px] font-black uppercase text-neutral-300 tracking-[0.2em] block mb-2 sm:mb-3">Skills</span>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {s.skills.slice(0, 3).map(skill => (
+                      {(s.skills || []).slice(0, 3).map(skill => (
                         <span key={skill} className="px-2 py-1 sm:px-3 sm:py-1.5 bg-white text-neutral-600 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl border border-neutral-100 shadow-sm group-hover:border-primary-100 transition-colors">
                           {skill}
                         </span>
                       ))}
-                      {s.skills.length > 3 && (
+                      {(s.skills || []).length > 3 && (
                         <span className="px-2 py-1 sm:px-3 sm:py-1.5 bg-neutral-100 text-neutral-400 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl">
-                          +{s.skills.length - 3}
+                          +{(s.skills || []).length - 3}
                         </span>
                       )}
                     </div>
@@ -369,7 +369,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Experience</span>
                       </div>
                       <div className="text-[10px] sm:text-xs text-neutral-700 font-bold leading-relaxed line-clamp-2">
-                        {s.experience.map((exp, idx) => (
+                        {(s.experience || []).map((exp, idx) => (
                           <div key={idx} className={idx > 0 ? "mt-1 pt-1 border-t border-neutral-200/50" : ""}>
                             {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
                           </div>
@@ -605,7 +605,7 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                           <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
                           <div className="font-bold text-neutral-900">
                             {selectedProfile.experience?.length ? (
-                              selectedProfile.experience.map((exp, i) => (
+                            {(selectedProfile.experience || []).map((exp, i) => (
                                 <div key={i} className={i > 0 ? "mt-1" : ""}>
                                   • {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
                                 </div>
@@ -626,8 +626,8 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         Professional Skills
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedProfile.skills.map(skill => (
-                          <span key={skill} className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-black rounded-xl">
+                        {(selectedProfile.skills || []).map(skill => (
+                          <span key={skill} className="px-4 py-2 bg-neutral-100 text-neutral-700 text-[10px] font-black rounded-xl">
                             {skill}
                           </span>
                         ))}
@@ -643,8 +643,8 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         Job Interests
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedProfile.jobInterests.map(interest => (
-                          <span key={interest} className="px-4 py-2 border-2 border-neutral-100 text-neutral-600 text-xs font-bold rounded-xl">
+                        {(selectedProfile.jobInterests || []).map(interest => (
+                          <span key={interest} className="px-4 py-2 border-2 border-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl">
                             {interest}
                           </span>
                         ))}

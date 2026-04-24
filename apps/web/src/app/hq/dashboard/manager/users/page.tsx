@@ -1330,13 +1330,13 @@ export default function ManagerUsersPage() {
                            </div>
                          )}
 
-                        {formData.dressCodeConfig.map((item) => (
+                        {(formData.dressCodeConfig || []).map((item) => (
                             <button
                               key={item.key}
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  dressCodeConfig: prev.dressCodeConfig.filter(i => i.key !== item.key)
+                                  dressCodeConfig: (prev.dressCodeConfig || []).filter(i => i.key !== item.key)
                                 }));
                               }}
                               className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-600 transition-all"
@@ -1399,7 +1399,7 @@ export default function ManagerUsersPage() {
                           </div>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                            {formData.education.map((edu, idx) => (
+                            {(formData.education || []).map((edu, idx) => (
                               <div key={idx} className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-center justify-between group">
                                 <div>
                                   <p className="text-xs font-black uppercase tracking-wider">{edu.degree}</p>
@@ -1444,7 +1444,7 @@ export default function ManagerUsersPage() {
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                            {formData.experience.map((exp, idx) => (
+                            {(formData.experience || []).map((exp, idx) => (
                               <div key={idx} className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between group">
                                 <div>
                                   <p className="text-xs font-black uppercase tracking-wider">{exp.title}</p>
@@ -1475,7 +1475,7 @@ export default function ManagerUsersPage() {
                           
                           <div className="flex flex-wrap gap-2 mt-2">
                             {formData.skills.length === 0 && <p className="text-[10px] text-black font-bold uppercase tracking-tight opacity-40">No skills listed</p>}
-                            {formData.skills.map(s => (
+                            {(formData.skills || []).map(s => (
                               <span key={s} className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                 {s}
                                 <button onClick={() => removeSkill(s)} className="hover:text-red-500"><X size={12} /></button>
