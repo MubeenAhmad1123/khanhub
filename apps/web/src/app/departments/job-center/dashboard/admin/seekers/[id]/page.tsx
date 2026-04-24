@@ -19,7 +19,6 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import RegistrationTab from '@/components/job-center/seeker-profile/RegistrationTab';
-import JobTrainingTab from '@/components/job-center/seeker-profile/JobTrainingTab';
 
 export default function SeekerDetailPage() {
   const router = useRouter();
@@ -36,7 +35,7 @@ export default function SeekerDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'training' | 'fees' | 'actions'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'actions'>('profile');
   const [meetings, setMeetings] = useState<any[]>([]);
   const [showAddMeetingModal, setShowAddMeetingModal] = useState(false);
   const [isSavingMeeting, setIsSavingMeeting] = useState(false);
@@ -747,12 +746,8 @@ export default function SeekerDetailPage() {
             </p>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Job Ready</p>
-            <p className="text-xl font-black text-gray-900">{seeker.isRegistrationPaid ? 'YES' : 'NO'}</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Portfolio Items</p>
-            <p className="text-xl font-black text-gray-900">{videos.length}</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Reg. Status</p>
+            <p className="text-xl font-black text-gray-900">{seeker.isRegistrationPaid ? 'PAID' : 'PENDING'}</p>
           </div>
         </div>
 
@@ -952,83 +947,6 @@ export default function SeekerDetailPage() {
           {activeTab === 'registration' && (
             <RegistrationTab seeker={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
           )}
-
-          {/* TAB: JOB TRAINING */}
-          {activeTab === 'training' && (
-            <JobTrainingTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: FEES */}
-          {activeTab === 'fees' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => changeMonth(-1)} 
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronLeft size={20} className="text-gray-400" />
-                  </button>
-                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
-                    {formatDateDMY(new Date(feeMonth + '-01'))}
-                  </span>
-                  <button onClick={() => changeMonth(1)}
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronRight size={20} className="text-gray-400" />
-                  </button>
-                </div>
-                {feeRecord && !isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPayAmt('');
-                      setPayDate(new Date().toISOString().split('T')[0]);
-                      setPayNote('');
-                      setShowAddPaymentModal(true);
-                    }}
-                    className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-600 shadow-sm transition-all active:scale-95"
-                  >
-                    <Plus size={14} /> Add Payment
-                  </button>
-                )}
-              </div>
-              
-              {!feeRecord ? (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <DollarSign className="w-8 h-8 text-gray-300" />
-                  </div>
-                  <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    You can initialize a fee record manually with the seeker's fixed placement package or registration amount.
-                  </p>
-                  {!isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPackageAmt(seeker.packageAmount?.toString() || '');
-                      setInitialPayment('');
-                      setPaymentNote('');
-                      setShowAddFeeModal(true);
-                    }}
-                    className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-orange-600 transition shadow-lg shadow-orange-100"
-                  >
-                    <Plus size={16} /> Initialize Fee Record
-                  </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-8 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div className="bg-white border border-gray-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Placement Package</div>
-                      <div className="text-2xl font-black text-gray-900">PKR {feeRecord.packageAmount.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-green-50 border border-green-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">Total Paid</div>
-                      <div className="text-2xl font-black text-green-700">PKR {feeRecord.amountPaid.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-red-500 font-black uppercase tracking-widest mb-1">Remaining</div>
-                      <div className="text-2xl font-black text-red-700">PKR {feeRecord.amountRemaining.toLocaleString()}</div>
-                    </div>
-                  </div>
 
                   <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
                     <div 
