@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -679,7 +680,13 @@ export default function SeekerDetailPage() {
           
           <div className="relative z-10">
             {seeker.photoUrl ? (
-              <img src={seeker.photoUrl} alt={seeker.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+              <Image 
+                src={seeker.photoUrl} 
+                alt={seeker.name} 
+                width={128}
+                height={128}
+                className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" 
+              />
             ) : (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
                 {seeker.name.charAt(0).toUpperCase()}
@@ -821,10 +828,12 @@ export default function SeekerDetailPage() {
                         className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all overflow-hidden flex-shrink-0"
                       >
                         {photoPreview ? (
-                          <img 
+                          <Image 
                             src={photoPreview} 
-                            className="w-full h-full object-cover" 
                             alt="Preview"
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover" 
                           />
                         ) : (
                           <>

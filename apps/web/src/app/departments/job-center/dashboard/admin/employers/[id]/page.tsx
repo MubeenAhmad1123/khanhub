@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -183,7 +184,13 @@ export default function EmployerDetailPage() {
           <div className="relative group mb-6">
             <div className="w-32 h-32 rounded-[2.5rem] bg-indigo-50 border-4 border-white shadow-xl flex items-center justify-center text-4xl font-black text-indigo-600 overflow-hidden mx-auto">
               {employer.logoUrl ? (
-                <img src={employer.logoUrl} alt={employer.companyName} className="w-full h-full object-cover" />
+                <Image 
+                  src={employer.logoUrl} 
+                  alt={employer.companyName} 
+                  width={128}
+                  height={128}
+                  className="w-full h-full object-cover" 
+                />
               ) : (
                 employer.companyName.charAt(0).toUpperCase()
               )}
