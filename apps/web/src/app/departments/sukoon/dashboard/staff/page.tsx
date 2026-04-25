@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useSukoonSession } from '@/hooks/sukoon/useSukoonSession';
 import {
   collection, query, where, getDocs, addDoc,
   updateDoc, doc, getDoc, Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
-import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/rehab';
+import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/sukoon';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2
@@ -26,7 +26,7 @@ const toDate = (ts: any): Date | null => {
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useSukoonSession();
 
   const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
@@ -38,6 +38,7 @@ export default function StaffSelfPage() {
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -46,7 +47,7 @@ export default function StaffSelfPage() {
     try {
       // Find staff profile linked to this login user
       const staffSnap = await getDocs(
-        query(collection(db, 'rehab_staff'), where('loginUserId', '==', user.uid))
+        query(collection(db, 'sukoon_staff'), where('loginUserId', '==', user.uid))
       );
       if (staffSnap.empty) { setLoading(false); return; }
       const staffDoc = staffSnap.docs[0];
@@ -61,7 +62,7 @@ export default function StaffSelfPage() {
 
       const today = new Date().toISOString().split('T')[0];
       const attSnap = await getDocs(
-        query(collection(db, 'rehab_attendance'), where('staffId', '==', staffId), where('date', '==', today))
+        query(collection(db, 'sukoon_attendance'), where('staffId', '==', staffId), where('date', '==', today))
       );
 
       // Today's attendance
@@ -80,15 +81,19 @@ export default function StaffSelfPage() {
 
       // Contributions (last 7 days)
       const contribSnap = await getDocs(
-        query(collection(db, 'rehab_contributions'), where('staffId', '==', staffId))
+        query(collection(db, 'sukoon_contributions'), where('staffId', '==', staffId))
       );
+      
+      const contribDocs = contribSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(), 
+        createdAt: toDate(d.data().createdAt) || new Date() 
+      } as StaffContribution));
+
+      setHasContributedToday(contribDocs.some(d => d.date === today));
+
       setContributions(
-        contribSnap.docs
-          .map(d => ({ 
-            id: d.id, 
-            ...d.data(), 
-            createdAt: toDate(d.data().createdAt) || new Date() 
-          } as StaffContribution))
+        contribDocs
           .sort((a, b) => {
             const dateA = toDate(a.createdAt)?.getTime() || 0;
             const dateB = toDate(b.createdAt)?.getTime() || 0;
@@ -105,7 +110,7 @@ export default function StaffSelfPage() {
 
       const monthlySnap = await getDocs(
         query(
-          collection(db, 'rehab_attendance'),
+          collection(db, 'sukoon_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
           where('date', '<=', todayStr)
@@ -125,7 +130,7 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') { router.push('/departments/rehab/login'); return; }
+    if (!user || user.role !== 'staff') { router.push('/departments/sukoon/login'); return; }
     fetchData();
   }, [sessionLoading, user, fetchData, router]);
 
@@ -154,7 +159,7 @@ export default function StaffSelfPage() {
         const lateByMinutes = Math.floor(lateByMs / 60000);
         const isLate = lateByMinutes > 0;
 
-        await addDoc(collection(db, 'rehab_attendance'), {
+        await addDoc(collection(db, 'sukoon_attendance'), {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
@@ -180,7 +185,7 @@ export default function StaffSelfPage() {
 
         if (isLate) {
           const currentMonth = today.substring(0, 7);
-          await addDoc(collection(db, 'rehab_fines'), {
+          await addDoc(collection(db, 'sukoon_fines'), {
             staffId: staffProfile.id,
             amount: 200,
             reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
@@ -192,7 +197,7 @@ export default function StaffSelfPage() {
         }
       } else if (!todayRecord.checkOutTime) {
         // Already checked in — check out
-        await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
+        await updateDoc(doc(db, 'sukoon_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
         showMsg('success', 'Checked out. Great work today! ✓');
@@ -210,7 +215,7 @@ export default function StaffSelfPage() {
     if (!contributionText.trim() || !staffProfile) return;
     setContribLoading(true);
     try {
-      await addDoc(collection(db, 'rehab_contributions'), {
+      await addDoc(collection(db, 'sukoon_contributions'), {
         staffId: staffProfile.id,
         date: today,
         content: contributionText.trim(),
@@ -219,6 +224,7 @@ export default function StaffSelfPage() {
       setContributionText('');
       fetchData();
       setSubmitted(true);
+      setHasContributedToday(true);
       setTimeout(() => setSubmitted(false), 2000);
     } catch {
       showMsg('error', 'Failed to save. Try again.');
@@ -400,13 +406,18 @@ export default function StaffSelfPage() {
           />
           <button
             onClick={handleContribution}
-            disabled={contribLoading || submitted || !contributionText.trim()}
+            disabled={contribLoading || submitted || hasContributedToday || !contributionText.trim()}
             className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-500/20"
           >
             {submitted ? (
               <div className="flex items-center justify-center gap-2">
                 <CheckCircle size={14} />
-                <span>Submitted</span>
+                <span>Submitted ✓</span>
+              </div>
+            ) : hasContributedToday ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle size={14} />
+                <span>Already Submitted Today</span>
               </div>
             ) : contribLoading ? (
               <div className="flex items-center justify-center gap-2">

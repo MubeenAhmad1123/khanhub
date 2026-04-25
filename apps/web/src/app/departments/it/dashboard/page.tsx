@@ -43,13 +43,19 @@ export default function ItOverviewPage() {
 
   useEffect(() => {
     async function fetchStats() {
-      // Fetch IT and Social Media staff count
-      const itSnap = await getDocs(collection(db, 'it_users'));
-      const mediaSnap = await getDocs(collection(db, 'media_users'));
-      setStats(prev => ({
-        ...prev,
-        totalStaff: itSnap.size + mediaSnap.size
-      }));
+      try {
+        // Fetch IT and Social Media staff count - only if admin or just handle error
+        // For regular staff, these might fail, so we catch and set to placeholder or 0
+        const itSnap = await getDocs(collection(db, 'it_users')).catch(() => ({ size: 0 }));
+        const mediaSnap = await getDocs(collection(db, 'media_users')).catch(() => ({ size: 0 }));
+        
+        setStats(prev => ({
+          ...prev,
+          totalStaff: (itSnap.size || 0) + (mediaSnap.size || 0)
+        }));
+      } catch (err) {
+        console.error("Error fetching system stats:", err);
+      }
     }
     fetchStats();
   }, []);

@@ -939,7 +939,7 @@ service cloud.firestore {
     match /{collectionId}/{docId} {
       allow read: if (
         isHqTier1()
-        || (isAuth() && (docId == request.auth.uid || (resource != null && resource.data.get('staffId', '') == request.auth.uid)))
+        || (isAuth() && (docId == request.auth.uid || (resource != null && (resource.data.get('staffId', '') == request.auth.uid || resource.data.get('loginUserId', '') == request.auth.uid))))
       ) && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')

@@ -38,6 +38,7 @@ export default function StaffSelfPage() {
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -82,13 +83,17 @@ export default function StaffSelfPage() {
       const contribSnap = await getDocs(
         query(collection(db, 'spims_contributions'), where('staffId', '==', staffId))
       );
+      
+      const contribDocs = contribSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(), 
+        createdAt: toDate(d.data().createdAt) || new Date() 
+      } as StaffContribution));
+
+      setHasContributedToday(contribDocs.some(d => d.date === today));
+
       setContributions(
-        contribSnap.docs
-          .map(d => ({ 
-            id: d.id, 
-            ...d.data(), 
-            createdAt: toDate(d.data().createdAt) || new Date() 
-          } as StaffContribution))
+        contribDocs
           .sort((a, b) => {
             const dateA = toDate(a.createdAt)?.getTime() || 0;
             const dateB = toDate(b.createdAt)?.getTime() || 0;
@@ -220,6 +225,7 @@ export default function StaffSelfPage() {
       setContributionText('');
       fetchData();
       setSubmitted(true);
+      setHasContributedToday(true);
       setTimeout(() => setSubmitted(false), 2000);
     } catch {
       showMsg('error', 'Failed to save. Try again.');
@@ -392,44 +398,43 @@ export default function StaffSelfPage() {
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Submit growth points for verification</p>
           
-          {submitted ? (
-            <div className="py-8 flex flex-col items-center justify-center text-center space-y-3 animate-in fade-in zoom-in duration-500">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border-2 border-emerald-500/20 shadow-lg shadow-emerald-500/10">
-                <CheckCircle size={32} className="animate-bounce" />
+          <div className="space-y-1 mb-4">
+            <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Description of Contribution</label>
+            <textarea
+              rows={3}
+              placeholder="What did you achieve or contribute today?"
+              className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
+              value={contributionText}
+              onChange={e => setContributionText(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={handleContribution}
+            disabled={contribLoading || submitted || hasContributedToday || !contributionText.trim()}
+            className="w-full py-4 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submitted ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle size={14} />
+                <span>Submitted ✓</span>
               </div>
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-white">Submitted!</h3>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Pending manager verification</p>
+            ) : hasContributedToday ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle size={14} />
+                <span>Already Submitted Today</span>
               </div>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-1 mb-4">
-                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Description of Contribution</label>
-                <textarea
-                  rows={3}
-                  placeholder="What did you achieve or contribute today?"
-                  className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
-                  value={contributionText}
-                  onChange={e => setContributionText(e.target.value)}
-                />
+            ) : contribLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span>Submitting...</span>
               </div>
-              <button
-                onClick={handleContribution}
-                disabled={contribLoading || !contributionText.trim()}
-                className="w-full py-4 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {contribLoading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <>
-                    <Send size={14} />
-                    Submit for Approval
-                  </>
-                )}
-              </button>
-            </>
-          )}
+            ) : (
+              <>
+                <Send size={14} />
+                Submit for Approval
+              </>
+            )}
+          </button>
         </div>
 
         {/* Past Contributions */}

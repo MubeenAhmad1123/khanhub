@@ -41,6 +41,7 @@ export default function StaffSelfPage() {
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -85,13 +86,17 @@ export default function StaffSelfPage() {
       const contribSnap = await getDocs(
         query(collection(db, 'rehab_contributions'), where('staffId', '==', staffId))
       );
+      
+      const contribDocs = contribSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(), 
+        createdAt: toDate(d.data().createdAt) || new Date() 
+      } as StaffContribution));
+
+      setHasContributedToday(contribDocs.some(d => d.date === today));
+
       setContributions(
-        contribSnap.docs
-          .map(d => ({ 
-            id: d.id, 
-            ...d.data(), 
-            createdAt: toDate(d.data().createdAt) || new Date() 
-          } as StaffContribution))
+        contribDocs
           .sort((a, b) => {
             const dateA = toDate(a.createdAt)?.getTime() || 0;
             const dateB = toDate(b.createdAt)?.getTime() || 0;
@@ -229,6 +234,7 @@ export default function StaffSelfPage() {
       setContributionText('');
       fetchData();
       setSubmitted(true);
+      setHasContributedToday(true);
       setTimeout(() => setSubmitted(false), 2000);
     } catch {
       showMsg('error', 'Failed to save. Try again.');
@@ -463,13 +469,18 @@ export default function StaffSelfPage() {
           />
           <button
             onClick={handleContribution}
-            disabled={contribLoading || submitted || !contributionText.trim()}
+            disabled={contribLoading || submitted || hasContributedToday || !contributionText.trim()}
             className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-500/20"
           >
             {submitted ? (
               <div className="flex items-center justify-center gap-2">
                 <CheckCircle size={14} />
-                <span>Submitted</span>
+                <span>Submitted ✓</span>
+              </div>
+            ) : hasContributedToday ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle size={14} />
+                <span>Already Submitted Today</span>
               </div>
             ) : contribLoading ? (
               <div className="flex items-center justify-center gap-2">
