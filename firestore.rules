@@ -2289,7 +2289,7 @@ service cloud.firestore {
 
     match /jobcenter_jobs/{jobId} {
       allow read: if true; // Public or seeker access
-      allow create, update: if isJobCenterAdmin() || (isJobCenterAuth() && jobCenterUserDoc().role == 'employer');
+      allow create, update: if isJobCenterAdmin() || (isJobCenterAuth() && jobCenterRole() == 'employer');
       allow delete: if isJobCenterAdmin();
     }
 
