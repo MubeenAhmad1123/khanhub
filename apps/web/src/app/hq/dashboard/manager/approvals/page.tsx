@@ -7,11 +7,12 @@ import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
+import LogoLoader from "@/components/ui/LogoLoader";
 
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import { awardStaffPoint } from '@/app/hq/actions/points';
 
-type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'urgent';
+type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it' | 'urgent';
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -168,19 +169,17 @@ export default function ManagerApprovalsPage() {
     sukoon: transactions.filter(t => t.dept === 'sukoon').length,
     welfare: transactions.filter(t => t.dept === 'welfare').length,
     'job-center': transactions.filter(t => t.dept === 'job-center').length,
+    'social-media': transactions.filter(t => t.dept === 'social-media').length,
+    it: transactions.filter(t => t.dept === 'it').length,
     urgent: transactions.filter(t => {
       const time = t.createdAt?.seconds ? t.createdAt.seconds * 1000 : 0;
       return time && (Date.now() - time) > 48 * 60 * 60 * 1000;
     }).length,
   };
 
-  if (sessionLoading || loading) {
-    return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
-        <Loader2 className="w-8 h-8 animate-spin text-black" />
+        <LogoLoader showText={true} />
       </div>
-    );
-  }
 
   return (
     <div className="space-y-8 pb-32 p-4 md:p-8 bg-[#FCFBF8] min-h-screen overflow-x-hidden w-full max-w-full text-black">
@@ -200,7 +199,7 @@ export default function ManagerApprovalsPage() {
       )}
 
       <div className="flex flex-wrap gap-2 p-2 bg-black/5 rounded-2xl w-full border border-black/10">
-        {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'urgent'] as FilterType[]).map(f => (
+        {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it', 'urgent'] as FilterType[]).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -211,7 +210,7 @@ export default function ManagerApprovalsPage() {
             }`}
           >
             <Filter size={10} />
-            {f === 'job-center' ? 'Job Center' : f.charAt(0).toUpperCase() + f.slice(1)}
+            {f === 'job-center' ? 'Job Center' : f === 'social-media' ? 'Social Media' : f.charAt(0).toUpperCase() + f.slice(1)}
             <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[8px] ${
               filter === f ? 'bg-white/20' : 'bg-black/10'
             }`}>

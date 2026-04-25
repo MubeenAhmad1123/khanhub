@@ -1,5 +1,7 @@
 export type ItRole = 'admin' | 'staff' | 'student' | 'client' | 'superadmin';
 
+export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated';
+
 export interface ItUser {
   uid: string;
   id: string;
@@ -13,6 +15,9 @@ export interface ItUser {
   photoUrl?: string;
   designation?: string;
   forceLogoutAt?: string;
+  studentId?: string;
+  clientId?: string;
+  staffId?: string;
 }
 
 export interface ItStaffMember {

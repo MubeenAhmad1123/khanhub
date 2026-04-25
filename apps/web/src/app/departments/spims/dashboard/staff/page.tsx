@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import {
   collection, query, where, getDocs, addDoc,
   updateDoc, doc, getDoc, Timestamp
@@ -26,7 +26,7 @@ const toDate = (ts: any): Date | null => {
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useSpimsSession();
 
   const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
@@ -46,7 +46,7 @@ export default function StaffSelfPage() {
     try {
       // Find staff profile linked to this login user
       const staffSnap = await getDocs(
-        query(collection(db, 'rehab_staff'), where('loginUserId', '==', user.uid))
+        query(collection(db, 'spims_users'), where('loginUserId', '==', user.uid))
       );
       if (staffSnap.empty) { setLoading(false); return; }
       const staffDoc = staffSnap.docs[0];
@@ -61,7 +61,7 @@ export default function StaffSelfPage() {
 
       const today = new Date().toISOString().split('T')[0];
       const attSnap = await getDocs(
-        query(collection(db, 'rehab_attendance'), where('staffId', '==', staffId), where('date', '==', today))
+        query(collection(db, 'spims_attendance'), where('staffId', '==', staffId), where('date', '==', today))
       );
 
       // Today's attendance
@@ -80,7 +80,7 @@ export default function StaffSelfPage() {
 
       // Contributions (last 7 days)
       const contribSnap = await getDocs(
-        query(collection(db, 'rehab_contributions'), where('staffId', '==', staffId))
+        query(collection(db, 'spims_contributions'), where('staffId', '==', staffId))
       );
       setContributions(
         contribSnap.docs
@@ -105,7 +105,7 @@ export default function StaffSelfPage() {
 
       const monthlySnap = await getDocs(
         query(
-          collection(db, 'rehab_attendance'),
+          collection(db, 'spims_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
           where('date', '<=', todayStr)
@@ -154,7 +154,7 @@ export default function StaffSelfPage() {
         const lateByMinutes = Math.floor(lateByMs / 60000);
         const isLate = lateByMinutes > 0;
 
-        await addDoc(collection(db, 'rehab_attendance'), {
+        await addDoc(collection(db, 'spims_attendance'), {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
@@ -180,7 +180,7 @@ export default function StaffSelfPage() {
 
         if (isLate) {
           const currentMonth = today.substring(0, 7);
-          await addDoc(collection(db, 'rehab_fines'), {
+          await addDoc(collection(db, 'spims_fines'), {
             staffId: staffProfile.id,
             amount: 200,
             reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
@@ -192,7 +192,7 @@ export default function StaffSelfPage() {
         }
       } else if (!todayRecord.checkOutTime) {
         // Already checked in — check out
-        await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
+        await updateDoc(doc(db, 'spims_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
         showMsg('success', 'Checked out. Great work today! ✓');
@@ -210,10 +210,11 @@ export default function StaffSelfPage() {
     if (!contributionText.trim() || !staffProfile) return;
     setContribLoading(true);
     try {
-      await addDoc(collection(db, 'rehab_contributions'), {
+      await addDoc(collection(db, 'spims_contributions'), {
         staffId: staffProfile.id,
         date: today,
         content: contributionText.trim(),
+        isApproved: false,
         createdAt: Timestamp.now(),
       });
       setContributionText('');

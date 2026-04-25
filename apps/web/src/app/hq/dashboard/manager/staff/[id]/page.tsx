@@ -14,10 +14,10 @@ import Link from 'next/link';
 import {
   Target, Camera, Activity,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
-  Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
+  TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
-  Sparkles, Save
+  Sparkles, Save, CheckCircle, Info, Download, Printer
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import {
@@ -196,9 +196,20 @@ export default function StaffProfilePage() {
     deductionReason: '',
   });
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
 
-  // ─── Monthly Grid Logic ───────────────────────────────────────────────────
+  const monthDays = useMemo(() => {
+    const days = [];
+    const date = new Date();
+    date.setDate(1);
+    const month = date.getMonth();
+    while (date.getMonth() === month) {
+      days.push(new Date(date));
+      date.setDate(date.getDate() + 1);
+    }
+    return days;
+  }, []);
 
   const [attendanceMap, setAttendanceMap] = useState<Record<string, HqDailyAttendanceRecord>>({});
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
@@ -388,9 +399,9 @@ export default function StaffProfilePage() {
       setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
       setSpecialTasks(tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
 
-      // Fetch growth history (all months)
+      // Fetch growth history (all records)
       const historySnap = await getDocs(
-        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), orderBy('month', 'desc'))
+        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), orderBy('date', 'desc'))
       );
       setGrowthHistory(historySnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
 
@@ -1109,8 +1120,8 @@ export default function StaffProfilePage() {
   };
 
   if (loading || sessionLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Spinner size="lg" />
+    <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
+      <Spinner showText={true} />
     </div>
   );
 
@@ -1135,7 +1146,7 @@ export default function StaffProfilePage() {
             <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
             <div className="text-right hidden sm:block">
               <p className="text-[10px] font-[1000] text-black uppercase tracking-widest leading-tight">Growth Points</p>
-              <p className="text-sm font-[1000] text-black">{growthPoints?.total || 0}</p>
+              <p className="text-sm font-[1000] text-black">{computedScores.growthPoint}</p>
             </div>
           </div>
         </div>
@@ -1398,22 +1409,57 @@ export default function StaffProfilePage() {
               </div>
             )}
 
-
             {activeTab === 'action' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* Today's Quick Operations Assessment */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                  }`}>
+
+              <div className="space-y-6 animate-in fade-in duration-500">
+                {/* 1. Matrix View */}
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                   <div className="flex flex-col sm:flex-row justify-between mb-8">
                     <div>
                       <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        <Award className="text-indigo-500" /> Today&apos;s Daily Checklist
+                        <Activity className="text-emerald-500" /> Operational Health Check
                       </h3>
-                      <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-1">{formatDateDMY(new Date(todayStr))}</p>
+                      <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Audit attendance, duty, and compliance patterns</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-4 scrollbar-none">
+                    {monthDays.map((day: Date) => {
+                      const dateStr = day.toISOString().split('T')[0];
+                      const isToday = dateStr === todayStr;
+                      const isSelected = dateStr === selectedDate;
+                      const att = attendanceMap[dateStr];
+                      const duty = dutyMap[dateStr];
+                      const contribs = growthHistory.filter(h => h.date === dateStr);
+
+                      return (
+                        <button
+                          key={dateStr}
+                          onClick={() => setSelectedDate(dateStr)}
+                          className={`min-w-[80px] p-4 rounded-3xl border-2 transition-all group flex flex-col items-center gap-3 ${isSelected
+                            ? 'bg-black border-black shadow-2xl scale-105'
+                            : (isToday ? 'bg-indigo-50/50 border-indigo-200' : 'bg-white border-black/5 hover:border-black/20')
+                            }`}
+                        >
+                          <div className="text-center">
+                            <p className={`text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-white/40' : 'text-black/30'}`}>{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                            <p className={`text-sm font-black ${isSelected ? 'text-white' : 'text-black'}`}>{day.getDate()}</p>
+                          </div>
+                          <div className="flex flex-col gap-1 w-full px-1">
+                            {/* Attendance */}
+                            <div className={`h-1 rounded-full w-full ${att?.status === 'present' ? 'bg-emerald-400' : att?.status === 'late' ? 'bg-amber-400' : att?.status === 'absent' ? 'bg-rose-400' : 'bg-black/5'}`} />
+                            {/* Duty */}
+                            <div className={`h-1 rounded-full w-full ${duty?.duties?.some(d => d.status === 'done') ? 'bg-teal-400' : 'bg-black/5'}`} />
+                            {/* Contribution */}
+                            <div className={`h-1 rounded-full w-full ${contribs.length > 0 ? 'bg-indigo-400' : 'bg-black/5'}`} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     {/* Dress Code Section */}
                     <div>
                       <h4 className="text-[10px] font-black text-black uppercase tracking-widest mb-3">Uniform Items</h4>
@@ -1504,7 +1550,6 @@ export default function StaffProfilePage() {
                       </button>
                     </div>
                   </div>
-                </div>
 
                 {/* Mark Duty Module */}
                 <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
@@ -1614,6 +1659,44 @@ export default function StaffProfilePage() {
                     </div>
                   ))
                 )}
+
+                {/* Daily Contributions Sync */}
+                <div className={`p-8 rounded-[2.5rem] border-2 border-dashed ${isDark ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50/50 border-indigo-100'}`}>
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <Sparkles size={18} />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-black">Verified Contributions</h3>
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Growth Point Synchronization</p>
+                      </div>
+                    </div>
+                    <div className="px-4 py-2 bg-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
+                      +{growthHistory.filter(h => h.date === selectedDate).length} GP Today
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {growthHistory.filter(h => h.date === selectedDate).length === 0 ? (
+                      <div className="col-span-full py-12 text-center bg-white/50 rounded-3xl border border-black/5">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-30">No contribution points recorded for this date</p>
+                      </div>
+                    ) : (
+                      growthHistory.filter(h => h.date === selectedDate).map((item, idx) => (
+                        <div key={item.id || idx} className="p-4 bg-white rounded-2xl border-2 border-black/5 flex items-center justify-between group hover:border-black transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center font-black text-[10px]">
+                              +{item.points || 1}
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-tight text-black">{item.note || item.category || 'Approved Contrib'}</p>
+                          </div>
+                          <CheckCircle size={14} className="text-emerald-500" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1947,7 +2030,7 @@ export default function StaffProfilePage() {
                       disabled={saving}
                       className="w-full sm:w-auto px-10 py-4 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
                     >
-                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      {saving ? <Spinner size="sm" /> : <Save size={16} />}
                       {saving ? 'Synchronizing...' : 'Save Changes'}
                     </button>
                   </div>
@@ -2726,7 +2809,7 @@ export default function StaffProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
-                        Total: {growthPoints?.total || 0}
+                        Total Score: {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
                       </span>
                       <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
                         <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
@@ -2767,15 +2850,37 @@ export default function StaffProfilePage() {
                       </div>
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Merits & Contributions</h4>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-6">
                       <div className="space-y-1">
-                        <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {growthPoints?.extra || 0}</p>
+                        <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {computedScores.growthPoint}</p>
                         <p className="text-[10px] font-bold text-black uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>
                         <p className={`text-sm font-bold ${isDark ? 'text-black' : 'text-black'}`}>T-3 Management Candidate</p>
                       </div>
+                    </div>
+
+                    {/* Growth History List */}
+                    <div className="space-y-3">
+                      {growthHistory.length === 0 ? (
+                        <p className="text-[10px] font-bold text-black opacity-30 uppercase text-center py-4">No contribution records found</p>
+                      ) : (
+                        growthHistory.map((item, idx) => (
+                          <div key={item.id || idx} className={`p-4 rounded-2xl border flex items-center justify-between transition-all hover:bg-white ${isDark ? 'bg-zinc-800/30 border-zinc-700' : 'bg-white/50 border-gray-100'}`}>
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-xs">
+                                +{item.points || 1}
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-tight">{item.note || item.category || 'Point Awarded'}</p>
+                                <p className="text-[8px] font-bold text-black opacity-40 uppercase tracking-widest">{formatDateDMY(item.date)}</p>
+                              </div>
+                            </div>
+                            <Award size={14} className="text-indigo-400" />
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2840,7 +2945,7 @@ export default function StaffProfilePage() {
                 disabled={saving}
                 className="w-full h-14 rounded-2xl bg-black text-white text-[11px] font-[1000] uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {saving ? <Spinner size="sm" /> : <RefreshCw size={16} />}
                 {saving ? 'Synchronizing...' : 'Update Record'}
               </button>
             </div>

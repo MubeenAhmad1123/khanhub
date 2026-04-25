@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDepartmentBySlug, getDepartmentTheme } from '@/data/departments';
 import JobCenterPublicDirectory from '@/components/departments/JobCenterPublicDirectory';
+import ITPublicDirectory from '@/components/departments/ITPublicDirectory';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -25,8 +26,9 @@ export default async function DirectoryPage({ params }: { params: Params }) {
   const { slug } = await params;
   const department = getDepartmentBySlug(slug);
 
-  // Currently we only have directory for job-placement, but we could extend to others.
-  if (!department || department.slug !== 'job-placement') {
+  const allowedSlugs = ['job-placement', 'it'];
+
+  if (!department || !allowedSlugs.includes(department.slug)) {
     notFound();
   }
 
@@ -60,17 +62,23 @@ export default async function DirectoryPage({ params }: { params: Params }) {
           </Link>
 
           <h1 className="text-3xl sm:text-5xl font-bold mb-4 font-display leading-tight drop-shadow-md">
-            Full Directory
+            {department.slug === 'it' ? 'Talent & Partner Directory' : 'Full Directory'}
           </h1>
           <p className="text-lg sm:text-xl opacity-90 max-w-2xl mx-auto">
-            Browse our complete database of verified job seekers and partner employers.
+            {department.slug === 'it' 
+              ? 'Browse our directory of skilled IT interns and technology partners.'
+              : 'Browse our complete database of verified job seekers and partner employers.'}
           </p>
         </div>
       </section>
 
       {/* DIRECTORY CONTENT */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20 bg-white rounded-t-3xl sm:rounded-3xl shadow-xl min-h-[500px]">
-        <JobCenterPublicDirectory theme={theme} previewMode={false} />
+        {department.slug === 'job-placement' ? (
+          <JobCenterPublicDirectory theme={theme} previewMode={false} />
+        ) : (
+          <ITPublicDirectory theme={theme} previewMode={false} />
+        )}
       </section>
     </main>
   );

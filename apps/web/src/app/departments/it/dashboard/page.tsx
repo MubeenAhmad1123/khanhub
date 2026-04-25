@@ -132,13 +132,12 @@ export default function ItOverviewPage() {
     setSubmitting(true);
     try {
       const prefix = getDeptPrefix(userStats.dept as any);
-      await addDoc(collection(db, `${prefix}_growth_points`), {
+      await addDoc(collection(db, `${prefix}_contributions`), {
         staffId: uid,
         staffName: name,
-        description: contributionText,
-        points: 0, // Pending review
-        status: 'pending',
-        type: 'contribution',
+        content: contributionText,
+        isApproved: false,
+        date: new Date().toISOString().split('T')[0],
         createdAt: serverTimestamp()
       });
       toast.success("Contribution submitted for review!");

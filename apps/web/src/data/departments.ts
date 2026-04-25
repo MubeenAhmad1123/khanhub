@@ -165,6 +165,13 @@ export const DEPARTMENT_THEMES = {
     accent: '#5EEAD4',
     light: '#CCFBF1',
     gradient: 'from-teal-600 to-emerald-600'
+  },
+  'it': {
+    primary: '#6366F1',      // Violet/Indigo - Modern Tech
+    secondary: '#4F46E5',
+    accent: '#818CF8',
+    light: '#EEF2FF',
+    gradient: 'from-indigo-500 to-indigo-800'
   }
 } as const;
 
@@ -1182,6 +1189,50 @@ export const DEPARTMENTS: Department[] = [
     facilities: ['Welfare Centers', 'Community Halls', 'Support Offices', 'Distribution Points'],
     contactPhone: '0300-6395220',
     contactEmail: 'info@welfare.khanhub.com.pk'
+  },
+  {
+    slug: 'it',
+    name: 'IT Department',
+    shortName: 'IT Department',
+    icon: '💻',
+    image: '/images/it.webp',
+    category: 'career-services',
+    tagline: 'Leading the digital transformation',
+    description: 'Centralized IT department providing software development, infrastructure management, and technical support across all Khan Hub entities.',
+    services: ['Software Development', 'IT Infrastructure', 'Technical Support', 'Cybersecurity'],
+    stats: [
+      { value: '24/7', label: 'Support' },
+      { value: '500+', label: 'Devices' }
+    ],
+    isActive: true,
+    colorHex: '#6366F1',
+    programs: [
+      {
+        slug: 'internship',
+        name: 'IT Internship',
+        description: 'Professional internship program for aspiring developers and IT professionals.',
+        image: '/images/it/internship.webp',
+        features: ['Real-world Projects', 'Mentorship', 'Certification'],
+        details: [
+          { label: 'Duration', value: '3 - 6 Months' },
+          { label: 'Focus', value: 'Full Stack Development' }
+        ]
+      },
+      {
+        slug: 'managed-services',
+        name: 'Managed Services',
+        description: 'Comprehensive IT management for partner organizations and internal departments.',
+        image: '/images/it/services.webp',
+        features: ['Infrastructure', 'SLA Support', 'Monitoring'],
+        details: [
+          { label: 'Type', value: 'Ongoing' },
+          { label: 'Support', value: 'Gold Tier' }
+        ]
+      }
+    ],
+    facilities: ['Development Lab', 'Server Room', 'Technical Support Hub', 'Training Center'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'it@khanhub.com.pk'
   }
 ];
 

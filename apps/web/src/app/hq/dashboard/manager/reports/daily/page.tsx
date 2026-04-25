@@ -9,8 +9,10 @@ import Link from 'next/link';
 import {
   FileText, ArrowLeft, Loader2, Search, Filter,
   Calendar, CheckCircle, XCircle, Info, Download,
-  Printer, TrendingUp, Shield, AlertTriangle, Clock
+  Printer, TrendingUp, Shield, AlertTriangle, Clock,
+  Sparkles
 } from 'lucide-react';
+import { Spinner } from '@/components/ui';
 import { getDeptPrefix, getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 import { HqDailyAttendanceRecord, HqDailyDressCodeRecord, HqDailyDutyRecord } from '@/types/hq';
@@ -364,10 +366,7 @@ export default function DailyReportPage() {
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className={`w-10 h-10 animate-spin ${isDark ? 'text-black' : 'text-black'}`} />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black animate-pulse">Syncing Matrix</p>
-        </div>
+        <Spinner showText={true} />
       </div>
     );
   }
