@@ -4,9 +4,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
-  Banknote, CalendarDays, User, LogOut, ArrowLeft, Menu, X, 
-  Shield, ChevronLeft, ExternalLink, Building2, GraduationCap, 
-  TrendingUp, Calculator, FileText, ClipboardList, Monitor, Laptop
+  Banknote, User, LogOut, ArrowLeft, Menu, X, 
+  Monitor, Bell, Search, GraduationCap, Building2, TrendingUp,
+  FileText, Shield, ExternalLink, ChevronLeft, ChevronRight,
+  CalendarDays, Laptop
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -54,7 +55,10 @@ const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string
   hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
   spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
   it:           { label: 'IT Dept',    adminUrl: '/departments/it/dashboard/admin',          color: 'text-indigo-500', icon: <Monitor size={16} /> },
+  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
+  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
   'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
+  'social-media': { label: 'Media',    adminUrl: '/departments/social-media/dashboard/admin', color: 'text-indigo-500', icon: <Monitor size={16} /> },
 };
 
 const HQ_NAV_ITEMS = [
@@ -145,75 +149,113 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-white text-black">
-        {/* Header */}
-        <div className="px-6 pt-10 pb-6 border-b border-black/5">
+      <div className="flex flex-col h-full bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+        <div className="px-6 pt-10 pb-6 border-b border-black/5 dark:border-white/5">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
-            className="flex items-center gap-2 text-gray-400 hover:text-black text-[10px] font-black mb-6 transition-colors group uppercase tracking-[0.2em]"
+            className="flex items-center gap-2 text-gray-400 hover:text-indigo-600 text-[10px] font-black mb-6 transition-colors group uppercase tracking-[0.3em]"
           >
-            <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-            {viewMode === 'hq' ? 'Back to HQ' : 'Exit Portal'}
+            <ArrowLeft size={10} className="group-hover:-translate-x-1 transition-transform" />
+            {viewMode === 'hq' ? 'Back to HQ' : 'Back to Home'}
           </Link>
-
-          <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
-              viewMode === 'hq' ? 'bg-zinc-900' : 'bg-indigo-600 shadow-indigo-200'
+          
+          <div className="flex items-center gap-4 mb-8">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all duration-500 ${
+              viewMode === 'hq' ? 'bg-black shadow-black/20' : 'bg-indigo-600 shadow-indigo-200'
             }`}>
-              {viewMode === 'hq' ? <Shield size={20} /> : <Monitor size={20} />}
+              {viewMode === 'hq' ? <Shield size={24} strokeWidth={2.5} /> : <Monitor size={24} strokeWidth={2.5} />}
             </div>
             <div>
-              <p className="font-black text-sm leading-none tracking-tight">
-                {viewMode === 'hq' ? 'HQ Navigator' : 'IT Department'}
+              <p className="font-black text-lg leading-none tracking-tighter uppercase">
+                {viewMode === 'hq' ? 'HQ Admin' : 'IT Portal'}
               </p>
-              <p className="text-gray-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
-                {viewMode === 'hq' ? 'Central' : 'Tech Hub'}
+              <p className="text-gray-400 text-[10px] font-black mt-2 uppercase tracking-[0.2em] italic">
+                {viewMode === 'hq' ? 'Central Node' : 'Technology Hub'}
               </p>
             </div>
           </div>
 
-          {/* Nav Switcher */}
+          {/* Jump Portal */}
           {isHqAdmin && (
-            <div className={`flex p-1 rounded-xl bg-gray-100`}>
+            <div className="relative mb-6">
+              <button
+                onClick={() => setPortalOpen(!portalOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-left transition-all bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-indigo-200 dark:hover:border-indigo-500/30 group"
+              >
+                <div className="flex items-center gap-3">
+                  <ExternalLink size={14} className="text-indigo-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-black uppercase tracking-widest">Jump to Portal</span>
+                </div>
+                <ChevronLeft size={14} className={`text-gray-300 transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
+              </button>
+
+              {portalOpen && (
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-[2rem] border shadow-2xl p-3 animate-in fade-in zoom-in-95 bg-white dark:bg-black border-gray-100 dark:border-white/10">
+                  <div className="grid grid-cols-1 gap-1">
+                    {Object.entries(DEPT_INFO).map(([key, info]) => (
+                      <Link
+                        key={key}
+                        href={info.adminUrl}
+                        onClick={() => setPortalOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
+                          pathname.includes(key)
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                            : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5'
+                        }`}>
+                          {React.cloneElement(info.icon as React.ReactElement, { size: 14, strokeWidth: 2.5 })}
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest">{info.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isHqAdmin && (
+            <div className="flex p-1.5 rounded-[1.25rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-inner">
               <button
                 onClick={() => setViewMode('dept')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-xl shadow-black/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}
               >
-                IT DEPT
+                PORTAL
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-xl shadow-black/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}
               >
-                HQ
+                HQ NODE
               </button>
             </div>
           )}
         </div>
 
-        {/* User */}
-        <div className={`px-6 py-4 border-b border-gray-100`}>
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 font-black text-xs">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-bold truncate">{user?.displayName}</p>
-              <p className="text-[10px] font-medium text-gray-400 truncate">{user?.customId}</p>
+              <p className="text-[13px] font-black truncate text-black dark:text-white">{user?.displayName}</p>
+              <p className="text-[9px] font-black text-gray-400 truncate uppercase tracking-widest">{user?.customId || 'STAFF'}</p>
             </div>
           </div>
-          <div className="mt-3 flex">
-            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
-              {role ? ROLE_LABELS[role] : ''}
+          <div className="mt-4">
+            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${ROLE_COLORS[user?.role as ItRole || 'staff']} shadow-sm`}>
+              {role ? ROLE_LABELS[role] : 'STAFF'}
             </span>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar font-black">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -238,7 +280,6 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
           })}
         </nav>
 
-        {/* Bottom */}
         <div className="p-6 border-t border-black/5">
           <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black text-red-500 hover:bg-red-50 transition-all active:scale-95">
             <LogOut size={18} />
@@ -265,23 +306,52 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="lg:hidden sticky top-0 z-20 backdrop-blur-md border-b border-black/5 px-4 py-3 flex items-center justify-between bg-white/80">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400"><Menu size={20} /></button>
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-20 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between bg-white/80 dark:bg-black/80 border-slate-200/60 dark:border-white/5">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors">
+            <Menu size={20} />
+          </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><Monitor size={14} /></div>
-            <span className="font-black text-sm tracking-tight">IT Dept</span>
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+              <Monitor size={16} />
+            </div>
+            <span className="font-bold text-sm text-slate-900 dark:text-white">IT Portal</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-black shadow-md ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
+              {(user?.displayName?.[0] || 'U').toUpperCase()}
+            </div>
+          </div>
         </header>
 
-        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b border-black/5 px-8 py-4 items-center justify-between bg-white/80">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Khan Hub • IT Portal</div>
-          <div className="flex items-center gap-6">
-             <div className="flex items-center gap-3">
-               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
-               <div className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center font-black text-sm">{user?.displayName?.[0]}</div>
-               <span className="text-sm font-black text-black">{user?.displayName}</span>
-             </div>
+        {/* Desktop Top Bar */}
+        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-black/80 border-slate-200/60 dark:border-white/5">
+          <div className="flex items-center gap-4 bg-slate-100/50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-white/5 w-96 group focus-within:border-indigo-300 dark:focus-within:border-indigo-500/50 transition-all">
+            <Search className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search IT portal..." 
+              className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium text-slate-900 dark:text-white"
+            />
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button className="relative p-2.5 text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10 group">
+              <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white dark:border-black animate-pulse" />
+            </button>
+            
+            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
+            
+            <div className="flex items-center gap-3 pl-2 group">
+              <div className="text-right">
+                <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">{user?.displayName}</p>
+                <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-0.5">{user?.role} Portal</p>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover:scale-110 ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
+                {(user?.displayName?.[0] || 'U').toUpperCase()}
+              </div>
+            </div>
           </div>
         </header>
 

@@ -49,10 +49,10 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'SPIMS',
     collection: 'spims_users',
     domain: '@spims.khanhub.com.pk',
-    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk', '@spims.KhanHub', '@spims.Khan Hub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk', '@spims.KhanHub', '@spims.Khan Hub', '@khanhub.com.pk', '@khanhub', '@spims.khanhub'],
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
-    prefixes: ['SPIMS', 'STU', 'STUDENT']
+    prefixes: ['SPIMS', 'STU', 'STUDENT', 'LECTURER', 'LECT', 'PROF']
   },
   hospital: {
     id: 'hospital',
@@ -281,7 +281,14 @@ export async function loginUniversal(customId: string, password: string, deptHin
         finalData.patientId?.toLowerCase(),
         finalData.seekerId?.toLowerCase(),
         finalData.studentId?.toLowerCase(),
-        finalData.childId?.toLowerCase()
+        finalData.childId?.toLowerCase(),
+        // Add designation-based prefix (e.g. "SPIMS Lecturer" -> "lecturer")
+        ...(finalData.designation ? [
+          finalData.designation.toLowerCase().replace('spims', '').trim().split(' ')[0],
+          finalData.designation.toLowerCase().replace('spims', '').trim().replace(/\s+/g, '-'),
+          // Try with -1 suffix as seen in some legacy accounts
+          finalData.designation.toLowerCase().replace('spims', '').trim().split(' ')[0] + '-1'
+        ] : [])
       ].filter(Boolean) as string[]));
       
       const domains = Array.from(new Set([
