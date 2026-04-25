@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { listStaffCards, type StaffCardRow, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
+import { Spinner } from '@/components/ui';
 
 export default function ManagerStaffPage() {
   const router = useRouter();
@@ -127,7 +128,7 @@ export default function ManagerStaffPage() {
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${darkMode ? 'bg-[#0A0A0A]' : 'bg-gray-50'}`}>
-        <Loader2 className={`w-10 h-10 animate-spin ${darkMode ? 'text-blue-400' : 'text-black'}`} />
+        <Spinner size="lg" />
       </div>
     );
   }

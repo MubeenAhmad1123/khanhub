@@ -19,6 +19,7 @@ import {
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
   Sparkles, Save
 } from 'lucide-react';
+import { Spinner } from '@/components/ui';
 import {
   fetchStaffProfile,
   updateStaffProfile,
@@ -1109,7 +1110,7 @@ export default function StaffProfilePage() {
 
   if (loading || sessionLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Loader2 className="w-8 h-8 animate-spin text-black" />
+      <Spinner size="lg" />
     </div>
   );
 

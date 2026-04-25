@@ -8,6 +8,7 @@ import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
+import { Spinner } from '@/components/ui';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
@@ -138,7 +139,7 @@ export default function HqLoginPage() {
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-400 text-sm animate-pulse">Checking session...</p>
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -185,7 +186,7 @@ export default function HqLoginPage() {
             disabled={loading}
             className="mt-4 bg-gray-900 text-white rounded-[30px] py-6 font-black text-lg shadow-2xl shadow-gray-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {loading ? 'Authenticating...' : 'Enter Dashboard'}
+            {loading ? <Spinner size="sm" showText={false} /> : 'Enter Dashboard'}
           </button>
 
           <div className="relative flex items-center py-2">

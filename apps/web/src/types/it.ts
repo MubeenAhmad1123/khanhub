@@ -1,13 +1,11 @@
-// apps/web/src/types/it.ts
-
-import { StaffDept, StaffRole, StaffStatus } from '@/lib/hq/superadmin/staff';
+export type ItRole = 'admin' | 'staff' | 'student' | 'client' | 'superadmin';
 
 export interface ItUser {
   uid: string;
   id: string;
   customId: string;
   name: string;
-  role: StaffRole;
+  role: ItRole;
   dept: 'it' | 'social-media';
   isActive: boolean;
   loginTime: number;
@@ -21,7 +19,7 @@ export interface ItStaffMember {
   id: string;
   customId: string;
   name: string;
-  role: StaffRole;
+  role: ItRole;
   dept: 'it' | 'social-media';
   status: StaffStatus;
   isActive: boolean;
@@ -30,4 +28,28 @@ export interface ItStaffMember {
   designation?: string;
   joiningDate?: any;
   createdAt?: any;
+}
+
+export interface ItStudent {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  course?: string;
+  batch?: string;
+  status: 'active' | 'completed' | 'dropped';
+  joiningDate: any;
+  feePaid?: number;
+  totalFee?: number;
+}
+
+export interface ItClient {
+  id: string;
+  companyName: string;
+  contactPerson: string;
+  email?: string;
+  phone?: string;
+  activeProjects: number;
+  totalPaid: number;
+  status: 'active' | 'inactive';
 }

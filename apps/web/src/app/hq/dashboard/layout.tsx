@@ -17,6 +17,7 @@ import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
 import { HqNotificationPermissionBanner } from '@/components/hq/HqNotificationPermissionBanner';
+import { Spinner } from '@/components/ui';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
@@ -206,22 +207,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   if (isChecking) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-surface-subtle">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Shield size={24} className="text-purple-500 animate-pulse" />
-          </div>
-        </div>
-        <div className="mt-6 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-black">
-            Khan Hub HQ
-          </p>
-          <div className="mt-2 flex items-center gap-1 justify-center">
-            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" />
-          </div>
-        </div>
+        <Spinner size="lg" />
       </div>
     );
   }

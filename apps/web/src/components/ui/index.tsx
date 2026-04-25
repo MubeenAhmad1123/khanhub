@@ -224,11 +224,21 @@ export function PageHero({
 // ═══════════════════════════════════════════════════════
 // LOADING SPINNER
 // ═══════════════════════════════════════════════════════
-export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const sizeClass = size === 'sm' ? 'w-4 h-4 border-2' : size === 'lg' ? 'w-10 h-10 border-4' : 'w-7 h-7 border-3';
-  return (
-    <div className={cn('rounded-full border-neutral-700 border-t-primary-500 animate-spin', sizeClass)} />
-  );
+import LogoLoader from './LogoLoader';
+export { LogoLoader };
+
+export function Spinner({ 
+  size = 'md', 
+  className, 
+  showText 
+}: { 
+  size?: 'sm' | 'md' | 'lg' | 'xl', 
+  className?: string,
+  showText?: boolean
+}) {
+  // If showText is explicitly provided, use it. Otherwise, hide text for 'sm' size.
+  const shouldShowText = showText !== undefined ? showText : size !== 'sm';
+  return <LogoLoader size={size} showText={shouldShowText} className={className} />;
 }
 
 // ═══════════════════════════════════════════════════════

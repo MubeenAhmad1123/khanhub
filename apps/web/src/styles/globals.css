@@ -162,6 +162,12 @@
     }
   }
 
+  @keyframes logoFlip {
+    0% { transform: perspective(1000px) rotateY(0deg); }
+    40%, 60% { transform: perspective(1000px) rotateY(180deg); }
+    100% { transform: perspective(1000px) rotateY(360deg); }
+  }
+
   @keyframes shimmer {
     0% {
       background-position: -1000px 0;
@@ -433,6 +439,10 @@
 
   .animate-bounce-subtle {
     animation: bounceSubtle 2s ease-in-out infinite;
+  }
+
+  .animate-logo-flip {
+    animation: logoFlip 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
   /* Professional spacing utilities */
