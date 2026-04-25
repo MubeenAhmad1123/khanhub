@@ -715,12 +715,14 @@ service cloud.firestore {
         ); 
     } 
     function hqRole() { 
-      return isHqAuth()
+      return exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
         ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('role', '')
         : (isSystemAdmin() ? 'superadmin' : ''); 
     } 
     function hqCustomId() {
-      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('customId', '');
+      return exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('customId', '')
+        : '';
     }
     function isHqRole(role) { 
       return isHqAuth() && hqRole() == role; 
@@ -2250,16 +2252,12 @@ service cloud.firestore {
     //  JOB CENTER PORTAL COLLECTIONS (NEW)
     // ═══════════════════════════════════════════════════════════
 
-    function jobCenterUserDoc() {
-      return get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data;
-    }
-    
     function isJobCenterAdmin() {
-      return isJobCenterAuth() && (jobCenterUserDoc().role == 'admin' || jobCenterUserDoc().role == 'superadmin');
+      return isJobCenterAdminOrAbove();
     }
     
     function isJobCenterStaff() {
-      return isJobCenterAuth() && (jobCenterUserDoc().role == 'staff' || isJobCenterAdmin());
+      return isJobCenterAuth() && (jobCenterRole() == 'staff' || isJobCenterAdmin());
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -2272,15 +2270,21 @@ service cloud.firestore {
     }
 
     match /jobcenter_seekers/{seekerId} {
-      allow read: if isJobCenterAuth() || isHqTier1();
-      allow create, update: if isJobCenterAdmin() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdmin();
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
+        || isJobCenterRole('cashier')
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
+        || isHqTier1();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdminOrAbove();
     }
 
     match /jobcenter_employers/{employerId} {
-      allow read: if isJobCenterAuth() || isHqTier1();
-      allow create, update: if isJobCenterAdmin() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdmin();
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
+        || isHqTier1();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdminOrAbove();
     }
 
     match /jobcenter_jobs/{jobId} {

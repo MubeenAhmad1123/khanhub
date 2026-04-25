@@ -44,7 +44,7 @@ function showBrowserNotification(title: string, body: string) {
   }
 }
 
-export function useFcmNotifications(session: HqSession | null) {
+export function useFcmNotifications(session: HqSession | null, userCol: string = 'hq_users') {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isRequesting, setIsRequesting] = useState(false);
@@ -64,14 +64,14 @@ export function useFcmNotifications(session: HqSession | null) {
 
     const silentRegister = async () => {
       try {
-        const token = await requestNotificationPermission(session.uid);
+        const token = await requestNotificationPermission(session.uid, userCol);
         if (token) setFcmToken(token);
       } catch (e) {
         console.warn('[FCM] Silent token registration failed', e);
       }
     };
     void silentRegister();
-  }, [session?.uid]);
+  }, [session?.uid, userCol]);
 
   // Subscribe to foreground messages after token is set
   useEffect(() => {
@@ -92,7 +92,7 @@ export function useFcmNotifications(session: HqSession | null) {
     if (!session?.uid) return false;
     setIsRequesting(true);
     try {
-      const token = await requestNotificationPermission(session.uid);
+      const token = await requestNotificationPermission(session.uid, userCol);
       const newPermission =
         typeof window !== 'undefined' && 'Notification' in window
           ? Notification.permission
@@ -109,7 +109,7 @@ export function useFcmNotifications(session: HqSession | null) {
     } finally {
       setIsRequesting(false);
     }
-  }, [session?.uid]);
+  }, [session?.uid, userCol]);
 
   return { permission, fcmToken, isRequesting, requestPermission };
 }

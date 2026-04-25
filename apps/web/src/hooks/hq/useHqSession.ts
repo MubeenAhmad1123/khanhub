@@ -36,47 +36,18 @@ export function useHqSession() {
       setSession(null);
     }
 
-    // Firebase Auth state listener with forced token refresh
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      const raw = localStorage.getItem(SESSION_KEY);
-      const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
-
-      // Clear on UID mismatch
-      if (user && parsed && user.uid !== parsed.uid) {
-        console.warn('[useHqSession] UID mismatch, clearing session');
-        localStorage.removeItem(SESSION_KEY);
-        setSession(null);
-        setLoading(false);
-        return;
-      }
-
-      // ── Force-refresh the ID token so Firestore rules see a valid auth ──
-      // Firebase tokens expire after 1 hour. Without this, prolonged sessions
-      // cause "Missing or insufficient permissions" on all Firestore reads.
-      if (user) {
-        try {
-          await getIdToken(user, true);
-        } catch (e) {
-          console.warn('[useHqSession] Token refresh failed:', e);
-        }
-      }
-
-      setLoading(false);
-    });
-
     // Real-time remote logout listener
     let unsubDoc: (() => void) | undefined;
-    const raw = localStorage.getItem(SESSION_KEY);
-    const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
 
-    if (parsed?.uid) {
+    const startListener = (uid: string, loginTime: number) => {
+      if (unsubDoc) unsubDoc();
       unsubDoc = onSnapshot(
-        doc(db, 'hq_users', parsed.uid),
+        doc(db, 'hq_users', uid),
         (snap) => {
           const data = snap.data();
           if (data?.forceLogoutAt) {
             const logoutTime = new Date(data.forceLogoutAt).getTime();
-            if (logoutTime > parsed.loginTime) {
+            if (logoutTime > loginTime) {
               console.log('[useHqSession] Remote logout triggered');
               localStorage.removeItem(SESSION_KEY);
               setSession(null);
@@ -92,7 +63,38 @@ export function useHqSession() {
           }
         }
       );
-    }
+    };
+
+    // Firebase Auth state listener with forced token refresh
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
+
+      // Clear on UID mismatch
+      if (user && parsed && user.uid !== parsed.uid) {
+        console.warn('[useHqSession] UID mismatch, clearing session');
+        localStorage.removeItem(SESSION_KEY);
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
+      // ── Start listener only when we have auth AND session matching ──
+      if (user && parsed && user.uid === parsed.uid) {
+        startListener(user.uid, parsed.loginTime);
+      }
+
+      // ── Force-refresh the ID token so Firestore rules see a valid auth ──
+      if (user) {
+        try {
+          await getIdToken(user, true);
+        } catch (e) {
+          console.warn('[useHqSession] Token refresh failed:', e);
+        }
+      }
+
+      setLoading(false);
+    });
 
     return () => {
       unsub();

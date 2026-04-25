@@ -27,21 +27,34 @@ export function useJobCenterSession() {
 
     // Real-time remote logout listener
     let unsubDoc: (() => void) | undefined;
-    if (parsed?.uid) {
-      unsubDoc = onSnapshot(doc(db, 'jobcenter_users', parsed.uid), (snap) => {
+    const startListener = (uid: string, loginTime: number) => {
+      if (unsubDoc) unsubDoc();
+      unsubDoc = onSnapshot(doc(db, 'jobcenter_users', uid), (snap) => {
         const data = snap.data();
         if (data?.forceLogoutAt) {
           const logoutTime = new Date(data.forceLogoutAt).getTime();
-          if (logoutTime > parsed.loginTime) {
+          if (logoutTime > loginTime) {
+            console.log('[JobCenterSession] Remote logout triggered');
             localStorage.removeItem('jobcenter_session');
             setSession(null);
             signOut(auth).catch(() => {});
           }
         }
       });
-    }
+    };
+
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      const raw = localStorage.getItem('jobcenter_session');
+      const parsed = raw ? (JSON.parse(raw) as JobCenterSession) : null;
+      
+      if (user && parsed && user.uid === parsed.uid) {
+        startListener(user.uid, parsed.loginTime);
+      }
+      setLoading(false);
+    });
 
     return () => {
+      unsubAuth();
       if (unsubDoc) unsubDoc();
     };
   }, []);

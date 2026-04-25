@@ -31,7 +31,7 @@ async function ensureFcmServiceWorker(): Promise<ServiceWorkerRegistration | nul
   }
 }
 
-export async function requestNotificationPermission(userId: string): Promise<string | null> {
+export async function requestNotificationPermission(userId: string, userCol: string = 'hq_users'): Promise<string | null> {
   const msg = getClientMessaging();
   if (!msg) return null;
 
@@ -48,8 +48,8 @@ export async function requestNotificationPermission(userId: string): Promise<str
     });
 
     if (token) {
-      // Persist token in hq_users sub-collection so the Admin SDK can fan-out
-      const tokenRef = doc(db, `hq_users/${userId}/fcmTokens`, token);
+      // Persist token in user-specific sub-collection so the Admin SDK can fan-out
+      const tokenRef = doc(db, `${userCol}/${userId}/fcmTokens`, token);
       await setDoc(
         tokenRef,
         {
@@ -75,12 +75,12 @@ export function onForegroundMessage(callback: (payload: any) => void) {
   return onMessage(msg, callback);
 }
 
-export async function removeToken(userId: string, currentToken: string): Promise<void> {
+export async function removeToken(userId: string, currentToken: string, userCol: string = 'hq_users'): Promise<void> {
   const msg = getClientMessaging();
   if (!msg) return;
   try {
     await deleteToken(msg);
-    const tokenRef = doc(db, `hq_users/${userId}/fcmTokens`, currentToken);
+    const tokenRef = doc(db, `${userCol}/${userId}/fcmTokens`, currentToken);
     await deleteDoc(tokenRef);
   } catch (error) {
     console.error('[FCM] Error removing FCM token:', error);
