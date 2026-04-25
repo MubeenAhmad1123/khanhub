@@ -41,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
+  { title: 'My Profile', href: '/departments/hospital/dashboard/profile', icon: UserCircle, roles: ['admin', 'staff', 'superadmin'] },
   { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/patient', icon: UserCircle, roles: ['family'] },
 ];
 

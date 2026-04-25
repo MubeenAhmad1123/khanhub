@@ -1,4 +1,4 @@
-// src/app/departments/welfare/dashboard/profile/page.tsx
+// src/app/departments/it/dashboard/profile/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -13,13 +13,13 @@ import {
   CheckCircle, Phone, Calendar, 
   Shirt, Award, Clock, Target, DollarSign,
   TrendingUp, Activity, MapPin, Mail, Briefcase,
-  AlertCircle, ChevronRight, Download, Info
+  AlertCircle, ChevronRight, Download, Info, Terminal
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
-export default function ProfilePage() {
+export default function ItProfilePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<any>(null);
@@ -43,17 +43,16 @@ export default function ProfilePage() {
   const fetchMetrics = useCallback(async (sId: string) => {
     try {
       const [attSnap, dutySnap, dressSnap, pointsSnap, taskSnap, fineSnap] = await Promise.all([
-        getDocs(query(collection(db, `welfare_attendance`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
-        getDocs(query(collection(db, `welfare_duty_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
-        getDocs(query(collection(db, `welfare_dress_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
-        getDocs(query(collection(db, `welfare_growth_points`), where('staffId', '==', sId), limit(1))),
-        getDocs(query(collection(db, `welfare_special_tasks`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
-        getDocs(query(collection(db, `welfare_fines`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30)))
+        getDocs(query(collection(db, `it_attendance`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `it_duty_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `it_dress_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `it_growth_points`), where('staffId', '==', sId), limit(1))),
+        getDocs(query(collection(db, `it_special_tasks`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `it_fines`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30)))
       ]);
 
       setAttendance(attSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setDuties(dutySnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setDressLogs(dressLogs.map(d => ({ id: d.id, ...d.data() }))); // Wait, fixed below
       setDressLogs(dressSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setSpecialTasks(taskSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setFines(fineSnap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -64,20 +63,28 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('welfare_session');
-    if (!sessionData) { router.push('/departments/welfare/login'); return; }
+    const sessionData = localStorage.getItem('it_session') || localStorage.getItem('hq_session');
+    if (!sessionData) { router.push('/departments/it/login'); return; }
     const parsed = JSON.parse(sessionData);
     setSession(parsed);
 
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const userSnap = await getDoc(doc(db, 'welfare_users', parsed.uid));
-        if (!userSnap.exists()) { router.push('/departments/welfare/login'); return; }
-        const uData = userSnap.data();
-        setProfile({ id: userSnap.id, ...uData });
+        const userSnap = await getDoc(doc(db, 'it_users', parsed.uid));
+        if (!userSnap.exists()) {
+           // Try hq_users
+           const hqSnap = await getDoc(doc(db, 'hq_users', parsed.uid));
+           if (!hqSnap.exists()) {
+             router.push('/departments/it/login'); 
+             return;
+           }
+           setProfile({ id: hqSnap.id, ...hqSnap.data() });
+        } else {
+           setProfile({ id: userSnap.id, ...userSnap.data() });
+        }
 
-        let sSnap = await getDocs(query(collection(db, 'welfare_staff'), where('loginUserId', '==', parsed.uid)));
+        let sSnap = await getDocs(query(collection(db, 'it_staff'), where('loginUserId', '==', parsed.uid)));
         if (sSnap.empty) sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
         if (!sSnap.empty) fetchMetrics(sSnap.docs[0].id);
       } catch (err) {
@@ -94,8 +101,8 @@ export default function ProfilePage() {
   const handleUploadPhoto = async (file: File) => {
     try {
       setUploadingPhoto(true);
-      const url = await uploadToCloudinary(file, 'Khan Hub/welfare/profile');
-      await updateDoc(doc(db, 'welfare_users', session.uid), { photoUrl: url });
+      const url = await uploadToCloudinary(file, 'Khan Hub/it/profile');
+      await updateDoc(doc(db, 'it_users', session.uid), { photoUrl: url });
       setProfile((p: any) => ({ ...p, photoUrl: url }));
       toast.success('Photo updated');
     } catch (e) {
@@ -113,22 +120,22 @@ export default function ProfilePage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
-      <div className="animate-spin text-green-600"><Loader2 size={40} /></div>
+      <div className="animate-spin text-slate-900"><Loader2 size={40} /></div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] pb-24 text-slate-800 font-sans selection:bg-green-100">
+    <div className="min-h-screen bg-[#f0f2f5] pb-24 text-slate-800 font-sans selection:bg-slate-200">
       <div className="sticky top-0 z-50 px-4 py-6 md:px-12 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-white/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl ${neumorphicOutset} bg-[#f0f2f5] text-green-600`}>
-              <Heart size={28} className="drop-shadow-sm" />
+            <div className={`p-3 rounded-2xl ${neumorphicOutset} bg-[#f0f2f5] text-slate-900`}>
+              <Terminal size={28} className="drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Welfare Portal</h1>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 uppercase">IT Profile</h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-slate-900 animate-pulse" />
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Live Dashboard • {session?.role}</p>
               </div>
             </div>
@@ -145,7 +152,7 @@ export default function ProfilePage() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-4 space-y-8">
           <div className={`p-8 rounded-[3rem] ${glassStyle} flex flex-col items-center relative overflow-hidden`}>
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-slate-900/5 rounded-full blur-3xl" />
             <div className="relative group">
               <div className={`w-32 h-32 rounded-[2.5rem] overflow-hidden ${neumorphicOutset} border-4 border-white/50 relative`}>
                 {profile?.photoUrl ? (
@@ -161,11 +168,11 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-              <button onClick={() => fileRef.current?.click()} className={`absolute -bottom-2 -right-2 p-3 rounded-2xl bg-green-600 text-white shadow-xl hover:scale-110 transition-transform`}><Camera size={18} /></button>
+              <button onClick={() => fileRef.current?.click()} className={`absolute -bottom-2 -right-2 p-3 rounded-2xl bg-slate-900 text-white shadow-xl hover:scale-110 transition-transform`}><Camera size={18} /></button>
               <input ref={fileRef} type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadPhoto(e.target.files[0])} />
             </div>
             <h2 className="mt-6 text-2xl font-black text-slate-900 text-center">{profile?.displayName}</h2>
-            <p className="text-green-600 font-bold text-sm tracking-wide uppercase mt-1">{profile?.designation || 'Welfare Staff'}</p>
+            <p className="text-slate-600 font-bold text-sm tracking-wide uppercase mt-1">{profile?.designation || 'IT Engineer'}</p>
             <div className="mt-8 w-full space-y-4">
               <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}><Mail className="text-slate-400" size={18} /><span className="text-sm font-bold text-slate-600 truncate">{profile?.email}</span></div>
               <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}><Phone className="text-slate-400" size={18} /><span className="text-sm font-bold text-slate-600">{profile?.phone || 'No Phone'}</span></div>
@@ -184,7 +191,7 @@ export default function ProfilePage() {
               { id: 'score', label: 'Score', icon: <TrendingUp size={18} /> },
               { id: 'profile', label: 'Profile', icon: <Info size={18} /> },
             ].map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-6 py-4 rounded-[1.5rem] text-sm font-black transition-all whitespace-nowrap ${activeTab === tab.id ? `bg-green-600 text-white shadow-[4px_4px_10px_rgba(22,163,74,0.3)] scale-105` : `text-slate-400 hover:text-slate-600 hover:bg-slate-200/50`}`}>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-6 py-4 rounded-[1.5rem] text-sm font-black transition-all whitespace-nowrap ${activeTab === tab.id ? `bg-slate-900 text-white shadow-[4px_4px_10px_rgba(0,0,0,0.2)] scale-105` : `text-slate-400 hover:text-slate-600 hover:bg-slate-200/50`}`}>
                 {tab.icon} {tab.label}
               </button>
             ))}
@@ -193,24 +200,24 @@ export default function ProfilePage() {
           <div className={`p-8 md:p-10 rounded-[3.5rem] ${glassStyle} min-h-[500px]`}>
             {activeTab === 'special_tasks' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Daily Special Tasks</h3>
+                <h3 className="text-2xl font-black text-slate-900 mb-8">IT Special Assignments</h3>
                 <div className="space-y-4">
-                  {specialTasks.map(task => (
+                  {specialTasks.length > 0 ? specialTasks.map(task => (
                     <div key={task.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between group hover:scale-[1.01] transition-transform`}>
                       <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-2xl ${task.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>{task.status === 'completed' ? <CheckCircle size={20} /> : <Clock size={20} />}</div>
                         <div><p className={`font-black ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.task}</p><p className="text-[10px] font-black uppercase text-slate-400 mt-1">{formatDateDMY(task.date)}</p></div>
                       </div>
-                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-green-600">+{task.points} PTS</div>
+                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-slate-900">+{task.points} PTS</div>
                     </div>
-                  ))}
+                  )) : <p className="text-slate-400 italic text-center py-10 font-bold">No active special tasks</p>}
                 </div>
               </div>
             )}
 
             {activeTab === 'attendance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Attendance Log</h3>
+                <h3 className="text-2xl font-black text-slate-900 mb-8">System Access Logs (Attendance)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {attendance.map(log => (
                     <div key={log.id} className={`p-5 rounded-[2rem] ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
@@ -225,7 +232,7 @@ export default function ProfilePage() {
             {activeTab === 'finance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-green-600 text-white`}><p className="text-xs font-black uppercase opacity-60">Estimated Payable</p><h4 className="text-4xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4></div>
+                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-slate-900 text-white`}><p className="text-xs font-black uppercase opacity-60">Estimated Payable</p><h4 className="text-4xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4></div>
                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-white text-slate-900`}><p className="text-xs font-black uppercase text-slate-400">Total Deductions</p><h4 className="text-4xl font-black mt-2 text-rose-500">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4></div>
                 </div>
                 <div className="space-y-4">
@@ -241,12 +248,12 @@ export default function ProfilePage() {
 
             {activeTab === 'duty' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                 <h3 className="text-2xl font-black text-slate-900 mb-8">Work Logs & Duties</h3>
+                 <h3 className="text-2xl font-black text-slate-900 mb-8">Work Logs & Sprint Activity</h3>
                  <div className="space-y-4">
                     {duties.map(duty => (
                       <div key={duty.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
                         <div className="flex items-center gap-4"><div className={`p-3 rounded-2xl ${duty.status === 'completed' ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'}`}><Activity size={20} /></div><div><p className="font-black text-slate-900 capitalize">{duty.dutyType.replace(/_/g, ' ')}</p><p className="text-[10px] font-black text-slate-400">{formatDateDMY(duty.date)}</p></div></div>
-                        <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-green-600">+{duty.points} PTS</div>
+                        <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-slate-900">+{duty.points} PTS</div>
                       </div>
                     ))}
                  </div>
@@ -255,12 +262,12 @@ export default function ProfilePage() {
 
             {activeTab === 'dress' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                 <h3 className="text-2xl font-black text-slate-900 mb-8">Dress Code Compliance</h3>
+                 <h3 className="text-2xl font-black text-slate-900 mb-8">Professional Attire Compliance</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {dressLogs.map(log => (
                       <div key={log.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
-                        <div className="flex items-center gap-4"><div className={`p-3 rounded-2xl ${log.status === 'yes' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}><Shirt size={20} /></div><div><p className="font-black text-slate-900">{formatDateDMY(log.date)}</p><p className="text-[10px] font-black text-slate-400">{log.status === 'yes' ? 'Compliant' : 'Non-Compliant'}</p></div></div>
-                        {log.status === 'yes' && <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-green-600">+{log.points} PTS</div>}
+                        <div className="flex items-center gap-4"><div className={`p-3 rounded-2xl ${log.status === 'yes' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'}`}><Shirt size={20} /></div><div><p className="font-black text-slate-900">{formatDateDMY(log.date)}</p><p className="text-[10px] font-black text-slate-400">{log.status === 'yes' ? 'Compliant' : 'Non-Compliant'}</p></div></div>
+                        {log.status === 'yes' && <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-slate-900">+{log.points} PTS</div>}
                       </div>
                     ))}
                  </div>
@@ -269,11 +276,11 @@ export default function ProfilePage() {
 
             {activeTab === 'score' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Performance Score</h3>
+                <h3 className="text-2xl font-black text-slate-900 mb-8">Growth Metrics</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
                       <Award className="mx-auto text-amber-500 mb-2" size={32} />
-                      <p className="text-[10px] font-black uppercase text-slate-400">Total Points</p>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Total Score</p>
                       <h4 className="text-3xl font-black mt-2 text-slate-900">{growthPoints?.totalPoints || 0}</h4>
                    </div>
                 </div>
@@ -282,14 +289,15 @@ export default function ProfilePage() {
 
             {activeTab === 'profile' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Personal Records</h3>
+                <h3 className="text-2xl font-black text-slate-900 mb-8">Infrastructure Credentials</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    <div className="space-y-6">
-                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">National ID (CNIC)</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}><Shield className="text-green-500" size={20} /><p className="text-sm font-bold text-slate-900">{profile?.cnic || 'Not provided'}</p></div></div>
-                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Home Address</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-start gap-4`}><MapPin className="text-green-500 mt-1" size={20} /><p className="text-sm font-bold text-slate-900 leading-relaxed">{profile?.address || 'No address registered.'}</p></div></div>
+                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">National ID (CNIC)</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}><Shield className="text-slate-900" size={20} /><p className="text-sm font-bold text-slate-900">{profile?.cnic || 'Not provided'}</p></div></div>
+                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Home Address</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-start gap-4`}><MapPin className="text-slate-900 mt-1" size={20} /><p className="text-sm font-bold text-slate-900 leading-relaxed">{profile?.address || 'No address registered.'}</p></div></div>
                    </div>
                    <div className="space-y-6">
-                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Work Schedule</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}><Clock className="text-green-500" size={20} /><p className="text-sm font-bold text-slate-900">{profile?.dutyStartTime || '09:00'} - {profile?.dutyEndTime || '17:00'}</p></div></div>
+                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Operating Hours</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}><Clock className="text-slate-900" size={20} /><p className="text-sm font-bold text-slate-900">{profile?.dutyStartTime || '09:00'} - {profile?.dutyEndTime || '17:00'}</p></div></div>
+                      <div><p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Joining Date</p><div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}><Calendar className="text-slate-900" size={20} /><p className="text-sm font-bold text-slate-900">{profile?.joiningDate ? formatDateDMY(profile.joiningDate) : 'Not recorded'}</p></div></div>
                    </div>
                 </div>
               </div>

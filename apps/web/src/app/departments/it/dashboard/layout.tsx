@@ -31,7 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Attendance', href: '/departments/it/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'Student Portal', href: '/departments/it/dashboard/student',        icon: <Laptop size={16}/>,          roles: ['student'] },
   { label: 'Client Portal',  href: '/departments/it/dashboard/client',         icon: <Monitor size={16}/>,         roles: ['client'] },
-  { label: 'Settings',      href: '/departments/it/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'student', 'client', 'superadmin'] },
+  { label: 'My Profile',    href: '/departments/it/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'student', 'client', 'superadmin'] },
 ];
 
 const ROLE_COLORS: Record<ItRole, string> = {
