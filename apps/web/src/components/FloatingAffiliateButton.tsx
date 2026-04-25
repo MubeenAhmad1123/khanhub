@@ -6,6 +6,10 @@ import { Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const FloatingAffiliateButton: React.FC = () => {
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => { setMounted(true); }, []);
+    if (!mounted) return null;
+
     return (
         <div className="fixed bottom-[160px] left-4 z-[9999] pointer-events-none lg:bottom-[104px] lg:left-6 scale-[0.96] lg:scale-100">
             <motion.div

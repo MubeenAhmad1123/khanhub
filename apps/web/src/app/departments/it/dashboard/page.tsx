@@ -70,19 +70,38 @@ export default function ItOverviewPage() {
       try {
         setUserStats(prev => ({ ...prev, loading: true }));
         
-        // Find which department this user belongs to
-        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
+        // Check all session keys in order of likelihood
+        const sessionKeys = ['it_session', 'media_session', 'hq_session', 'rehab_session', 'hospital_session', 'spims_session', 'sukoon_session', 'welfare_session', 'job_center_session'];
+        
         let userDept = '';
         let userData = null;
 
-        for (const d of depts) {
-          const col = d === 'hq' ? 'hq_users' : (d === 'job-center' ? 'jobcenter_users' : (d === 'social-media' ? 'media_users' : `${d.replace('-', '_')}_users`));
-          const docRef = doc(db, col, uid);
-          const snap = await getDoc(docRef);
-          if (snap.exists()) {
-            userDept = d;
-            userData = snap.data();
-            break;
+        for (const key of sessionKeys) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.uid === uid) {
+                userDept = key.replace('_session', '').replace('media', 'social-media').replace('job_center', 'job-center');
+                userData = parsed;
+                break;
+              }
+            } catch(e) {}
+          }
+        }
+
+        // Fallback: search collections if no local session found
+        if (!userDept) {
+          const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
+          for (const d of depts) {
+            const col = d === 'hq' ? 'hq_users' : (d === 'job-center' ? 'jobcenter_users' : (d === 'social-media' ? 'media_users' : `${d.replace('-', '_')}_users`));
+            const docRef = doc(db, col, uid);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+              userDept = d;
+              userData = snap.data();
+              break;
+            }
           }
         }
 
@@ -193,7 +212,7 @@ export default function ItOverviewPage() {
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">System Status: Operational</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tightest text-black uppercase">
-            IT <span className="text-gray-200">&amp;</span> DIGITAL
+            IT <span className="text-gray-200">&</span> DIGITAL
           </h1>
           <p className="text-gray-500 mt-2 font-medium max-w-xl text-sm leading-relaxed">
             Centralized management for infrastructure, development, and social media operations across the KhanHub ecosystem.
