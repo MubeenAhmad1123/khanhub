@@ -248,6 +248,57 @@ export default function StaffProfilePage() {
     return days;
   }, [selectedMonth]);
 
+  const computedScores = useMemo(() => {
+    if (!staff) return { attendance: 0, uniform: 0, working: 0, growthPoint: 0 };
+    
+    const days = daysInMonth();
+    let attScore = 0;
+    let uniScore = 0;
+    let workScore = 0;
+
+    days.forEach(day => {
+      // 1. Attendance: 1 point if present AND not late
+      const att = attendanceMap[day];
+      if (att?.status === 'present' && !att.isLate) {
+        attScore++;
+      }
+
+      // 2. Uniform: 1 point if all items are 'yes'
+      const dress = dressMap[day];
+      if (dress) {
+        const config = staff.dressCodeConfig || [];
+        const items = dress.items || [];
+        const missing = config.filter(c => {
+          const item = items.find(i => i.key === c.key);
+          return !item || item.status === 'no';
+        });
+        if (config.length > 0 && missing.length === 0) uniScore++;
+      }
+
+      // 3. Working: 1 point if all duties are 'completed'
+      const duty = dutyMap[day];
+      if (duty) {
+        const config = staff.dutyConfig || [];
+        const items = duty.duties || [];
+        const pending = config.filter(c => {
+          const item = items.find(i => i.key === c.key);
+          return !item || item.status === 'not_done';
+        });
+        if (config.length > 0 && pending.length === 0) workScore++;
+      }
+    });
+
+    // 4. Growth Points: Total points from history (matches roster card)
+    const gpScore = growthHistory.reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+
+    return {
+      attendance: attScore,
+      uniform: uniScore,
+      working: workScore,
+      growthPoint: gpScore
+    };
+  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth]);
+
   const fetchData = useCallback(async () => {
     if (!staffId) return;
     try {
@@ -298,11 +349,10 @@ export default function StaffProfilePage() {
       const end = days[days.length - 1];
 
       // Robust fetching: Individual catches prevent total page failure if one collection fails
-      const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
+      const [attSnap, dressSnap, dutySnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), limit(1))).catch(e => { console.error('points fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
         getDoc(doc(db, `hq_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
@@ -330,7 +380,10 @@ export default function StaffProfilePage() {
       dutySnap.docs.forEach((d: any) => { duMap[d.data().date] = d.data() as HqDailyDutyRecord; });
       setDutyMap(duMap);
 
-      if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
+      // Populate array states for calculations and lists
+      setAttendance(attSnap.docs.map((d: any) => d.data()));
+      setDressLogs(dressSnap.docs.map((d: any) => d.data()));
+      setDutyLogs(dutySnap.docs.map((d: any) => d.data()));
       setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
       setSpecialTasks(tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
 
@@ -1186,13 +1239,8 @@ export default function StaffProfilePage() {
             {/* Score Card */}
             <ScoreCard
               staffName={staff?.name || 'Staff'}
-              month={growthPoints?.month || new Date().toISOString().slice(0, 7)}
-              scores={growthPoints ? {
-                attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
-                uniform: growthPoints.dressCode || 0,
-                working: growthPoints.duties || 0,
-                growthPoint: (growthPoints.contributions || 0) + (growthPoints.extra || 0)
-              } : { attendance: 0, uniform: 0, working: 0, growthPoint: 0 }}
+              month={selectedMonth}
+              scores={computedScores}
               darkMode={isDark}
             />
           </div>
