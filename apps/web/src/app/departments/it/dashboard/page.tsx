@@ -38,6 +38,7 @@ export default function ItOverviewPage() {
   const [showContributionModal, setShowContributionModal] = useState(false);
   const [contributionText, setContributionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -140,13 +141,18 @@ export default function ItOverviewPage() {
         date: new Date().toISOString().split('T')[0],
         createdAt: serverTimestamp()
       });
-      toast.success("Contribution submitted for review!");
+      
+      setSubmitted(true);
       setContributionText('');
-      setShowContributionModal(false);
+      
+      setTimeout(() => {
+        setShowContributionModal(false);
+        setSubmitted(false);
+      }, 2000);
+
     } catch (err) {
       console.error(err);
       toast.error("Failed to submit contribution");
-    } finally {
       setSubmitting(false);
     }
   };
@@ -267,32 +273,44 @@ export default function ItOverviewPage() {
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Submit growth points for verification</p>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Description of Contribution</label>
-                <textarea
-                  className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-3xl p-6 text-sm font-bold outline-none min-h-[150px] transition-all"
-                  placeholder="What did you achieve or contribute today?"
-                  value={contributionText}
-                  onChange={e => setContributionText(e.target.value)}
-                />
+            {submitted ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in zoom-in duration-500">
+                <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 border-4 border-emerald-500/20 shadow-lg shadow-emerald-500/10">
+                  <CheckCircle size={40} className="animate-bounce" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black uppercase tracking-tight text-black">Submitted!</h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Pending manager verification</p>
+                </div>
               </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Description of Contribution</label>
+                  <textarea
+                    className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-3xl p-6 text-sm font-bold outline-none min-h-[150px] transition-all"
+                    placeholder="What did you achieve or contribute today?"
+                    value={contributionText}
+                    onChange={e => setContributionText(e.target.value)}
+                  />
+                </div>
 
-              <button
-                onClick={handleSubmitContribution}
-                disabled={submitting || !contributionText.trim()}
-                className="w-full bg-black text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {submitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle size={18} />
-                    Submit for Approval
-                  </>
-                )}
-              </button>
-            </div>
+                <button
+                  onClick={handleSubmitContribution}
+                  disabled={submitting || !contributionText.trim()}
+                  className="w-full bg-black text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle size={18} />
+                      Submit for Approval
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

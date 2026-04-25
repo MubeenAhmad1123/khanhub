@@ -388,23 +388,48 @@ export default function StaffSelfPage() {
         <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Lightbulb size={18} className="text-amber-400" />
-            <h2 className="font-black text-white">Your Contribution Today</h2>
+            <h2 className="font-black text-white uppercase tracking-tight">Record Contribution</h2>
           </div>
-          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the rehab center.</p>
-          <textarea
-            rows={3}
-            placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."
-            className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
-            value={contributionText}
-            onChange={e => setContributionText(e.target.value)}
-          />
-          <button
-            onClick={handleContribution}
-            disabled={contribLoading || !contributionText.trim()}
-            className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
-          >
-            {submitted ? '✓ Submitted' : contribLoading ? 'Submitting...' : 'Submit'}
-          </button>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Submit growth points for verification</p>
+          
+          {submitted ? (
+            <div className="py-8 flex flex-col items-center justify-center text-center space-y-3 animate-in fade-in zoom-in duration-500">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border-2 border-emerald-500/20 shadow-lg shadow-emerald-500/10">
+                <CheckCircle size={32} className="animate-bounce" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">Submitted!</h3>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Pending manager verification</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1 mb-4">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Description of Contribution</label>
+                <textarea
+                  rows={3}
+                  placeholder="What did you achieve or contribute today?"
+                  className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
+                  value={contributionText}
+                  onChange={e => setContributionText(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={handleContribution}
+                disabled={contribLoading || !contributionText.trim()}
+                className="w-full py-4 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {contribLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <>
+                    <Send size={14} />
+                    Submit for Approval
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Past Contributions */}

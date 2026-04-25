@@ -382,13 +382,14 @@ export default function StaffSelfPage() {
           </div>
         )}
 
-        {/* Daily Contribution */}
+        {/* Record Contribution */}
         <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Lightbulb size={18} className="text-amber-400" />
-            <h2 className="font-black text-white">Your Contribution Today</h2>
+            <h2 className="font-black text-white text-lg">Record Contribution</h2>
           </div>
-          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the hospital.</p>
+          <p className="text-slate-400 text-xs mb-4 font-medium italic">Submit growth points for verification</p>
+          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Description of Contribution</p>
           <textarea
             rows={3}
             placeholder="e.g. Conducted patient rounds, assisted in lab tests, improved registration flow..."
@@ -398,10 +399,22 @@ export default function StaffSelfPage() {
           />
           <button
             onClick={handleContribution}
-            disabled={contribLoading || !contributionText.trim()}
-            className="w-full py-3 mt-3 rounded-2xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
+            disabled={contribLoading || submitted || !contributionText.trim()}
+            className="w-full py-3 mt-3 rounded-2xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
           >
-            {submitted ? '✓ Submitted' : contribLoading ? 'Submitting...' : 'Submit'}
+            {submitted ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle size={14} />
+                <span>Submitted</span>
+              </div>
+            ) : contribLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 size={14} className="animate-spin" />
+                <span>Submitting...</span>
+              </div>
+            ) : (
+              'Submit for Verification'
+            )}
           </button>
         </div>
 
