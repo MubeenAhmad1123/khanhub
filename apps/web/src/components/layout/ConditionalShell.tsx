@@ -15,6 +15,7 @@ export default function ConditionalShell({ children }: { children: React.ReactNo
                                pathname.startsWith('/departments/job-center/') ||
                                pathname.startsWith('/departments/hospital/') ||
                                pathname.startsWith('/departments/sukoon/') ||
+                               pathname.startsWith('/departments/it/') ||
                                pathname.startsWith('/hq/');
 
   if (isDepartmentDashboard) {

@@ -39,6 +39,7 @@ export default function ItOverviewPage() {
   const [contributionText, setContributionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [hasContributedToday, setHasContributedToday] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -123,7 +124,25 @@ export default function ItOverviewPage() {
     }
 
     fetchPersonalStats();
-  }, [session]);
+
+    // Check if contributed today
+    async function checkContribution() {
+      if (!session?.uid || !userStats.dept) return;
+      const prefix = getDeptPrefix(userStats.dept as any);
+      const today = new Date().toISOString().split('T')[0];
+      const q = query(
+        collection(db, `${prefix}_contributions`),
+        where('staffId', '==', session.uid),
+        where('date', '==', today),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setHasContributedToday(true);
+      }
+    }
+    checkContribution();
+  }, [session, userStats.dept]);
 
   const handleSubmitContribution = async () => {
     if (!contributionText.trim() || !userStats.dept || !session?.uid) return;
@@ -143,6 +162,7 @@ export default function ItOverviewPage() {
       });
       
       setSubmitted(true);
+      setHasContributedToday(true);
       setContributionText('');
       
       setTimeout(() => {
@@ -245,10 +265,12 @@ export default function ItOverviewPage() {
           <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-gray-400">Value Addition</p>
           <h2 className="text-4xl font-black tracking-tighter mb-4 uppercase">Contribution</h2>
           <p className="text-sm font-bold uppercase tracking-tight text-gray-500 max-w-xs leading-snug">
-            Record growth milestones, suggest improvements, or log daily value added.
+            {hasContributedToday 
+              ? "You've already recorded your daily contribution. Great job!" 
+              : "Record growth milestones, suggest improvements, or log daily value added."}
           </p>
-          <div className="mt-8 w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10">
-            <Plus size={28} />
+          <div className={`mt-8 w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10 ${hasContributedToday ? 'bg-emerald-500 text-white' : 'bg-black text-white'}`}>
+            {hasContributedToday ? <CheckCircle size={28} /> : <Plus size={28} />}
           </div>
         </button>
       </div>
@@ -297,11 +319,16 @@ export default function ItOverviewPage() {
 
                 <button
                   onClick={handleSubmitContribution}
-                  disabled={submitting || !contributionText.trim()}
+                  disabled={submitting || hasContributedToday || !contributionText.trim()}
                   className="w-full bg-black text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   {submitting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : hasContributedToday ? (
+                    <>
+                      <CheckCircle size={18} />
+                      Already Submitted Today
+                    </>
                   ) : (
                     <>
                       <CheckCircle size={18} />
