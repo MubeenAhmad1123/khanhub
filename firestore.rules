@@ -937,8 +937,10 @@ service cloud.firestore {
     //   {dept}_staff, {dept}_attendance, {dept}_duty_logs
     // is automatically manageable from HQ by manager/superadmin/cashier.
     match /{collectionId}/{docId} {
-      allow read: if (isHqTier1()
-        && (
+      allow read: if (
+        isHqTier1()
+        || (isAuth() && (docId == request.auth.uid || (resource != null && resource.data.get('staffId', '') == request.auth.uid)))
+      ) && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
           || collectionId.matches('^[a-z0-9_-]+_duty_logs$')
@@ -954,8 +956,12 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
-        )) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
-      allow create, update: if (isHqSuperOrManager() || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$')))
+        ) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
+      allow create, update: if (
+        isHqSuperOrManager() 
+        || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$'))
+        || (isAuth() && request.resource.data.staffId == request.auth.uid && collectionId.matches('^[a-z0-9_-]+_contributions$'))
+      )
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
