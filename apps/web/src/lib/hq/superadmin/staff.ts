@@ -338,20 +338,49 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
 export async function updateStaffProfile(
   compositeId: string,
   updates: any
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; newId?: string }> {
   const idx = compositeId.indexOf('_');
   if (idx <= 0) return { success: false, error: 'Invalid ID' };
-  const dept = compositeId.slice(0, idx) as StaffDept;
+  const currentDept = compositeId.slice(0, idx) as StaffDept;
   const uid = compositeId.slice(idx + 1);
 
-  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) return { success: false, error: 'Invalid department' };
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(currentDept)) {
+    return { success: false, error: 'Invalid department' };
+  }
 
-  const col = getDeptCollection(dept);
-  const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
+  const { updateDoc, setDoc, getDoc, deleteDoc, doc: firestoreDoc } = await import('firebase/firestore');
 
   try {
-    const docRef = firestoreDoc(db, col, uid);
-    await updateDoc(docRef, updates);
+    const oldCol = getDeptCollection(currentDept);
+    const oldDocRef = firestoreDoc(db, oldCol, uid);
+
+    // Handle department change (Migration)
+    if (updates.dept && updates.dept !== currentDept) {
+      const newDept = updates.dept as StaffDept;
+      const newCol = getDeptCollection(newDept);
+      const newDocRef = firestoreDoc(db, newCol, uid);
+
+      // 1. Get current data to preserve fields not in updates
+      const snap = await getDoc(oldDocRef);
+      if (!snap.exists()) return { success: false, error: 'Staff member not found' };
+      const currentData = snap.data();
+
+      // 2. Create new document in target collection
+      await setDoc(newDocRef, {
+        ...currentData,
+        ...updates,
+        updatedAt: new Date()
+      });
+
+      // 3. Delete old document
+      await deleteDoc(oldDocRef);
+
+      // 4. Return new composite ID
+      return { success: true, newId: `${newDept}_${uid}` };
+    }
+
+    // Standard update within same collection
+    await updateDoc(oldDocRef, updates);
     return { success: true };
   } catch (err: any) {
     console.error('Update failed:', err);

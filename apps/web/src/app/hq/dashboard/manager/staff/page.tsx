@@ -274,7 +274,7 @@ export default function ManagerStaffPage() {
                 </div>
 
                 <h3 className={`text-base font-black transition-colors ${darkMode ? 'text-white group-hover:text-teal-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{s.name}</h3>
-                <p className={`text-[9px] font-black uppercase tracking-widest mt-1 mb-3 transition-colors ${darkMode ? 'text-slate-500' : 'text-black'}`}>{s.designation || 'Staff Member'}</p>
+                <p className={`text-[10px] font-black uppercase tracking-widest mt-1.5 mb-4 px-3 py-1 rounded-lg border transition-colors ${darkMode ? 'bg-white/5 text-teal-400 border-teal-500/20' : 'bg-gray-900 text-white border-black shadow-sm'}`}>{s.designation || 'Staff Member'}</p>
 
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                   <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-widest transition-colors ${darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-black border-gray-100'

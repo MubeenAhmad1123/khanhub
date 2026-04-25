@@ -524,7 +524,6 @@ export default function DailyReportPage() {
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">GP</th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Score (4)</th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Fine</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-right print:hidden">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -537,7 +536,7 @@ export default function DailyReportPage() {
                         </div>
                         <div>
                           <p className="font-black text-xs text-gray-900 dark:text-black truncate max-w-[120px]">{row.name}</p>
-                          <p className="text-[9px] font-bold text-black uppercase tracking-widest">{row.designation}</p>
+                          <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">{row.designation}</p>
                         </div>
                       </div>
                     </td>
@@ -615,20 +614,6 @@ export default function DailyReportPage() {
                       )}
                     </td>
 
-                    <td className="px-6 py-5 text-right print:hidden">
-                      <select
-                        value={row.attendance}
-                        onChange={(e) => handleUpdateStatus(row.id, e.target.value as any)}
-                        className={`px-3 py-1.5 rounded-xl border-none outline-none text-[9px] font-black uppercase tracking-widest cursor-pointer transition-all ${isDark ? 'bg-white/5 text-indigo-400 hover:bg-white/10' : 'bg-gray-50 text-indigo-600 hover:bg-indigo-50'
-                          }`}
-                      >
-                        <option value="unmarked">Unmarked</option>
-                        <option value="present">Present</option>
-                        <option value="late">Late</option>
-                        <option value="absent">Absent</option>
-                        <option value="leave">Leave</option>
-                      </select>
-                    </td>
                   </tr>
                 ))}
               </tbody>

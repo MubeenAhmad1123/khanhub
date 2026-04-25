@@ -1013,8 +1013,16 @@ export default function StaffProfilePage() {
       if (!res.success) throw new Error(res.error);
 
       toast.success("Profile updated successfully");
-      fetchData();
+      
+      if (res.newId) {
+        // Redirect to new ID if department changed
+        router.replace(`/hq/dashboard/manager/staff/${res.newId}`);
+      } else {
+        fetchData();
+        setActiveTab('profile');
+      }
     } catch (error) {
+      console.error(error);
       toast.error("Failed to update profile");
     } finally {
       setSaving(false);
