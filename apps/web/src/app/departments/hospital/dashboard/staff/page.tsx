@@ -254,20 +254,18 @@ export default function StaffSelfPage() {
     );
   }
 
-  // --- Styles ---
-  const glassStyle = "bg-white/70 backdrop-blur-xl border border-white shadow-[20px_20px_60px_#d1d9e6,-20px_-20px_60px_#ffffff]";
-  const neumorphicOutset = "shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]";
-  const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
+  // --- Styles (Cream/Black Brutalist) ---
+  const glassStyle = "bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all";
 
   return (
-    <div className="min-h-screen bg-[#FCFBF8] text-slate-900 pb-24 overflow-x-hidden">
+    <div className="min-h-screen bg-[#FCFBF8] text-black pb-24 overflow-x-hidden font-bold">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-gray-900">
-              {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'},
+            <h1 className="text-4xl font-[1000] tracking-tighter text-black uppercase">
+              {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},
               <span className="block text-indigo-600">{user?.displayName?.split(' ')[0]}</span>
             </h1>
             <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mt-2">
@@ -281,7 +279,7 @@ export default function StaffSelfPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <div className={`p-5 rounded-[2rem] ${glassStyle}`}>
+          <div className={`p-5 ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
                 <Trophy size={16} />
@@ -290,7 +288,7 @@ export default function StaffSelfPage() {
             </div>
             <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
           </div>
-          <div className={`p-5 rounded-[2rem] ${glassStyle}`}>
+          <div className={`p-5 ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
                 <Activity size={16} />
@@ -340,65 +338,9 @@ export default function StaffSelfPage() {
           </div>
         )}
 
-        {/* Attendance Action Card */}
-        <div className={`p-8 rounded-[2.5rem] border-2 border-white relative overflow-hidden ${glassStyle}`}>
-          <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12">
-            <Clock size={120} strokeWidth={3} />
-          </div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                <Clock size={20} />
-              </div>
-              <h2 className="text-xl font-black text-gray-900">Work Session</h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 mb-8">
-              <div className={`p-6 rounded-3xl text-center bg-white/50 border border-white ${neumorphicInset}`}>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Check In</p>
-                <p className={`text-2xl font-black font-mono ${todayRecord?.checkInTime ? 'text-emerald-600' : 'text-slate-300'}`}>
-                  {todayRecord?.checkInTime ? todayRecord.checkInTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
-                </p>
-              </div>
-              <div className={`p-6 rounded-3xl text-center bg-white/50 border border-white ${neumorphicInset}`}>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Check Out</p>
-                <p className={`text-2xl font-black font-mono ${todayRecord?.checkOutTime ? 'text-indigo-600' : 'text-slate-300'}`}>
-                  {todayRecord?.checkOutTime ? todayRecord.checkOutTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
-                </p>
-              </div>
-            </div>
-
-            {todayRecord?.checkOutTime ? (
-              <div className="w-full py-5 rounded-2xl bg-slate-100 text-slate-400 font-black text-xs uppercase tracking-widest text-center border border-slate-200">
-                Session Completed
-              </div>
-            ) : (
-              <button
-                onClick={handleCheckIn}
-                disabled={checkLoading}
-                className={`w-full py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 ${
-                  todayRecord?.checkInTime 
-                    ? 'bg-red-500 text-white shadow-red-200' 
-                    : 'bg-indigo-600 text-white shadow-indigo-200 animate-pulse'
-                }`}
-              >
-                {checkLoading ? <Loader2 size={18} className="animate-spin" /> : todayRecord?.checkInTime ? <LogOut size={18} /> : <LogIn size={18} />}
-                {checkLoading ? 'Syncing...' : todayRecord?.checkInTime ? 'End Session' : 'Start Session'}
-              </button>
-            )}
-            
-            {todayRecord?.isLate && (
-              <div className="mt-4 flex items-center gap-2 text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 p-3 rounded-xl border border-red-100">
-                <AlertCircle size={12} />
-                Late by {todayRecord.lateByMinutes} mins — Fine Applied
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Contribution Section */}
-        <div className={`p-8 rounded-[2.5rem] border-2 border-white ${glassStyle}`}>
+        <div className={`p-8 border-4 border-black ${glassStyle}`}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
               <Lightbulb size={20} />
@@ -408,20 +350,20 @@ export default function StaffSelfPage() {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
           
           <div className="space-y-4">
-            <div className={`p-2 rounded-[2rem] bg-white/50 ${neumorphicInset}`}>
+            <div className="p-2 border-2 border-black bg-white">
               <textarea
                 value={contributionText}
                 onChange={(e) => setContributionText(e.target.value)}
                 placeholder="What did you achieve or contribute today?"
                 rows={4}
-                className="w-full bg-transparent p-6 text-sm font-bold text-slate-700 outline-none resize-none placeholder:text-slate-300"
+                className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
               />
             </div>
             
             <button
               onClick={handleContribution}
               disabled={contribLoading || hasContributedToday || !contributionText.trim()}
-              className="w-full py-5 rounded-[1.5rem] bg-gray-900 text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-gray-200"
+              className="w-full py-5 bg-black text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
             >
               {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
@@ -459,7 +401,7 @@ export default function StaffSelfPage() {
 
         {/* Duties Section */}
         {staffProfile?.duties?.length > 0 && (
-          <div className={`p-8 rounded-[2.5rem] border-2 border-white ${glassStyle}`}>
+          <div className={`p-8 border-4 border-black ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
                 <List size={20} />
