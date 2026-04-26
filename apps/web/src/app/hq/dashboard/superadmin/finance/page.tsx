@@ -35,6 +35,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn, formatDateDMY, parseDateDMY } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import LogoLoader from "@/components/ui/LogoLoader";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function todayLocalDateString() {
@@ -351,11 +352,8 @@ export default function SuperadminFinancePage() {
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading && !summary) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-white dark:bg-black space-y-8">
-        <div className="relative w-24 h-24">
-          <div className="absolute inset-0 border-8 border-primary/20 rounded-[2rem]" />
-          <div className="absolute inset-0 border-8 border-primary border-t-transparent rounded-[2rem] animate-spin" />
-        </div>
+      <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF8] space-y-8">
+        <LogoLoader size="xl" showText={true} />
         <div className="text-center">
           <div className="text-xs font-black uppercase tracking-[0.5em] text-primary mb-2 animate-pulse font-bold">
             Constructing Financial Data Hub
@@ -369,7 +367,7 @@ export default function SuperadminFinancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background dark:bg-black font-sans selection:bg-primary selection:text-white">
+    <div className="min-h-screen bg-[#FCFBF8] font-sans selection:bg-primary selection:text-white">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 px-8 py-6 backdrop-blur-3xl border-b border-border/20 flex flex-wrap items-center justify-between gap-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
@@ -378,7 +376,7 @@ export default function SuperadminFinancePage() {
           <div className="flex items-center gap-3 text-[10px] text-primary font-bold uppercase tracking-widest mb-1">
             <TrendingUp className="w-4 h-4" /> HQ Financial Dashboard
           </div>
-          <h1 className="text-4xl font-bold text-black dark:text-white tracking-tight uppercase leading-none">
+          <h1 className="text-4xl font-bold text-black tracking-tight uppercase leading-none">
             Central <span className="text-primary tracking-normal font-black">Oversight</span>
           </h1>
         </div>
@@ -405,7 +403,7 @@ export default function SuperadminFinancePage() {
               onClick={() => setViewMode('terminal')}
               className={cn(
                 "flex items-center gap-2 px-6 py-2.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all shadow-sm",
-                viewMode === 'terminal' ? "bg-black dark:bg-white text-white dark:text-black shadow-xl" : "text-muted-foreground hover:bg-muted"
+                viewMode === 'terminal' ? "bg-black text-white shadow-xl" : "text-muted-foreground hover:bg-muted"
               )}
             >
               <Terminal className="w-4 h-4" /> Terminal
@@ -429,10 +427,10 @@ export default function SuperadminFinancePage() {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
             <Sparkles className="w-12 h-12 text-primary" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
             Today's Collection
           </span>
-          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
+          <div className="text-3xl font-bold tracking-tight text-black">
             Rs. {summary?.collectedToday.toLocaleString()}
           </div>
           <div className={cn(
@@ -446,10 +444,10 @@ export default function SuperadminFinancePage() {
 
         {/* 2. Today's Pending */}
         <div className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
             Today's Pending
           </span>
-          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
+          <div className="text-3xl font-bold tracking-tight text-black">
             Rs. {summary?.pendingAmountToday.toLocaleString()}
           </div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-500">
@@ -459,10 +457,10 @@ export default function SuperadminFinancePage() {
 
         {/* 3. Remaining Balance */}
         <div className="p-8 rounded-[2.5rem] bg-rose-500/5 border border-rose-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
             Remaining Balance
           </span>
-          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
+          <div className="text-3xl font-bold tracking-tight text-black">
             Rs. {summary?.outstandingTotal.toLocaleString()}
           </div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500">
@@ -472,10 +470,10 @@ export default function SuperadminFinancePage() {
 
         {/* 4. Need Approval */}
         <div className="p-8 rounded-[2.5rem] bg-muted/20 border border-border/50 backdrop-blur-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-lg">
-          <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-4 block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
             Need Approval
           </span>
-          <div className="text-3xl font-bold tracking-tight text-black dark:text-white uppercase tracking-tighter">
+          <div className="text-3xl font-bold tracking-tight text-black uppercase tracking-tighter">
             {summary?.pendingApprovals} <span className="text-sm font-black text-primary">Task Queue</span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
@@ -484,7 +482,7 @@ export default function SuperadminFinancePage() {
         </div>
 
         {/* 5. Monthly Total */}
-        <div className="p-8 rounded-[2.5rem] bg-black dark:bg-white border text-white dark:text-black shadow-2xl relative overflow-hidden group">
+        <div className="p-8 rounded-[2.5rem] bg-white border-2 border-black text-black shadow-2xl relative overflow-hidden group">
           <span className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-4 block">Monthly Total</span>
           <div className="text-3xl font-bold tracking-tight">
             Rs. {summary?.collectedThisMonth.toLocaleString()}
@@ -497,7 +495,7 @@ export default function SuperadminFinancePage() {
 
       {/* ── Date Filter Panel ────────────────────────────────────────────────── */}
       <div className="px-8 mt-10">
-        <div className="rounded-[2.5rem] border border-border/50 bg-white/60 dark:bg-white/[0.03] backdrop-blur-xl p-8">
+        <div className="bg-white/80 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
             {/* Label */}
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -508,7 +506,7 @@ export default function SuperadminFinancePage() {
                 <p className="text-xs font-black uppercase tracking-widest text-primary mb-0.5">
                   Historical Date Filter
                 </p>
-                <p className="text-sm font-semibold text-black dark:text-white">
+                <p className="text-sm font-semibold text-black">
                   View any past date's departmental breakdown
                 </p>
               </div>
@@ -530,7 +528,7 @@ export default function SuperadminFinancePage() {
                   }
                 }}
                 className={cn(
-                  "flex-1 sm:max-w-xs px-5 py-3.5 rounded-2xl border border-border/50 bg-white dark:bg-black text-black dark:text-white text-sm font-bold",
+                  "flex-1 sm:max-w-xs px-5 py-3.5 rounded-2xl border border-border/50 bg-white border-2 border-black text-black",
                   "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all",
                   "hover:border-primary/30 cursor-pointer"
                 )}
@@ -684,28 +682,28 @@ export default function SuperadminFinancePage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex-1 p-10 rounded-[4rem] border-2 border-border/20 bg-muted/20 backdrop-blur-md space-y-10 overflow-y-auto max-h-[80vh] custom-scrollbar"
+              className="flex-1 p-10 rounded-[4rem] border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-10 overflow-y-auto max-h-[80vh] custom-scrollbar"
             >
               {/* Pulse Velocity Matrix */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="rounded-[3rem] border border-border/50 bg-white dark:bg-black p-10 shadow-sm overflow-hidden">
-                  <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black dark:text-white">
+                <div className="rounded-[3rem] border border-border/50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                  <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black">
                     Pulse velocity matrix
                   </h2>
                   <div className="space-y-4">
                     {data.map((dept) => (
                       <div key={dept.deptId} className="flex items-center justify-between p-6 rounded-3xl bg-gray-50 dark:bg-white/[0.03] border border-transparent hover:border-primary/20 transition-all group">
                         <div className="flex items-center gap-4">
-                          <div className="p-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-xl group-hover:scale-110 transition-transform">
+                          <div className="p-4 rounded-2xl bg-black text-white shadow-xl group-hover:scale-110 transition-transform">
                             <Database className="w-5 h-5" />
                           </div>
                           <div>
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-black">Terminal: {dept.deptId}</p>
-                            <p className="text-base font-bold text-black dark:text-white uppercase tracking-tight">{dept.deptName}</p>
+                            <p className="text-base font-bold text-black uppercase tracking-tight">{dept.deptName}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-black dark:text-white">RS {dept.totalIncome.toLocaleString()}</p>
+                          <p className="text-lg font-bold text-black">RS {dept.totalIncome.toLocaleString()}</p>
                           <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-500">{dept.percentOfTotal.toFixed(1)}% Share</p>
                         </div>
                       </div>
@@ -713,8 +711,8 @@ export default function SuperadminFinancePage() {
                   </div>
                 </div>
 
-                <div className="rounded-[3rem] border border-border/50 bg-white dark:bg-black p-10 shadow-sm overflow-hidden">
-                  <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black dark:text-white">
+                <div className="rounded-[3rem] border border-border/50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                  <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black">
                     Recent System Closings
                   </h2>
                   <div className="space-y-4 flex flex-col justify-center h-[calc(100%-80px)] items-center opacity-30 group">
@@ -728,7 +726,7 @@ export default function SuperadminFinancePage() {
               </div>
 
               {/* Drill Down CTA */}
-              <div className="flex flex-col items-center justify-center py-20 border-4 border-dashed border-border/20 rounded-[4rem] group hover:border-primary/20 transition-all bg-white dark:bg-black/20">
+              <div className="flex flex-col items-center justify-center py-20 border-4 border-dashed border-black/10 rounded-[4rem] group hover:border-black/20 transition-all bg-white">
                 <Sparkles className="w-20 h-20 text-muted-foreground group-hover:text-primary transition-all duration-700 mb-6 scale-90 group-hover:scale-110" />
                 <h3 className="text-xl font-bold uppercase tracking-tight mb-2">Deep Operational Drill-Down</h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-10 opacity-60">
@@ -736,7 +734,7 @@ export default function SuperadminFinancePage() {
                 </p>
                 <button
                   onClick={() => setViewMode('visual')}
-                  className="px-12 py-5 rounded-3xl bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-4"
+                  className="px-12 py-5 rounded-3xl bg-black text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-4"
                 >
                   Open Visual Control Hub
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

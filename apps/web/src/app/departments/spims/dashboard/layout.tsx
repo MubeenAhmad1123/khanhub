@@ -73,6 +73,13 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const pathname = usePathname();
 
+  const [user, setUser] = useState<any>(null);
+  const [isChecking, setIsChecking] = useState(true);
+  const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
+  const [isHqAdmin, setIsHqAdmin] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const handleSignOut = useCallback(() => {
     localStorage.removeItem('spims_session');
     const hqSessionStr = localStorage.getItem('hq_session');
@@ -232,12 +239,12 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
                         onClick={() => setPortalOpen(false)}
                         className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all group ${
                           pathname.includes(key)
-                            ? (darkMode ? 'bg-white/10 text-white' : 'bg-teal-50 text-teal-700')
-                            : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-600 hover:text-teal-600')
+                            ? 'bg-teal-50 text-teal-700'
+                            : 'hover:bg-gray-50 text-gray-600 hover:text-teal-600'
                         }`}
                       >
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-teal-500 text-white' : (darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100')
+                          pathname.includes(key) ? 'bg-teal-500 text-white' : 'bg-gray-100'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>

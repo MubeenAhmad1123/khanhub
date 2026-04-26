@@ -169,7 +169,8 @@ export default function StaffProfilePage() {
   const [specialTasks, setSpecialTasks] = useState<HqSpecialTask[]>([]);
   const [newTaskText, setNewTaskText] = useState('');
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [newTaskRecurrence, setNewTaskRecurrence] = useState<'once' | 'weekly' | 'monthly'>('once');
+  const [newTaskRecurrence, setNewTaskRecurrence] = useState<'once' | 'weekly' | 'monthly' | 'custom_days'>('once');
+  const [newTaskIntervalDays, setNewTaskIntervalDays] = useState<number>(15);
   const [creatingTask, setCreatingTask] = useState(false);
 
   // Meeting Form
@@ -858,9 +859,11 @@ export default function StaffProfilePage() {
         description: newTaskText,
         status: 'assigned',
         recurrence: newTaskRecurrence,
+        intervalDays: newTaskRecurrence === 'custom_days' ? newTaskIntervalDays : undefined,
         assignedBy: session?.uid || '',
         assignedByName: session?.name || '',
         createdAt: new Date().toISOString(),
+        dueDate: new Date().toISOString(), // Default to today
       };
       const docRef = await addDoc(collection(db, `${slug}_special_tasks`), newTask);
       setSpecialTasks([{ id: docRef.id, ...newTask } as HqSpecialTask, ...specialTasks]);
@@ -900,6 +903,32 @@ export default function StaffProfilePage() {
           extra: increment(1),
           total: increment(1)
         }).catch(e => console.log('Growth doc might not exist yet', e));
+
+        // Handle Recurrence
+        const taskSnap = await getDoc(doc(db, `${prefix}_special_tasks`, taskId));
+        const taskData = taskSnap.data() as HqSpecialTask;
+        
+        if (taskData && taskData.recurrence && taskData.recurrence !== 'once') {
+          const nextDate = new Date();
+          if (taskData.recurrence === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+          else if (taskData.recurrence === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+          else if (taskData.recurrence === 'custom_days' && taskData.intervalDays) {
+            nextDate.setDate(nextDate.getDate() + taskData.intervalDays);
+          }
+
+          const nextTask: Partial<HqSpecialTask> = {
+            staffId: staff.staffId,
+            description: taskData.description,
+            status: 'assigned',
+            recurrence: taskData.recurrence,
+            intervalDays: taskData.intervalDays,
+            assignedBy: taskData.assignedBy,
+            assignedByName: taskData.assignedByName,
+            createdAt: new Date().toISOString(),
+            dueDate: nextDate.toISOString(),
+          };
+          await addDoc(collection(db, `${prefix}_special_tasks`), nextTask);
+        }
       }
       toast.success(`Task marked as ${newStatus}`);
       fetchData();
@@ -1800,7 +1829,20 @@ export default function StaffProfilePage() {
                       <option value="once">Once</option>
                       <option value="weekly">Weekly</option>
                       <option value="monthly">Monthly</option>
+                      <option value="custom_days">Custom Days</option>
                     </select>
+                    {newTaskRecurrence === 'custom_days' && (
+                      <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
+                        <input
+                          type="number"
+                          className={`w-20 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                          value={newTaskIntervalDays}
+                          onChange={e => setNewTaskIntervalDays(Number(e.target.value))}
+                          min={1}
+                        />
+                        <span className="text-[10px] font-black uppercase text-black">Days</span>
+                      </div>
+                    )}
                     <button
                       onClick={handleCreateSpecialTask}
                       disabled={creatingTask || !newTaskText.trim()}

@@ -110,6 +110,8 @@ export default function CashierStationPage() {
     pendingCount: 0,
     topDept: 'N/A'
   });
+  const [entityHistory, setEntityHistory] = useState<any[]>([]);
+  const [entityHistoryLoading, setEntityHistoryLoading] = useState(false);
   const [historyTo, setHistoryTo] = useState('');
   const [historyStats, setHistoryStats] = useState({ income: 0, expense: 0, count: 0, students: 0, patients: 0, clients: 0 });
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
@@ -275,16 +277,54 @@ export default function CashierStationPage() {
     }
   }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
 
+  const fetchEntityHistory = useCallback(async (entity: any) => {
+    if (!entity?.id) return;
+    try {
+      setEntityHistoryLoading(true);
+      const q = query(
+        collection(db, activeDepartment.txCollection),
+        where(isStaffMode ? 'staffId' : (activeDepartment.code === 'welfare' ? 'donorId' : 'patientId'), '==', entity.id),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
+      const snap = await getDocs(q);
+      setEntityHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error('[HQ Cashier] fetchEntityHistory Error:', err);
+    } finally {
+      setEntityHistoryLoading(false);
+    }
+  }, [activeDepartment, isStaffMode]);
+
+  useEffect(() => {
+    if (selectedEntity) {
+      fetchEntityHistory(selectedEntity);
+    } else {
+      setEntityHistory([]);
+    }
+  }, [selectedEntity, fetchEntityHistory]);
+
   const handleDeleteTransaction = async (tx: any) => {
-    if (!window.confirm('Are you sure you want to PERMANENTLY DELETE this pending transaction? This action cannot be undone.')) return;
+    const isPermanent = tx.status === 'approved' || tx.status === 'rejected';
+    const msg = isPermanent 
+      ? 'WARNING: This transaction is already PROCESSED. Deleting it will permanently remove it from the ledger and financial records. Are you ABSOLUTELY SURE?' 
+      : 'Are you sure you want to PERMANENTLY DELETE this transaction? This action cannot be undone.';
+    
+    if (!window.confirm(msg)) return;
     try {
       setProcessing(true);
-      const dept = DEPARTMENTS.find(d => d.code === tx.departmentCode);
-      if (!dept) throw new Error('Department not found');
+      const dept = DEPARTMENTS.find(d => d.code === tx.departmentCode) || activeDepartment;
       const { deleteDoc, doc } = await import('firebase/firestore');
       await deleteDoc(doc(db, dept.txCollection, tx.id));
-      toast.success('Transaction deleted from database');
+      
+      // If it was a fee payment in SPIMS, we might want to update the fee doc too
+      if (tx.departmentCode === 'spims' && tx.feePaymentId) {
+        await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
+      }
+
+      toast.success('Transaction permanently deleted from database');
       fetchHistory();
+      if (selectedEntity) fetchEntityHistory(selectedEntity);
     } catch (err) {
       console.error(err);
       toast.error('Deletion failed');
@@ -1122,6 +1162,41 @@ export default function CashierStationPage() {
                     </div>
                   </div>
                 )}
+
+                {selectedEntity && (
+                  <div className="mt-6 bg-white border-2 border-black rounded-[2rem] p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-in slide-in-from-bottom-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-[1000] uppercase tracking-widest text-black flex items-center gap-2">
+                        <History size={14} /> Account Ledger
+                      </h4>
+                      {entityHistoryLoading && <Loader2 size={12} className="animate-spin text-black" />}
+                    </div>
+                    
+                    <div className="space-y-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                      {entityHistory.length === 0 ? (
+                        <p className="text-[10px] font-black text-black/40 uppercase text-center py-8 italic">No previous history found for this account.</p>
+                      ) : entityHistory.map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-surface-subtle border border-border-subtle group relative">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black text-black truncate uppercase">{tx.categoryName || tx.category}</p>
+                            <p className="text-[8px] font-bold text-black/40 uppercase">{formatDateDMY(tx.date || tx.createdAt)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className={cn('text-[10px] font-[1000]', tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600')}>
+                              {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
+                            </p>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
+                              className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1691,15 +1766,13 @@ export default function CashierStationPage() {
                         <div className={cn('text-sm font-black', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
                           {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
                         </div>
-                        {(tx.status === 'pending' || tx.status === 'pending_cashier') && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
-                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all"
-                            title="Delete Pending Transaction"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
+                          className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all"
+                          title="Delete Transaction Permanently"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>

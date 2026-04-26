@@ -47,36 +47,36 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
         whileHover={{ scale: 1.02, rotateX: 2, rotateY: 2 }}
         className="relative z-10 w-full max-w-xl mx-auto mb-6 perspective-1000"
       >
-        <div className="relative rounded-[2.5rem] bg-[#0d1f2d] dark:bg-[#0a1628] border-2 border-cyan-500/30 p-10 text-center overflow-hidden shadow-[0_0_100px_rgba(6,182,212,0.25)] group">
+        <div className="relative rounded-[2.5rem] bg-white border-4 border-black p-10 text-center overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] group">
           
-          {/* Animated background pulse */}
+          {/* Animated background pulse (Subtle) */}
           <motion.div 
             animate={{ 
-              opacity: [0.05, 0.1, 0.05],
-              scale: [1, 1.1, 1]
+              opacity: [0.02, 0.05, 0.02],
+              scale: [1, 1.05, 1]
             }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-transparent to-purple-500/20" 
+            className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-purple-500/10" 
           />
           
-          <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(6,182,212,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.3)_1px,transparent_1px)] bg-[size:30px_30px]" />
+          <div className="absolute inset-0 opacity-5 bg-[linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:30px_30px]" />
           
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_rgba(34,211,238,0.8)]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[2px] bg-black shadow-[0_0_15px_rgba(0,0,0,0.2)]" />
           
           <div className="relative z-10">
             <motion.p 
               initial={{ letterSpacing: "0.2em", opacity: 0 }}
               animate={{ letterSpacing: "0.4em", opacity: 0.7 }}
               transition={{ delay: 0.3, duration: 1 }}
-              className="text-[11px] font-black uppercase text-cyan-400 mb-2"
+              className="text-[11px] font-black uppercase text-black mb-2"
             >
               Real-Time Revenue Command
             </motion.p>
             
             <div className="flex flex-col items-center justify-center gap-2 mb-8">
               <div className="relative">
-                <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest block mb-1">Available Liquidity</span>
-                <p className="text-6xl md:text-7xl font-black tracking-tighter text-white leading-none drop-shadow-2xl">
+                <span className="text-[11px] font-bold text-black/40 uppercase tracking-widest block mb-1">Available Liquidity</span>
+                <p className="text-6xl md:text-7xl font-black tracking-tighter text-black leading-none">
                   Rs. {totalToday.toLocaleString()}
                 </p>
                 <div className="absolute -top-6 -right-10">
@@ -84,7 +84,7 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
                     animate={{ rotate: 360 }}
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                   >
-                    <Sparkles className="w-8 h-8 text-cyan-400 opacity-20" />
+                    <Sparkles className="w-8 h-8 text-black opacity-10" />
                   </motion.div>
                 </div>
               </div>
@@ -93,9 +93,9 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
                 <motion.div 
                   initial={{ opacity: 0, filter: "blur(10px)" }}
                   animate={{ opacity: 1, filter: "blur(0px)" }}
-                  className="mt-4 px-6 py-2 rounded-full bg-amber-500/10 border border-amber-500/30"
+                  className="mt-4 px-6 py-2 rounded-full bg-amber-100 border-2 border-black"
                 >
-                  <p className="text-[11px] font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <p className="text-[11px] font-black text-black uppercase tracking-[0.2em] flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     Pending Pipeline: Rs. {totalPendingToday.toLocaleString()}
                   </p>
@@ -103,26 +103,26 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 opacity-80 max-w-lg mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-lg mx-auto">
               {departments.map((d, index) => (
                 <motion.div 
                   key={d.deptId}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 + (index * 0.1) }}
-                  className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5"
+                  className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 border-2 border-black"
                 >
-                  <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest mb-1">{d.deptName}</span>
-                  <span className="text-[10px] font-black text-cyan-400">Rs. {d.totalIncome.toLocaleString()}</span>
+                  <span className="text-[8px] font-bold text-black/30 uppercase tracking-widest mb-1">{d.deptName}</span>
+                  <span className="text-[10px] font-black text-black">Rs. {d.totalIncome.toLocaleString()}</span>
                 </motion.div>
               ))}
             </div>
 
-            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-cyan-400/50 animate-pulse">Revenue Flow System Active</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-black/30 animate-pulse">Revenue Flow System Active</p>
           </div>
           
           {/* Bottom interactive dot */}
-          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-cyan-400 shadow-[0_0_30px_rgba(6,182,212,1)] z-20" />
+          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-black shadow-[0_0_20px_rgba(0,0,0,0.5)] z-20" />
         </div>
       </motion.div>
 
