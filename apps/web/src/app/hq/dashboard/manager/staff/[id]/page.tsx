@@ -279,7 +279,10 @@ export default function StaffProfilePage() {
 
     const days = [];
     while (date.getMonth() === month - 1) {
-      days.push(new Date(date).toISOString().slice(0, 10));
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${d}`);
       date.setDate(date.getDate() + 1);
     }
     return days;
@@ -385,11 +388,11 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      // Robust fetching: Individual catches prevent total page failure if one collection fails
+      // Robust fetching: Query by staffId and filter dates in-memory to avoid missing index errors
       const [attSnap, dressSnap, dutySnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
         getDoc(doc(db, `hq_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
@@ -406,15 +409,34 @@ export default function StaffProfilePage() {
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
-      attSnap.docs.forEach((d: any) => { aMap[d.data().date] = d.data() as HqDailyAttendanceRecord; });
+      attSnap.docs.forEach((d: any) => { 
+        const data = d.data();
+        if (data.date >= start && data.date <= end) {
+          aMap[data.date] = data as HqDailyAttendanceRecord; 
+        }
+      });
       setAttendanceMap(aMap);
 
       const drMap: Record<string, HqDailyDressCodeRecord> = {};
-      dressSnap.docs.forEach((d: any) => { drMap[d.data().date] = d.data() as HqDailyDressCodeRecord; });
+      dressSnap.docs.forEach((d: any) => { 
+        const data = d.data();
+        if (data.date >= start && data.date <= end) {
+          drMap[data.date] = data as HqDailyDressCodeRecord; 
+        }
+      });
       setDressMap(drMap);
 
       const duMap: Record<string, HqDailyDutyRecord> = {};
-      dutySnap.docs.forEach((d: any) => { duMap[d.data().date] = d.data() as HqDailyDutyRecord; });
+      dutySnap.docs.forEach((d: any) => { 
+        const data = d.data();
+        // Filter by date in-memory
+        if (data.date >= start && data.date <= end) {
+          // Prioritize checklist records (with duties array) over assessment records for the grid map
+          if (!duMap[data.date] || (data.duties && !duMap[data.date].duties)) {
+            duMap[data.date] = data as HqDailyDutyRecord; 
+          }
+        }
+      });
       setDutyMap(duMap);
 
       // Populate array states for calculations and lists
@@ -799,11 +821,16 @@ export default function StaffProfilePage() {
         date,
         items: nextItems,
         markedBy: session?.uid,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString() // Keep string for local state
       };
 
       setDressMap(prev => ({ ...prev, [date]: newRecord }));
-      await setDoc(ref, newRecord, { merge: true });
+      
+      // Use serverTimestamp for the actual DB write to avoid "future time" warnings
+      await setDoc(ref, {
+        ...newRecord,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
 
       // Check if ALL dress items are ticked (yes)
       const config = staff.dressCodeConfig || [];
@@ -816,6 +843,15 @@ export default function StaffProfilePage() {
           await awardStaffPoint(uid, staff.dept, 'dress', date);
         }
       }
+
+      // Sync to primary staff document for dashboard visibility
+      const staffDocRef = doc(db, `${slug}_users`, uid);
+      await updateDoc(staffDocRef, {
+        dressCodeConfig: nextItems,
+        updatedAt: serverTimestamp()
+      }).catch(() => {
+        console.warn(`Could not sync dress to ${slug}_users/${uid}`);
+      });
     } catch (err) {
       toast.error("Update failed");
       fetchData();
@@ -849,7 +885,21 @@ export default function StaffProfilePage() {
       };
 
       setDutyMap(prev => ({ ...prev, [date]: newRecord }));
-      await setDoc(ref, newRecord, { merge: true });
+      
+      // Use serverTimestamp for the actual DB write
+      await setDoc(ref, {
+        ...newRecord,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Sync to primary staff document for dashboard visibility
+      const staffDocRef = doc(db, `${slug}_users`, uid);
+      await updateDoc(staffDocRef, {
+        duties: nextDuties,
+        updatedAt: serverTimestamp()
+      }).catch(() => {
+        console.warn(`Could not sync duties to ${slug}_users/${uid}`);
+      });
 
       // Check if ALL duties are marked as 'done'
       const config = staff.dutyConfig || [];
