@@ -580,7 +580,7 @@ export default function StaffProfilePage() {
         staffId: uid,
         date,
         [field]: next,
-        status: (next || prevRecord.status === 'present') ? 'present' : prevRecord.status || 'unmarked',
+        status: ((next || prevRecord.status === 'present') ? 'present' : prevRecord.status || 'unmarked') as any,
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
       };
@@ -667,7 +667,7 @@ export default function StaffProfilePage() {
         [field]: value,
         arrivedOnTime,
         departedOnTime,
-        status: prevRecord.status === 'unmarked' ? 'present' : prevRecord.status,
+        status: (prevRecord.status === 'unmarked' ? 'present' : prevRecord.status) as any,
         updatedAt: new Date().toISOString()
       };
 
@@ -746,10 +746,10 @@ export default function StaffProfilePage() {
         departureTime: timePopup.departureTime,
         arrivedOnTime,
         departedOnTime,
-        status: 'present',
+        status: 'present' as const,
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
-      };
+      } as any;
 
       // Update Local State
       setAttendanceMap(prev => ({

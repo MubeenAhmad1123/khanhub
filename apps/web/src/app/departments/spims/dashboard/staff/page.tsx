@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import {
   collection, query, where, getDocs, addDoc,
-  updateDoc, doc, getDoc, Timestamp, orderBy, limit
+  updateDoc, doc, getDoc, Timestamp, orderBy, limit, setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY, toDate } from '@/lib/utils';

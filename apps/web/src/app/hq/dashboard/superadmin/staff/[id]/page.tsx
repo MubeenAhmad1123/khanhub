@@ -427,6 +427,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           onClose={() => setShowReset(false)}
         />
       )}
+      </div>
     </div>
   );
 }

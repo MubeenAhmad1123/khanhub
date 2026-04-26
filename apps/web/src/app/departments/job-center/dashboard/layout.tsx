@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
   Banknote, FileBarChart, CreditCard, CalendarDays,
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
-  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, Briefcase
+  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, Briefcase, Search
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

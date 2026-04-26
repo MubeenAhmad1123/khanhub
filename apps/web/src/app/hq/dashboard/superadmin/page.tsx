@@ -13,8 +13,9 @@ import { fetchTodayClientCounts, formatPKTDate, type TodayClientsResult } from '
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { cn } from '@/lib/utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
