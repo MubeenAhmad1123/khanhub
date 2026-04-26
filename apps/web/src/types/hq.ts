@@ -249,6 +249,7 @@ export interface HqDressCodeItem {
 
 export interface HqDailyDutyRecord {
   staffId: string;
+  department?: string;
   date: string;
   duties: HqDutyItem[];
   markedBy?: string;

@@ -17,9 +17,10 @@ export function getDeptCollection(dept: StaffDept): string {
 }
 
 export function getDeptPrefix(dept: StaffDept): string {
-  if (dept === 'job-center') return 'jobcenter';
-  if (dept === 'social-media') return 'media';
-  return dept.replace('-', '_');
+  const d = String(dept || '').toLowerCase();
+  if (d === 'job-center') return 'jobcenter';
+  if (d === 'social-media') return 'media';
+  return d.replace('-', '_');
 }
 
 export type StaffCardRow = {

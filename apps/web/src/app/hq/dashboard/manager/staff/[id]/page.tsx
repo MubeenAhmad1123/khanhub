@@ -294,9 +294,9 @@ export default function StaffProfilePage() {
     let workScore = 0;
 
     days.forEach(day => {
-      // 1. Attendance: 1 point if present AND not late
+      // 1. Attendance Point: Must be present AND on time
       const att = attendanceMap[day];
-      if (att?.status === 'present' && !att.isLate) {
+      if (att?.status === 'present' && att.arrivedOnTime) {
         attScore++;
       }
 
@@ -580,7 +580,15 @@ export default function StaffProfilePage() {
         staffId: uid,
         date,
         [field]: next,
-        status: ((next || prevRecord.status === 'present') ? 'present' : prevRecord.status || 'unmarked') as any,
+        status: (() => {
+          const currentStatus = prevRecord.status || 'unmarked';
+          // If status is a "leave" status, DO NOT change it based on punctuality toggles
+          if (['leave', 'paid_leave', 'unpaid_leave'].includes(currentStatus)) {
+            return currentStatus;
+          }
+          // Otherwise, if they are marked on-time or were already present, keep as present
+          return (next || currentStatus === 'present') ? 'present' : (currentStatus === 'late' ? 'present' : currentStatus);
+        })() as any,
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
       } as any;
@@ -833,6 +841,7 @@ export default function StaffProfilePage() {
 
       const newRecord: HqDailyDutyRecord = {
         staffId: uid,
+        department: staff.dept,
         date,
         duties: nextDuties,
         markedBy: session?.uid,
