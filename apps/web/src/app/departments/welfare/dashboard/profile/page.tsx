@@ -13,7 +13,7 @@ import {
   CheckCircle, Phone, Calendar, 
   Shirt, Award, Clock, Target, DollarSign,
   TrendingUp, Activity, MapPin, Mail, Briefcase,
-  AlertCircle, ChevronRight, Download, Info
+  AlertCircle, ChevronRight, Download, Info, Heart
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
@@ -53,7 +53,6 @@ export default function ProfilePage() {
 
       setAttendance(attSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setDuties(dutySnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setDressLogs(dressLogs.map(d => ({ id: d.id, ...d.data() }))); // Wait, fixed below
       setDressLogs(dressSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setSpecialTasks(taskSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setFines(fineSnap.docs.map(d => ({ id: d.id, ...d.data() })));

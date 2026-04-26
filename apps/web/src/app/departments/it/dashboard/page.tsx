@@ -64,8 +64,7 @@ export default function ItOverviewPage() {
     if (!session?.uid) return;
 
     async function fetchPersonalStats() {
-      if (!session?.uid) return;
-      const uid = session.uid;
+      const uid = session!.uid;
 
       try {
         setUserStats(prev => ({ ...prev, loading: true }));
@@ -149,15 +148,18 @@ export default function ItOverviewPage() {
     }
 
     fetchPersonalStats();
+  }, [session]);
+
+  useEffect(() => {
+    if (!session?.uid || !userStats.dept) return;
 
     // Check if contributed today
     async function checkContribution() {
-      if (!session?.uid || !userStats.dept) return;
       const prefix = getDeptPrefix(userStats.dept as any);
       const today = new Date().toISOString().split('T')[0];
       const q = query(
         collection(db, `${prefix}_contributions`),
-        where('staffId', '==', session.uid),
+        where('staffId', '==', session!.uid),
         where('date', '==', today),
         limit(1)
       );
@@ -167,7 +169,7 @@ export default function ItOverviewPage() {
       }
     }
     checkContribution();
-  }, [session, userStats.dept]);
+  }, [session?.uid, userStats.dept]);
 
   const handleSubmitContribution = async () => {
     if (!contributionText.trim() || !userStats.dept || !session?.uid) return;
