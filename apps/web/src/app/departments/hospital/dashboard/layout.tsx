@@ -24,7 +24,6 @@ import {
   Moon
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { useTheme } from 'next-themes';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { HospitalRole } from '@/types/hospital';
 import StaffNotifications from '@/components/layout/StaffNotifications';
@@ -61,14 +60,10 @@ export default function HospitalDashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
     setMounted(true);
@@ -159,24 +154,24 @@ export default function HospitalDashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 dark:text-gray-400 font-medium animate-pulse">Syncing Hospital Portal...</p>
+          <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
+          <p className="text-black font-black uppercase tracking-widest animate-pulse">Syncing Hospital Portal...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-black text-slate-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-[#FCFBF8] text-black font-bold">
       {/* Mobile Header */}
-      <header className="lg:hidden bg-white dark:bg-black border-b border-slate-200 dark:border-white/5 px-4 h-16 flex items-center justify-between sticky top-0 z-50">
+      <header className="lg:hidden bg-[#FCFBF8] border-b-2 border-black px-4 h-16 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-slate-900 dark:text-white">Hospital Portal</span>
+          <span className="font-black uppercase tracking-tighter text-black">Hospital Portal</span>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -198,20 +193,20 @@ export default function HospitalDashboardLayout({
         {/* Sidebar */}
         <aside className={`
           fixed lg:sticky top-0 left-0 z-50
-          w-72 h-screen bg-white dark:bg-black border-r border-slate-200 dark:border-white/5
+          w-72 h-screen bg-[#FCFBF8] border-r-2 border-black
           transition-transform duration-300 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           <div className="flex flex-col h-full">
             {/* Logo Section */}
             <div className="p-6 hidden lg:block">
-              <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
-                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-none">
+              <div className="flex items-center gap-3 bg-white p-3 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-none">
                   <Activity className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-slate-900 dark:text-white leading-none">Hospital</h1>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-1">Khan Hub Ecosystem</p>
+                  <h1 className="font-black text-black leading-none uppercase tracking-tighter">Hospital</h1>
+                  <p className="text-[10px] text-black/50 font-black uppercase tracking-wider mt-1">Khan Hub Ecosystem</p>
                 </div>
               </div>
             </div>
@@ -228,38 +223,37 @@ export default function HospitalDashboardLayout({
                       href={item.href}
                       onClick={() => setIsSidebarOpen(false)}
                       className={`
-                        flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                        flex items-center gap-3 px-4 py-3 border-2 border-black transition-all duration-200 group mb-2
                         ${isActive 
-                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-none' 
-                          : 'text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-emerald-400'}
+                          ? 'bg-emerald-600 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' 
+                          : 'bg-white text-black hover:bg-emerald-50'}
                       `}
                     >
                       <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'group-hover:text-emerald-600'}`} />
-                      <span className="font-medium">{item.title}</span>
-                      {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+                      <span className="font-black uppercase text-xs tracking-tight">{item.title}</span>
                     </Link>
                   );
                 })}
               </div>
 
               {/* Quick Actions / Status */}
-              <div className="pt-4 border-t border-slate-100 dark:border-white/5">
-                <p className="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">Account Status</p>
-                <div className="mx-2 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+              <div className="pt-4 border-t-2 border-black">
+                <p className="px-4 text-[11px] font-black text-black/40 uppercase tracking-widest mb-2">Account Status</p>
+                <div className="mx-2 p-4 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
                       {(user?.role?.[0] || 'U').toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.displayName}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-gray-400 font-medium capitalize">{user?.role} Portal</p>
+                      <p className="text-sm font-black text-black truncate">{user?.displayName}</p>
+                      <p className="text-[10px] text-black/50 font-black capitalize tracking-widest">{user?.role} Portal</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 w-full" />
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-600">Active</span>
+                    <span className="text-[10px] font-black text-emerald-600 uppercase">Active</span>
                   </div>
                 </div>
               </div>
@@ -269,24 +263,17 @@ export default function HospitalDashboardLayout({
             <div className="p-4 border-t border-slate-100 dark:border-white/5 space-y-2">
               <Link 
                 href="/departments/hospital/dashboard/settings"
-                className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl transition-all"
+                className="flex items-center gap-3 px-4 py-3 text-black hover:bg-emerald-50 border-2 border-transparent hover:border-black transition-all"
               >
-                <Settings className="w-5 h-5 text-slate-400" />
-                <span className="font-medium">Settings</span>
+                <Settings className="w-5 h-5 text-black" />
+                <span className="font-black uppercase text-xs tracking-tight">Settings</span>
               </Link>
               <button
-                onClick={toggleDark}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${darkMode ? 'text-yellow-400 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-50'}`}
-              >
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-                <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-              </button>
-              <button
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+                className="w-full flex items-center gap-3 px-4 py-3 text-rose-600 hover:bg-red-50 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="font-medium">Sign Out</span>
+                <span className="font-black uppercase text-xs tracking-tight">Sign Out</span>
               </button>
             </div>
           </div>
@@ -295,27 +282,27 @@ export default function HospitalDashboardLayout({
         {/* Main Content Area */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           {/* Top Bar for Desktop */}
-          <div className="hidden lg:flex items-center justify-between px-8 py-4 bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60 dark:border-white/5">
-            <div className="flex items-center gap-4 bg-slate-100/50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-white/5 w-96">
-              <Search className="w-4 h-4 text-slate-400" />
+          <div className="hidden lg:flex items-center justify-between px-8 py-4 bg-[#FCFBF8]/80 backdrop-blur-md sticky top-0 z-30 border-b-2 border-black">
+            <div className="flex items-center gap-4 bg-white px-4 py-2 border-2 border-black w-96">
+              <Search className="w-4 h-4 text-black" />
               <input 
                 type="text" 
                 placeholder="Search anything..." 
-                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium text-slate-900 dark:text-white"
+                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-black/30 font-black text-black"
               />
             </div>
             
             <div className="flex items-center gap-4">
               {user?.uid && <StaffNotifications uid={user.uid} dept="hospital" />}
               
-              <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
+              <div className="h-8 w-[2px] bg-black mx-2" />
               
               <div className="flex items-center gap-3 pl-2">
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.displayName}</p>
-                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{user?.role}</p>
+                  <p className="text-sm font-black text-black uppercase tracking-tighter">{user?.displayName}</p>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{user?.role}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg dark:shadow-none ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
+                <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
                   {(user?.displayName?.[0] || 'U').toUpperCase()}
                 </div>
               </div>

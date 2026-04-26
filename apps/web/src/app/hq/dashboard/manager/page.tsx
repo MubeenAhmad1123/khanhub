@@ -8,10 +8,9 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
-  ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon,
+  ArrowRight, Loader2, AlertTriangle, TrendingUp,
   ChevronRight, KeyRound, Calendar, Send
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 function timeAgo(dateInput: any): string {

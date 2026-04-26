@@ -9,7 +9,6 @@ import {
   FileText, Shield, ExternalLink, ChevronLeft, ChevronRight,
   CalendarDays, Laptop
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Spinner } from '@/components/ui';
@@ -74,7 +73,6 @@ const HQ_NAV_ITEMS = [
 export default function ITDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: ItRole; displayName: string; customId: string; uid: string } | null>(null);
@@ -82,8 +80,6 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
-
-  const darkMode = mounted && resolvedTheme === 'dark';
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem('it_session');
@@ -136,7 +132,7 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -151,8 +147,8 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
-        <div className="px-6 pt-10 pb-6 border-b border-black/5 dark:border-white/5">
+      <div className="flex flex-col h-full bg-[#FCFBF8] text-black">
+        <div className="px-6 pt-10 pb-6 border-b-2 border-black">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
             className="flex items-center gap-2 text-gray-400 hover:text-indigo-600 text-[10px] font-black mb-6 transition-colors group uppercase tracking-[0.3em]"
@@ -162,8 +158,8 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
           </Link>
           
           <div className="flex items-center gap-4 mb-8">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all duration-500 ${
-              viewMode === 'hq' ? 'bg-black shadow-black/20' : 'bg-indigo-600 shadow-indigo-200'
+            <div className={`w-12 h-12 border-2 border-black flex items-center justify-center text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-500 ${
+              viewMode === 'hq' ? 'bg-black' : 'bg-indigo-600'
             }`}>
               {viewMode === 'hq' ? <Shield size={24} strokeWidth={2.5} /> : <Monitor size={24} strokeWidth={2.5} />}
             </div>
@@ -171,7 +167,7 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
               <p className="font-black text-lg leading-none tracking-tighter uppercase">
                 {viewMode === 'hq' ? 'HQ Admin' : 'IT Portal'}
               </p>
-              <p className="text-gray-400 text-[10px] font-black mt-2 uppercase tracking-[0.2em] italic">
+              <p className="text-black/50 text-[10px] font-black mt-2 uppercase tracking-[0.2em] italic">
                 {viewMode === 'hq' ? 'Central Node' : 'Technology Hub'}
               </p>
             </div>
@@ -182,31 +178,31 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
             <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-left transition-all bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-indigo-200 dark:hover:border-indigo-500/30 group"
+                className="w-full flex items-center justify-between px-4 py-3 border-2 border-black text-left transition-all bg-white hover:bg-gray-50 group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
               >
                 <div className="flex items-center gap-3">
                   <ExternalLink size={14} className="text-indigo-600 group-hover:scale-110 transition-transform" />
                   <span className="text-[11px] font-black uppercase tracking-widest">Jump to Portal</span>
                 </div>
-                <ChevronLeft size={14} className={`text-gray-300 transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
+                <ChevronLeft size={14} className={`text-black transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-[2rem] border shadow-2xl p-3 animate-in fade-in zoom-in-95 bg-white dark:bg-black border-gray-100 dark:border-white/10">
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-3 animate-in fade-in zoom-in-95 bg-[#FCFBF8]">
                   <div className="grid grid-cols-1 gap-1">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
                         key={key}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
+                        className={`flex items-center gap-3 px-4 py-3 border-2 border-transparent transition-all group ${
                           pathname.includes(key)
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                            : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white'
+                            ? 'bg-indigo-600 text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                            : 'hover:bg-gray-50 text-black hover:border-black'
                         }`}
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5'
+                        <div className={`w-8 h-8 border border-black flex items-center justify-center transition-colors ${
+                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14, strokeWidth: 2.5 })}
                         </div>
@@ -220,19 +216,19 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
           )}
 
           {isHqAdmin && (
-            <div className="flex p-1.5 rounded-[1.25rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-inner">
+            <div className="flex p-1 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <button
                 onClick={() => setViewMode('dept')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-xl shadow-black/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
                 }`}
               >
                 PORTAL
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-xl shadow-black/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
                 }`}
               >
                 HQ NODE
@@ -241,24 +237,24 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
           )}
         </div>
 
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/5">
+        <div className="px-6 py-4 border-b-2 border-black bg-white">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
+            <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-black truncate text-black dark:text-white">{user?.displayName}</p>
-              <p className="text-[9px] font-black text-gray-400 truncate uppercase tracking-widest">{user?.customId || 'STAFF'}</p>
+              <p className="text-[13px] font-black truncate text-black">{user?.displayName}</p>
+              <p className="text-[9px] font-black text-black/40 truncate uppercase tracking-widest">{user?.customId || 'STAFF'}</p>
             </div>
           </div>
           <div className="mt-4">
-            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${ROLE_COLORS[user?.role as ItRole || 'staff']} shadow-sm`}>
+            <span className={`px-3 py-1 border border-black text-[9px] font-black uppercase tracking-widest ${ROLE_COLORS[user?.role as ItRole || 'staff']} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
               {role ? ROLE_LABELS[role] : 'STAFF'}
             </span>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar font-black">
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar font-black">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -266,26 +262,25 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-[13px] transition-all group ${
+                className={`flex items-center gap-3 px-4 py-3.5 border-2 text-[13px] transition-all group ${
                   isActive 
-                    ? 'bg-black text-white shadow-xl shadow-black/10 translate-x-1' 
-                    : 'text-gray-500 hover:text-black hover:bg-gray-50'
+                    ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-1' 
+                    : 'text-black/50 hover:text-black hover:bg-white border-transparent hover:border-black'
                 }`}
               >
                 <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
                   {item.icon}
                 </div>
                 <span className="flex-1 tracking-tight">{item.label}</span>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-6 border-t border-black/5">
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black text-red-500 hover:bg-red-50 transition-all active:scale-95">
+        <div className="p-6 border-t-2 border-black">
+          <button onClick={handleSignOut} className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-black bg-white text-sm font-black text-red-500 hover:bg-red-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1">
             <LogOut size={18} />
-            Sign Out
+            SIGN OUT
           </button>
         </div>
       </div>
@@ -293,15 +288,15 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
   };
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-[#FDFCFB] text-black selection:bg-indigo-100">
-      <aside className="hidden lg:flex flex-col w-64 border-r border-black/5 fixed left-0 top-0 h-screen z-30 bg-white">
+    <div className="min-h-screen flex overflow-x-hidden bg-[#FCFBF8] text-black">
+      <aside className="hidden lg:flex flex-col w-64 border-r-2 border-black fixed left-0 top-0 h-screen z-30 bg-[#FCFBF8]">
         <SidebarContent />
       </aside>
 
       {sidebarOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-white border-r border-black/10`}>
-        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100">
+      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-[#FCFBF8] border-r-2 border-black`}>
+        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 text-black hover:bg-white border border-black z-50">
           <X size={16} />
         </button>
         <SidebarContent />
@@ -309,45 +304,45 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-20 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between bg-white/80 dark:bg-black/80 border-slate-200/60 dark:border-white/5">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors">
+        <header className="lg:hidden sticky top-0 z-20 bg-[#FCFBF8] border-b-2 border-black px-4 py-3 flex items-center justify-between">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-black border border-black hover:bg-white">
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+            <div className="w-8 h-8 bg-black flex items-center justify-center text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <Monitor size={16} />
             </div>
-            <span className="font-bold text-sm text-slate-900 dark:text-white">IT Portal</span>
+            <span className="font-black text-sm uppercase tracking-tighter">IT Portal</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-black shadow-md ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
+            <div className={`w-8 h-8 border border-black flex items-center justify-center text-white text-[10px] font-black ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
               {(user?.displayName?.[0] || 'U').toUpperCase()}
             </div>
           </div>
         </header>
 
         {/* Desktop Top Bar */}
-        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-black/80 border-slate-200/60 dark:border-white/5">
-          <div className="flex items-center gap-4 bg-slate-100/50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-white/5 w-96 group focus-within:border-indigo-300 dark:focus-within:border-indigo-500/50 transition-all">
-            <Search className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FCFBF8]/80 backdrop-blur-md border-b-2 border-black px-8 py-4 items-center justify-between">
+          <div className="flex items-center gap-4 bg-white px-4 py-2 border-2 border-black w-96 group transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <Search className="w-4 h-4 text-black group-focus-within:text-indigo-500 transition-colors" />
             <input 
               type="text" 
               placeholder="Search IT portal..." 
-              className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium text-slate-900 dark:text-white"
+              className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-black/30 font-black text-black"
             />
           </div>
           
           <div className="flex items-center gap-4">
             {user?.uid && <StaffNotifications uid={user.uid} dept="it" />}
             
-            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
+            <div className="h-8 w-[2px] bg-black mx-2" />
             
             <div className="flex items-center gap-3 pl-2 group">
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">{user?.displayName}</p>
-                <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-0.5">{user?.role} Portal</p>
+                <p className="text-sm font-black text-black uppercase tracking-tighter">{user?.displayName}</p>
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">{user?.role} Portal</p>
               </div>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover:scale-110 ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
+              <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform group-hover:scale-110 ${ROLE_COLORS[user?.role as ItRole || 'staff']}`}>
                 {(user?.displayName?.[0] || 'U').toUpperCase()}
               </div>
             </div>

@@ -9,7 +9,6 @@ import {
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import StaffNotifications from '@/components/layout/StaffNotifications';
@@ -68,7 +67,6 @@ const HQ_NAV_ITEMS = [
 export default function SukoonDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
@@ -76,9 +74,6 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
-
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem('sukoon_session');
@@ -163,10 +158,10 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading...</p>
+          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+          <p className="text-black text-xs font-black uppercase tracking-widest animate-pulse">Loading Portal...</p>
         </div>
       </div>
     );
@@ -181,9 +176,9 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+      <div className={`flex flex-col h-full bg-[#FCFBF8] text-black`}>
         {/* Header */}
-        <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className={`px-6 pt-6 pb-4 border-b-2 border-black bg-white`}>
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
             className="flex items-center gap-2 text-gray-400 hover:text-purple-600 text-[10px] font-bold mb-4 transition-colors group uppercase tracking-widest"
@@ -193,8 +188,8 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
           </Link>
 
           <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
-              viewMode === 'hq' ? 'bg-indigo-600 shadow-indigo-200' : 'bg-purple-500 shadow-purple-200'
+            <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 ${
+              viewMode === 'hq' ? 'bg-indigo-600' : 'bg-purple-500'
             }`}>
               {viewMode === 'hq' ? <Shield size={20} /> : <Heart size={20} />}
             </div>
@@ -202,7 +197,7 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
               <p className="font-black text-sm leading-none tracking-tight">
                 {viewMode === 'hq' ? 'HQ Navigator' : 'Sukoon Portal'}
               </p>
-              <p className="text-gray-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
+              <p className="text-black/50 text-[10px] font-black mt-1 uppercase tracking-widest">
                 {viewMode === 'hq' ? 'Central' : 'Department'}
               </p>
             </div>
@@ -213,39 +208,35 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
             <div className="relative mb-4">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
-                  darkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-white hover:border-purple-200'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 border-2 border-black text-left transition-all bg-white hover:bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 group`}
               >
                 <div className="flex items-center gap-2">
-                  <ExternalLink size={14} className="text-purple-500" />
+                  <ExternalLink size={14} className="text-purple-500 group-hover:scale-110 transition-transform" />
                   <span className="text-[11px] font-black uppercase tracking-tight">Jump to Portal</span>
                 </div>
-                <ChevronLeft size={14} className={`text-gray-400 transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
+                <ChevronLeft size={14} className={`text-black transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className={`absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border shadow-2xl p-2 animate-in fade-in zoom-in-95 ${
-                  darkMode ? 'bg-gray-800 border-white/10' : 'bg-white border-gray-100'
-                }`}>
+                <div className={`absolute top-full left-0 right-0 mt-2 z-50 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-2 animate-in fade-in zoom-in-95 bg-[#FCFBF8]`}>
                   <div className="grid grid-cols-1 gap-1">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
                         key={key}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all group ${
+                        className={`flex items-center gap-3 px-3 py-2 border-2 border-transparent transition-all group ${
                           pathname.includes(key)
-                            ? (darkMode ? 'bg-white/10 text-white' : 'bg-purple-50 text-purple-700')
-                            : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-600 hover:text-purple-600')
+                            ? 'bg-purple-50 text-purple-700 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                            : 'hover:bg-gray-50 text-black hover:border-black'
                         }`}
                       >
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-purple-500 text-white' : (darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100')
+                        <div className={`w-7 h-7 border border-black flex items-center justify-center transition-colors ${
+                          pathname.includes(key) ? 'bg-purple-500 text-white' : 'bg-gray-100'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>
-                        <span className="text-xs font-bold">{info.label}</span>
+                        <span className="text-xs font-black uppercase tracking-tight">{info.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -256,19 +247,19 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
 
           {/* Nav Switcher */}
           {isHqAdmin && (
-            <div className={`flex p-1 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-gray-100'}`}>
+            <div className={`flex p-1 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`}>
               <button
                 onClick={() => setViewMode('dept')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-purple-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
                 }`}
               >
                 DEPT
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-purple-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
                 }`}
               >
                 HQ
@@ -278,25 +269,25 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
         </div>
 
         {/* User */}
-        <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className={`px-6 py-4 border-b-2 border-black bg-white`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-xl flex items-center justify-center text-gray-500 font-black text-xs">
+            <div className="w-9 h-9 border-2 border-black bg-white flex items-center justify-center text-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-bold truncate">{user?.displayName}</p>
-              <p className="text-[10px] font-medium text-gray-400 truncate">{user?.customId}</p>
+              <p className="text-[13px] font-black truncate">{user?.displayName}</p>
+              <p className="text-[10px] font-black text-black/40 truncate tracking-widest uppercase">{user?.customId}</p>
             </div>
           </div>
           <div className="mt-3 flex">
-            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
+            <span className={`px-2.5 py-0.5 border border-black text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
               {role ? ROLE_LABELS[role] : ''}
             </span>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar font-bold">
+        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar font-black">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -304,27 +295,22 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all group ${
-                  isActive ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-500 hover:text-purple-600')
+                className={`flex items-center gap-3 px-4 py-3 border-2 text-sm transition-all group ${
+                  isActive ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-1' : 'hover:bg-white text-black/50 border-transparent hover:border-black hover:text-black'
                 }`}
               >
                 {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />}
+                <span className="flex-1 uppercase tracking-tight">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom */}
-        <div className={`p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <button onClick={toggleDark} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold mb-1 ${darkMode ? 'text-yellow-400' : 'text-gray-500 hover:bg-gray-100'}`}>
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            {darkMode ? 'Light' : 'Dark'}
-          </button>
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50">
+        <div className={`p-6 border-t-2 border-black bg-white`}>
+          <button onClick={handleSignOut} className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-black bg-white text-sm font-black text-red-500 hover:bg-red-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all">
             <LogOut size={16} />
-            Sign Out
+            SIGN OUT
           </button>
         </div>
       </div>
@@ -332,37 +318,37 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
   };
 
   return (
-    <div className={`min-h-screen flex overflow-x-hidden ${darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
-      <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+    <div className={`min-h-screen flex overflow-x-hidden bg-[#FCFBF8] text-black`}>
+      <aside className={`hidden lg:flex flex-col w-64 border-r-2 border-black fixed left-0 top-0 h-screen z-30 bg-[#FCFBF8]`}>
         <SidebarContent />
       </aside>
 
       {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100">
+      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-[#FCFBF8] border-r-2 border-black`}>
+        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 text-black border border-black z-50 bg-white">
           <X size={16} />
         </button>
         <SidebarContent />
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400"><Menu size={20} /></button>
+        <header className={`lg:hidden sticky top-0 z-20 bg-[#FCFBF8] border-b-2 border-black px-4 py-3 flex items-center justify-between`}>
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-black border border-black bg-white"><Menu size={20} /></button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-purple-500 rounded-lg flex items-center justify-center text-white"><Shield size={14} /></div>
-            <span className="font-black text-sm">Sukoon Portal</span>
+            <div className="w-7 h-7 bg-black flex items-center justify-center text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><Shield size={14} /></div>
+            <span className="font-black text-sm uppercase tracking-tighter">Sukoon Portal</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+          <span className={`px-2 py-0.5 border border-black text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>{role && ROLE_LABELS[role]}</span>
         </header>
 
-        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Khan Hub Sukoon Portal</div>
+        <header className={`hidden lg:flex sticky top-0 z-20 bg-[#FCFBF8]/80 backdrop-blur-md border-b-2 border-black px-8 py-4 items-center justify-between`}>
+          <div className="text-[10px] font-black uppercase tracking-widest text-black">Khan Hub Sukoon Portal</div>
           <div className="flex items-center gap-3">
              {user?.uid && <StaffNotifications uid={user.uid} dept="sukoon" />}
-             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
-             <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
-             <span className="text-sm font-bold">{user?.displayName}</span>
+             <span className={`px-3 py-1 border border-black text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>{role && ROLE_LABELS[role]}</span>
+             <div className="w-8 h-8 border-2 border-black flex items-center justify-center text-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white">{user?.displayName?.[0]}</div>
+             <span className="text-sm font-black uppercase tracking-tight">{user?.displayName}</span>
           </div>
         </header>
 

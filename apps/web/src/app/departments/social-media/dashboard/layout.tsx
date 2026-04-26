@@ -9,7 +9,6 @@ import {
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, Monitor, Camera, Share2
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import StaffNotifications from '@/components/layout/StaffNotifications';
@@ -70,7 +69,6 @@ const HQ_NAV_ITEMS = [
 export default function SocialMediaDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{
@@ -83,9 +81,6 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
-
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem('media_session');
@@ -132,10 +127,10 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading Media Portal...</p>
+          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+          <p className="text-black text-xs font-black uppercase tracking-widest animate-pulse">Loading Media Portal...</p>
         </div>
       </div>
     );
@@ -150,37 +145,37 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-white text-black transition-colors duration-300">
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+      <div className="flex flex-col h-full bg-[#FCFBF8] text-black">
+        <div className="px-6 pt-6 pb-4 border-b-2 border-black bg-white">
           <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-indigo-600 text-[10px] font-bold mb-4 transition-colors group uppercase tracking-widest">
             <ArrowLeft size={10} className="group-hover:-translate-x-1 transition-transform" />
             Back to Home
           </Link>
 
           <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-indigo-600 shadow-indigo-100`}>
+            <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-indigo-600`}>
               <Monitor size={20} />
             </div>
             <div>
               <p className="font-black text-sm leading-none tracking-tight">Media Portal</p>
-              <p className="text-gray-400 text-[10px] font-bold mt-1 uppercase tracking-widest">Department</p>
+              <p className="text-black/50 text-[10px] font-black mt-1 uppercase tracking-widest italic">Department</p>
             </div>
           </div>
 
           {isHqAdmin && (
-            <div className="flex p-1 rounded-xl bg-gray-100 mb-4">
+            <div className="flex p-1 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-4">
               <button
                 onClick={() => setViewMode('dept')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
                 }`}
               >
                 DEPT
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
                 }`}
               >
                 HQ
@@ -189,24 +184,24 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
           )}
         </div>
 
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b-2 border-black bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 font-black text-xs">
+            <div className="w-9 h-9 border-2 border-black bg-white flex items-center justify-center text-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-bold truncate">{user?.displayName}</p>
-              <p className="text-[10px] font-medium text-gray-400 truncate">{user?.customId}</p>
+              <p className="text-[13px] font-black truncate">{user?.displayName}</p>
+              <p className="text-[10px] font-black text-black/40 truncate tracking-widest">{user?.customId}</p>
             </div>
           </div>
           <div className="mt-3 flex">
-            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
+            <span className={`px-2.5 py-0.5 border border-black text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
               {role ? ROLE_LABELS[role] : 'Staff'}
             </span>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto font-bold">
+        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar font-black">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -214,21 +209,21 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all group ${
-                  isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'hover:bg-gray-50 text-gray-500 hover:text-indigo-600'
+                className={`flex items-center gap-3 px-4 py-3 border-2 text-sm transition-all group ${
+                  isActive ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-1' : 'hover:bg-white text-black/50 border-transparent hover:border-black hover:text-black'
                 }`}
               >
                 {item.icon}
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1 uppercase tracking-tight">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-100">
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50">
+        <div className="p-4 border-t-2 border-black bg-white">
+          <button onClick={handleSignOut} className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-black bg-white text-sm font-black text-red-500 hover:bg-red-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all">
             <LogOut size={16} />
-            Sign Out
+            SIGN OUT
           </button>
         </div>
       </div>
@@ -236,37 +231,37 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
   };
 
   return (
-    <div className="min-h-screen flex bg-white text-black transition-colors duration-300">
-      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-white border-gray-100 transition-colors duration-300">
+    <div className="min-h-screen flex bg-[#FCFBF8] text-black">
+      <aside className="hidden lg:flex flex-col w-64 border-r-2 border-black fixed left-0 top-0 h-screen z-30 bg-[#FCFBF8]">
         <SidebarContent />
       </aside>
 
       {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-white`}>
-        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100">
+      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-[#FCFBF8] border-r-2 border-black`}>
+        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 text-black border border-black z-50 bg-white">
           <X size={16} />
         </button>
         <SidebarContent />
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0">
-        <header className="lg:hidden sticky top-0 z-20 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between bg-white/80 border-gray-100">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400"><Menu size={20} /></button>
+        <header className="lg:hidden sticky top-0 z-20 bg-[#FCFBF8] border-b-2 border-black px-4 py-3 flex items-center justify-between">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-black border border-black bg-white"><Menu size={20} /></button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><Monitor size={14} /></div>
-            <span className="font-black text-sm">Media Portal</span>
+            <div className="w-7 h-7 bg-black flex items-center justify-center text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><Monitor size={14} /></div>
+            <span className="font-black text-sm uppercase tracking-tighter">Media Portal</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+          <span className={`px-2 py-0.5 border border-black text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>{role && ROLE_LABELS[role]}</span>
         </header>
 
-        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 border-gray-100">
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Social Media Department Dashboard</div>
+        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FCFBF8]/80 backdrop-blur-md border-b-2 border-black px-8 py-4 items-center justify-between">
+          <div className="text-[10px] font-black uppercase tracking-widest text-black">Social Media Department Dashboard</div>
           <div className="flex items-center gap-3">
              {user?.uid && <StaffNotifications uid={user.uid} dept="social-media" />}
-             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
-             <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
-             <span className="text-sm font-bold">{user?.displayName}</span>
+             <span className={`px-3 py-1 border border-black text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>{role && ROLE_LABELS[role]}</span>
+             <div className="w-8 h-8 border-2 border-black flex items-center justify-center text-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white">{user?.displayName?.[0]}</div>
+             <span className="text-sm font-black uppercase tracking-tight">{user?.displayName}</span>
           </div>
         </header>
 
