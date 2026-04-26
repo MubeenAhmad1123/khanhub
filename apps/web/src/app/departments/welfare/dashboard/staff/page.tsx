@@ -5,39 +5,30 @@ import { useRouter } from 'next/navigation';
 import { useWelfareSession } from '@/hooks/welfare/useWelfareSession';
 import {
   collection, query, where, getDocs, addDoc,
-  updateDoc, doc, getDoc, Timestamp
+  updateDoc, doc, getDoc, Timestamp, orderBy, limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { formatDateDMY } from '@/lib/utils';
-import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/welfare';
+import { formatDateDMY, toDate } from '@/lib/utils';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
-  Lightbulb, Send, Star, List, Loader2
+  Lightbulb, Send, Star, List, Loader2, AlertCircle,
+  Trophy, TrendingUp, User as UserIcon, Sparkles, Activity
 } from 'lucide-react';
-
-// Helper for robust timestamp handling
-const toDate = (ts: any): Date | null => {
-  if (!ts) return null;
-  if (ts instanceof Date) return ts;
-  if (typeof ts.toDate === 'function') return ts.toDate();
-  if (typeof ts === 'string') return new Date(ts);
-  return null;
-};
+import { toast } from 'react-hot-toast';
 
 export default function StaffSelfPage() {
   const router = useRouter();
   const { session: user, loading: sessionLoading } = useWelfareSession();
 
-  const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
-  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
-  const [contributions, setContributions] = useState<StaffContribution[]>([]);
+  const [staffProfile, setStaffProfile] = useState<any>(null);
+  const [todayRecord, setTodayRecord] = useState<any>(null);
+  const [contributions, setContributions] = useState<any[]>([]);
   const [contributionText, setContributionText] = useState('');
   const [loading, setLoading] = useState(true);
   const [checkLoading, setCheckLoading] = useState(false);
   const [contribLoading, setContribLoading] = useState(false);
+  const [specialTasks, setSpecialTasks] = useState<any[]>([]);
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [submitted, setSubmitted] = useState(false);
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
@@ -45,84 +36,108 @@ export default function StaffSelfPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      // Find staff profile linked to this login user
-      const staffSnap = await getDocs(
-        query(collection(db, 'welfare_staff'), where('loginUserId', '==', user.uid))
-      );
-      if (staffSnap.empty) { setLoading(false); return; }
-      const staffDoc = staffSnap.docs[0];
-      const staffId = staffDoc.id;
-      const staffData = staffDoc.data();
+      // 1. Fetch Staff Profile
+      const staffRef = doc(db, 'welfare_users', user.uid);
+      let staffSnap = await getDoc(staffRef);
+      
+      if (!staffSnap.exists()) {
+        const fallbackSnap = await getDocs(query(collection(db, 'welfare_staff'), where('loginUserId', '==', user.uid)));
+        if (!fallbackSnap.empty) {
+            staffSnap = fallbackSnap.docs[0] as any;
+        }
+      }
+
+      if (!staffSnap.exists()) {
+        console.error('Staff profile not found for UID:', user.uid);
+        setLoading(false);
+        return;
+      }
+
+      const staffData = staffSnap.data() as any;
+      const staffId = staffSnap.id;
+      
       setStaffProfile({ 
         id: staffId, 
         ...staffData, 
         joiningDate: toDate(staffData.joiningDate) || new Date(), 
         duties: staffData.duties || [] 
-      } as unknown as StaffMember);
+      });
 
-      const today = new Date().toISOString().split('T')[0];
+      // 2. Today's attendance
       const attSnap = await getDocs(
-        query(collection(db, 'welfare_attendance'), where('staffId', '==', staffId), where('date', '==', today))
+        query(
+          collection(db, 'welfare_attendance'), 
+          where('staffId', '==', staffId), 
+          where('date', '==', today)
+        )
       );
 
-      // Today's attendance
-      const attDoc = attSnap.empty ? null : attSnap.docs[0];
-      if (attDoc) {
-        const d = attDoc.data();
+      if (!attSnap.empty) {
+        const d = attSnap.docs[0].data();
         setTodayRecord({ 
-          id: attDoc.id, 
+          id: attSnap.docs[0].id, 
           ...d, 
           checkInTime: toDate(d.checkInTime), 
           checkOutTime: toDate(d.checkOutTime) 
-        } as AttendanceRecord);
+        });
       } else {
         setTodayRecord(null);
       }
 
-      // Contributions (last 7 days)
+      // 3. Contributions (Recent)
       const contribSnap = await getDocs(
-        query(collection(db, 'welfare_contributions'), where('staffId', '==', staffId))
+        query(
+          collection(db, 'welfare_contributions'), 
+          where('staffId', '==', staffId),
+          orderBy('createdAt', 'desc'),
+          limit(5)
+        )
       );
       
       const contribDocs = contribSnap.docs.map(d => ({ 
         id: d.id, 
         ...d.data(), 
         createdAt: toDate(d.data().createdAt) || new Date() 
-      } as StaffContribution));
+      } as any));
 
       setHasContributedToday(contribDocs.some(d => d.date === today));
+      setContributions(contribDocs);
 
-      setContributions(
-        contribDocs
-          .sort((a, b) => {
-            const dateA = toDate(a.createdAt)?.getTime() || 0;
-            const dateB = toDate(b.createdAt)?.getTime() || 0;
-            return dateB - dateA;
-          })
-          .slice(0, 10)
-      );
-
-      // Monthly attendance summary
-      const firstDay = new Date();
-      firstDay.setDate(1);
+      // 4. Monthly attendance summary
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const firstDayStr = firstDay.toISOString().split('T')[0];
-      const todayStr = new Date().toISOString().split('T')[0];
 
       const monthlySnap = await getDocs(
         query(
           collection(db, 'welfare_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
-          where('date', '<=', todayStr)
+          where('date', '<=', today)
         )
       );
-      const presentCount = monthlySnap.docs.filter(d => d.data().status === 'present').length;
-      const absentCount  = monthlySnap.docs.filter(d => d.data().status === 'absent').length;
-      const leaveCount   = monthlySnap.docs.filter(d => d.data().status === 'leave').length;
+      
+      const summary = { present: 0, absent: 0, leave: 0 };
+      monthlySnap.docs.forEach(d => {
+        const status = d.data().status;
+        if (status === 'present') summary.present++;
+        else if (status === 'absent') summary.absent++;
+        else if (status === 'leave') summary.leave++;
+      });
 
-      setMonthlySummary({ present: presentCount, absent: absentCount, leave: leaveCount });
+      setMonthlySummary(summary);
+
+      // 5. Special Tasks
+      const tasksSnap = await getDocs(
+        query(
+          collection(db, 'welfare_special_tasks'), 
+          where('staffId', '==', staffId),
+          where('status', '!=', 'completed')
+        )
+      );
+      setSpecialTasks(tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
@@ -130,26 +145,18 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') { router.push('/departments/welfare/login'); return; }
+    if (!user || user.role !== 'staff') {
+      router.push('/departments/welfare/login');
+      return;
+    }
     fetchData();
   }, [sessionLoading, user, fetchData, router]);
 
-  const showMsg = (type: string, text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-  };
-
   const handleCheckIn = async () => {
-    console.log('Check-in clicked, staffProfile:', staffProfile?.id, 'today:', today);
-    if (!staffProfile) {
-      showMsg('error', 'Staff profile not found. Contact superadmin.');
-      return;
-    }
-
+    if (!staffProfile) return;
     setCheckLoading(true);
     try {
       if (!todayRecord) {
-        // No record yet — create with check-in
         const now = new Date();
         const [dutyHour, dutyMin] = (staffProfile.dutyStartTime || '08:00').split(':').map(Number);
         const dutyStart = new Date();
@@ -157,7 +164,7 @@ export default function StaffSelfPage() {
 
         const lateByMs = now.getTime() - dutyStart.getTime();
         const lateByMinutes = Math.floor(lateByMs / 60000);
-        const isLate = lateByMinutes > 0;
+        const isLate = lateByMinutes > 15; // 15 min grace period
 
         await addDoc(collection(db, 'welfare_attendance'), {
           staffId: staffProfile.id,
@@ -170,45 +177,32 @@ export default function StaffSelfPage() {
           autoFineApplied: isLate,
         });
 
-        showMsg('success', 'Checked in! ✓');
-        // optimistic update
-        setTodayRecord({
-          id: 'temp-' + Date.now(),
-          staffId: staffProfile.id,
-          date: today,
-          status: 'present',
-          checkInTime: new Date(),
-          isLate,
-          lateByMinutes: isLate ? lateByMinutes : 0,
-          autoFineApplied: isLate,
-        } as unknown as AttendanceRecord);
-
         if (isLate) {
           const currentMonth = today.substring(0, 7);
           await addDoc(collection(db, 'welfare_fines'), {
             staffId: staffProfile.id,
             amount: 200,
-            reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
+            reason: `Late arrival (${lateByMinutes} mins) - Auto-generated`,
             date: currentMonth,
-            recordedBy: 'system_auto',
+            recordedBy: 'System',
             createdAt: Timestamp.now(),
           });
-          showMsg('success', `Checked in. Note: You are ${lateByMinutes} minutes late. PKR 200 fine applied. ⚠️`);
+          toast.success('Checked in. Note: Late arrival fine applied.');
+        } else {
+          toast.success('Checked in successfully!');
         }
       } else if (!todayRecord.checkOutTime) {
-        // Already checked in — check out
         await updateDoc(doc(db, 'welfare_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
-        showMsg('success', 'Checked out. Great work today! ✓');
-        setTodayRecord(prev => prev ? { ...prev, checkOutTime: new Date() } : prev);
+        toast.success('Checked out successfully!');
       }
       fetchData();
     } catch (err: any) {
-      console.error('Attendance error:', err);
-      showMsg('error', `Failed: ${err?.message || 'Unknown error'}`);
+      toast.error('Attendance failed: ' + err.message);
+    } finally {
+      setCheckLoading(false);
     }
-    setCheckLoading(false);
   };
 
   const handleContribution = async () => {
@@ -217,236 +211,273 @@ export default function StaffSelfPage() {
     try {
       await addDoc(collection(db, 'welfare_contributions'), {
         staffId: staffProfile.id,
+        staffName: staffProfile.name || user?.displayName,
         date: today,
         content: contributionText.trim(),
+        isApproved: false,
         createdAt: Timestamp.now(),
+        dept: 'welfare'
       });
       setContributionText('');
-      fetchData();
-      setSubmitted(true);
       setHasContributedToday(true);
-      setTimeout(() => setSubmitted(false), 2000);
-    } catch {
-      showMsg('error', 'Failed to save. Try again.');
+      toast.success('Contribution submitted for manager approval! ✓');
+      fetchData();
+    } catch (err: any) {
+      toast.error('Submission failed: ' + err.message);
+    } finally {
+      setContribLoading(false);
     }
-    setContribLoading(false);
   };
 
-  const checkedIn    = !!todayRecord?.checkInTime;
-  const checkedOut   = !!todayRecord?.checkOutTime;
-  const isOverridden = !!todayRecord?.overriddenBy;
+  const handleTaskUpdate = async (taskId: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, 'welfare_special_tasks', taskId), {
+        status: newStatus,
+        ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : {})
+      });
+      toast.success(newStatus === 'completed' ? 'Task Completed!' : 'Task Acknowledged');
+      fetchData();
+    } catch (err: any) {
+      toast.error('Task update failed');
+    }
+  };
 
   if (sessionLoading || loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-40 bg-gray-100 rounded-3xl" />
-        <div className="h-32 bg-gray-100 rounded-3xl" />
-        <div className="h-48 bg-gray-100 rounded-3xl" />
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
+          <p className="text-sm font-black uppercase tracking-widest text-gray-400">Loading Portal...</p>
+        </div>
       </div>
     );
   }
 
+  // --- Styles ---
+  const glassStyle = "bg-white/70 backdrop-blur-xl border border-white shadow-[20px_20px_60px_#d1d9e6,-20px_-20px_60px_#ffffff]";
+  const neumorphicOutset = "shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]";
+  const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] overflow-x-hidden w-full max-w-full pb-24">
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Greeting */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-white">
-            {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, {user?.displayName?.split(' ')[0]}
-          </h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            {formatDateDMY(new Date())}
-          </p>
+    <div className="min-h-screen bg-[#FCFBF8] text-slate-900 pb-24 overflow-x-hidden">
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+        
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-gray-900">
+              {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'},
+              <span className="block text-indigo-600">{user?.displayName?.split(' ')[0]}</span>
+            </h1>
+            <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mt-2">
+              {formatDateDMY(new Date())}
+            </p>
+          </div>
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-indigo-600 ${glassStyle}`}>
+            <UserIcon size={24} strokeWidth={2.5} />
+          </div>
         </div>
 
-        {/* Message */}
-        {message.text && (
-          <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${
-            message.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-          }`}>
-            <CheckCircle size={16} />
-            {message.text}
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`p-5 rounded-[2rem] ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                <Trophy size={16} />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Growth Points</p>
+            </div>
+            <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
           </div>
-        )}
-
-        {/* Check In / Out Card */}
-        <div className={`rounded-2xl p-4 border-l-4 ${checkedIn || checkedOut ? 'border-teal-500 bg-white/5' : 'border-amber-500 bg-white/5'}`}>
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Clock size={18} className="text-teal-400" />
-              <h2 className="font-black text-white">Today's Attendance</h2>
+          <div className={`p-5 rounded-[2rem] ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                <Activity size={16} />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance</p>
             </div>
-            {staffProfile && (
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
-                 Duty: {staffProfile.dutyStartTime} — {staffProfile.dutyEndTime}
-              </p>
-            )}
+            <p className="text-3xl font-black text-gray-900">{monthlySummary.present}</p>
           </div>
-
-          {isOverridden && (
-            <div className="mb-4 px-4 py-3 bg-amber-500/10 rounded-2xl text-xs text-amber-400 font-bold border border-amber-500/20">
-              ⚠️ Your attendance was marked by admin today.
-            </div>
-          )}
-
-          {/* Time display */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className={`p-4 rounded-2xl text-center ${checkedIn ? 'bg-teal-500/10' : 'bg-white/5'}`}>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check In</p>
-              <p className={`font-mono text-2xl font-black ${checkedIn ? 'text-teal-400' : 'opacity-30'}`}>
-                {todayRecord?.checkInTime
-                  ? toDate(todayRecord.checkInTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
-                  : '--:--'
-                }
-              </p>
-              {todayRecord?.isLate && (
-                <p className="text-[10px] text-amber-400 font-bold mt-1">
-                  ⚠️ Late by {todayRecord.lateByMinutes} mins — PKR 200 fine
-                </p>
-              )}
-            </div>
-            <div className={`p-4 rounded-2xl text-center ${checkedOut ? 'bg-blue-500/10' : 'bg-white/5'}`}>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check Out</p>
-              <p className={`font-mono text-2xl font-black ${checkedOut ? 'text-blue-400' : 'opacity-30'}`}>
-                {todayRecord?.checkOutTime
-                  ? toDate(todayRecord.checkOutTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
-                  : '--:--'
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Action Button OR Badge */}
-          {checkedOut || isOverridden ? (
-            <div className="w-full py-4 bg-white/5 rounded-2xl text-center text-slate-400 font-black text-sm uppercase tracking-wide">
-              {isOverridden ? 'Attendance marked by admin' : 'Shift complete for today ✓'}
-            </div>
-          ) : checkedIn ? (
-            <div className="w-full py-4 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-500/20">
-              <CheckCircle size={14} /> Checked In
-            </div>
-          ) : (
-            <button
-              onClick={handleCheckIn}
-              disabled={checkLoading}
-              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-teal-500 text-white animate-pulse"
-            >
-              {checkLoading
-                ? <Loader2 size={18} className="animate-spin" />
-                : <LogIn size={18} />
-              }
-              {checkLoading ? 'Processing...' : 'Check In Now'}
-            </button>
-          )}
         </div>
 
-        {/* Monthly Summary Card */}
-        <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar size={18} className="text-teal-400" />
-            <h2 className="font-black text-white">Monthly Summary</h2>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-emerald-500/10 rounded-2xl p-4 text-center">
-              <p className="text-2xl font-black text-emerald-400">{monthlySummary.present}</p>
-              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-wide mt-1">Present</p>
+        {/* Special Tasks Override Card */}
+        {specialTasks.length > 0 && (
+          <div className={`p-8 rounded-[2.5rem] border-2 border-indigo-100 bg-indigo-50/30 ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                <Sparkles size={20} />
+              </div>
+              <h2 className="text-xl font-black text-gray-900">Special Tasks</h2>
             </div>
-            <div className="bg-red-500/10 rounded-2xl p-4 text-center">
-              <p className="text-2xl font-black text-red-400">{monthlySummary.absent}</p>
-              <p className="text-[9px] font-bold text-red-400/60 uppercase tracking-wide mt-1">Absent</p>
-            </div>
-            <div className="bg-blue-500/10 rounded-2xl p-4 text-center">
-              <p className="text-2xl font-black text-blue-400">{monthlySummary.leave}</p>
-              <p className="text-[9px] font-bold text-blue-400/60 uppercase tracking-wide mt-1">Leave</p>
-            </div>
-          </div>
-          {/* Progress bar */}
-          {((monthlySummary.present + monthlySummary.absent + monthlySummary.leave) > 0) && (
-            <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-              <div 
-                className="h-full bg-teal-500 rounded-full transition-all duration-500"
-                style={{ width: `${(monthlySummary.present / (monthlySummary.present + monthlySummary.absent + monthlySummary.leave)) * 100}%` }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Duties */}
-        {(staffProfile?.duties?.length ?? 0) > 0 && (
-          <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <List size={18} className="text-teal-400" />
-              <h2 className="font-black text-white">Your Duties</h2>
-            </div>
-            <ol className="space-y-2">
-              {staffProfile?.duties?.map((d: any, i: number) => (
-                <li key={d.id || i} className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
-                  <span className="w-5 h-5 rounded-lg bg-teal-500/10 text-teal-400 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                  <span className="text-slate-300 text-sm leading-snug">{d.description || String(d)}</span>
-                </li>
+            <div className="space-y-4">
+              {specialTasks.map(task => (
+                <div key={task.id} className="bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-all">
+                    <Sparkles size={40} />
+                  </div>
+                  <p className="text-sm font-bold text-slate-700 mb-4">{task.description}</p>
+                  <div className="flex gap-2">
+                    {task.status === 'assigned' ? (
+                      <button 
+                        onClick={() => handleTaskUpdate(task.id, 'acknowledged')}
+                        className="flex-1 py-3 rounded-xl bg-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
+                      >
+                        Acknowledge
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handleTaskUpdate(task.id, 'completed')}
+                        className="flex-1 py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle size={12} /> Complete
+                      </button>
+                    )}
+                  </div>
+                </div>
               ))}
-            </ol>
+            </div>
           </div>
         )}
 
-        {/* Record Contribution */}
-        <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb size={18} className="text-amber-400" />
-            <h2 className="font-black text-white text-lg">Record Contribution</h2>
+        {/* Attendance Action Card */}
+        <div className={`p-8 rounded-[2.5rem] border-2 border-white relative overflow-hidden ${glassStyle}`}>
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12">
+            <Clock size={120} strokeWidth={3} />
           </div>
-          <p className="text-slate-400 text-xs mb-4 font-medium italic">Submit growth points for verification</p>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Description of Contribution</p>
-          <textarea
-            rows={3}
-            placeholder="e.g. Completed morning rounds, cleaned all child rooms, suggested new shift handover system..."
-            className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
-            value={contributionText}
-            onChange={e => setContributionText(e.target.value)}
-          />
-          <button
-            onClick={handleContribution}
-            disabled={contribLoading || submitted || hasContributedToday || !contributionText.trim()}
-            className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-500/20"
-          >
-            {submitted ? (
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle size={14} />
-                <span>Submitted ✓</span>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                <Clock size={20} />
               </div>
-            ) : hasContributedToday ? (
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle size={14} />
-                <span>Already Submitted Today</span>
+              <h2 className="text-xl font-black text-gray-900">Work Session</h2>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className={`p-6 rounded-3xl text-center bg-white/50 border border-white ${neumorphicInset}`}>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Check In</p>
+                <p className={`text-2xl font-black font-mono ${todayRecord?.checkInTime ? 'text-emerald-600' : 'text-slate-300'}`}>
+                  {todayRecord?.checkInTime ? todayRecord.checkInTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                </p>
               </div>
-            ) : contribLoading ? (
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 size={14} className="animate-spin" />
-                <span>Submitting...</span>
+              <div className={`p-6 rounded-3xl text-center bg-white/50 border border-white ${neumorphicInset}`}>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Check Out</p>
+                <p className={`text-2xl font-black font-mono ${todayRecord?.checkOutTime ? 'text-indigo-600' : 'text-slate-300'}`}>
+                  {todayRecord?.checkOutTime ? todayRecord.checkOutTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                </p>
+              </div>
+            </div>
+
+            {todayRecord?.checkOutTime ? (
+              <div className="w-full py-5 rounded-2xl bg-slate-100 text-slate-400 font-black text-xs uppercase tracking-widest text-center border border-slate-200">
+                Session Completed
               </div>
             ) : (
-              'Submit for Verification'
+              <button
+                onClick={handleCheckIn}
+                disabled={checkLoading}
+                className={`w-full py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 ${
+                  todayRecord?.checkInTime 
+                    ? 'bg-red-500 text-white shadow-red-200' 
+                    : 'bg-indigo-600 text-white shadow-indigo-200 animate-pulse'
+                }`}
+              >
+                {checkLoading ? <Loader2 size={18} className="animate-spin" /> : todayRecord?.checkInTime ? <LogOut size={18} /> : <LogIn size={18} />}
+                {checkLoading ? 'Syncing...' : todayRecord?.checkInTime ? 'End Session' : 'Start Session'}
+              </button>
             )}
-          </button>
+            
+            {todayRecord?.isLate && (
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 p-3 rounded-xl border border-red-100">
+                <AlertCircle size={12} />
+                Late by {todayRecord.lateByMinutes} mins — Fine Applied
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Past Contributions */}
-        {contributions.length > 0 && (
-          <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Star size={18} className="text-amber-300" />
-              <h2 className="font-black text-white">Recent Contributions</h2>
+        {/* Contribution Section */}
+        <div className={`p-8 rounded-[2.5rem] border-2 border-white ${glassStyle}`}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+              <Lightbulb size={20} />
             </div>
-            <div className="space-y-3">
-                {contributions.map(c => (
-                  <div key={c.id} className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                    <p className="text-slate-300 text-sm leading-relaxed">{c.content || c.contributionDescription || ''}</p>
-                    <p className="text-[10px] text-slate-500 font-mono mt-2">{c.date} — {toDate(c.createdAt)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
+            <h2 className="text-xl font-black text-gray-900">Record Contribution</h2>
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
+          
+          <div className="space-y-4">
+            <div className={`p-2 rounded-[2rem] bg-white/50 ${neumorphicInset}`}>
+              <textarea
+                value={contributionText}
+                onChange={(e) => setContributionText(e.target.value)}
+                placeholder="What did you achieve or contribute today?"
+                rows={4}
+                className="w-full bg-transparent p-6 text-sm font-bold text-slate-700 outline-none resize-none placeholder:text-slate-300"
+              />
+            </div>
+            
+            <button
+              onClick={handleContribution}
+              disabled={contribLoading || hasContributedToday || !contributionText.trim()}
+              className="w-full py-5 rounded-[1.5rem] bg-gray-900 text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-gray-200"
+            >
+              {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Contributions List */}
+        {contributions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-2">
+              <Star size={16} className="text-amber-500 fill-amber-500" />
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Recent Contributions</h3>
+            </div>
+            <div className="space-y-4">
+              {contributions.map((c) => (
+                <div key={c.id} className={`p-6 rounded-[2rem] border-2 border-white ${glassStyle}`}>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{c.content}</p>
+                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest whitespace-nowrap ${
+                      c.isApproved ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {c.isApproved ? 'Approved' : 'Pending'}
+                    </div>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <Calendar size={10} />
+                    {c.date}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
+
+        {/* Duties Section */}
+        {staffProfile?.duties?.length > 0 && (
+          <div className={`p-8 rounded-[2.5rem] border-2 border-white ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
+                <List size={20} />
+              </div>
+              <h2 className="text-xl font-black text-gray-900">Daily Duties</h2>
+            </div>
+            <div className="space-y-3">
+              {staffProfile.duties.map((duty: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 border border-white">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 text-[10px] font-black">
+                    {idx + 1}
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">{duty.description || duty}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

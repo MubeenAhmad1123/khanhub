@@ -12,6 +12,8 @@ import {
 import { useTheme } from 'next-themes';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import StaffNotifications from '@/components/layout/StaffNotifications';
+
 
 type RehabRole = 'admin' | 'staff' | 'family' | 'superadmin';
 
@@ -367,6 +369,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-black/80 border-gray-100 dark:border-white/10`}>
           <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Khan Hub Rehab Portal</div>
           <div className="flex items-center gap-3">
+             {user?.uid && <StaffNotifications uid={user.uid} dept="rehab" />}
              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
              <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
              <span className="text-sm font-bold">{user?.displayName}</span>

@@ -13,6 +13,8 @@ import { useTheme } from 'next-themes';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { JobCenterRole } from '@/types/job-center';
+import StaffNotifications from '@/components/layout/StaffNotifications';
+
 
 interface NavItem {
   label: string;
@@ -363,9 +365,10 @@ export default function JobCenterDashboardLayout({ children }: { children: React
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Khan Hub • Job Center Portal</div>
           <div className="flex items-center gap-6">
              <div className="flex items-center gap-3">
+               {user?.uid && <StaffNotifications uid={user.uid} dept="job-center" />}
                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
-               <div className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center font-black text-sm">{user?.displayName?.[0]}</div>
-               <span className="text-sm font-black text-black">{user?.displayName}</span>
+               <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
+               <span className="text-sm font-bold">{user?.displayName}</span>
              </div>
           </div>
         </header>

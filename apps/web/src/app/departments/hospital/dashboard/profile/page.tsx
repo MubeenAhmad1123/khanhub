@@ -6,17 +6,17 @@ import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
   doc, getDoc, updateDoc, collection, query, where, getDocs, 
-  serverTimestamp, orderBy, limit 
+  orderBy, limit 
 } from 'firebase/firestore';
 import { 
   User, Camera, Loader2, Shield, 
   CheckCircle, Phone, Calendar, 
   Shirt, Award, Clock, Target, DollarSign,
   TrendingUp, Activity, MapPin, Mail, Briefcase,
-  AlertCircle, ChevronRight, Download, Info
+  AlertCircle, ChevronRight, Download, Info, Sparkles
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 // --- Types ---
@@ -24,8 +24,8 @@ interface AttendanceRecord {
   id: string;
   date: string;
   status: 'present' | 'absent' | 'leave' | 'late';
-  arrivalTime?: string;
-  departureTime?: string;
+  checkInTime?: any;
+  checkOutTime?: any;
 }
 
 interface DutyRecord {
@@ -45,10 +45,10 @@ interface DressRecord {
 
 interface SpecialTask {
   id: string;
-  task: string;
-  status: 'pending' | 'completed';
+  description: string;
+  status: 'assigned' | 'acknowledged' | 'completed';
   date: string;
-  points: number;
+  points?: number;
 }
 
 interface FineRecord {
@@ -75,9 +75,9 @@ export default function ProfilePage() {
   const [growthPoints, setGrowthPoints] = useState<any>(null);
 
   // Styles
-  const glassStyle = "bg-white/60 backdrop-blur-xl border border-white/20 shadow-[10px_10px_20px_#d1d9e6,-10px_-10px_20px_#ffffff]";
-  const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
+  const glassStyle = "bg-white/70 backdrop-blur-xl border border-white shadow-[20px_20px_60px_#d1d9e6,-20px_-20px_60px_#ffffff]";
   const neumorphicOutset = "shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]";
+  const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
 
   const fetchMetrics = useCallback(async (sId: string) => {
     try {
@@ -110,17 +110,15 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const userSnap = await getDoc(doc(db, 'hospital_users', parsed.uid));
+        const userRef = doc(db, 'hospital_users', parsed.uid);
+        const userSnap = await getDoc(userRef);
+        
         if (!userSnap.exists()) { router.push('/departments/hospital/login'); return; }
         const uData = userSnap.data();
         setProfile({ id: userSnap.id, ...uData });
 
-        let sSnap = await getDocs(query(collection(db, 'hospital_staff'), where('loginUserId', '==', parsed.uid)));
-        if (sSnap.empty) sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
-        
-        if (!sSnap.empty) {
-          fetchMetrics(sSnap.docs[0].id);
-        }
+        // Use the same doc ID for metrics
+        fetchMetrics(userSnap.id);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load profile");
@@ -153,96 +151,97 @@ export default function ProfilePage() {
   }, [profile, fines]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
-      <div className="animate-spin text-indigo-600"><Loader2 size={40} /></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+      <div className="animate-spin text-rose-600"><Loader2 size={40} /></div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] pb-24 text-slate-800 font-sans selection:bg-indigo-100">
-      <div className="sticky top-0 z-50 px-4 py-6 md:px-12 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-white/20">
+    <div className="min-h-screen bg-[#FCFBF8] pb-24 text-slate-900 overflow-x-hidden">
+      {/* Header */}
+      <div className="sticky top-0 z-50 px-4 py-6 md:px-12 bg-[#FCFBF8]/80 backdrop-blur-md border-b border-white">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl ${neumorphicOutset} bg-[#f0f2f5] text-rose-600`}>
-              <Activity size={28} className="drop-shadow-sm" />
+            <div className={`p-3 rounded-2xl ${glassStyle} text-rose-600`}>
+              <Activity size={28} />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Hospital Portal</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Live Dashboard • {session?.role}</p>
-              </div>
+              <h1 className="text-2xl font-black tracking-tight">Hospital Portal</h1>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Staff Profile • Live</p>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-6">
-             <div className={`px-6 py-3 rounded-2xl ${glassStyle} flex items-center gap-3`}>
-                <Award className="text-amber-500" size={20} />
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400">Total Points</p>
-                  <p className="text-lg font-black text-slate-900">{growthPoints?.totalPoints || 0}</p>
-                </div>
-             </div>
+          <div className="hidden md:flex items-center gap-4">
+            <div className={`px-6 py-3 rounded-2xl ${glassStyle} flex items-center gap-3`}>
+              <Award className="text-amber-500" size={20} />
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Growth Points</p>
+                <p className="text-lg font-black">{profile?.totalGrowthPoints || 0}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Profile Sidebar */}
         <div className="lg:col-span-4 space-y-8">
           <div className={`p-8 rounded-[3rem] ${glassStyle} flex flex-col items-center relative overflow-hidden`}>
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl" />
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-rose-500/5 rounded-full blur-3xl" />
+            
             <div className="relative group">
               <div className={`w-32 h-32 rounded-[2.5rem] overflow-hidden ${neumorphicOutset} border-4 border-white/50 relative`}>
                 {profile?.photoUrl ? (
                   <img src={profile.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-slate-100 flex items-center justify-center text-4xl font-black text-slate-300">
+                  <div className="w-full h-full bg-slate-50 flex items-center justify-center text-4xl font-black text-slate-200 uppercase">
                     {profile?.displayName?.[0]}
                   </div>
                 )}
                 {uploadingPhoto && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                    <Loader2 className="animate-spin text-white" />
+                  <div className="absolute inset-0 bg-white/40 flex items-center justify-center backdrop-blur-sm">
+                    <Loader2 className="animate-spin text-rose-600" />
                   </div>
                 )}
               </div>
               <button 
                 onClick={() => fileRef.current?.click()}
-                className={`absolute -bottom-2 -right-2 p-3 rounded-2xl bg-rose-600 text-white shadow-xl hover:scale-110 transition-transform`}
+                className="absolute -bottom-2 -right-2 p-3 rounded-2xl bg-rose-600 text-white shadow-xl hover:scale-110 transition-all active:scale-95"
               >
                 <Camera size={18} />
               </button>
               <input ref={fileRef} type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadPhoto(e.target.files[0])} />
             </div>
 
-            <h2 className="mt-6 text-2xl font-black text-slate-900 text-center">{profile?.displayName}</h2>
-            <p className="text-rose-600 font-bold text-sm tracking-wide uppercase mt-1">{profile?.designation || 'Healthcare Professional'}</p>
+            <h2 className="mt-6 text-2xl font-black text-center">{profile?.displayName}</h2>
+            <p className="text-rose-600 font-black text-[10px] uppercase tracking-widest mt-2">{profile?.designation || 'Healthcare Professional'}</p>
             
-            <div className="mt-8 w-full space-y-4">
+            <div className="mt-8 w-full space-y-3">
               <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}>
-                <Mail className="text-slate-400" size={18} />
-                <span className="text-sm font-bold text-slate-600 truncate">{profile?.email}</span>
+                <Mail className="text-slate-300" size={16} />
+                <span className="text-xs font-bold text-slate-600 truncate">{profile?.email}</span>
               </div>
               <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}>
-                <Phone className="text-slate-400" size={18} />
-                <span className="text-sm font-bold text-slate-600">{profile?.phone || 'No Phone'}</span>
+                <Phone className="text-slate-300" size={16} />
+                <span className="text-xs font-bold text-slate-600">{profile?.phone || 'No Phone'}</span>
               </div>
             </div>
 
             <div className="mt-10 grid grid-cols-2 gap-4 w-full">
-              <div className={`p-4 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Emp ID</p>
-                <p className="text-lg font-black text-slate-900">#{profile?.employeeId || '---'}</p>
+              <div className={`p-4 rounded-3xl ${glassStyle} text-center`}>
+                <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Emp ID</p>
+                <p className="text-md font-black">#{profile?.employeeId || '---'}</p>
               </div>
-              <div className={`p-4 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Joined</p>
-                <p className="text-lg font-black text-slate-900">{profile?.joiningDate ? formatDateDMY(profile.joiningDate).split('-')[2] : '2024'}</p>
+              <div className={`p-4 rounded-3xl ${glassStyle} text-center`}>
+                <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Joined</p>
+                <p className="text-md font-black">{profile?.joiningDate ? formatDateDMY(profile.joiningDate).split('-')[2] : '2024'}</p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Content Tabs */}
         <div className="lg:col-span-8 space-y-8">
-          <div className={`p-2 rounded-[2rem] ${neumorphicOutset} bg-[#f0f2f5] flex overflow-x-auto no-scrollbar gap-1`}>
+          <div className={`p-2 rounded-[2rem] ${glassStyle} flex overflow-x-auto no-scrollbar gap-1`}>
             {[
               { id: 'special_tasks', label: 'Tasks', icon: <Target size={18} /> },
               { id: 'attendance', label: 'Attendance', icon: <Calendar size={18} /> },
@@ -255,10 +254,10 @@ export default function ProfilePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-4 rounded-[1.5rem] text-sm font-black transition-all whitespace-nowrap
+                className={`flex items-center gap-2 px-6 py-4 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap
                   ${activeTab === tab.id 
-                    ? `bg-rose-600 text-white shadow-[4px_4px_10px_rgba(225,29,72,0.3)] scale-105` 
-                    : `text-slate-400 hover:text-slate-600 hover:bg-slate-200/50`}`}
+                    ? `bg-rose-600 text-white shadow-xl scale-105` 
+                    : `text-slate-400 hover:text-rose-600 hover:bg-rose-50`}`}
               >
                 {tab.icon}
                 {tab.label}
@@ -266,41 +265,55 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          <div className={`p-8 md:p-10 rounded-[3.5rem] ${glassStyle} min-h-[500px]`}>
+          <div className={`p-8 md:p-10 rounded-[3.5rem] min-h-[500px] relative overflow-hidden ${glassStyle}`}>
+            
             {activeTab === 'special_tasks' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Daily Special Tasks</h3>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Target size={20} /></div>
+                  <h3 className="text-xl font-black">Daily Special Tasks</h3>
+                </div>
                 <div className="space-y-4">
-                  {specialTasks.map(task => (
-                    <div key={task.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between group hover:scale-[1.01] transition-transform`}>
+                  {specialTasks.length > 0 ? specialTasks.map(task => (
+                    <div key={task.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between group transition-transform hover:scale-[1.01]`}>
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-2xl ${task.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                        <div className={`p-3 rounded-2xl ${task.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                           {task.status === 'completed' ? <CheckCircle size={20} /> : <Clock size={20} />}
                         </div>
                         <div>
-                          <p className={`font-black ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.task}</p>
+                          <p className={`text-sm font-bold ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.description || (task as any).task}</p>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{formatDateDMY(task.date)}</p>
                         </div>
                       </div>
-                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{task.points} PTS</div>
+                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600 shadow-sm">+{task.points || 0} PTS</div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="py-20 flex flex-col items-center opacity-30">
+                      <Sparkles size={48} className="text-slate-400 mb-4" />
+                      <p className="font-black uppercase tracking-widest">No Active Tasks</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {activeTab === 'attendance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Attendance Log</h3>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Calendar size={20} /></div>
+                  <h3 className="text-xl font-black">Attendance History</h3>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {attendance.map(log => (
-                    <div key={log.id} className={`p-5 rounded-[2rem] ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
+                    <div key={log.id} className={`p-5 rounded-[2rem] ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
                       <div>
-                        <p className="font-black text-slate-900">{formatDateDMY(log.date)}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase">{log.arrivalTime || '--:--'} to {log.departureTime || '--:--'}</p>
+                        <p className="font-bold text-sm text-slate-900">{formatDateDMY(log.date)}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase mt-1">
+                          {log.checkInTime ? toDate(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} - {log.checkOutTime ? toDate(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        </p>
                       </div>
                       <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                        log.status === 'present' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                        log.status === 'present' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
                       }`}>
                         {log.status}
                       </div>
@@ -313,21 +326,26 @@ export default function ProfilePage() {
             {activeTab === 'finance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-rose-600 text-white`}>
-                     <p className="text-xs font-black uppercase tracking-[0.2em] opacity-60">Estimated Payable</p>
-                     <h4 className="text-4xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
+                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-rose-600 text-white relative overflow-hidden`}>
+                     <DollarSign size={80} className="absolute -right-4 -bottom-4 opacity-10" />
+                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Estimated Payable</p>
+                     <h4 className="text-3xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
                   </div>
-                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-white text-slate-900`}>
-                     <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Total Deductions</p>
-                     <h4 className="text-4xl font-black mt-2 text-rose-500">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4>
+                  <div className={`p-8 rounded-[3rem] ${glassStyle} text-slate-900`}>
+                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Deductions</p>
+                     <h4 className="text-3xl font-black mt-2 text-rose-500">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4>
                   </div>
                 </div>
-                <div className="space-y-4">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 px-2">Recent Fines</h4>
+                <div className="space-y-3">
                   {fines.map(fine => (
-                    <div key={fine.id} className={`p-6 rounded-3xl ${neumorphicInset} flex items-center justify-between`}>
+                    <div key={fine.id} className={`p-5 rounded-3xl ${neumorphicInset} flex items-center justify-between`}>
                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-2xl bg-rose-50 text-rose-500"><AlertCircle size={20} /></div>
-                          <div><p className="font-black text-slate-900">{fine.reason}</p><p className="text-[10px] font-black text-slate-400">{formatDateDMY(fine.date)}</p></div>
+                          <div className="p-2 bg-rose-50 rounded-xl text-rose-500"><AlertCircle size={18} /></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{fine.reason}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase">{formatDateDMY(fine.date)}</p>
+                          </div>
                        </div>
                        <p className="font-black text-rose-500">- Rs. {fine.amount}</p>
                     </div>
@@ -338,46 +356,70 @@ export default function ProfilePage() {
 
             {activeTab === 'duty' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                 <h3 className="text-2xl font-black text-slate-900 mb-8">Work Logs & Duties</h3>
-                 <div className="space-y-4">
-                    {duties.map(duty => (
-                      <div key={duty.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
-                        <div className="flex items-center gap-4">
-                           <div className={`p-3 rounded-2xl ${duty.status === 'completed' ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'}`}><Activity size={20} /></div>
-                           <div><p className="font-black text-slate-900 capitalize">{duty.dutyType.replace(/_/g, ' ')}</p><p className="text-[10px] font-black text-slate-400">{formatDateDMY(duty.date)}</p></div>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Activity size={20} /></div>
+                  <h3 className="text-xl font-black">Work Logs</h3>
+                </div>
+                <div className="space-y-4">
+                  {duties.map(duty => (
+                    <div key={duty.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${duty.status === 'completed' ? 'bg-teal-50 text-teal-600' : 'bg-slate-50 text-slate-400'}`}>
+                          <Activity size={20} />
                         </div>
-                        <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{duty.points} PTS</div>
+                        <div>
+                          <p className="text-sm font-bold capitalize">{duty.dutyType.replace(/_/g, ' ')}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{formatDateDMY(duty.date)}</p>
+                        </div>
                       </div>
-                    ))}
-                 </div>
+                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{duty.points} PTS</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {activeTab === 'dress' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                 <h3 className="text-2xl font-black text-slate-900 mb-8">Dress Code Compliance</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {dressLogs.map(log => (
-                      <div key={log.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
-                        <div className="flex items-center gap-4">
-                           <div className={`p-3 rounded-2xl ${log.status === 'yes' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}><Shirt size={20} /></div>
-                           <div><p className="font-black text-slate-900">{formatDateDMY(log.date)}</p><p className="text-[10px] font-black text-slate-400">{log.status === 'yes' ? 'Compliant' : 'Non-Compliant'}</p></div>
+                 <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Shirt size={20} /></div>
+                  <h3 className="text-xl font-black">Dress Compliance</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dressLogs.map(log => (
+                    <div key={log.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${log.status === 'yes' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-300'}`}>
+                          <Shirt size={20} />
                         </div>
-                        {log.status === 'yes' && <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{log.points} PTS</div>}
+                        <div>
+                          <p className="text-sm font-bold">{formatDateDMY(log.date)}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{log.status === 'yes' ? 'Compliant' : 'Non-Compliant'}</p>
+                        </div>
                       </div>
-                    ))}
-                 </div>
+                      {log.status === 'yes' && <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{log.points} PTS</div>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {activeTab === 'score' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Performance Score</h3>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><TrendingUp size={20} /></div>
+                  <h3 className="text-xl font-black">Performance Analysis</h3>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#FCFBF8] text-center`}>
                       <Award className="mx-auto text-amber-500 mb-2" size={32} />
-                      <p className="text-[10px] font-black uppercase text-slate-400">Total Points</p>
-                      <h4 className="text-3xl font-black mt-2 text-slate-900">{growthPoints?.totalPoints || 0}</h4>
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Total Growth Points</p>
+                      <h4 className="text-3xl font-black mt-2">{profile?.totalGrowthPoints || 0}</h4>
+                   </div>
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#FCFBF8] text-center`}>
+                      <Activity className="mx-auto text-emerald-500 mb-2" size={32} />
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Attendance %</p>
+                      <h4 className="text-3xl font-black mt-2">{Math.floor((attendance.filter(a=>a.status==='present').length / 30) * 100) || 0}%</h4>
                    </div>
                 </div>
               </div>
@@ -385,31 +427,41 @@ export default function ProfilePage() {
 
             {activeTab === 'profile' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-2xl font-black text-slate-900 mb-8">Personal Records</h3>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><User size={20} /></div>
+                  <h3 className="text-xl font-black">Personal Dossier</h3>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    <div className="space-y-6">
                       <div>
-                         <p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">National ID (CNIC)</p>
+                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2 tracking-widest">National ID (CNIC)</p>
                          <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
-                            <Shield className="text-rose-500" size={20} />
-                            <p className="text-sm font-bold text-slate-900">{profile?.cnic || 'Not provided'}</p>
+                            <Shield className="text-rose-500" size={18} />
+                            <p className="text-sm font-bold text-slate-700">{profile?.cnic || 'Not provided'}</p>
                          </div>
                       </div>
                       <div>
-                         <p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Home Address</p>
+                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2 tracking-widest">Home Address</p>
                          <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-start gap-4`}>
-                            <MapPin className="text-rose-500 mt-1" size={20} />
-                            <p className="text-sm font-bold text-slate-900 leading-relaxed">{profile?.address || 'No address registered.'}</p>
+                            <MapPin className="text-rose-500 mt-1" size={18} />
+                            <p className="text-sm font-bold text-slate-700 leading-relaxed">{profile?.address || 'No address registered.'}</p>
                          </div>
                       </div>
                    </div>
                    <div className="space-y-6">
                       <div>
-                         <p className="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Work Schedule</p>
+                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2 tracking-widest">Work Schedule</p>
                          <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
-                            <Clock className="text-rose-500" size={20} />
-                            <p className="text-sm font-bold text-slate-900">{profile?.dutyStartTime || '09:00'} - {profile?.dutyEndTime || '17:00'}</p>
+                            <Clock className="text-rose-500" size={18} />
+                            <p className="text-sm font-bold text-slate-700">{profile?.dutyStartTime || '09:00'} - {profile?.dutyEndTime || '17:00'}</p>
                          </div>
+                      </div>
+                      <div className={`p-8 rounded-[2.5rem] ${neumorphicOutset} bg-rose-50/30 border border-rose-100 flex flex-col items-center justify-center text-center`}>
+                        <Award className="text-rose-600 mb-3" size={32} />
+                        <p className="text-xs font-black uppercase tracking-widest text-rose-900">Certified Staff</p>
+                        <button className="mt-4 px-4 py-2 rounded-xl bg-white border border-rose-100 text-[10px] font-black uppercase text-rose-600 shadow-sm hover:bg-rose-600 hover:text-white transition-all">
+                          Download ID Card
+                        </button>
                       </div>
                    </div>
                 </div>

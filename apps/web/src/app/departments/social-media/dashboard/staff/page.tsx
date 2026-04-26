@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useJobCenterSession } from '@/hooks/job-center/useJobCenterSession';
+import { useMediaSession } from '@/hooks/social-media/useMediaSession';
 import {
   collection, query, where, getDocs, addDoc,
   updateDoc, doc, getDoc, Timestamp, orderBy, limit
@@ -18,7 +18,7 @@ import { toast } from 'react-hot-toast';
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useJobCenterSession();
+  const { session: user, loading: sessionLoading } = useMediaSession();
 
   const [staffProfile, setStaffProfile] = useState<any>(null);
   const [todayRecord, setTodayRecord] = useState<any>(null);
@@ -37,11 +37,11 @@ export default function StaffSelfPage() {
     if (!user) return;
     try {
       // 1. Fetch Staff Profile
-      const staffRef = doc(db, 'jobcenter_users', user.uid);
+      const staffRef = doc(db, 'media_users', user.uid);
       let staffSnap = await getDoc(staffRef);
       
       if (!staffSnap.exists()) {
-        const fallbackSnap = await getDocs(query(collection(db, 'jobcenter_staff'), where('loginUserId', '==', user.uid)));
+        const fallbackSnap = await getDocs(query(collection(db, 'media_staff'), where('loginUserId', '==', user.uid)));
         if (!fallbackSnap.empty) {
             staffSnap = fallbackSnap.docs[0] as any;
         }
@@ -66,7 +66,7 @@ export default function StaffSelfPage() {
       // 2. Today's attendance
       const attSnap = await getDocs(
         query(
-          collection(db, 'jobcenter_attendance'), 
+          collection(db, 'media_attendance'), 
           where('staffId', '==', staffId), 
           where('date', '==', today)
         )
@@ -87,7 +87,7 @@ export default function StaffSelfPage() {
       // 3. Contributions (Recent)
       const contribSnap = await getDocs(
         query(
-          collection(db, 'jobcenter_contributions'), 
+          collection(db, 'media_contributions'), 
           where('staffId', '==', staffId),
           orderBy('createdAt', 'desc'),
           limit(5)
@@ -110,7 +110,7 @@ export default function StaffSelfPage() {
 
       const monthlySnap = await getDocs(
         query(
-          collection(db, 'jobcenter_attendance'),
+          collection(db, 'media_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
           where('date', '<=', today)
@@ -130,7 +130,7 @@ export default function StaffSelfPage() {
       // 5. Special Tasks
       const tasksSnap = await getDocs(
         query(
-          collection(db, 'jobcenter_special_tasks'), 
+          collection(db, 'media_special_tasks'), 
           where('staffId', '==', staffId),
           where('status', '!=', 'completed')
         )
@@ -146,7 +146,7 @@ export default function StaffSelfPage() {
   useEffect(() => {
     if (sessionLoading) return;
     if (!user || user.role !== 'staff') {
-      router.push('/departments/job-center/login');
+      router.push('/departments/social-media/login');
       return;
     }
     fetchData();
@@ -166,7 +166,7 @@ export default function StaffSelfPage() {
         const lateByMinutes = Math.floor(lateByMs / 60000);
         const isLate = lateByMinutes > 15; // 15 min grace period
 
-        await addDoc(collection(db, 'jobcenter_attendance'), {
+        await addDoc(collection(db, 'media_attendance'), {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
@@ -179,7 +179,7 @@ export default function StaffSelfPage() {
 
         if (isLate) {
           const currentMonth = today.substring(0, 7);
-          await addDoc(collection(db, 'jobcenter_fines'), {
+          await addDoc(collection(db, 'media_fines'), {
             staffId: staffProfile.id,
             amount: 200,
             reason: `Late arrival (${lateByMinutes} mins) - Auto-generated`,
@@ -192,7 +192,7 @@ export default function StaffSelfPage() {
           toast.success('Checked in successfully!');
         }
       } else if (!todayRecord.checkOutTime) {
-        await updateDoc(doc(db, 'jobcenter_attendance', todayRecord.id), {
+        await updateDoc(doc(db, 'media_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
         toast.success('Checked out successfully!');
@@ -209,14 +209,14 @@ export default function StaffSelfPage() {
     if (!contributionText.trim() || !staffProfile) return;
     setContribLoading(true);
     try {
-      await addDoc(collection(db, 'jobcenter_contributions'), {
+      await addDoc(collection(db, 'media_contributions'), {
         staffId: staffProfile.id,
         staffName: staffProfile.name || user?.displayName,
         date: today,
         content: contributionText.trim(),
         isApproved: false,
         createdAt: Timestamp.now(),
-        dept: 'job-center'
+        dept: 'social-media'
       });
       setContributionText('');
       setHasContributedToday(true);
@@ -231,7 +231,7 @@ export default function StaffSelfPage() {
 
   const handleTaskUpdate = async (taskId: string, newStatus: string) => {
     try {
-      await updateDoc(doc(db, 'jobcenter_special_tasks', taskId), {
+      await updateDoc(doc(db, 'media_special_tasks', taskId), {
         status: newStatus,
         ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : {})
       });

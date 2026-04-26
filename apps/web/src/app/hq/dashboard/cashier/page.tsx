@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -98,10 +98,19 @@ export default function CashierStationPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyDateMode, setHistoryDateMode] = useState<DateMode>('today');
   const [historyFrom, setHistoryFrom] = useState('');
-  const [historyTo, setHistoryTo] = useState('');
   const [historyStatus, setHistoryStatus] = useState<StatusFilter>('all');
-  const [historyType, setHistoryType] = useState<'all' | TxnType>('all');
-  const [historyDepartment, setHistoryDepartment] = useState<'all' | string>('all');
+  const [historyType, setHistoryType] = useState<'all' | 'income' | 'expense'>('all');
+  const [historyDepartment, setHistoryDepartment] = useState('all');
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+
+  // Intelligence Stats
+  const [intelStats, setIntelStats] = useState({
+    todayRevenue: 0,
+    todayExpense: 0,
+    pendingCount: 0,
+    topDept: 'N/A'
+  });
+  const [historyTo, setHistoryTo] = useState('');
   const [historyStats, setHistoryStats] = useState({ income: 0, expense: 0, count: 0, students: 0, patients: 0, clients: 0 });
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
 
@@ -131,6 +140,20 @@ export default function CashierStationPage() {
   const selectedCategory = allCategories.find((c) => c.id === selectedCategoryId);
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
+  
+  const historyFiltered = useMemo(() => {
+    if (!showDuplicatesOnly) return historyTxns;
+    return historyTxns.filter((tx1, idx1) => {
+      return historyTxns.some((tx2, idx2) => {
+        if (idx1 === idx2) return false;
+        const date1 = getLocalDateString(tx1.transactionDate || tx1.date || tx1.createdAt);
+        const date2 = getLocalDateString(tx2.transactionDate || tx2.date || tx2.createdAt);
+        const entity1 = tx1.patientId || tx1.staffId || tx1.entityId;
+        const entity2 = tx2.patientId || tx2.staffId || tx2.entityId;
+        return tx1.amount === tx2.amount && date1 === date2 && entity1 === entity2 && !!entity1;
+      });
+    });
+  }, [historyTxns, showDuplicatesOnly]);
 
   // Optimized fetchHistory that uses filters and aggregation
   const fetchHistory = useCallback(async () => {
@@ -251,6 +274,24 @@ export default function CashierStationPage() {
       setHistoryLoading(false);
     }
   }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
+
+  const handleDeleteTransaction = async (tx: any) => {
+    if (!window.confirm('Are you sure you want to PERMANENTLY DELETE this pending transaction? This action cannot be undone.')) return;
+    try {
+      setProcessing(true);
+      const dept = DEPARTMENTS.find(d => d.code === tx.departmentCode);
+      if (!dept) throw new Error('Department not found');
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, dept.txCollection, tx.id));
+      toast.success('Transaction deleted from database');
+      fetchHistory();
+    } catch (err) {
+      console.error(err);
+      toast.error('Deletion failed');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -739,7 +780,29 @@ export default function CashierStationPage() {
   const todayStr = getLocalDateString(new Date());
   
   // Client-side filtering as fallback/refinement
-  const historyFiltered = useMemo(() => {
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayTxns = historyTxns.filter(t => t.date === today && t.status !== 'pending_cashier');
+    
+    const revenue = todayTxns.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const expense = todayTxns.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    
+    const deptCounts: Record<string, number> = {};
+    todayTxns.forEach(t => {
+      deptCounts[t.departmentCode] = (deptCounts[t.departmentCode] || 0) + 1;
+    });
+    
+    const topDept = Object.entries(deptCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+    setIntelStats({
+      todayRevenue: revenue,
+      todayExpense: expense,
+      pendingCount: incomingFeeReqs.length,
+      topDept
+    });
+  }, [historyTxns, incomingFeeReqs]);
+
+  const filteredHistory = useMemo(() => {
     return historyTxns.filter((tx) => {
       // 1. Department Filter (Immediate UI responsiveness)
       if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
@@ -1337,15 +1400,70 @@ export default function CashierStationPage() {
               <p className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Live Transaction Ledger</p>
             </div>
           </div>
-          <button 
-            type="button" 
-            onClick={() => void fetchHistory()} 
-            disabled={historyLoading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all active:scale-95"
-          >
-            <RefreshCw size={14} className={cn(historyLoading && 'animate-spin')} />
-            {historyLoading ? 'Syncing...' : 'Refresh Records'}
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <button 
+              type="button" 
+              onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+              className={cn(
+                "flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border-2",
+                showDuplicatesOnly 
+                  ? "bg-amber-100 border-amber-500 text-amber-700 shadow-[4px_4px_0px_0px_rgba(245,158,11,1)]" 
+                  : "bg-white border-black text-black hover:bg-gray-50"
+              )}
+            >
+              <RefreshCw size={14} className={cn(showDuplicatesOnly && "animate-pulse")} />
+              {showDuplicatesOnly ? 'Viewing Potential Doubles' : 'Analyze Double'}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => void fetchHistory()} 
+              disabled={historyLoading}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-black text-white font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]"
+            >
+              <RefreshCw size={14} className={cn(historyLoading && 'animate-spin')} />
+              {historyLoading ? 'Syncing...' : 'Refresh Records'}
+            </button>
+          </div>
+        </div>
+
+        {/* Intelligence Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000 delay-300">
+          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Today's Inflow</p>
+            <div className="flex items-center justify-between">
+              <h4 className="text-2xl font-[1000]">Rs {intelStats.todayRevenue.toLocaleString()}</h4>
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                <TrendingUp size={16} />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Today's Outflow</p>
+            <div className="flex items-center justify-between">
+              <h4 className="text-2xl font-[1000]">Rs {intelStats.todayExpense.toLocaleString()}</h4>
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                <TrendingDown size={16} />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Pending Review</p>
+            <div className="flex items-center justify-between">
+              <h4 className="text-2xl font-[1000]">{incomingFeeReqs.length} Units</h4>
+              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                <Clock size={16} />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">High-Velocity Dept</p>
+            <div className="flex items-center justify-between">
+              <h4 className="text-2xl font-[1000] uppercase tracking-tighter">{intelStats.topDept}</h4>
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                <Activity size={16} />
+              </div>
+            </div>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -1416,6 +1534,27 @@ export default function CashierStationPage() {
             </div>
           </div>
         )}
+
+        <div className="flex flex-wrap items-center gap-4 mb-8">
+          <button
+            onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+            className={cn(
+              "px-8 py-4 rounded-2xl border-2 font-[1000] text-[10px] uppercase tracking-widest transition-all flex items-center gap-3",
+              showDuplicatesOnly 
+                ? "bg-amber-100 border-amber-600 text-amber-600 shadow-[4px_4px_0px_0px_#d97706]" 
+                : "bg-white border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-surface-subtle"
+            )}
+          >
+            <Sparkles size={16} />
+            {showDuplicatesOnly ? 'Viewing Potential Duplicates' : 'Analyze Double Transactions'}
+          </button>
+          
+          {showDuplicatesOnly && (
+            <p className="text-[10px] font-black uppercase text-amber-600 animate-pulse">
+              Highlighting similar amounts on same dates for same accounts.
+            </p>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border-l-8 border-l-black border border-border-subtle rounded-[2rem] p-6 shadow-sm">
@@ -1527,7 +1666,7 @@ export default function CashierStationPage() {
                   <tr>
                     <td colSpan={6} className="px-8 py-20 text-center text-sm font-black text-black uppercase tracking-widest">No entries found for this query.</td>
                   </tr>
-                ) : historyFiltered.map((tx) => (
+                ) : historyFiltered.map((tx: any) => (
                   <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-surface-subtle transition-colors cursor-pointer group">
                     <td className="px-8 py-6 text-xs font-black text-black">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
                     <td className="px-8 py-6">
@@ -1548,8 +1687,19 @@ export default function CashierStationPage() {
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <div className={cn('text-sm font-black', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
-                        {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                      <div className="flex items-center justify-end gap-3">
+                        <div className={cn('text-sm font-black', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
+                          {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                        </div>
+                        {(tx.status === 'pending' || tx.status === 'pending_cashier') && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all"
+                            title="Delete Pending Transaction"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1761,15 +1911,36 @@ export default function CashierStationPage() {
                   Dismiss
                 </button>
                 {detailModalTx.status === 'pending_cashier' && (
-                   <button 
-                   onClick={() => {
-                     setDetailModalTx(null);
-                     openForwardModal(detailModalTx);
-                   }}
-                   className="flex-1 py-5 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
-                 >
-                   Authorize Tx
-                 </button>
+                  <>
+                    <button 
+                      onClick={async () => {
+                        if (confirm('Are you sure you want to PERMANENTLY DELETE this pending transaction?')) {
+                          try {
+                            const { deleteDoc, doc } = await import('firebase/firestore');
+                            const coll = DEPARTMENTS.find(d => d.code === detailModalTx.departmentCode)?.txCollection || 'hq_transactions';
+                            await deleteDoc(doc(db, coll, detailModalTx.id));
+                            toast.success('Transaction Deleted Permanently');
+                            setDetailModalTx(null);
+                            fetchHistory();
+                          } catch (err) {
+                            toast.error('Failed to delete transaction');
+                          }
+                        }
+                      }}
+                      className="flex-1 py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20"
+                    >
+                      Delete Record
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setDetailModalTx(null);
+                        openForwardModal(detailModalTx);
+                      }}
+                      className="flex-1 py-5 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
+                    >
+                      Authorize Tx
+                    </button>
+                  </>
                 )}
               </div>
             </div>

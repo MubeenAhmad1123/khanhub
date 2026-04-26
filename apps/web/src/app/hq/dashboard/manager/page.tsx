@@ -9,7 +9,7 @@ import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
   ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon,
-  ChevronRight, KeyRound
+  ChevronRight, KeyRound, Calendar, Send
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
@@ -60,6 +60,17 @@ export default function ManagerOverviewPage() {
   const [attMap, setAttMap] = useState<Map<string, string>>(new Map());
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Broadcast Modal State
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({
+    dept: 'hq' as StaffDept,
+    title: '',
+    time: '10:00',
+    date: new Date().toISOString().split('T')[0],
+    location: 'Main Hall'
+  });
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -220,6 +231,41 @@ export default function ManagerOverviewPage() {
     fetchData();
   }, [session]);
 
+  const handleBroadcastMeeting = async () => {
+    if (!broadcastForm.title) return;
+    setSendingBroadcast(true);
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      
+      // Filter staff for the selected department
+      const deptStaff = allStaff.filter(s => s.department === broadcastForm.dept);
+      
+      const notifications = deptStaff.map(s => addDoc(collection(db, 'staff_notifications'), {
+        recipientId: s.id,
+        title: `ALL STAFF MEETING: ${broadcastForm.title}`,
+        body: `General department meeting for ${broadcastForm.dept} scheduled on ${broadcastForm.date} at ${broadcastForm.time}. Location: ${broadcastForm.location}`,
+        type: 'meeting',
+        dept: broadcastForm.dept,
+        relatedId: 'broadcast',
+        isRead: false,
+        createdAt: serverTimestamp()
+      }));
+
+      await Promise.all(notifications);
+      
+      // Also add to special tasks for everyone? Maybe too noisy. Just notifications is enough for "ALL STAFF".
+      
+      alert(`Broadcast sent to ${deptStaff.length} staff members in ${broadcastForm.dept}`);
+      setShowBroadcast(false);
+      setBroadcastForm({ ...broadcastForm, title: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send broadcast');
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
+
   if (sessionLoading || loading || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF4]">
@@ -237,13 +283,16 @@ export default function ManagerOverviewPage() {
           <p className="text-black/60 text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">Global Departmental Oversight • Real-time Operational Metrics</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          <button 
+            onClick={() => setShowBroadcast(true)}
+            className="flex items-center gap-3 px-8 py-4 bg-white border-4 border-black text-black rounded-[2rem] text-xs font-black uppercase tracking-widest transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+          >
+            <Calendar size={18} /> Broadcast Meeting
+          </button>
           <Link 
             href="/hq/dashboard/manager/reports/daily"
-            className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-[2rem] text-xs font-black uppercase tracking-widest transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+            className="flex items-center gap-4 px-6 py-3 bg-white border-2 border-black rounded-2xl shadow-sm hover:bg-gray-50 transition-all"
           >
-            <TrendingUp size={18} /> Generate Daily Report
-          </Link>
-          <div className="flex items-center gap-4 px-6 py-3 bg-white border-2 border-black rounded-2xl shadow-sm">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live Connection</p>
@@ -252,7 +301,7 @@ export default function ManagerOverviewPage() {
             <p className="text-[9px] font-black uppercase tracking-widest text-black/60">
               {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
-          </div>
+          </Link>
         </div>
       </div>
 
@@ -414,6 +463,77 @@ export default function ManagerOverviewPage() {
           )}
         </div>
       </div>
+
+      {/* Broadcast Modal */}
+      {showBroadcast && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white border-8 border-black rounded-[4rem] p-10 shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-300">
+            <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Broadcast Meeting</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40 mb-8 italic">Notify all personnel in a specific division</p>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Target Department</label>
+                <select 
+                  value={broadcastForm.dept}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, dept: e.target.value as any })}
+                  className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                >
+                  {Object.keys(deptStats).map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Meeting Title</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Monthly Operational Review"
+                  value={broadcastForm.title}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
+                  className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Time</label>
+                  <input 
+                    type="time"
+                    value={broadcastForm.time}
+                    onChange={e => setBroadcastForm({ ...broadcastForm, time: e.target.value })}
+                    className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Location</label>
+                  <input 
+                    type="text"
+                    value={broadcastForm.location}
+                    onChange={e => setBroadcastForm({ ...broadcastForm, location: e.target.value })}
+                    className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  onClick={() => setShowBroadcast(false)}
+                  className="flex-1 px-8 py-5 border-4 border-black text-black rounded-[2rem] text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleBroadcastMeeting}
+                  disabled={sendingBroadcast || !broadcastForm.title}
+                  className="flex-1 px-8 py-5 bg-black text-white border-4 border-black rounded-[2rem] text-xs font-black uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 hover:shadow-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {sendingBroadcast ? 'Sending...' : <><Send size={16} /> Send Signal</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

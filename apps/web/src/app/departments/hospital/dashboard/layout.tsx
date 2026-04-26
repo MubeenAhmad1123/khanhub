@@ -27,6 +27,7 @@ import { auth, db } from '@/lib/firebase';
 import { useTheme } from 'next-themes';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { HospitalRole } from '@/types/hospital';
+import StaffNotifications from '@/components/layout/StaffNotifications';
 
 interface NavItem {
   title: string;
@@ -305,10 +306,7 @@ export default function HospitalDashboardLayout({
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="relative p-2.5 text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-black" />
-              </button>
+              {user?.uid && <StaffNotifications uid={user.uid} dept="hospital" />}
               
               <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
               

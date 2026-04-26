@@ -14,6 +14,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Spinner } from '@/components/ui';
 import { ItRole } from '@/types/it';
+import StaffNotifications from '@/components/layout/StaffNotifications';
+
 
 interface NavItem {
   label: string;
@@ -336,10 +338,7 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
           </div>
           
           <div className="flex items-center gap-4">
-            <button className="relative p-2.5 text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10 group">
-              <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white dark:border-black animate-pulse" />
-            </button>
+            {user?.uid && <StaffNotifications uid={user.uid} dept="it" />}
             
             <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
             

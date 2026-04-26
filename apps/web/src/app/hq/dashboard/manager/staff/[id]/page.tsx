@@ -168,8 +168,19 @@ export default function StaffProfilePage() {
   // Special Tasks State
   const [specialTasks, setSpecialTasks] = useState<HqSpecialTask[]>([]);
   const [newTaskText, setNewTaskText] = useState('');
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [newTaskRecurrence, setNewTaskRecurrence] = useState<'once' | 'weekly' | 'monthly'>('once');
   const [creatingTask, setCreatingTask] = useState(false);
+
+  // Meeting Form
+  const [meetingForm, setMeetingForm] = useState({
+    title: '',
+    date: todayStr,
+    time: '10:00',
+    location: 'Conference Room',
+    agenda: ''
+  });
+  const [schedulingMeeting, setSchedulingMeeting] = useState(false);
 
   // Custom Config Add States
   const [availableDuties, setAvailableDuties] = useState<{ key: string, label: string }[]>([]);
@@ -196,7 +207,6 @@ export default function StaffProfilePage() {
     deductionReason: '',
   });
 
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const monthDays = useMemo(() => {
@@ -854,6 +864,19 @@ export default function StaffProfilePage() {
       };
       const docRef = await addDoc(collection(db, `${slug}_special_tasks`), newTask);
       setSpecialTasks([{ id: docRef.id, ...newTask } as HqSpecialTask, ...specialTasks]);
+      
+      // Add notification for the staff member
+      await addDoc(collection(db, "staff_notifications"), {
+        recipientId: staff.staffId,
+        title: "New Special Task Assigned",
+        body: `You have been assigned a new task: ${newTaskText}`,
+        type: 'task',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        dept: staff.dept,
+        relatedId: docRef.id
+      });
+
       setNewTaskText('');
       setNewTaskRecurrence('once');
       toast.success("Special Task Assigned!");
@@ -935,6 +958,52 @@ export default function StaffProfilePage() {
     }
     fetchData();
   }, [session, sessionLoading, fetchData, router]);
+
+  const handleScheduleMeeting = async () => {
+    if (!meetingForm.title || !meetingForm.date || !staff) return;
+    const currentDept = staff.dept as StaffDept;
+    setSchedulingMeeting(true);
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      
+      // 1. Save to staff_notifications (Individual)
+      await addDoc(collection(db, 'staff_notifications'), {
+        recipientId: staff.id,
+        title: `Meeting: ${meetingForm.title}`,
+        body: `You have a meeting scheduled for ${meetingForm.date} at ${meetingForm.time}. Location: ${meetingForm.location}`,
+        type: 'meeting',
+        dept: currentDept,
+        relatedId: staff.id,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      // 2. Add to specialTasks with meeting type
+      await addDoc(collection(db, `${getDeptPrefix(currentDept)}_special_tasks`), {
+        staffId: staff.id,
+        description: `MEETING: ${meetingForm.title} (${meetingForm.date} @ ${meetingForm.time})`,
+        status: 'pending',
+        priority: 'high',
+        assignedBy: session?.uid,
+        assignedByName: session?.displayName || 'Manager',
+        category: 'meeting',
+        metadata: {
+          ...meetingForm
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      toast.success('Meeting Scheduled and Notified');
+      setMeetingForm({ title: '', date: todayStr, time: '10:00', location: 'Conference Room', agenda: '' });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to schedule meeting');
+    } finally {
+      setSchedulingMeeting(false);
+    }
+  };
 
   const handleMarkDuty = async () => {
     try {
@@ -1753,6 +1822,11 @@ export default function StaffProfilePage() {
                             <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <p className="text-[10px] text-black font-bold uppercase tracking-widest">By {task.assignedByName}</p>
+                              {(task as any).category === 'meeting' && (
+                                <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase tracking-tighter border border-amber-500/20">
+                                  Meeting
+                                </span>
+                              )}
                               {task.recurrence && task.recurrence !== 'once' && (
                                 <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-tighter border border-purple-500/20">
                                   {task.recurrence}
@@ -1771,6 +1845,68 @@ export default function StaffProfilePage() {
                       ))
                     )}
                   </div>
+                </div>
+
+                {/* Schedule Meeting Section */}
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                  <div className="mb-8">
+                    <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <Calendar className="text-amber-500" /> Schedule Professional Meeting
+                    </h3>
+                    <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Notify staff member of formal discussions</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Meeting Title</label>
+                      <input
+                        type="text"
+                        placeholder="Performance Review / Policy Update"
+                        className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                        value={meetingForm.title}
+                        onChange={e => setMeetingForm({ ...meetingForm, title: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Date</label>
+                        <input
+                          type="date"
+                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                          value={meetingForm.date}
+                          onChange={e => setMeetingForm({ ...meetingForm, date: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Time</label>
+                        <input
+                          type="time"
+                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                          value={meetingForm.time}
+                          onChange={e => setMeetingForm({ ...meetingForm, time: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Location</label>
+                    <input
+                      type="text"
+                      placeholder="Conference Room / Online / Staff Desk"
+                      className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                      value={meetingForm.location}
+                      onChange={e => setMeetingForm({ ...meetingForm, location: e.target.value })}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleScheduleMeeting}
+                    disabled={schedulingMeeting || !meetingForm.title}
+                    className="w-full py-4 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all disabled:opacity-50 shadow-lg shadow-amber-500/20"
+                  >
+                    {schedulingMeeting ? 'Scheduling...' : 'Schedule & Notify Staff'}
+                  </button>
                 </div>
               </div>
             )}
