@@ -176,21 +176,25 @@ export default function DailyReportPage() {
           attendanceStatus = rawStatus as any;
         }
 
-        if (att?.isLate && attendanceStatus === 'present') attendanceStatus = 'late';
+        // Use arrivedOnTime from new schema, fallback to isLate if it exists
+        const isLate = att?.arrivedOnTime === false || (att?.isLate && attendanceStatus === 'present');
+        if (isLate && attendanceStatus === 'present') attendanceStatus = 'late';
 
-        const uniformStatus: DailyReportRow['uniformStatus'] = uniformConfig.length === 0 ? 'na' :
+        const onLeave = attendanceStatus === 'leave';
+
+        const uniformStatus: DailyReportRow['uniformStatus'] = onLeave ? 'na' : (uniformConfig.length === 0 ? 'na' :
           (uniformMissing.length === 0 ? 'yes' :
-            (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
+            (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete')));
 
-        const dutyStatus: DailyReportRow['dutyStatus'] = dutyConfig.length === 0 ? 'na' :
+        const dutyStatus: DailyReportRow['dutyStatus'] = onLeave ? 'na' : (dutyConfig.length === 0 ? 'na' :
           (dutiesPending.length === 0 ? 'yes' :
-            (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
+            (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete')));
 
         // Point Calculation (1 point each, total 4)
         const attPoint = (attendanceStatus === 'present' || attendanceStatus === 'late') ? 1 : 0;
-        const uniformPoint = uniformStatus === 'yes' ? 1 : 0;
-        const dutyPoint = dutyStatus === 'yes' ? 1 : 0;
-        const contribPoint = contribScore > 0 ? 1 : 0;
+        const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
+        const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
+        const contribPoint = (!onLeave && contribScore > 0) ? 1 : 0;
 
         const totalDailyPoints = attPoint + uniformPoint + dutyPoint + contribPoint;
 
@@ -203,13 +207,13 @@ export default function DailyReportPage() {
           uniformStatus,
           dutyStatus,
           // GP status is specifically tied to contribution approval as requested
-          gpStatus: contribScore > 0 ? 'yes' : 'no',
+          gpStatus: onLeave ? 'na' : (contribScore > 0 ? 'yes' : 'no'),
           dailyScore: totalDailyPoints,
           fines: fineTotal,
           fineReason: finesList.length > 0 ? finesList[0].reason : '',
           details: {
-            uniformMissing,
-            dutiesPending,
+            uniformMissing: onLeave ? [] : uniformMissing,
+            dutiesPending: onLeave ? [] : dutiesPending,
             finesReason: finesList.map((f: any) => `${f.reason} (₨${f.amount})`)
           },
           arrivalTime: att?.arrivalTime

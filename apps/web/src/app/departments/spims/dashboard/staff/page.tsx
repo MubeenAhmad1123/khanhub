@@ -12,7 +12,8 @@ import { formatDateDMY, toDate } from '@/lib/utils';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2, AlertCircle,
-  Trophy, TrendingUp, User as UserIcon, Shield, Activity
+  Trophy, TrendingUp, User as UserIcon, Shield, Activity,
+  CheckCircle2, Circle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -114,10 +115,29 @@ export default function StaffSelfPage() {
         const status = d.data().status;
         if (status === 'present') summary.present++;
         else if (status === 'absent') summary.absent++;
-        else if (status === 'leave') summary.leave++;
+        else if (['leave', 'paid_leave', 'unpaid_leave'].includes(status)) summary.leave++;
       });
 
       setMonthlySummary(summary);
+
+      // 5. Fetch Today's Duty Log for real-time status
+      const dutyLogSnap = await getDocs(
+        query(
+          collection(db, 'spims_duty_logs'),
+          where('staffId', '==', staffId),
+          where('date', '==', today)
+        )
+      );
+      
+      if (!dutyLogSnap.empty) {
+        const logData = dutyLogSnap.docs[0].data();
+        if (logData.duties) {
+          setStaffProfile((prev: any) => ({
+            ...(prev || {}),
+            duties: logData.duties
+          }));
+        }
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -338,14 +358,31 @@ export default function StaffSelfPage() {
               <h2 className="text-xl font-black text-gray-900">Daily Duties</h2>
             </div>
             <div className="space-y-3">
-              {staffProfile.duties.map((duty: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 border border-white">
-                  <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 text-[10px] font-black">
-                    {idx + 1}
+              {staffProfile.duties.map((duty: any, idx: number) => {
+                const label = duty.label || duty.description || (typeof duty === 'string' ? duty : 'Unknown Duty');
+                const isDone = duty.status === 'done';
+                return (
+                  <div key={idx} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isDone ? 'bg-emerald-50 border-emerald-100' : 'bg-white/50 border-white'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                        {idx + 1}
+                      </div>
+                      <p className={`text-sm font-bold ${isDone ? 'text-emerald-900' : 'text-slate-700'}`}>{label}</p>
+                    </div>
+                    {isDone ? (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        <CheckCircle2 size={12} />
+                        Completed
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-400 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        <Circle size={12} />
+                        Pending
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm font-bold text-slate-700">{duty.description || duty}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

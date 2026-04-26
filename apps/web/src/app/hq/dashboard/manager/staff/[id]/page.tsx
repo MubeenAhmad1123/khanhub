@@ -289,21 +289,24 @@ export default function StaffProfilePage() {
   }, [selectedMonth]);
 
   const computedScores = useMemo(() => {
-    if (!staff) return { attendance: 0, uniform: 0, working: 0, growthPoint: 0 };
+    if (!staff) return { attendance: 0, punctuality: 0, uniform: 0, working: 0, growthPoint: 0, workingDays: 0 };
     
     const days = daysInMonth();
     let attScore = 0;
+    let punctScore = 0;
     let uniScore = 0;
     let workScore = 0;
 
     days.forEach(day => {
-      // 1. Attendance Point: Must be present AND on time
+      // 1. Attendance: 1 point if present or late
       const att = attendanceMap[day];
-      if (att?.status === 'present' && att.arrivedOnTime) {
+      if (att?.status === 'present' || att?.status === 'late') {
         attScore++;
+        // 2. Punctuality: 1 point if arrived on time
+        if (att.arrivedOnTime) punctScore++;
       }
 
-      // 2. Uniform: 1 point if all items are 'yes'
+      // 3. Uniform: 1 point if all items are 'yes'
       const dress = dressMap[day];
       if (dress) {
         const config = staff.dressCodeConfig || [];
@@ -315,7 +318,7 @@ export default function StaffProfilePage() {
         if (config.length > 0 && missing.length === 0) uniScore++;
       }
 
-      // 3. Working: 1 point if all duties are 'completed'
+      // 4. Working (Duties): 1 point if all duties are 'done'
       const duty = dutyMap[day];
       if (duty) {
         const config = staff.dutyConfig || [];
@@ -328,14 +331,16 @@ export default function StaffProfilePage() {
       }
     });
 
-    // 4. Growth Points: Total points from history (matches roster card)
+    // 5. Growth Points: Total points from history
     const gpScore = growthHistory.reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
 
     return {
       attendance: attScore,
+      punctuality: punctScore,
       uniform: uniScore,
       working: workScore,
-      growthPoint: gpScore
+      growthPoint: gpScore,
+      workingDays: days.length
     };
   }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth]);
 
@@ -564,8 +569,8 @@ export default function StaffProfilePage() {
         status: next,
         markedBy: session?.uid,
         updatedAt: new Date().toISOString(),
-        arrivedOnTime: prevRecord.arrivedOnTime ?? (next === 'present'),
-        departedOnTime: prevRecord.departedOnTime ?? (next === 'present'),
+        arrivedOnTime: next === 'present' || next === 'late' ? (prevRecord.arrivedOnTime ?? true) : null,
+        departedOnTime: next === 'present' || next === 'late' ? (prevRecord.departedOnTime ?? true) : null,
       } as any;
 
       // Set default times if presenting for the first time
@@ -1166,7 +1171,9 @@ export default function StaffProfilePage() {
         markedAt: serverTimestamp(),
         markedBy: session?.uid,
         arrivalTime: status === 'present' ? '09:00' : null,
-        departureTime: status === 'present' ? '17:00' : null
+        departureTime: status === 'present' ? '17:00' : null,
+        arrivedOnTime: status === 'present' ? true : null, // Fix: Ensure they are marked on time by default
+        departedOnTime: status === 'present' ? true : null
       });
       toast.success(`Marked as ${status}`);
       fetchData();
@@ -2166,7 +2173,11 @@ export default function StaffProfilePage() {
                                 <HqCheckCell
                                   type="dresscode"
                                   size="sm"
-                                  value={attendanceMap[d]?.arrivedOnTime ? 'yes' : attendanceMap[d]?.arrivedOnTime === false ? 'no' : 'na'}
+                                  value={
+                                    (attendanceMap[d]?.status === 'present' || attendanceMap[d]?.status === 'late')
+                                      ? (attendanceMap[d]?.arrivedOnTime ? 'yes' : attendanceMap[d]?.arrivedOnTime === false ? 'no' : 'na')
+                                      : 'na'
+                                  }
                                   onToggle={(next) => togglePunctuality(d, 'arrivedOnTime', next === 'yes')}
                                 />
                                 {attendanceMap[d]?.note && (
@@ -2219,7 +2230,11 @@ export default function StaffProfilePage() {
                               <HqCheckCell
                                 type="dresscode"
                                 size="sm"
-                                value={attendanceMap[d]?.departedOnTime ? 'yes' : attendanceMap[d]?.departedOnTime === false ? 'no' : 'na'}
+                                value={
+                                  (attendanceMap[d]?.status === 'present' || attendanceMap[d]?.status === 'late')
+                                    ? (attendanceMap[d]?.departedOnTime ? 'yes' : attendanceMap[d]?.departedOnTime === false ? 'no' : 'na')
+                                    : 'na'
+                                }
                                 onToggle={(next) => togglePunctuality(d, 'departedOnTime', next === 'yes')}
                               />
                             </td>
@@ -3126,7 +3141,7 @@ export default function StaffProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
-                        Total Score: {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                        Total Score: {computedScores.attendance + computedScores.punctuality + computedScores.uniform + computedScores.working + computedScores.growthPoint}
                       </span>
                       <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
                         <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
@@ -3136,10 +3151,10 @@ export default function StaffProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                      { label: 'Attendance', score: growthPoints?.attendance || 0, max: (growthPoints?.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
-                      { label: 'Punctuality', score: growthPoints?.punctuality || 0, max: (growthPoints?.workingDays || 0) * 2, icon: <Clock size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                      { label: 'Uniform', score: growthPoints?.dressCode || 0, max: (growthPoints?.workingDays || 0) * (staff?.dressCodeConfig?.length || 4), icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                      { label: 'Duties', score: growthPoints?.duties || 0, max: (growthPoints?.workingDays || 0) * (staff?.dutyConfig?.length || 4), icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      { label: 'Attendance', score: computedScores.attendance, max: (computedScores.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                      { label: 'Punctuality', score: computedScores.punctuality, max: (computedScores.workingDays || 0) * 1, icon: <Clock size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                      { label: 'Uniform', score: computedScores.uniform, max: (computedScores.workingDays || 0) * 1, icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                      { label: 'Duties', score: computedScores.working, max: (computedScores.workingDays || 0) * 1, icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                     ].map((stat, i) => (
                       <div key={i} className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-200/50'} flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
