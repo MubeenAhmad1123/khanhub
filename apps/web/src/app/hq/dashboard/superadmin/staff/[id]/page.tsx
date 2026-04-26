@@ -150,16 +150,32 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
     );
   }
 
-  const joinDate = staff.joiningDate ? toDate(staff.joiningDate) : null;
-  const lastLogin = staff.lastLoginAt ? toDate(staff.lastLoginAt) : null;
-
   // Permission Checks for UI
   const isSuperadmin = session?.role === 'superadmin';
   const isManager = session?.role === 'manager';
   const canEdit = isSuperadmin || (isManager && (staff.role === 'staff' || staff.role === 'cashier'));
 
+  const getDeptTheme = (dept: string) => {
+    switch (dept.toLowerCase()) {
+      case 'rehab': return { accent: 'bg-rose-600', light: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200', shadow: 'shadow-rose-500/20' };
+      case 'it': return { accent: 'bg-indigo-600', light: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200', shadow: 'shadow-indigo-500/20' };
+      case 'spims': return { accent: 'bg-sky-600', light: 'bg-sky-50', text: 'text-sky-600', border: 'border-sky-200', shadow: 'shadow-sky-500/20' };
+      case 'hospital': return { accent: 'bg-rose-500', light: 'bg-rose-50', text: 'text-rose-500', border: 'border-rose-200', shadow: 'shadow-rose-500/20' };
+      case 'sukoon': return { accent: 'bg-teal-600', light: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200', shadow: 'shadow-teal-500/20' };
+      case 'welfare': return { accent: 'bg-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', shadow: 'shadow-emerald-500/20' };
+      case 'job-center': return { accent: 'bg-amber-600', light: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200', shadow: 'shadow-amber-500/20' };
+      case 'social-media': return { accent: 'bg-fuchsia-600', light: 'bg-fuchsia-50', text: 'text-fuchsia-600', border: 'border-fuchsia-200', shadow: 'shadow-fuchsia-500/20' };
+      default: return { accent: 'bg-zinc-900', light: 'bg-zinc-50', text: 'text-zinc-900', border: 'border-zinc-200', shadow: 'shadow-zinc-500/20' };
+    }
+  };
+
+  const theme = getDeptTheme(staff.dept);
+  const joinDate = staff.joiningDate ? toDate(staff.joiningDate) : null;
+  const lastLogin = staff.lastLoginAt ? toDate(staff.lastLoginAt) : null;
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
+    <div className={`min-h-screen transition-colors duration-700 ${theme.light} py-12`}>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       {/* Top Navigation */}
       <div className="mb-8 flex items-center justify-between">
         <Link
@@ -175,7 +191,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           {canEdit && (
             <button
               onClick={() => setShowEdit(true)}
-              className="flex items-center gap-2 rounded-xl bg-black dark:bg-white px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white dark:text-black transition-all hover:scale-105 active:scale-95 shadow-xl"
+              className={`flex items-center gap-2 rounded-xl ${theme.accent} px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:scale-105 active:scale-95 shadow-xl ${theme.shadow}`}
             >
               <Edit2 className="h-4 w-4" />
               Edit Profile
@@ -183,7 +199,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           )}
           <Link 
             href={`/hq/dashboard/superadmin/audit?entity=${staff.name}`}
-            className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest text-black transition-all hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-black dark:hover:bg-white/10"
+            className={`hidden sm:flex items-center gap-2 rounded-xl border ${theme.border} bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest ${theme.text} transition-all hover:bg-white shadow-sm`}
           >
             <History className="h-3 w-3" />
             Activity Log
@@ -197,22 +213,22 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-200/50 dark:border-white/5 dark:bg-[#111] dark:shadow-none">
             <div className="flex flex-col items-center text-center">
               <div className="relative mb-4">
-                <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-black dark:bg-white text-4xl font-black text-white dark:text-black shadow-2xl">
+                <div className={`flex h-32 w-32 items-center justify-center overflow-hidden rounded-full ${theme.accent} text-4xl font-black text-white shadow-2xl`}>
                   {staff.photoUrl ? (
                     <img src={staff.photoUrl} alt={staff.name} className="h-full w-full object-cover" />
                   ) : (
                     staff.name.charAt(0)
                   )}
                 </div>
-                <div className={`absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white dark:border-[#111] shadow-xl ${staff.isActive ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+                <div className={`absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white shadow-xl ${staff.isActive ? theme.accent : 'bg-gray-300'}`}></div>
               </div>
               
               <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white line-clamp-1">{staff.name}</h1>
               <div className="mt-2 flex flex-wrap justify-center gap-2">
-                <span className="inline-flex items-center rounded-lg bg-black dark:bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white dark:text-black shadow-sm">
+                <span className={`inline-flex items-center rounded-lg ${theme.accent} px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow-sm`}>
                   {staff.dept}
                 </span>
-                <span className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-black dark:bg-white/10 dark:text-black border border-gray-100 dark:border-white/5">
+                <span className={`inline-flex items-center rounded-lg bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-black border ${theme.border}`}>
                   {staff.role}
                 </span>
               </div>
@@ -279,28 +295,28 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
         <div className="space-y-6 lg:col-span-2">
           {/* Performance Overview */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div className="group rounded-[2rem] border border-gray-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px] dark:border-white/5 dark:bg-[#111]">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
+            <div className={`group rounded-[2rem] border ${theme.border} bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px]`}>
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${theme.accent} text-white shadow-lg ${theme.shadow}`}>
                 <Calendar className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Attendance Stream (MTD)</div>
-              <div className="mt-2 text-3xl font-black text-black dark:text-white">{staff.presentCount}</div>
+              <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.text}`}>Attendance Stream (MTD)</div>
+              <div className="mt-2 text-3xl font-black text-black">{staff.presentCount}</div>
             </div>
 
-            <div className="group rounded-[2rem] border border-gray-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px] dark:border-white/5 dark:bg-[#111]">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
+            <div className={`group rounded-[2rem] border ${theme.border} bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px]`}>
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${theme.accent} text-white shadow-lg ${theme.shadow}`}>
                 <Award className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Growth Point Accumulation</div>
-              <div className="mt-2 text-3xl font-black text-black dark:text-white">{staff.growthPointsTotal}</div>
+              <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.text}`}>Growth Point Accumulation</div>
+              <div className="mt-2 text-3xl font-black text-black">{staff.growthPointsTotal}</div>
             </div>
 
-            <div className="group rounded-[2rem] border border-gray-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px] dark:border-white/5 dark:bg-[#111]">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
+            <div className={`group rounded-[2rem] border ${theme.border} bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px]`}>
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${theme.accent} text-white shadow-lg ${theme.shadow}`}>
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Financial Deductions</div>
-              <div className="mt-2 text-3xl font-black text-black dark:text-white">Rs. {staff.totalFines}</div>
+              <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.text}`}>Financial Deductions</div>
+              <div className="mt-2 text-3xl font-black text-black">Rs. {staff.totalFines}</div>
             </div>
           </div>
 
@@ -327,7 +343,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-widest text-black">Last Reported Status</p>
-                  <p className={`inline-flex items-center rounded-lg bg-black dark:bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white dark:text-black shadow-sm`}>
+                  <p className={`inline-flex items-center rounded-lg ${theme.accent} px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow-sm`}>
                     {staff.isActive ? 'Active Member' : 'Inactive'}
                   </p>
                 </div>
@@ -361,33 +377,33 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
 
           {/* Direct Actions Section */}
           <div>
-             <h3 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black">
+             <h3 className={`mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest ${theme.text}`}>
                 <ExternalLink className="h-3 w-3" />
                 Administrative Actions
              </h3>
              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <button 
                   onClick={() => setShowReset(true)}
-                  className="flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border border-gray-100 bg-white p-10 text-center transition-all hover:border-black hover:shadow-2xl dark:border-white/5 dark:bg-[#111] group overflow-hidden relative"
+                  className={`flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border ${theme.border} bg-white p-10 text-center transition-all hover:border-black hover:shadow-2xl group overflow-hidden relative shadow-xl`}
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/10 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-all">
-                    <History className="h-7 w-7" />
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-black group-hover:scale-110 transition-all shadow-md`}>
+                    <History className={`h-7 w-7 ${theme.text}`} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-black dark:text-white uppercase tracking-tight">Credential Reset</h4>
+                    <h4 className="text-sm font-black text-black uppercase tracking-tight">Credential Reset</h4>
                     <p className="mt-2 text-[9px] text-black font-bold uppercase tracking-[0.2em] italic">Refresh authorization node</p>
                   </div>
                 </button>
 
                 <button 
                   onClick={handleImpersonate}
-                  className="flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border border-gray-100 bg-white p-10 text-center transition-all hover:border-black hover:shadow-2xl dark:border-white/5 dark:bg-[#111] group overflow-hidden relative"
+                  className={`flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border ${theme.border} bg-white p-10 text-center transition-all hover:border-black hover:shadow-2xl group overflow-hidden relative shadow-xl`}
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/10 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-all">
-                    <LogIn className="h-7 w-7" />
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-black group-hover:scale-110 transition-all shadow-md`}>
+                    <LogIn className={`h-7 w-7 ${theme.text}`} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-black dark:text-white uppercase tracking-tight">Active Impersonation</h4>
+                    <h4 className="text-sm font-black text-black uppercase tracking-tight">Active Impersonation</h4>
                     <p className="mt-2 text-[9px] text-black font-bold uppercase tracking-[0.2em] italic">Proxy session synchronization</p>
                   </div>
                 </button>

@@ -20,6 +20,9 @@ import {
   ChevronUp,
   Receipt,
   Building2,
+  DollarSign,
+  PieChart,
+  ArrowRight,
 } from "lucide-react";
 import {
   fetchFinanceHubData,
@@ -57,36 +60,41 @@ function formatDateDisplay(dateStr: string) {
   return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
 }
 
-const DEPT_ACCENT: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+const DEPT_ACCENT: Record<string, { bg: string; border: string; text: string; dot: string; gradient: string }> = {
   rehab: {
     bg: "bg-violet-500/5",
-    border: "border-violet-500/20",
+    border: "border-violet-500/10",
     text: "text-violet-600 dark:text-violet-400",
     dot: "bg-violet-500",
+    gradient: "from-violet-500/10 to-transparent",
   },
   spims: {
     bg: "bg-sky-500/5",
-    border: "border-sky-500/20",
+    border: "border-sky-500/10",
     text: "text-sky-600 dark:text-sky-400",
     dot: "bg-sky-500",
+    gradient: "from-sky-500/10 to-transparent",
   },
   "job-center": {
     bg: "bg-emerald-500/5",
-    border: "border-emerald-500/20",
+    border: "border-emerald-500/10",
     text: "text-emerald-600 dark:text-emerald-400",
     dot: "bg-emerald-500",
+    gradient: "from-emerald-500/10 to-transparent",
   },
   hospital: {
     bg: "bg-rose-500/5",
-    border: "border-rose-500/20",
+    border: "border-rose-500/10",
     text: "text-rose-600 dark:text-rose-400",
     dot: "bg-rose-500",
+    gradient: "from-rose-500/10 to-transparent",
   },
   hq: {
     bg: "bg-amber-500/5",
-    border: "border-amber-500/20",
+    border: "border-amber-500/10",
     text: "text-amber-600 dark:text-amber-400",
     dot: "bg-amber-500",
+    gradient: "from-amber-500/10 to-transparent",
   },
 };
 
@@ -105,46 +113,50 @@ function DeptDayCard({ dept, expanded, onToggle }: {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "rounded-[2rem] border backdrop-blur-xl overflow-hidden transition-all",
+        "rounded-[2.5rem] border backdrop-blur-xl overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-black/5",
         accent.bg, accent.border
       )}
     >
       {/* Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-7 py-5 group"
+        className="w-full flex items-center justify-between px-10 py-8 group relative overflow-hidden"
       >
-        <div className="flex items-center gap-4">
-          <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", accent.dot)} />
+        <div className={cn("absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity group-hover:opacity-60", accent.gradient)} />
+        
+        <div className="flex items-center gap-6 relative z-10">
+          <div className={cn("w-16 h-16 rounded-[2rem] flex items-center justify-center shadow-xl", accent.bg, accent.text)}>
+            <Building2 size={32} />
+          </div>
           <div className="text-left">
-            <p className={cn("text-xs font-black uppercase tracking-widest mb-0.5", accent.text)}>
-              {dept.deptId.toUpperCase()}
+            <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", accent.text)}>
+              {dept.deptId.toUpperCase()} MATRIX
             </p>
-            <p className="text-lg font-bold text-black dark:text-white">{dept.deptName}</p>
+            <p className="text-2xl font-black text-black dark:text-white tracking-tight leading-none">{dept.deptName}</p>
           </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-10 relative z-10">
           <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-black mb-0.5">Collected</p>
-            <p className="text-xl font-bold text-black dark:text-white">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Gross Collected</p>
+            <p className="text-3xl font-black text-black dark:text-white tracking-tighter leading-none">
               Rs. {dept.income.toLocaleString()}
             </p>
           </div>
           {dept.expense > 0 && (
             <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-0.5">Expense</p>
-              <p className="text-lg font-bold text-rose-500">
+              <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-1">Matrix Expense</p>
+              <p className="text-2xl font-black text-rose-600 tracking-tighter leading-none">
                 Rs. {dept.expense.toLocaleString()}
               </p>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-black">{dept.txCount} tx</span>
-            {expanded ? (
-              <ChevronUp className={cn("w-4 h-4", accent.text)} />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-black" />
-            )}
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 text-[10px] font-black text-black dark:text-white uppercase tracking-widest">
+              {dept.txCount} TRANSFERS
+            </div>
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform", expanded ? "rotate-180" : "group-hover:translate-y-1")}>
+              <ChevronDown size={20} strokeWidth={3} className={accent.text} />
+            </div>
           </div>
         </div>
       </button>
@@ -156,39 +168,42 @@ function DeptDayCard({ dept, expanded, onToggle }: {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden relative z-10"
           >
-            <div className="px-7 pb-6 space-y-4">
-              <div className="h-px bg-border/30" />
+            <div className="px-10 pb-10 space-y-8">
+              <div className="h-px bg-black/5 dark:bg-white/5" />
 
               {!hasData ? (
-                <div className="flex items-center gap-3 py-4 opacity-40">
-                  <Receipt className="w-5 h-5" />
-                  <span className="text-sm font-bold uppercase tracking-wider">
-                    No transactions recorded on this date
+                <div className="flex flex-col items-center justify-center py-12 gap-4 opacity-40">
+                  <Receipt className="w-12 h-12" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-center">
+                    Zero Activity Detected In Matrix Registry
                   </span>
                 </div>
               ) : (
                 <>
                   {/* Category Breakdown */}
                   {Object.keys(dept.categories).length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-black mb-3">
-                        Category Breakdown
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex items-center gap-3 mb-6">
+                        <PieChart size={16} className="text-gray-400" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                          Resource Allocation Breakdown
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
                         {Object.entries(dept.categories)
                           .sort(([, a], [, b]) => b - a)
                           .map(([cat, amount]) => (
                             <div
                               key={cat}
-                              className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-white/[0.04] border border-border/30"
+                              className="flex flex-col gap-2 p-6 rounded-[2rem] bg-white dark:bg-white/5 border border-black/5 shadow-xl shadow-black/5 transition-transform hover:scale-105"
                             >
-                              <span className="text-xs font-semibold text-black dark:text-black truncate pr-2">
+                              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate">
                                 {cat}
                               </span>
-                              <span className="text-xs font-black text-black dark:text-white whitespace-nowrap">
+                              <span className="text-lg font-black text-black dark:text-white tracking-tighter">
                                 {amount.toLocaleString()}
                               </span>
                             </div>
@@ -198,11 +213,14 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                   )}
 
                   {/* Transaction List */}
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-black mb-3">
-                      Transactions ({dept.txCount})
-                    </p>
-                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Database size={16} className="text-gray-400" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                        Operational Ledger Stream ({dept.txCount})
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                       {dept.transactions.map((tx) => {
                         const isExp =
                           tx.type === "expense" ||
@@ -210,20 +228,28 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                         return (
                           <div
                             key={tx.id}
-                            className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-white/[0.04] border border-border/20 group hover:border-border/50 transition-all"
+                            className="flex items-center justify-between p-6 rounded-[2rem] bg-white dark:bg-white/5 border border-black/5 group hover:border-primary/20 transition-all hover:shadow-xl shadow-black/5"
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-black dark:text-white truncate">
-                                {tx.patientName || tx.studentName || tx.seekerName || tx.name || tx.description || "—"}
+                              <p className="text-sm font-black text-black dark:text-white truncate uppercase tracking-tight">
+                                {tx.patientName || tx.studentName || tx.seekerName || tx.name || tx.description || "UNIDENTIFIED"}
                               </p>
-                              <p className="text-[10px] text-black mt-0.5">
-                                {tx.categoryName || tx.category || tx.type || "General"}{" "}
-                                · {tx.status?.toUpperCase()}
-                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                                  {tx.categoryName || tx.category || tx.type || "General"}
+                                </span>
+                                <div className="w-1 h-1 rounded-full bg-gray-300" />
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase tracking-widest",
+                                  tx.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'
+                                )}>
+                                  {tx.status}
+                                </span>
+                              </div>
                             </div>
                             <p
                               className={cn(
-                                "text-sm font-black ml-3 whitespace-nowrap",
+                                "text-lg font-black ml-4 whitespace-nowrap tracking-tighter",
                                 isExp ? "text-rose-500" : "text-emerald-500"
                               )}
                             >
@@ -352,14 +378,14 @@ export default function SuperadminFinancePage() {
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading && !summary) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF8] space-y-8">
+      <div className="flex h-screen flex-col items-center justify-center bg-[#FDFDFD] space-y-12 animate-in fade-in duration-700">
         <LogoLoader size="xl" showText={true} />
         <div className="text-center">
-          <div className="text-xs font-black uppercase tracking-[0.5em] text-primary mb-2 animate-pulse font-bold">
-            Constructing Financial Data Hub
+          <div className="text-xs font-black uppercase tracking-[0.5em] text-primary mb-3 animate-pulse">
+            Synchronizing Financial Intelligence
           </div>
-          <div className="text-[10px] font-bold text-black uppercase tracking-widest opacity-50">
-            Establishing secure departmental tunnels...
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            Mapping secure departmental nodes...
           </div>
         </div>
       </div>
@@ -367,194 +393,209 @@ export default function SuperadminFinancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF8] font-sans selection:bg-primary selection:text-white">
+    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] font-sans selection:bg-primary selection:text-white transition-colors duration-500 overflow-x-hidden">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 px-8 py-6 backdrop-blur-3xl border-b border-border/20 flex flex-wrap items-center justify-between gap-6 overflow-hidden">
+      <header className="sticky top-0 z-[60] px-6 lg:px-10 py-8 backdrop-blur-3xl border-b border-black/5 dark:border-white/5 flex flex-wrap items-center justify-between gap-10">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
 
-        <div className="relative">
-          <div className="flex items-center gap-3 text-[10px] text-primary font-bold uppercase tracking-widest mb-1">
-            <TrendingUp className="w-4 h-4" /> HQ Financial Dashboard
+        <div className="relative group">
+          <div className="flex items-center gap-4 text-[10px] text-primary font-black uppercase tracking-[0.3em] mb-2 group-hover:translate-x-1 transition-transform">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            Oversight Protocol
           </div>
-          <h1 className="text-4xl font-bold text-black tracking-tight uppercase leading-none">
-            Central <span className="text-primary tracking-normal font-black">Oversight</span>
+          <h1 className="text-5xl font-black text-black dark:text-white tracking-tighter uppercase leading-none">
+            Financial <span className="text-primary italic font-[1000]">Matrix</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-4 relative z-10">
-          <button
-            onClick={() => router.push('/hq/dashboard/superadmin/analytics')}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest bg-muted/40 border border-border/50 text-muted-foreground hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all shadow-sm"
-          >
-            <LayoutDashboard className="w-4 h-4" /> Analytics Engine
-          </button>
-
-          <div className="flex bg-muted/40 p-1.5 rounded-[1.5rem] border border-border/50 backdrop-blur-md">
+        <div className="flex items-center gap-6 relative z-10">
+          <div className="flex bg-gray-100 dark:bg-white/5 p-2 rounded-[2rem] border border-black/5 dark:border-white/10 backdrop-blur-md shadow-2xl shadow-black/5">
             <button
               onClick={() => setViewMode('visual')}
               className={cn(
-                "flex items-center gap-2 px-6 py-2.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all shadow-sm",
-                viewMode === 'visual' ? "bg-black dark:bg-white text-white dark:text-black shadow-xl" : "text-muted-foreground hover:bg-muted"
+                "flex items-center gap-3 px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all",
+                viewMode === 'visual' ? "bg-black dark:bg-white text-white dark:text-black shadow-2xl" : "text-gray-400 hover:text-black dark:hover:text-white"
               )}
             >
-              <Database className="w-4 h-4" /> Data Hub
+              <Database className="w-4 h-4" /> Control Hub
             </button>
             <button
               onClick={() => setViewMode('terminal')}
               className={cn(
-                "flex items-center gap-2 px-6 py-2.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all shadow-sm",
-                viewMode === 'terminal' ? "bg-black text-white shadow-xl" : "text-muted-foreground hover:bg-muted"
+                "flex items-center gap-3 px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all",
+                viewMode === 'terminal' ? "bg-black dark:bg-white text-white dark:text-black shadow-2xl" : "text-gray-400 hover:text-black dark:hover:text-white"
               )}
             >
-              <Terminal className="w-4 h-4" /> Terminal
+              <Terminal className="w-4 h-4" /> Raw Feed
             </button>
           </div>
 
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-3.5 rounded-[1rem] bg-muted/30 hover:bg-muted text-muted-foreground transition-all border border-border/50 active:scale-95 disabled:opacity-50 group shadow-sm"
+            className="p-5 rounded-[1.5rem] bg-gray-100 dark:bg-white/5 hover:bg-black dark:hover:bg-white text-gray-400 hover:text-white dark:hover:text-black transition-all border border-black/5 active:scale-90 disabled:opacity-50 group shadow-xl shadow-black/5"
           >
-            <RefreshCw className={cn("w-5 h-5 group-hover:rotate-180 transition-transform duration-500", loading && "animate-spin")} />
+            <RefreshCw className={cn("w-6 h-6 group-hover:rotate-180 transition-transform duration-1000", loading && "animate-spin")} />
           </button>
         </div>
       </header>
 
       {/* ── Today's Summary Cards ────────────────────────────────────────────── */}
-      <div className="px-8 mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div className="px-4 lg:px-6 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* 1. Today's Collection */}
-        <div className="p-8 rounded-[2.5rem] bg-primary/5 border border-primary/20 backdrop-blur-xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
-            <Sparkles className="w-12 h-12 text-primary" />
+        <div className="p-10 rounded-[3rem] bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl" />
+          <div className="flex items-center justify-between mb-8">
+             <div className="p-4 rounded-2xl bg-emerald-500 text-white shadow-xl shadow-emerald-500/20">
+               <DollarSign size={24} />
+             </div>
+             <div className={cn(
+              "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-white dark:bg-black/50 border border-emerald-500/20",
+              (summary?.collectedDailyTrend || 0) >= 0 ? "text-emerald-500" : "text-rose-500"
+            )}>
+              {(summary?.collectedDailyTrend || 0) >= 0 ? "+" : ""}{Math.abs(summary?.collectedDailyTrend || 0).toFixed(1)}%
+            </div>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
-            Today's Collection
-          </span>
-          <div className="text-3xl font-bold tracking-tight text-black">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 mb-2 block">Daily Collection</span>
+          <div className="text-4xl font-black tracking-tighter text-black dark:text-white leading-none">
             Rs. {summary?.collectedToday.toLocaleString()}
-          </div>
-          <div className={cn(
-            "mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest",
-            (summary?.collectedDailyTrend || 0) >= 0 ? "text-emerald-500" : "text-rose-500"
-          )}>
-            {(summary?.collectedDailyTrend || 0) >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-            {Math.abs(summary?.collectedDailyTrend || 0).toFixed(1)}% vs Yesterday
           </div>
         </div>
 
         {/* 2. Today's Pending */}
-        <div className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
-            Today's Pending
-          </span>
-          <div className="text-3xl font-bold tracking-tight text-black">
-            Rs. {summary?.pendingAmountToday.toLocaleString()}
+        <div className="p-10 rounded-[3rem] bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/10 backdrop-blur-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="flex items-center justify-between mb-8">
+             <div className="p-4 rounded-2xl bg-amber-500 text-white shadow-xl shadow-amber-500/20">
+               <Clock size={24} />
+             </div>
+             <div className="px-4 py-2 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-widest bg-white dark:bg-black/50 border border-amber-500/20">
+               {summary?.pendingCountToday} QUEUED
+             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-500">
-            <Clock className="w-4 h-4" /> {summary?.pendingCountToday} Items awaiting approval
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-2 block">Matrix Pending</span>
+          <div className="text-4xl font-black tracking-tighter text-black dark:text-white leading-none">
+            Rs. {summary?.pendingAmountToday.toLocaleString()}
           </div>
         </div>
 
         {/* 3. Remaining Balance */}
-        <div className="p-8 rounded-[2.5rem] bg-rose-500/5 border border-rose-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
-            Remaining Balance
-          </span>
-          <div className="text-3xl font-bold tracking-tight text-black">
-            Rs. {summary?.outstandingTotal.toLocaleString()}
+        <div className="p-10 rounded-[3rem] bg-rose-500/10 dark:bg-rose-500/5 border border-rose-500/10 backdrop-blur-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl" />
+          <div className="flex items-center justify-between mb-8">
+             <div className="p-4 rounded-2xl bg-rose-500 text-white shadow-xl shadow-rose-500/20">
+               <AlertCircle size={24} />
+             </div>
+             <div className="px-4 py-2 rounded-full text-[10px] font-black text-rose-600 uppercase tracking-widest bg-white dark:bg-black/50 border border-rose-500/20">
+               OUTSTANDING
+             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500">
-            <AlertCircle className="w-4 h-4" /> Total Outstanding Debt
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 mb-2 block">Central Debt</span>
+          <div className="text-4xl font-black tracking-tighter text-black dark:text-white leading-none">
+            Rs. {summary?.outstandingTotal.toLocaleString()}
           </div>
         </div>
 
         {/* 4. Need Approval */}
-        <div className="p-8 rounded-[2.5rem] bg-muted/20 border border-border/50 backdrop-blur-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-lg">
-          <span className="text-[10px] font-black uppercase tracking-widest text-black mb-4 block">
-            Need Approval
-          </span>
-          <div className="text-3xl font-bold tracking-tight text-black uppercase tracking-tighter">
-            {summary?.pendingApprovals} <span className="text-sm font-black text-primary">Task Queue</span>
+        <div className="p-10 rounded-[3rem] bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/10 backdrop-blur-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl" />
+          <div className="flex items-center justify-between mb-8">
+             <div className="p-4 rounded-2xl bg-indigo-500 text-white shadow-xl shadow-indigo-500/20">
+               <Layers size={24} />
+             </div>
+             <div className="px-4 py-2 rounded-full text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-white dark:bg-black/50 border border-indigo-500/20 animate-pulse">
+               ACTION REQUIRED
+             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
-            <Layers className="w-4 h-4" /> Action Required
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 mb-2 block">Audit Queue</span>
+          <div className="text-4xl font-black tracking-tighter text-black dark:text-white leading-none">
+            {summary?.pendingApprovals} TASKS
           </div>
         </div>
 
         {/* 5. Monthly Total */}
-        <div className="p-8 rounded-[2.5rem] bg-white border-2 border-black text-black shadow-2xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-4 block">Monthly Total</span>
-          <div className="text-3xl font-bold tracking-tight">
-            Rs. {summary?.collectedThisMonth.toLocaleString()}
+        <div className="p-10 rounded-[3rem] bg-black dark:bg-white text-white dark:text-black relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 shadow-2xl">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 dark:bg-black/10 rounded-full blur-3xl" />
+          <div className="flex items-center justify-between mb-8">
+             <div className="p-4 rounded-2xl bg-white/10 dark:bg-black/10">
+               <Sparkles size={24} />
+             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-60">
-            <Sparkles className="w-4 h-4" /> Current Month Collection
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-2 block">Monthly Revenue</span>
+          <div className="text-4xl font-black tracking-tighter leading-none">
+            Rs. {summary?.collectedThisMonth.toLocaleString()}
           </div>
         </div>
       </div>
 
       {/* ── Date Filter Panel ────────────────────────────────────────────────── */}
-      <div className="px-8 mt-10">
-        <div className="bg-white/80 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+      <div className="px-4 lg:px-6 mt-8">
+        <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-[3rem] p-10 shadow-2xl shadow-black/5 backdrop-blur-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-10">
             {/* Label */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-                <CalendarDays className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-6 flex-shrink-0">
+              <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center shadow-xl">
+                <CalendarDays className="w-8 h-8 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-black uppercase tracking-widest text-primary mb-0.5">
-                  Historical Date Filter
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">
+                  Temporal Audit Filter
                 </p>
-                <p className="text-sm font-semibold text-black">
-                  View any past date's departmental breakdown
+                <p className="text-xl font-black text-black dark:text-white uppercase tracking-tight">
+                  Historical Registry Access
                 </p>
               </div>
             </div>
 
             {/* Date Input */}
-            <div className="flex items-center gap-3 flex-1">
-              <input
-                type="text"
-                placeholder="DD MM YYYY"
-                value={formatDateDMY(selectedDate)}
-                onChange={handleDateChange}
-                onBlur={(e) => {
-                  const parsed = parseDateDMY(e.target.value);
-                  if (parsed) {
-                    const val = parsed.toISOString().split("T")[0];
-                    setSelectedDate(val);
-                    fetchDayData(val);
-                  }
-                }}
-                className={cn(
-                  "flex-1 sm:max-w-xs px-5 py-3.5 rounded-2xl border border-border/50 bg-white border-2 border-black text-black",
-                  "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all",
-                  "hover:border-primary/30 cursor-pointer"
-                )}
-              />
+            <div className="flex items-center gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  placeholder="DD MM YYYY"
+                  value={formatDateDMY(selectedDate)}
+                  onChange={handleDateChange}
+                  onBlur={(e) => {
+                    const parsed = parseDateDMY(e.target.value);
+                    if (parsed) {
+                      const val = parsed.toISOString().split("T")[0];
+                      setSelectedDate(val);
+                      fetchDayData(val);
+                    }
+                  }}
+                  className={cn(
+                    "w-full px-8 py-5 rounded-[2rem] bg-gray-100 dark:bg-white/5 border border-transparent text-sm font-black text-black dark:text-white uppercase tracking-widest",
+                    "focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all",
+                    "hover:bg-gray-200 dark:hover:bg-white/10 cursor-pointer shadow-inner"
+                  )}
+                />
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                   <ArrowRight size={20} />
+                </div>
+              </div>
+              
               {selectedDate && (
                 <button
                   onClick={clearDateFilter}
-                  className="p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-500 transition-all active:scale-95"
-                  title="Clear date filter"
+                  className="p-5 rounded-[1.5rem] bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white transition-all active:scale-90 border border-rose-500/20"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-6 h-6" />
                 </button>
               )}
               {filterLoading && (
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
+                <div className="flex items-center gap-3 px-6 py-4 rounded-[1.5rem] bg-primary/5 text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  Loading...
+                  Querying Archive...
                 </div>
               )}
             </div>
 
             {/* Quick date shortcuts */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
               {[
                 { label: "Yesterday", offset: -1 },
-                { label: "2 days ago", offset: -2 },
                 { label: "Last week", offset: -7 },
               ].map(({ label, offset }) => {
                 const d = new Date();
@@ -572,10 +613,10 @@ export default function SuperadminFinancePage() {
                       fetchDayData(str);
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                      "px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all border shadow-lg",
                       isActive
-                        ? "bg-primary text-white border-primary"
-                        : "bg-muted/40 border-border/50 text-muted-foreground hover:bg-muted"
+                        ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-black/20"
+                        : "bg-white dark:bg-white/5 border-black/5 text-gray-400 hover:text-black dark:hover:text-white shadow-black/5"
                     )}
                   >
                     {label}
@@ -592,49 +633,51 @@ export default function SuperadminFinancePage() {
         {dailyResult && !filterLoading && (
           <motion.div
             key="daily-breakdown"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="px-8 mt-8"
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="px-4 lg:px-6 mt-8"
           >
             {/* Grand Summary Bar */}
-            <div className="rounded-[2.5rem] border border-border/30 bg-black dark:bg-white p-8 mb-6 flex flex-wrap items-center gap-8">
+            <div className="rounded-[4rem] bg-black dark:bg-white p-12 mb-8 flex flex-wrap items-center gap-16 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] dark:shadow-white/5">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/40 dark:text-black/40 mb-1">
-                  <CalendarDays className="w-3 h-3 inline mr-1" />
-                  {isFilteringToday ? "Today" : formatDateDisplay(dailyResult.date)}
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 dark:text-black/40 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  {isFilteringToday ? "OPERATIONAL PERIOD: TODAY" : `ARCHIVE: ${formatDateDisplay(dailyResult.date)}`}
                 </p>
-                <p className="text-3xl font-bold text-white dark:text-black">
+                <p className="text-6xl font-black text-white dark:text-black tracking-tighter leading-none mb-3">
                   Rs. {dailyResult.grandIncome.toLocaleString()}
                 </p>
-                <p className="text-[10px] font-bold uppercase tracking-widest mt-1 text-white/50 dark:text-black/50">
-                  Total Collected (All Departments)
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 dark:text-black/30">
+                  Aggregate Liquidity Influx (Cross-Matrix)
                 </p>
               </div>
+              
               {dailyResult.grandExpense > 0 && (
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-1">Total Expense</p>
-                  <p className="text-2xl font-bold text-rose-400">
+                <div className="p-8 rounded-[3rem] bg-white/5 dark:bg-black/5 border border-white/10 dark:border-black/10">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">Total Matrix Expense</p>
+                  <p className="text-3xl font-black text-rose-500 tracking-tighter leading-none">
                     Rs. {dailyResult.grandExpense.toLocaleString()}
                   </p>
                 </div>
               )}
-              <div className="ml-auto flex items-center gap-8">
+
+              <div className="ml-auto grid grid-cols-2 lg:grid-cols-4 gap-12">
                 {dailyResult.departments.filter(d => d.txCount > 0).map((dept) => {
                   const pct = dailyResult.grandIncome > 0
                     ? ((dept.income / dailyResult.grandIncome) * 100).toFixed(1)
                     : "0.0";
                   const accent = DEPT_ACCENT[dept.deptId] ?? DEPT_ACCENT.hq;
                   return (
-                    <div key={dept.deptId} className="text-right">
-                      <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", accent.text)}>
+                    <div key={dept.deptId} className="text-right group">
+                      <p className={cn("text-[10px] font-black uppercase tracking-widest mb-2 transition-transform group-hover:-translate-x-1", accent.text)}>
                         {dept.deptName}
                       </p>
-                      <p className="text-lg font-bold text-white dark:text-black">
+                      <p className="text-2xl font-black text-white dark:text-black tracking-tighter leading-none mb-1">
                         {pct}%
                       </p>
-                      <p className="text-[10px] text-white/40 dark:text-black/30">
+                      <p className="text-[10px] font-bold text-white/30 dark:text-black/20 uppercase tracking-widest">
                         Rs. {dept.income.toLocaleString()}
                       </p>
                     </div>
@@ -644,11 +687,13 @@ export default function SuperadminFinancePage() {
             </div>
 
             {/* Per-department cards */}
-            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-4 px-1 flex items-center gap-2">
-              <Building2 className="w-3 h-3" />
-              Department Breakdown — {formatDateDisplay(dailyResult.date)}
-            </p>
-            <div className="space-y-4 pb-12">
+            <div className="flex items-center gap-4 mb-8 px-6">
+               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-100 dark:via-white/10 to-transparent" />
+               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400">Departmental Ledger Nodes</p>
+               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-100 dark:via-white/10 to-transparent" />
+            </div>
+            
+            <div className="space-y-6 pb-20">
               {dailyResult.departments.map((dept) => (
                 <DeptDayCard
                   key={dept.deptId}
@@ -663,83 +708,86 @@ export default function SuperadminFinancePage() {
       </AnimatePresence>
 
       {/* ── Main Data Hub ────────────────────────────────────────────────────── */}
-      <main className="relative min-h-[70vh] flex flex-col p-8 lg:p-12 overflow-hidden">
+      <main className="relative min-h-[85vh] flex flex-col p-4 lg:p-6 overflow-hidden">
         <AnimatePresence mode="wait">
           {viewMode === 'visual' ? (
             <motion.div
               key="visual-hub"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 min-h-[85vh] flex items-center justify-center p-10 lg:p-20 border-2 border-border/20 rounded-[4rem] bg-grid-white/[0.02] shadow-inner relative overflow-hidden"
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-1 min-h-[110vh] rounded-[4rem] bg-gray-50 dark:bg-white/[0.02] shadow-inner relative overflow-hidden flex flex-col items-center border border-black/5 dark:border-white/5"
             >
-              <FinanceHub departments={hubDepts} onUpdate={loadData} />
+              <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.01] pointer-events-none" />
+              <div className="w-full relative z-10 p-4 lg:p-8">
+                <FinanceHub departments={hubDepts} onUpdate={loadData} />
+              </div>
             </motion.div>
           ) : (
             <motion.div
               key="terminal-view"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex-1 p-10 rounded-[4rem] border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-10 overflow-y-auto max-h-[80vh] custom-scrollbar"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex-1 p-12 lg:p-20 rounded-[4rem] bg-white dark:bg-[#121212] border border-black/5 dark:border-white/10 shadow-2xl shadow-black/5 space-y-16 overflow-y-auto max-h-[90vh] custom-scrollbar"
             >
               {/* Pulse Velocity Matrix */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="rounded-[3rem] border border-border/50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                  <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black">
-                    Pulse velocity matrix
-                  </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-10">
+                  <div className="relative">
+                    <h2 className="text-4xl font-black uppercase tracking-tighter text-black dark:text-white leading-none mb-4">
+                      Pulse Velocity <span className="text-primary italic">Matrix</span>
+                    </h2>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">Departmental Stream Analysis</p>
+                  </div>
+                  
                   <div className="space-y-4">
                     {data.map((dept) => (
-                      <div key={dept.deptId} className="flex items-center justify-between p-6 rounded-3xl bg-gray-50 dark:bg-white/[0.03] border border-transparent hover:border-primary/20 transition-all group">
-                        <div className="flex items-center gap-4">
-                          <div className="p-4 rounded-2xl bg-black text-white shadow-xl group-hover:scale-110 transition-transform">
-                            <Database className="w-5 h-5" />
+                      <div key={dept.deptId} className="flex items-center justify-between p-8 rounded-[2.5rem] bg-gray-50 dark:bg-white/[0.03] border border-black/5 hover:border-primary/20 transition-all group hover:shadow-2xl shadow-black/5">
+                        <div className="flex items-center gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                            <Database size={24} />
                           </div>
                           <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-black">Terminal: {dept.deptId}</p>
-                            <p className="text-base font-bold text-black uppercase tracking-tight">{dept.deptName}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">Terminal: {dept.deptId}</p>
+                            <p className="text-xl font-black text-black dark:text-white uppercase tracking-tight">{dept.deptName}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-black">RS {dept.totalIncome.toLocaleString()}</p>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-500">{dept.percentOfTotal.toFixed(1)}% Share</p>
+                          <p className="text-2xl font-black text-black dark:text-white tracking-tighter leading-none mb-1">RS {dept.totalIncome.toLocaleString()}</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">{dept.percentOfTotal.toFixed(1)}% Velocity</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="rounded-[3rem] border border-border/50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                  <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black">
-                    Recent System Closings
-                  </h2>
-                  <div className="space-y-4 flex flex-col justify-center h-[calc(100%-80px)] items-center opacity-30 group">
-                    <CheckCircle2 className="w-16 h-16 mb-4 group-hover:text-primary transition-colors" />
-                    <p className="font-black text-xs uppercase tracking-widest">Operational verification system active.</p>
-                    <p className="text-[10px] font-bold text-center max-w-xs">
-                      All departmental reconciliations are synchronized with the central audit ledger.
-                    </p>
+                <div className="rounded-[4rem] bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 p-16 flex flex-col justify-center items-center text-center group overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                  <div className="w-24 h-24 rounded-[2.5rem] bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-2xl mb-10 group-hover:scale-110 transition-transform duration-700 relative z-10">
+                    <CheckCircle2 size={48} strokeWidth={2.5} />
                   </div>
+                  <h3 className="text-2xl font-black text-black dark:text-white uppercase tracking-tight mb-4 relative z-10">Operational Integrity Active</h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-10 relative z-10">Verification Protocol Synchronized</p>
+                  <p className="text-sm font-bold text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed relative z-10">
+                    All departmental reconciliations are cryptographically verified and synchronized with the central governance audit ledger in real-time.
+                  </p>
                 </div>
               </div>
 
               {/* Drill Down CTA */}
-              <div className="flex flex-col items-center justify-center py-20 border-4 border-dashed border-black/10 rounded-[4rem] group hover:border-black/20 transition-all bg-white">
-                <Sparkles className="w-20 h-20 text-muted-foreground group-hover:text-primary transition-all duration-700 mb-6 scale-90 group-hover:scale-110" />
-                <h3 className="text-xl font-bold uppercase tracking-tight mb-2">Deep Operational Drill-Down</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-10 opacity-60">
-                  Accessing low-level data fragments and departmental logs.
-                </p>
+              <div className="relative p-20 border-2 border-dashed border-black/10 dark:border-white/10 rounded-[4rem] group hover:border-primary/20 transition-all duration-1000 bg-gray-50 dark:bg-white/[0.02] flex flex-col items-center justify-center overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                <Sparkles className="w-32 h-32 text-gray-300 dark:text-white/10 group-hover:text-primary transition-all duration-1000 mb-10 scale-90 group-hover:scale-110 relative z-10" />
+                <h3 className="text-4xl font-black text-black dark:text-white uppercase tracking-tighter mb-4 relative z-10">Low-Level Matrix Access</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mb-16 relative z-10">Deep Operational Data Drilling</p>
                 <button
                   onClick={() => setViewMode('visual')}
-                  className="px-12 py-5 rounded-3xl bg-black text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-4"
+                  className="px-16 py-6 rounded-[2.5rem] bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-[0.3em] text-[12px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-6 relative z-10 group/btn"
                 >
-                  Open Visual Control Hub
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                  </svg>
+                  Synchronize Visual Interface
+                  <ArrowRight size={24} strokeWidth={3} className="transition-transform group-hover/btn:translate-x-2" />
                 </button>
               </div>
             </motion.div>
@@ -748,8 +796,8 @@ export default function SuperadminFinancePage() {
       </main>
 
       {/* Decorative glows */}
-      <div className="fixed -top-64 -left-64 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[150px] -z-10 pointer-events-none" />
-      <div className="fixed -bottom-64 -right-64 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[150px] -z-10 pointer-events-none" />
+      <div className="fixed -top-96 -left-96 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[200px] -z-10 pointer-events-none" />
+      <div className="fixed -bottom-96 -right-96 w-[1000px] h-[1000px] bg-primary/10 rounded-full blur-[200px] -z-10 pointer-events-none" />
     </div>
   );
 }

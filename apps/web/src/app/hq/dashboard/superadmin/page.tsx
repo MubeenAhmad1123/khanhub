@@ -163,7 +163,7 @@ export default function HqSuperadminPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FCFBF4] py-8">
+    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] py-12 transition-colors duration-500">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* ── Clients Flow Modal ────────────────────────────────────────────── */}
         {flowOpen && clientsData && (
@@ -177,30 +177,34 @@ export default function HqSuperadminPage() {
         )}
 
         {/* ── Page Header ────────────────────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <Building2 className="text-white" size={24} />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
+          <div className="space-y-4">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-black dark:bg-white rounded-[2rem] flex items-center justify-center shadow-2xl shadow-black/20 dark:shadow-white/10 group overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Building2 className="text-white dark:text-black relative z-10" size={32} />
               </div>
-              <h1 className="text-4xl font-black tracking-tight text-black uppercase">HQ Governance Hub</h1>
+              <div>
+                <h1 className="text-5xl font-black tracking-tight text-black dark:text-white uppercase leading-none">Governance Hub</h1>
+                <p className="mt-3 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.5em] italic">
+                  Institutional Intelligence • Operational Matrix
+                </p>
+              </div>
             </div>
-            <p className="text-[10px] font-black text-black/60 uppercase tracking-[0.4em] italic pl-1">
-              Global Operations Matrix • Real-time Institutional Oversight
-            </p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
             <Link
               href="/hq/dashboard/superadmin/approvals"
-              className="group relative px-8 py-4 bg-white border-4 border-black text-xs font-black uppercase tracking-widest text-black hover:bg-black hover:text-white transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 rounded-2xl"
+              className="px-10 py-5 bg-black dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
             >
-              Review Approvals
+              <BadgeCheck size={18} />
+              Review Matrix Approvals
             </Link>
           </div>
         </div>
 
         {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5 mb-12">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-16">
           {cards.map((c, idx) => (
             <StatCard
               key={c.title}
@@ -225,39 +229,55 @@ export default function HqSuperadminPage() {
         </div>
 
         {/* ── Governance Terminal ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Execution Terminal */}
-          <div className="lg:col-span-2 rounded-[3rem] border-4 border-black bg-white p-10 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
-                <ShieldCheck className="text-black" size={28} />
-                <h2 className="text-xl font-black text-black uppercase tracking-tight">Institutional Control Matrix</h2>
+        <div className="space-y-12">
+          <div className="relative rounded-[4rem] bg-white dark:bg-[#121212] p-12 shadow-2xl shadow-black/5 dark:shadow-white/5 border border-gray-100 dark:border-white/5 overflow-hidden group">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/5 to-transparent rounded-full -mr-48 -mt-48 blur-3xl opacity-50" />
+            
+            <div className="relative flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
+              <div className="flex items-center gap-6">
+                <div className="p-4 rounded-3xl bg-primary/10 text-primary">
+                  <ShieldCheck size={32} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black text-black dark:text-white uppercase tracking-tight">Institutional Control Matrix</h2>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Global System Configuration & Synchronization</p>
+                </div>
               </div>
-              <div className="px-4 py-1 bg-black text-white rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">
-                System Active
+              <div className="flex items-center gap-3 px-6 py-3 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Synchronization Active
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, color: 'from-black to-black/80', desc: 'Staff registry & compliance' },
-                { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, color: 'from-black to-black/80', desc: 'Real-time data visualization' },
-                { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, color: 'from-black to-black/80', desc: 'Institutional structure' },
-                { label: 'Finance Center',   href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, color: 'from-black to-black/80', desc: 'Global financial ledger' },
-              ].map((btn) => (
-                <Link
-                  key={btn.label}
-                  className="group relative flex flex-col items-center text-center gap-4 rounded-[2.5rem] border-4 border-black bg-[#FCFBF4] p-8 transition-all hover:bg-black hover:text-white active:scale-[0.98] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
-                  href={btn.href}
-                >
-                  <div className={`w-20 h-20 shrink-0 rounded-3xl bg-gradient-to-br ${btn.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform border-2 border-black/10`}>
-                    <btn.icon size={32} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black uppercase tracking-[0.2em]">{btn.label}</span>
-                    <span className="text-[10px] font-bold text-black/40 group-hover:text-white/60 uppercase tracking-widest mt-2">{btn.desc}</span>
-                  </div>
-                </Link>
-              ))}
+                { label: 'Personnel Hub',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, tone: 'rehab', desc: 'Staff registry & compliance' },
+                { label: 'Analytics Matrix', href: '/hq/dashboard/superadmin/analytics',   icon: Activity, tone: 'spims', desc: 'Real-time data visualization' },
+                { label: 'Departmental Map', href: '/hq/dashboard/superadmin/departments', icon: Building2, tone: 'hq', desc: 'Institutional structure' },
+                { label: 'Finance Center',   href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, tone: 'primary', desc: 'Global financial ledger' },
+              ].map((btn) => {
+                const colors = {
+                  rehab: 'from-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+                  spims: 'from-sky-500/20 text-sky-600 dark:text-sky-400',
+                  hq: 'from-purple-500/20 text-purple-600 dark:text-purple-400',
+                  primary: 'from-gray-500/20 text-gray-900 dark:text-white'
+                };
+                return (
+                  <Link
+                    key={btn.label}
+                    className="group relative flex flex-col items-center text-center gap-6 rounded-[3rem] bg-gray-50 dark:bg-white/[0.03] p-10 transition-all duration-500 hover:bg-white dark:hover:bg-white/5 hover:shadow-2xl hover:-translate-y-2 border border-transparent hover:border-gray-100 dark:hover:border-white/10"
+                    href={btn.href}
+                  >
+                    <div className={cn("w-24 h-24 rounded-[2.5rem] bg-gradient-to-br flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform", colors[btn.tone as keyof typeof colors])}>
+                      <btn.icon size={40} />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">{btn.label}</span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest max-w-[140px] leading-relaxed">{btn.desc}</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>

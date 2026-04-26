@@ -163,10 +163,13 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-          <p className="text-black text-xs font-black uppercase tracking-widest">Loading...</p>
+      <div className="min-h-screen bg-[#FFFBF7] dark:bg-[#0A0A0A] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 border-4 border-orange-500/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="text-orange-600 dark:text-orange-400 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Workforce Grid...</p>
         </div>
       </div>
     );
@@ -181,67 +184,67 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-[#FCFBF8] text-black">
+      <div className="flex flex-col h-full bg-white/50 dark:bg-black/50 backdrop-blur-xl border-r border-gray-200/50 dark:border-white/5">
         {/* Header */}
-        <div className="px-6 pt-10 pb-6 border-b border-black/5">
+        <div className="p-8">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
-            className="flex items-center gap-2 text-gray-400 hover:text-black text-[10px] font-black mb-6 transition-colors group uppercase tracking-[0.2em]"
+            className="flex items-center gap-2 text-gray-400 hover:text-orange-500 text-[9px] font-black mb-8 transition-colors group uppercase tracking-[0.2em]"
           >
             <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
             {viewMode === 'hq' ? 'Back to HQ' : 'Exit Portal'}
           </Link>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 ${
-              viewMode === 'hq' ? 'bg-indigo-600' : 'bg-orange-500'
+          <div className="flex items-center gap-4 mb-10">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-2xl -rotate-3 transition-transform hover:rotate-0 duration-500 ${
+              viewMode === 'hq' ? 'bg-gradient-to-br from-indigo-500 to-blue-600' : 'bg-gradient-to-br from-orange-400 to-red-600'
             }`}>
-              {viewMode === 'hq' ? <Shield size={20} /> : <User size={20} />}
+              {viewMode === 'hq' ? <Shield size={24} /> : <Briefcase size={24} />}
             </div>
             <div>
-              <p className="font-black text-sm leading-none tracking-tight">
-                {viewMode === 'hq' ? 'HQ Navigator' : 'Job Center Portal'}
-              </p>
-              <p className="text-black/50 text-[10px] font-black mt-1 uppercase tracking-widest">
-                {viewMode === 'hq' ? 'Central' : 'Department'}
+              <h1 className="font-black text-lg leading-tight tracking-tight dark:text-white uppercase">
+                {viewMode === 'hq' ? 'HQ Link' : 'Job Center'}
+              </h1>
+              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                {viewMode === 'hq' ? 'Nexus Central' : 'Workforce Node'}
               </p>
             </div>
           </div>
 
-          {/* Jump Portal */}
+          {/* Portal Jumper */}
           {isHqAdmin && (
-            <div className="relative mb-4">
+            <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between px-3 py-2.5 border-2 border-black text-left transition-all bg-white hover:bg-gray-50 group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-orange-500/30 transition-all group"
               >
-                <div className="flex items-center gap-2">
-                  <ExternalLink size={14} className="text-orange-500" />
-                  <span className="text-[11px] font-black uppercase tracking-tight">Jump to Portal</span>
+                <div className="flex items-center gap-3">
+                  <ExternalLink size={16} className="text-orange-500" />
+                  <span className="text-[11px] font-black uppercase tracking-tight dark:text-white">Jump Portal</span>
                 </div>
-                <ChevronLeft size={14} className={`text-black transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
+                <ChevronLeft size={16} className={`text-gray-400 transition-transform duration-300 ${portalOpen ? '-rotate-90 text-orange-500' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 z-50 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-2 animate-in fade-in zoom-in-95 bg-[#FCFBF8]">
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-[2rem] border border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-black/90 backdrop-blur-2xl shadow-2xl p-4 animate-in fade-in zoom-in-95 overflow-hidden">
                   <div className="grid grid-cols-1 gap-1">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
                         key={key}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 border-2 border-transparent transition-all group ${
+                        className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all group ${
                           pathname.includes(key)
-                            ? 'bg-orange-50 text-orange-700 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                            : 'hover:bg-gray-50 text-black hover:border-black'
+                            ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                            : 'text-gray-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
                         }`}
                       >
-                        <div className={`w-7 h-7 border border-black flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-orange-500 text-white' : 'bg-gray-100'
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                          pathname.includes(key) ? 'bg-orange-500 text-white scale-110 shadow-lg' : 'bg-gray-100 dark:bg-white/5'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>
-                        <span className="text-xs font-black uppercase tracking-tight">{info.label}</span>
+                        <span className="text-[11px] font-black uppercase tracking-tight">{info.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -250,76 +253,80 @@ export default function JobCenterDashboardLayout({ children }: { children: React
             </div>
           )}
 
-          {/* Nav Switcher */}
+          {/* Navigation Mode Switcher */}
           {isHqAdmin && (
-            <div className="flex p-1 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex p-1.5 bg-gray-100/50 dark:bg-white/5 rounded-2xl mb-8">
               <button
                 onClick={() => setViewMode('dept')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? 'bg-white dark:bg-white/10 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                DEPT
+                DEPARTMENT
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-black text-white' : 'text-black/40 hover:text-black'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? 'bg-white dark:bg-white/10 text-indigo-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                HQ
+                HEADQUARTERS
               </button>
             </div>
           )}
+
+          {/* Navigation Links */}
+          <nav className="space-y-2">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-orange-500/10 to-transparent text-orange-600 dark:text-orange-400' 
+                      : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  {isActive && (
+                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-orange-500 rounded-r-full shadow-[0_0_12px_rgba(249,115,22,0.5)]" />
+                  )}
+                  <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-orange-500' : ''}`}>
+                    {item.icon}
+                  </div>
+                  <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.label}</span>
+                  {isActive && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* User */}
-        <div className="px-6 py-4 border-b-2 border-black bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 border-2 border-black bg-white flex items-center justify-center text-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+        {/* Footer User Section */}
+        <div className="mt-auto p-8 space-y-6">
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-white dark:to-gray-300 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-xl">
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-black truncate">{user?.displayName}</p>
-              <p className="text-[10px] font-black text-black/40 truncate uppercase tracking-widest">{user?.customId}</p>
+              <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+              <div className="flex items-center gap-2 mt-1">
+                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                 <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{role} node</p>
+              </div>
             </div>
           </div>
-          <div className="mt-3 flex">
-            <span className={`px-2.5 py-0.5 border border-black text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
-              {role ? ROLE_LABELS[role] : ''}
-            </span>
-          </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar font-black">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3.5 border-2 text-[13px] transition-all group ${
-                  isActive 
-                    ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-1' 
-                    : 'text-black/50 hover:text-black hover:bg-white border-transparent hover:border-black'
-                }`}
-              >
-                <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-                  {item.icon}
-                </div>
-                <span className="flex-1 tracking-tight uppercase">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Bottom */}
-        <div className="p-6 border-t-2 border-black">
-          <button onClick={handleSignOut} className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-black bg-white text-sm font-black text-red-500 hover:bg-red-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all">
-            <LogOut size={18} />
-            SIGN OUT
+          <button 
+            onClick={handleSignOut} 
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-[11px] font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 transition-all group"
+          >
+            <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
+            DISCONNECT
           </button>
         </div>
       </div>
@@ -327,44 +334,89 @@ export default function JobCenterDashboardLayout({ children }: { children: React
   };
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-[#FCFBF8] text-black">
-      <aside className="hidden lg:flex flex-col w-64 border-r-2 border-black fixed left-0 top-0 h-screen z-30 bg-[#FCFBF8]">
+    <div className="min-h-screen flex bg-[#FDFDFD] dark:bg-[#050505] text-black dark:text-white transition-colors duration-500 font-sans">
+      {/* Sidebar Desktop */}
+      <aside className="hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30">
         <SidebarContent />
       </aside>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 lg:hidden animate-in fade-in duration-500" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      )}
 
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-[#FCFBF8] border-r-2 border-black`}>
-        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 text-black border border-black z-50 bg-white">
-          <X size={16} />
+      {/* Mobile Sidebar */}
+      <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
+      } bg-white dark:bg-[#0A0A0A] shadow-2xl`}>
+        <button 
+          onClick={() => setSidebarOpen(false)} 
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white z-50 hover:rotate-90 transition-all"
+        >
+          <X size={18} />
         </button>
         <SidebarContent />
       </aside>
 
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="lg:hidden sticky top-0 z-20 bg-[#FCFBF8] border-b-2 border-black px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-black border border-black bg-white"><Menu size={20} /></button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-black flex items-center justify-center text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><Shield size={14} /></div>
-            <span className="font-black text-sm uppercase tracking-tighter">Job Center</span>
-          </div>
-          <span className={`px-2 py-0.5 border border-black text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>{role && ROLE_LABELS[role]}</span>
-        </header>
+      {/* Main Content Area */}
+      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+        {/* Background Decorative Circles */}
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
 
-        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FCFBF8]/80 backdrop-blur-md border-b-2 border-black px-8 py-4 items-center justify-between">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Khan Hub • Job Center Portal</div>
+        {/* Top Header */}
+        <header className="sticky top-0 z-20 bg-white/80 dark:bg-black/80 lg:bg-[#FDFDFD]/80 lg:dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between">
           <div className="flex items-center gap-6">
-             <div className="flex items-center gap-3">
-               {user?.uid && <StaffNotifications uid={user.uid} dept="job-center" />}
-               <span className={`px-3 py-1 border border-black text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>{role && ROLE_LABELS[role]}</span>
-               <div className="w-8 h-8 border-2 border-black flex items-center justify-center text-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white">{user?.displayName?.[0]}</div>
-               <span className="text-sm font-black uppercase tracking-tight">{user?.displayName}</span>
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="lg:hidden w-10 h-10 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="hidden lg:flex flex-col">
+              <h2 className="text-xs font-black uppercase tracking-[0.4em] text-gray-400 leading-none">Workforce Hub</h2>
+              <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-2">Central Job Terminal</p>
+            </div>
+            
+            <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10" />
+
+            <div className="relative group hidden md:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Search workforce data..." 
+                className="bg-gray-100/50 dark:bg-white/5 border border-transparent focus:border-orange-500/30 rounded-2xl pl-12 pr-6 py-2.5 text-xs font-medium w-80 outline-none transition-all"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 lg:gap-8">
+             {user?.uid && <StaffNotifications uid={user.uid} dept="job-center" />}
+             
+             <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10" />
+
+             <div className="flex items-center gap-4">
+                <div className="hidden sm:flex flex-col items-end">
+                   <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+                   <span className="px-2 py-0.5 rounded-lg bg-orange-500/10 text-orange-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-orange-500/20">
+                      {role}
+                   </span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
+                   {user?.displayName?.[0]}
+                </div>
              </div>
           </div>
         </header>
 
-        <main className={`flex-1 p-4 lg:p-10 transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="max-w-6xl mx-auto">{children}</div>
+        {/* Page Content Container */}
+        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <div className="max-w-7xl mx-auto relative">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -966,29 +966,33 @@ export default function CashierStationPage() {
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-[#FCFBF8] text-black pb-32 md:pb-8">
-      <div className="sticky top-0 z-30 bg-white border-b-4 border-black px-4 py-6 md:px-8 md:py-8 shadow-xl shadow-black/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6 min-w-0">
-          <div className="flex items-center gap-4 min-w-0 flex-1">
-            <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shrink-0 shadow-2xl">
-              <CreditCard size={24} />
+    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] py-16 transition-colors duration-500">
+      <div className="mx-auto max-w-7xl px-6">
+        
+        {/* Header Section */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10 mb-16">
+          <div className="flex items-center gap-6">
+            <div className="w-20 h-20 bg-black dark:bg-white rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-black/20 dark:shadow-white/10">
+              <CreditCard className="text-white dark:text-black" size={40} strokeWidth={2.5} />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-3xl md:text-4xl font-black text-black tracking-tight truncate uppercase">Cashier Terminal</h1>
-              <p className="text-[10px] text-black font-black uppercase tracking-[0.2em] mt-1 opacity-50">Active Session: {session?.customId || 'HQ-DELTA'}</p>
+            <div>
+              <h1 className="text-5xl font-black tracking-tighter text-black dark:text-white uppercase leading-none">Cashier Terminal</h1>
+              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic pl-1">
+                Central Financial Gateway • Secure Transaction Hub
+              </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0">
+          
+          <div className="flex items-center gap-3">
             {[
-              { href: "/hq/dashboard/cashier/history", icon: History, label: "Logs" },
-              { href: "/hq/dashboard/cashier/daily-report", icon: LayoutDashboard, label: "Sheet" },
+              { href: "/hq/dashboard/cashier/history", icon: History, label: "History" },
+              { href: "/hq/dashboard/cashier/daily-report", icon: LayoutDashboard, label: "Daily Sheet" },
               { href: "/hq/dashboard/cashier/reconciliation", icon: ShieldCheck, label: "Audit" }
             ].map(link => (
               <Link 
                 key={link.label}
                 href={link.href}
-                className="flex items-center gap-2 px-6 py-3.5 bg-white hover:bg-black hover:text-white rounded-2xl border-2 border-black text-[10px] font-black uppercase tracking-[0.2em] text-black transition-all active:scale-95 shadow-xl shadow-black/5"
+                className="flex items-center gap-2 px-6 py-4 bg-white dark:bg-white/5 hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black rounded-2xl border border-black/5 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-black dark:text-white transition-all active:scale-95 shadow-xl shadow-black/5"
               >
                 <link.icon size={16} />
                 <span className="hidden lg:inline">{link.label}</span>
@@ -996,248 +1000,226 @@ export default function CashierStationPage() {
             ))}
             <Link 
               href="/hq/dashboard/cashier/day-close"
-              className="flex items-center gap-2 px-8 py-3.5 bg-black hover:bg-white hover:text-black border-2 border-black rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xl shadow-black/20 transition-all active:scale-95"
+              className="flex items-center gap-2 px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-black/20 transition-all active:scale-95"
             >
               <Lock size={16} />
               <span className="hidden lg:inline">Terminal Lock</span>
             </Link>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-4 space-y-10 min-w-0">
-          <div className="bg-white border-4 border-black rounded-[3rem] p-8 md:p-10 shadow-2xl">
-            <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-black flex items-center gap-3">
-              <Plus size={16} strokeWidth={4} /> Incoming Queue
-            </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="lg:col-span-4 space-y-12 min-w-0">
+          <div className="bg-white dark:bg-[#121212] rounded-[3.5rem] border border-black/5 dark:border-white/5 p-10 shadow-2xl shadow-black/5">
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Activity className="text-white" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tighter">Incoming</h2>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Action Required</p>
+                </div>
+              </div>
             </div>
+            
             {incomingError ? (
-              <div className="mb-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs font-bold">
+              <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[10px] font-black uppercase tracking-widest">
                 {incomingError}
               </div>
             ) : null}
+
             {incomingLoading ? (
-              <div className="p-8 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center">
-                <Loader2 size={24} className="animate-spin text-purple-600" />
+              <div className="py-20 flex items-center justify-center">
+                <Loader2 size={32} className="animate-spin text-gray-300" />
               </div>
             ) : incomingFeeReqs.length === 0 ? (
-              <div className="p-10 rounded-2xl bg-surface-subtle border border-border-subtle text-center">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border-subtle">
-                  <FileText className="text-black" size={24} />
+              <div className="py-20 text-center space-y-6">
+                <div className="w-20 h-20 bg-gray-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
+                  <FileText className="text-gray-300" size={32} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-black">Queue empty</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Queue is clear</p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
                 {incomingFeeReqs.map((tx, index) => (
                   <div 
                     key={tx.id} 
-                    style={{ animationDelay: `${index * 60}ms` }} 
                     onClick={() => setDetailModalTx(tx)}
-                    className="animate-in fade-in slide-in-from-bottom-2 duration-300 group cursor-pointer bg-white border border-border-subtle rounded-2xl p-5 hover:border-black transition-all"
+                    className="group cursor-pointer bg-gray-50 dark:bg-white/5 border border-transparent hover:border-black/5 dark:hover:border-white/10 rounded-[2.5rem] p-8 transition-all hover:shadow-2xl hover:-translate-y-1"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
-                            {formatDateDMY(tx.createdAt)}
-                          </span>
-                          <span className="text-[9px] font-black text-black uppercase tracking-widest">
-                            {tx.departmentCode}
-                          </span>
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black font-black text-xs">
+                          {String(tx.patientName || tx.donorName || '?')[0]?.toUpperCase()}
                         </div>
-                        <div className="text-sm font-black text-black truncate uppercase tracking-tight">{tx.patientName || tx.donorName || 'Entity'}</div>
-                        <div className="text-[10px] font-black text-black truncate opacity-40">{tx.patientId || tx.donorId || tx.id}</div>
-                        <div className="text-sm font-black text-black mt-3">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-bold text-black mt-1 line-clamp-1 italic opacity-60">{tx.description || tx.note || 'No manifest provided'}</div>
-                        <span className="mt-4 inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border-2 border-black bg-black text-white">
-                          {tx.status?.replace('_', ' ') || 'QUEUED'}
-                        </span>
+                        <div>
+                          <p className="text-sm font-black text-black dark:text-white uppercase tracking-tight truncate max-w-[120px]">
+                            {tx.patientName || tx.donorName || 'Entity'}
+                          </p>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                            {tx.departmentCode}
+                          </p>
+                        </div>
                       </div>
-                      <div className="shrink-0 flex flex-col gap-2">
-                        <button
-                          type="button"
-                          disabled={incomingActionId === tx.id}
-                          onClick={(e) => { e.stopPropagation(); openForwardModal(tx); }}
-                          className="px-3 py-2 rounded-lg bg-black hover:bg-black/90 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95 shadow-lg shadow-black/10"
-                        >
-                          {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Process'}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={incomingActionId === tx.id}
-                          onClick={(e) => { e.stopPropagation(); openRejectModal(tx); }}
-                          className="px-3 py-2 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-red-100 text-[10px] font-black uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95"
-                        >
-                          Reject
-                        </button>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-black dark:text-white tracking-tighter">Rs {Number(tx.amount || 0).toLocaleString()}</p>
                       </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <button
+                        type="button"
+                        disabled={incomingActionId === tx.id}
+                        onClick={(e) => { e.stopPropagation(); openForwardModal(tx); }}
+                        className="w-full h-12 rounded-[1.2rem] bg-black dark:bg-white text-white dark:text-black text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                      >
+                        {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Authorize'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={incomingActionId === tx.id}
+                        onClick={(e) => { e.stopPropagation(); openRejectModal(tx); }}
+                        className="w-full h-12 rounded-[1.2rem] bg-rose-500/10 text-rose-600 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                      >
+                        Reject
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <p className="mt-4 text-[10px] font-bold text-black">
-              Clicking <span className="text-black font-black">Process</span> sends request to superadmin approvals.
-            </p>
           </div>
 
           {/* Quick Statistics */}
-          <div className="bg-white border-4 border-black rounded-[3rem] p-8 md:p-10 shadow-2xl">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-black/5 border-2 border-black/10 rounded-[2rem] p-8 transition-all hover:border-black">
-                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white mb-6 shadow-xl">
-                  <TrendingUp size={24} />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black mb-1 opacity-40">Revenue Today</p>
-                <p className="text-2xl font-black text-black">Rs {totals.income.toLocaleString()}</p>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-emerald-500 rounded-[3rem] p-8 shadow-2xl shadow-emerald-500/20 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white mb-4">
+                <TrendingUp size={24} />
               </div>
-              <div className="bg-black/5 border-2 border-black/10 rounded-[2rem] p-8 transition-all hover:border-black">
-                <div className="w-12 h-12 bg-white border-2 border-black rounded-2xl flex items-center justify-center text-black mb-6 shadow-xl">
-                  <TrendingDown size={24} />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black mb-1 opacity-40">Payout Today</p>
-                <p className="text-2xl font-black text-black">Rs {totals.expense.toLocaleString()}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mb-1">Revenue</p>
+              <p className="text-xl font-black text-white">Rs {totals.income.toLocaleString()}</p>
+            </div>
+            <div className="bg-rose-500 rounded-[3rem] p-8 shadow-2xl shadow-rose-500/20 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white mb-4">
+                <TrendingDown size={24} />
               </div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mb-1">Payouts</p>
+              <p className="text-xl font-black text-white">Rs {totals.expense.toLocaleString()}</p>
             </div>
           </div>
 
           {/* Search Section */}
-          <div className="bg-white border-4 border-black rounded-[3rem] p-8 md:p-10 shadow-2xl">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-black mb-8 flex items-center gap-3">
+          <div className="bg-white dark:bg-[#121212] rounded-[3.5rem] border border-black/5 dark:border-white/5 p-10 shadow-2xl shadow-black/5">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-8 flex items-center gap-3">
               <Search size={16} strokeWidth={4} /> {isStaffMode ? 'Fleet Directory' : 'Global Accounts'}
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <select 
                 value={departmentCode} 
                 onChange={(e) => setDepartmentCode(e.target.value)} 
-                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all"
+                className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[1.5rem] px-6 text-black dark:text-white text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
               >
                 {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
               </select>
               
-              <div className="relative w-full">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={18} />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    onFocus={() => searchQuery && setSearchOpen(true)}
-                    placeholder="Search by name or ID..."
-                    className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-12 pr-10 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-black"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-black hover:text-black transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {searchOpen && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-border-subtle rounded-[1.5rem] shadow-2xl z-50 overflow-hidden border-t-0 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {searchResults.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={async () => {
-                           if (isStaffMode) {
-                             const prefix = departmentCode.replace('-', '_');
-                             const finesSnap = await getDocs(query(
-                               collection(db, `${prefix}_fines`),
-                               where('staffId', '==', p.id),
-                               where('status', '==', 'unpaid')
-                             ));
-                             const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
-                             const baseSalary = Number(p.monthlySalary || 0);
-                             const daysPresent = Number(p.presentDays || 0);
-                             const perDay = baseSalary / 30;
-                             const calculatedSalary = Math.round(perDay * daysPresent);
-                             const net = Math.max(0, calculatedSalary - totalFines);
-                             setSelectedEntity({ ...p, totalFines, calculatedSalary, daysPresent });
-                             setAmount(String(net));
-                             setDescription(`Salary payment for ${p.name || p.employeeId}. Days Present: ${daysPresent}, Base: Rs ${baseSalary.toLocaleString()}, Calculated: Rs ${calculatedSalary.toLocaleString()}, Fines Deducted: Rs ${totalFines.toLocaleString()}`);
-                           } else {
-                             setSelectedEntity(p);
-                           }
-                           setEntityResults([p]);
-                           setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
-                           setSearchOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-subtle transition-colors text-left border-b border-border-subtle last:border-0"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-white font-black text-xs shrink-0">
-                          {String(p.name || p.fullName || '?')[0]?.toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-black text-sm font-black truncate">{p.name || p.fullName || 'Unknown'}</p>
-                          <p className="text-black text-[10px] font-bold uppercase tracking-widest truncate">
-                            {p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {searchOpen && <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />}
-              </div>
-            </div>
-            {entityResults.length > 0 && (
-              <div className="mt-4 space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                {entityResults.map((e) => (
-                  <button 
-                    key={e.id} 
-                    type="button" 
-                    onClick={() => setSelectedEntity(e)} 
-                    className={cn(
-                      "w-full text-left p-4 rounded-2xl border transition-all",
-                      selectedEntity?.id === e.id ? "bg-black border-black text-white" : "bg-surface-subtle border-border-subtle text-black hover:border-black"
-                    )}
+              <div className="relative group">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={20} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery && setSearchOpen(true)}
+                  placeholder="Search by name or ID..."
+                  className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[1.5rem] pl-16 pr-12 text-black dark:text-white text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-inner placeholder:text-gray-400"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-rose-500 transition-colors"
                   >
-                    <div className="text-sm font-black truncate">{e.name || e.fullName || 'Unknown'}</div>
-                    <div className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", selectedEntity?.id === e.id ? "text-black" : "text-black")}>
-                      {e.customId || e.rollNumber || e.id?.slice(0, 10)}
-                    </div>
+                    <X size={18} />
                   </button>
-                ))}
+                )}
               </div>
-            )}
+
+              {searchOpen && searchResults.length > 0 && (
+                <div className="bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/10 rounded-[2rem] shadow-2xl mt-4 overflow-hidden divide-y divide-black/5 dark:divide-white/5">
+                  {searchResults.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={async () => {
+                         if (isStaffMode) {
+                           const prefix = departmentCode.replace('-', '_');
+                           const finesSnap = await getDocs(query(
+                             collection(db, `${prefix}_fines`),
+                             where('staffId', '==', p.id),
+                             where('status', '==', 'unpaid')
+                           ));
+                           const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
+                           const baseSalary = Number(p.monthlySalary || 0);
+                           const daysPresent = Number(p.presentDays || 0);
+                           const perDay = baseSalary / 30;
+                           const calculatedSalary = Math.round(perDay * daysPresent);
+                           const net = Math.max(0, calculatedSalary - totalFines);
+                           setSelectedEntity({ ...p, totalFines, calculatedSalary, daysPresent });
+                           setAmount(String(net));
+                           setDescription(`Salary payment for ${p.name || p.employeeId}. Days Present: ${daysPresent}, Base: Rs ${baseSalary.toLocaleString()}, Calculated: Rs ${calculatedSalary.toLocaleString()}, Fines Deducted: Rs ${totalFines.toLocaleString()}`);
+                         } else {
+                           setSelectedEntity(p);
+                         }
+                         setEntityResults([p]);
+                         setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
+                         setSearchOpen(false);
+                      }}
+                      className="w-full flex items-center gap-4 px-6 py-5 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-left"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-black text-xs shrink-0">
+                        {String(p.name || p.fullName || '?')[0]?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-black dark:text-white text-sm font-black truncate">{p.name || p.fullName || 'Unknown'}</p>
+                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest truncate">
+                          {p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="lg:col-span-8 min-w-0">
-          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-10 shadow-sm">
-            <form onSubmit={submitTx} className="space-y-6">
-              <div className="p-8 rounded-[3.5rem] bg-black text-white min-w-0 shadow-2xl shadow-black/20 group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/10 transition-all duration-700" />
+        <div className="lg:col-span-8 min-w-0 space-y-12">
+          <div className="bg-white dark:bg-[#121212] rounded-[3.5rem] border border-black/5 dark:border-white/5 p-10 shadow-2xl shadow-black/5">
+            <form onSubmit={submitTx} className="space-y-10">
+              <div className="p-10 rounded-[3rem] bg-black dark:bg-white text-white dark:text-black min-w-0 shadow-2xl shadow-black/20 group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div className="flex items-center gap-6">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                  <div className="flex items-center gap-8">
                     {selectedEntity && (
-                      <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center text-2xl font-black border border-white/20 shadow-inner group-hover:scale-105 transition-transform duration-500">
+                      <div className="w-20 h-20 rounded-[2rem] bg-white/10 dark:bg-black/5 flex items-center justify-center text-3xl font-black border border-white/20 dark:border-black/5 shadow-inner group-hover:scale-105 transition-transform duration-500 overflow-hidden">
                         {selectedEntity.photoUrl ? (
-                          <img src={selectedEntity.photoUrl} alt="" className="w-full h-full object-cover rounded-3xl" />
+                          <img src={selectedEntity.photoUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span>{(selectedEntity.name || selectedEntity.fullName || '?')[0]?.toUpperCase()}</span>
                         )}
                       </div>
                     )}
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 mb-2">
                         {selectedEntity ? 'Verified Account Identity' : departmentCode === 'hospital' ? 'General Hospital Stream' : 'Account Identity Required'}
                       </p>
                       <div className="flex flex-col">
-                        <p className="text-2xl sm:text-3xl font-[1000] tracking-tight truncate max-w-[300px]">
+                        <p className="text-3xl sm:text-4xl font-[1000] tracking-tighter truncate leading-none">
                           {selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Select identity...'}
                         </p>
                         {selectedEntity && (
-                          <p className="text-[11px] font-black opacity-60 uppercase tracking-widest mt-1">
+                          <p className="text-[11px] font-black opacity-60 uppercase tracking-widest mt-3">
                             ID: {selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.customId || 'N/A'} • {activeDepartment.label}
                           </p>
                         )}
@@ -1245,83 +1227,88 @@ export default function CashierStationPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     {selectedEntity && (
                       <Link 
                         href={getProfileLink(selectedEntity) || '#'}
                         target="_blank"
-                        className="h-12 px-6 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-1"
+                        className="h-14 px-8 rounded-2xl bg-white/10 dark:bg-black/5 hover:bg-white/20 dark:hover:bg-black/10 text-white dark:text-black text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 dark:border-black/5 flex items-center gap-2 hover:-translate-y-1"
                       >
-                        <Eye size={14} /> Visit Profile
+                        <Eye size={16} /> Profile
                       </Link>
                     )}
                     {selectedEntity && (
                       <button 
                         type="button" 
                         onClick={() => { setSelectedEntity(null); setAmount(''); }} 
-                        className="h-12 w-12 rounded-2xl bg-rose-500/20 hover:bg-rose-500 text-rose-500 hover:text-white transition-all border border-rose-500/20 flex items-center justify-center"
-                        title="Change Account"
+                        className="h-14 w-14 rounded-2xl bg-rose-500/20 hover:bg-rose-500 text-rose-500 hover:text-white transition-all border border-rose-500/20 flex items-center justify-center"
                       >
-                        <X size={18} />
+                        <X size={20} />
                       </button>
                     )}
                   </div>
                 </div>
                 
                 {selectedEntity && isStaffMode && (
-                  <div className="mt-6 p-6 rounded-2xl bg-white/5 border border-white/10 animate-in zoom-in-95 duration-500">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Days Present</span>
-                      <span className="text-sm font-black">{selectedEntity.daysPresent || 0} Days</span>
-                    </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Pro-rated Salary</span>
-                      <span className="text-sm font-black">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Unpaid Fines</span>
-                      <span className="text-sm font-black text-red-400">- Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Net Payable</span>
-                      <span className="text-2xl font-[1000] text-green-400">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                  <div className="mt-8 p-8 rounded-[2rem] bg-white/5 dark:bg-black/5 border border-white/10 dark:border-black/5 backdrop-blur-md">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                      <div>
+                        <span className="text-[9px] font-black uppercase opacity-40 tracking-widest block mb-2">Days Present</span>
+                        <span className="text-xl font-black">{selectedEntity.daysPresent || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-black uppercase opacity-40 tracking-widest block mb-2">Pro-rated</span>
+                        <span className="text-xl font-black">Rs {Number(selectedEntity.calculatedSalary || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-black uppercase opacity-40 tracking-widest block mb-2">Fines</span>
+                        <span className="text-xl font-black text-rose-400">Rs {Number(selectedEntity.totalFines || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-black uppercase opacity-40 tracking-widest block mb-2">Net Payable</span>
+                        <span className="text-2xl font-[1000] text-emerald-400">Rs {(Number(selectedEntity.calculatedSalary || 0) - Number(selectedEntity.totalFines || 0)).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {selectedEntity && (
-                  <div className="mt-6 bg-white border-2 border-black rounded-[2rem] p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-in slide-in-from-bottom-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-[1000] uppercase tracking-widest text-black flex items-center gap-2">
-                        <History size={14} /> Account Ledger
+                  <div className="mt-10 bg-white dark:bg-[#1A1A1A] rounded-[2.5rem] p-10 shadow-2xl">
+                    <div className="flex items-center justify-between mb-8">
+                      <h4 className="text-xs font-[1000] uppercase tracking-[0.3em] text-black dark:text-white flex items-center gap-3">
+                        <History size={18} /> Account Ledger
                       </h4>
-                      {entityHistoryLoading && <Loader2 size={12} className="animate-spin text-black" />}
+                      {entityHistoryLoading && <Loader2 size={16} className="animate-spin text-gray-400" />}
                     </div>
                     
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-4 -mr-4">
                       {entityHistory.length === 0 ? (
-                        <p className="text-[10px] font-black text-black/40 uppercase text-center py-8 italic">No previous history found for this account.</p>
-                      ) : entityHistory.map((tx) => (
+                        <div className="py-12 text-center">
+                          <History size={32} className="mx-auto text-gray-200 mb-4" />
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 italic">No previous history found for this account.</p>
+                        </div>
+                      ) : entityHistory.map((tx: any) => (
                         <div 
                           key={tx.id} 
                           onClick={() => setDetailModalTx({ ...tx, departmentCode: activeDepartment.code })}
-                          className="flex items-center justify-between p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:border-black hover:shadow-sm cursor-pointer transition-all group relative"
+                          className="flex items-center justify-between p-5 rounded-[1.5rem] bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5 group relative cursor-pointer"
                         >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-[10px] font-black text-black truncate uppercase">{tx.categoryName || tx.category}</p>
-                              <span className={cn('px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter border', 
-                                tx.status === 'approved' ? 'bg-black text-white border-black' : 
-                                tx.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' : 
-                                'bg-white text-black border-border-subtle'
+                          <div className="min-w-0 flex-1 mr-4">
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="text-sm font-black text-black dark:text-white truncate uppercase">{tx.categoryName || tx.category}</p>
+                              <span className={cn(
+                                "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                                tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
+                                tx.status === 'rejected' ? "bg-rose-500/10 text-rose-500 border-rose-500/20" :
+                                "bg-amber-500/10 text-amber-500 border-amber-500/20"
                               )}>
                                 {tx.status || 'pending'}
                               </span>
                             </div>
-                            <p className="text-[8px] font-bold text-black/40 uppercase">{formatDateDMY(tx.date || tx.createdAt)}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatDateDMY(tx.date || tx.createdAt)}</p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <p className={cn('text-[11px] font-[1000]', tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600')}>
+                          <div className="flex items-center gap-4">
+                            <p className={cn('text-sm font-[1000]', tx.type === 'income' ? 'text-emerald-500' : 'text-rose-500')}>
                               {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
                             </p>
                             {(tx.status === 'pending' || tx.status === 'pending_cashier' || !tx.status) && (
@@ -1330,10 +1317,10 @@ export default function CashierStationPage() {
                                   e.stopPropagation(); 
                                   handleDeleteTransaction({ ...tx, departmentCode: activeDepartment.code }); 
                                 }}
-                                className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                 title="Delete Pending Transaction"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={16} />
                               </button>
                             )}
                           </div>
@@ -1344,53 +1331,91 @@ export default function CashierStationPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button type="button" onClick={() => setTxnType('income')} className={cn('p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all active:scale-95', txnType === 'income' ? 'border-black bg-black text-white shadow-xl shadow-black/20' : 'border-border-subtle bg-white hover:bg-surface-subtle text-black')}>
-                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', txnType === 'income' ? 'bg-white/10 text-white' : 'bg-surface-subtle text-black')}><TrendingUp size={24} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Payment In</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <button 
+                  type="button" 
+                  onClick={() => setTxnType('income')} 
+                  className={cn(
+                    'p-8 rounded-[2.5rem] border transition-all flex flex-col items-center gap-4 group',
+                    txnType === 'income' 
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500 ring-4 ring-emerald-500/5' 
+                      : 'border-black/5 dark:border-white/5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+                  )}
+                >
+                  <div className={cn(
+                    'w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110',
+                    txnType === 'income' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20' : 'bg-white dark:bg-black text-gray-400'
+                  )}>
+                    <TrendingUp size={28} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">Payment Receipt</span>
                 </button>
-                <button type="button" onClick={() => setTxnType('expense')} className={cn('p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all active:scale-95', txnType === 'expense' ? 'border-black bg-black text-white shadow-xl shadow-black/20' : 'border-border-subtle bg-white hover:bg-surface-subtle text-black')}>
-                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', txnType === 'expense' ? 'bg-white/10 text-white' : 'bg-surface-subtle text-black')}><TrendingDown size={24} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Payment Out</span>
+                <button 
+                  type="button" 
+                  onClick={() => setTxnType('expense')} 
+                  className={cn(
+                    'p-8 rounded-[2.5rem] border transition-all flex flex-col items-center gap-4 group',
+                    txnType === 'expense' 
+                      ? 'border-rose-500/20 bg-rose-500/10 text-rose-500 ring-4 ring-rose-500/5' 
+                      : 'border-black/5 dark:border-white/5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+                  )}
+                >
+                  <div className={cn(
+                    'w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110',
+                    txnType === 'expense' ? 'bg-rose-500 text-white shadow-xl shadow-rose-500/20' : 'bg-white dark:bg-black text-gray-400'
+                  )}>
+                    <TrendingDown size={28} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">Payment Disbursement</span>
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="min-w-0">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Field / Category</label>
-                  <input 
-                    value={categorySearch} 
-                    onChange={(e) => setCategorySearch(e.target.value)} 
-                    placeholder="Search or create field..." 
-                    className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3.5 text-black text-sm font-bold outline-none focus:border-black transition-all placeholder:text-black" 
-                  />
-                  <div className="mt-3 border border-border-subtle rounded-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar bg-white shadow-inner">
-                    {visibleCategories.map((c) => (
-                      <button 
-                        key={c.id} 
-                        type="button" 
-                        onClick={() => setSelectedCategoryId(c.id)} 
-                        className={cn(
-                          'w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest border-b border-border-subtle last:border-0 transition-all', 
-                          selectedCategoryId === c.id ? 'bg-black text-white' : 'text-black bg-white hover:bg-surface-subtle'
-                        )}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                    {visibleCategories.length === 0 && categorySearch.trim() && (
-                      <button type="button" onClick={createCategory} className="w-full text-left px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-purple-600 bg-purple-50 hover:bg-purple-100 transition-all">
-                        Create "{categorySearch.trim()}"
-                      </button>
-                    )}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Classification</label>
+                    <div className="relative group">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
+                      <input 
+                         value={categorySearch} 
+                         onChange={(e) => setCategorySearch(e.target.value)} 
+                         placeholder="Search or define new field..." 
+                         className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[1.5rem] pl-16 pr-6 text-black dark:text-white text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <div className="mt-4 bg-gray-50 dark:bg-white/5 rounded-[2rem] p-3 border border-black/5 dark:border-white/5 shadow-inner">
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                        {visibleCategories.map((c) => (
+                          <button 
+                            key={c.id} 
+                            type="button" 
+                            onClick={() => setSelectedCategoryId(c.id)} 
+                            className={cn(
+                              'px-4 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all text-center', 
+                              selectedCategoryId === c.id 
+                                ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' 
+                                : 'text-gray-500 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                            )}
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                      {visibleCategories.length === 0 && categorySearch.trim() && (
+                        <button type="button" onClick={createCategory} className="w-full mt-2 px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 rounded-xl hover:bg-primary/20 transition-all">
+                          Create "{categorySearch.trim()}"
+                        </button>
+                      )}
+                    </div>
                   </div>
+
                   {departmentCode === 'spims' && selectedCategoryId === 'fee' && (
-                    <div className="mt-4 p-5 rounded-2xl bg-indigo-50 border border-indigo-100">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">SPIMS Fee Category</label>
+                    <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 space-y-4">
+                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400">Academic Fee Context</label>
                       <select
                         value={spimsFeeSubtype}
                         onChange={(e) => setSpimsFeeSubtype(e.target.value as any)}
-                        className="mt-2 w-full bg-white border border-indigo-200 rounded-2xl px-4 py-3 text-indigo-900 text-xs font-black uppercase tracking-widest outline-none focus:border-indigo-500 transition-all"
+                        className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-black dark:text-white text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500/20"
                       >
                         <option value="admission">Admission Fee</option>
                         <option value="registration">Registration Fee</option>
@@ -1400,143 +1425,126 @@ export default function CashierStationPage() {
                     </div>
                   )}
                 </div>
-                <div className="space-y-6 min-w-0">
-                  {departmentCode === 'hospital' ? (
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-[1.5rem] p-6 shadow-sm">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Hospital Service Details</label>
-                      <select value={hospCategory} onChange={(e) => setHospCategory(e.target.value as any)} className="mt-2 w-full bg-white border border-emerald-200 rounded-xl px-4 py-3.5 text-black text-sm font-black outline-none focus:border-emerald-500">
-                        <option value="opd_reception">OPD Reception</option>
-                        <option value="lab_test">Lab Test</option>
-                        <option value="operation">Operation/Surgery</option>
-                        <option value="staff_salary">Staff Salary</option>
-                        <option value="utilities">Utilities</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="other_income">Other Income</option>
-                        <option value="other_expense">Other Expense</option>
-                      </select>
+                <div className="space-y-8">
+                  {departmentCode === 'hospital' && (
+                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-8 space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Service Category</label>
+                        <select 
+                          value={hospCategory} 
+                          onChange={(e) => setHospCategory(e.target.value as any)} 
+                          className="w-full h-14 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-2xl px-6 text-black dark:text-white text-sm font-black outline-none focus:ring-4 focus:ring-emerald-500/10"
+                        >
+                          <option value="opd_reception">OPD Reception</option>
+                          <option value="lab_test">Lab Test</option>
+                          <option value="operation">Operation/Surgery</option>
+                          <option value="staff_salary">Staff Salary</option>
+                          <option value="utilities">Utilities</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="other_income">Other Income</option>
+                          <option value="other_expense">Other Expense</option>
+                        </select>
+                      </div>
 
                       {['opd_reception', 'lab_test', 'operation'].includes(hospCategory) && (
-                        <div className="mt-5 space-y-4">
-                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
-                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
+                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
                           <div className="grid grid-cols-2 gap-4">
-                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
-                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
+                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
                           </div>
                           
                           {hospCategory === 'opd_reception' && (
-                            <>
-                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500">
-                                <option value="morning">Morning Shift</option>
-                                <option value="evening">Evening Shift</option>
+                            <div className="grid grid-cols-2 gap-4">
+                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-xs font-black uppercase">
+                                <option value="morning">Morning</option>
+                                <option value="evening">Evening</option>
                               </select>
-                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose (e.g. Checkup)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
-                            </>
+                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose" className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none" />
+                            </div>
                           )}
 
                           {hospCategory === 'lab_test' && (
-                            <>
-                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
-                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
-                              {txnType === 'expense' && <input type="number" value={hospTestExpense} onChange={e => setHospTestExpense(e.target.value)} placeholder="Lab Cost/Expense (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />}
-                            </>
+                            <div className="space-y-4">
+                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm font-bold outline-none" />
+                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm font-bold outline-none" />
+                            </div>
                           )}
 
                           {hospCategory === 'operation' && (
-                            <>
-                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Operation Type" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
-                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-sm text-black font-bold outline-none focus:border-emerald-500 transition-all" />
+                            <div className="space-y-4">
+                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Surgery Type" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm font-bold outline-none" />
                               <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-black uppercase text-emerald-600 pl-1">Admit Date</label>
-                                  <input
-                                    type="text"
-                                    placeholder="DD MM YYYY"
-                                    value={formatDateDMY(hospAdmitDate)}
-                                    onChange={e => setHospAdmitDate(e.target.value)}
-                                    onBlur={e => {
-                                      const parsed = parseDateDMY(e.target.value);
-                                      if (parsed) setHospAdmitDate(parsed.toISOString().split('T')[0]);
-                                    }}
-                                    className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-xs text-black font-black outline-none"
-                                  />
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase text-emerald-500 ml-2">Admit</label>
+                                  <input type="date" value={hospAdmitDate} onChange={e => setHospAdmitDate(e.target.value)} className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-xs font-black" />
                                 </div>
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-black uppercase text-emerald-600 pl-1">Discharge Date</label>
-                                  <input
-                                    type="text"
-                                    placeholder="DD MM YYYY"
-                                    value={formatDateDMY(hospDischargeDate)}
-                                    onChange={e => setHospDischargeDate(e.target.value)}
-                                    onBlur={e => {
-                                      const parsed = parseDateDMY(e.target.value);
-                                      if (parsed) setHospDischargeDate(parsed.toISOString().split('T')[0]);
-                                    }}
-                                    className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-3 text-xs text-black font-black outline-none"
-                                  />
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase text-emerald-500 ml-2">Discharge</label>
+                                  <input type="date" value={hospDischargeDate} onChange={e => setHospDischargeDate(e.target.value)} className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-xs font-black" />
                                 </div>
                               </div>
-                            </>
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
-                  ) : null}
+                  )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Amount (Rs)</label>
+                  <div className="space-y-8">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Currency Amount (PKR)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="mt-2 w-full h-24 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[2rem] px-10 text-5xl font-[1000] text-black dark:text-white outline-none focus:ring-8 focus:ring-primary/5 transition-all shadow-inner tracking-tighter placeholder:text-gray-200 dark:placeholder:text-white/5"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Processing Date</label>
                         <input
-                          type="number"
-                          step="0.01"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          placeholder="0.00"
-                          className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-6 py-5 text-3xl font-[1000] text-black outline-none focus:border-black transition-all placeholder:text-gray-200"
+                          type="date"
+                          value={txDate}
+                          onChange={(e) => setTxDate(e.target.value)}
+                          className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                         />
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Date</label>
-                          <input
-                            type="date"
-                            value={txDate}
-                            onChange={(e) => setTxDate(e.target.value)}
-                            className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-4 text-sm font-black text-black outline-none focus:border-black transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Method</label>
-                          <select
-                            value={paymentMethod}
-                            onChange={(e) => setPaymentMethod(e.target.value as any)}
-                            className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-4 text-sm font-black text-black outline-none focus:border-black transition-all"
-                          >
-                            <option value="cash">Cash</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="jazzcash">JazzCash</option>
-                            <option value="easypaisa">EasyPaisa</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Liquidity Channel</label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value as any)}
+                          className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="bank_transfer">Bank Transfer</option>
+                          <option value="jazzcash">JazzCash</option>
+                          <option value="easypaisa">EasyPaisa</option>
+                          <option value="other">Other</option>
+                        </select>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Reference / Bill No</label>
-                        <input 
-                          value={referenceNo} 
-                          onChange={(e) => setReferenceNo(e.target.value)} 
-                          placeholder="Internal or bank reference..." 
-                          className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-5 text-sm font-black text-black outline-none focus:border-black transition-all placeholder:text-black" 
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Proof Upload</label>
-                        <div className="relative mt-2">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">External Reference (Optional)</label>
+                      <input 
+                        value={referenceNo} 
+                        onChange={(e) => setReferenceNo(e.target.value)} 
+                        placeholder="Cheque #, Bank ID, etc." 
+                        className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-2xl px-6 text-sm font-bold text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all" 
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Verification Audit</label>
+                        <div className="relative group h-full">
                           <input
                             type="file"
                             accept="image/*,application/pdf"
@@ -1544,37 +1552,36 @@ export default function CashierStationPage() {
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             disabled={processing}
                           />
-                          <div className="w-full bg-surface-subtle border border-dashed border-border-subtle rounded-2xl px-5 py-4 flex items-center justify-between group transition-all hover:border-black">
-                            <span className="text-xs font-black text-black truncate max-w-[150px]">
-                              {proofFile ? proofFile.name : "Select Receipt Image"}
-                            </span>
-                            <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                              <ArrowRight size={14} className="-rotate-45" />
+                          <div className="h-full min-h-[120px] bg-gray-50 dark:bg-white/5 border-2 border-dashed border-black/5 dark:border-white/5 rounded-[2rem] p-8 flex flex-col items-center justify-center text-center transition-all group-hover:border-primary/40 group-hover:bg-primary/5">
+                            <div className="w-12 h-12 rounded-2xl bg-white dark:bg-black flex items-center justify-center shadow-lg mb-4 text-primary group-hover:scale-110 transition-transform">
+                              <Camera size={24} />
                             </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white truncate max-w-[200px]">
+                              {proofFile ? proofFile.name : "Secure Proof Upload"}
+                            </span>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase mt-2">JPG, PNG or PDF</span>
                           </div>
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Exception Reason</label>
+                        <textarea
+                          value={proofReason}
+                          onChange={(e) => setProofReason(e.target.value)}
+                          placeholder="Why is proof missing?"
+                          className="w-full h-full min-h-[120px] bg-gray-50 dark:bg-white/5 border border-transparent rounded-[2rem] px-6 py-6 text-sm font-bold text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
+                          disabled={processing}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="min-w-0">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Missing Proof Reason</label>
-                      <textarea
-                        value={proofReason}
-                        onChange={(e) => setProofReason(e.target.value)}
-                        placeholder="Explain if receipt is not available..."
-                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-black"
-                        disabled={processing}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Purpose / Details</label>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Administrative Notes</label>
                       <textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
-                        placeholder="Additional details about this transaction..." 
-                        className="mt-2 w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black transition-all min-h-[120px] resize-none placeholder:text-black" 
+                        placeholder="Narrative description of transaction purpose..." 
+                        className="w-full min-h-[120px] bg-gray-50 dark:bg-white/5 border border-transparent rounded-[2rem] px-8 py-8 text-sm font-bold text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none" 
                       />
                     </div>
                   </div>
@@ -1582,8 +1589,11 @@ export default function CashierStationPage() {
               </div>
 
               {message && (
-                <div className={cn('p-5 rounded-2xl border flex items-center gap-3 animate-in fade-in zoom-in-95', message.type === 'success' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700')}>
-                  {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                <div className={cn(
+                  'p-6 rounded-[2rem] border flex items-center gap-4 animate-in fade-in slide-in-from-top-2', 
+                  message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                )}>
+                  {message.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
                   <p className="text-sm font-black uppercase tracking-tight">{message.text}</p>
                 </div>
               )}
@@ -1591,16 +1601,16 @@ export default function CashierStationPage() {
               <button 
                 type="submit" 
                 disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                className="w-full bg-black hover:bg-black/90 active:scale-[0.98] text-white font-black text-xs uppercase tracking-[0.2em] px-10 py-6 rounded-2xl transition-all shadow-2xl shadow-black/20 disabled:opacity-30 flex items-center justify-center gap-4"
+                className="w-full h-20 bg-black dark:bg-white hover:bg-black/90 dark:hover:bg-white/90 active:scale-[0.98] text-white dark:text-black font-black text-xs uppercase tracking-[0.4em] rounded-[2rem] transition-all shadow-2xl shadow-black/20 disabled:opacity-30 flex items-center justify-center gap-6"
               >
                 {processing ? (
                   <>
-                    <Loader2 size={20} className="animate-spin" />
-                    <span>Processing Securely...</span>
+                    <Loader2 size={24} className="animate-spin" />
+                    <span>Synchronizing Ledger...</span>
                   </>
                 ) : (
                   <>
-                    Finalize Transaction <ArrowRight size={20} />
+                    Finalize Entry <ArrowRight size={24} />
                   </>
                 )}
               </button>
@@ -1609,266 +1619,230 @@ export default function CashierStationPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-black/20">
-              <History size={24} />
+      <div className="w-full mt-24">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-black dark:bg-white rounded-[2rem] flex items-center justify-center text-white dark:text-black shadow-2xl shadow-black/20">
+                <History size={32} />
+              </div>
+              <div>
+                <h2 className="text-4xl sm:text-6xl font-[1000] text-black dark:text-white uppercase tracking-tight leading-none">Journal Log</h2>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mt-3 ml-1">Universal Financial Stream</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl sm:text-4xl font-[1000] text-black uppercase tracking-tight">Terminal History</h2>
-              <p className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Live Transaction Ledger</p>
+            <div className="flex flex-wrap items-center gap-4">
+              <button 
+                type="button" 
+                onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+                className={cn(
+                  "h-14 flex items-center gap-3 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border",
+                  showDuplicatesOnly 
+                    ? "bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20" 
+                    : "bg-white dark:bg-white/5 border-black/5 dark:border-white/5 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/10"
+                )}
+              >
+                <RefreshCw size={16} className={cn(showDuplicatesOnly && "animate-pulse")} />
+                {showDuplicatesOnly ? 'Isolating Clones' : 'Audit Duplicates'}
+              </button>
+              <button 
+                type="button" 
+                onClick={() => void fetchHistory()} 
+                disabled={historyLoading}
+                className="h-14 flex items-center gap-3 px-8 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-black/20"
+              >
+                <RefreshCw size={16} className={cn(historyLoading && 'animate-spin')} />
+                {historyLoading ? 'Syncing...' : 'Sync Records'}
+              </button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <button 
-              type="button" 
-              onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
-              className={cn(
-                "flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border-2",
-                showDuplicatesOnly 
-                  ? "bg-amber-100 border-amber-500 text-amber-700 shadow-[4px_4px_0px_0px_rgba(245,158,11,1)]" 
-                  : "bg-white border-black text-black hover:bg-gray-50"
-              )}
-            >
-              <RefreshCw size={14} className={cn(showDuplicatesOnly && "animate-pulse")} />
-              {showDuplicatesOnly ? 'Viewing Potential Doubles' : 'Analyze Double'}
-            </button>
-            <button 
-              type="button" 
-              onClick={() => void fetchHistory()} 
-              disabled={historyLoading}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-black text-white font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]"
-            >
-              <RefreshCw size={14} className={cn(historyLoading && 'animate-spin')} />
-              {historyLoading ? 'Syncing...' : 'Refresh Records'}
-            </button>
-          </div>
-        </div>
 
-        {/* Intelligence Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000 delay-300">
-          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Today's Inflow</p>
-            <div className="flex items-center justify-between">
-              <h4 className="text-2xl font-[1000]">Rs {intelStats.todayRevenue.toLocaleString()}</h4>
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                <TrendingUp size={16} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 animate-in fade-in slide-in-from-top-8 duration-1000 delay-200">
+            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Total Inbound</p>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                  <TrendingUp size={18} />
+                </div>
               </div>
+              <h4 className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">Rs {intelStats.todayRevenue.toLocaleString()}</h4>
+              <div className="mt-4 h-1 w-12 bg-emerald-500 rounded-full group-hover:w-full transition-all duration-700" />
+            </div>
+
+            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Total Outbound</p>
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                  <TrendingDown size={18} />
+                </div>
+              </div>
+              <h4 className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">Rs {intelStats.todayExpense.toLocaleString()}</h4>
+              <div className="mt-4 h-1 w-12 bg-rose-500 rounded-full group-hover:w-full transition-all duration-700" />
+            </div>
+
+            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Pending Review</p>
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                  <Clock size={18} />
+                </div>
+              </div>
+              <h4 className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">{incomingFeeReqs.length} Units</h4>
+              <div className="mt-4 h-1 w-12 bg-amber-500 rounded-full group-hover:w-full transition-all duration-700" />
+            </div>
+
+            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Top Velocity</p>
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                  <Activity size={18} />
+                </div>
+              </div>
+              <h4 className="text-3xl font-[1000] text-black dark:text-white uppercase tracking-tighter">{intelStats.topDept}</h4>
+              <div className="mt-4 h-1 w-12 bg-indigo-500 rounded-full group-hover:w-full transition-all duration-700" />
             </div>
           </div>
-          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Today's Outflow</p>
-            <div className="flex items-center justify-between">
-              <h4 className="text-2xl font-[1000]">Rs {intelStats.todayExpense.toLocaleString()}</h4>
-              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
-                <TrendingDown size={16} />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Pending Review</p>
-            <div className="flex items-center justify-between">
-              <h4 className="text-2xl font-[1000]">{incomingFeeReqs.length} Units</h4>
-              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
-                <Clock size={16} />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-black p-6 rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">High-Velocity Dept</p>
-            <div className="flex items-center justify-between">
-              <h4 className="text-2xl font-[1000] uppercase tracking-tighter">{intelStats.topDept}</h4>
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                <Activity size={16} />
-              </div>
-            </div>
-          </div>
-        </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Timeframe</span>
-            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
-              <option value="today">Transaction Date: Today</option>
-              <option value="created_today">Entry Date: Added Today</option>
-              <option value="range">Custom Date Range</option>
-              <option value="all">Full Historical Log</option>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Temporal Filter</label>
+            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+              <option value="today">Daily Active: Today</option>
+              <option value="created_today">Entry Point: Today</option>
+              <option value="range">Custom Matrix Range</option>
+              <option value="all">Full Temporal Log</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Transaction Status</span>
-            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
-              <option value="all">All Statuses</option>
-              <option value="pending">Awaiting Approval</option>
-              <option value="approved">Verified / Approved</option>
-              <option value="rejected">Rejected / Error</option>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Verification State</label>
+            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+              <option value="all">All Assertions</option>
+              <option value="pending">Awaiting Validation</option>
+              <option value="approved">Verified / Success</option>
+              <option value="rejected">Denied / Error</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Flow Type</span>
-            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
-              <option value="all">All Cash Flows</option>
-              <option value="income">Inbound Payments</option>
-              <option value="expense">Outbound Expenses</option>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Flow Vector</label>
+            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+              <option value="all">Bi-Directional</option>
+              <option value="income">Inbound (Credit)</option>
+              <option value="expense">Outbound (Debit)</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Department Origin</span>
-            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black transition-all">
-              <option value="all">All Portals</option>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Department Node</label>
+            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+              <option value="all">All Entry Points</option>
               {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
             </select>
           </div>
         </div>
 
         {historyDateMode === 'range' && (
-          <div className="grid grid-cols-2 gap-4 mb-8 animate-in slide-in-from-top-2 duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 animate-in slide-in-from-top-4 duration-500">
             <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">Start Date</span>
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Start Coordinates</label>
               <input
-                type="text"
-                placeholder="DD MM YYYY"
-                value={formatDateDMY(historyFrom)}
+                type="date"
+                value={historyFrom}
                 onChange={(e) => setHistoryFrom(e.target.value)}
-                onBlur={(e) => {
-                  const parsed = parseDateDMY(e.target.value);
-                  if (parsed) setHistoryFrom(parsed.toISOString().split('T')[0]);
-                }}
-                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black"
+                className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-black px-1">End Date</span>
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">End Coordinates</label>
               <input
-                type="text"
-                placeholder="DD MM YYYY"
-                value={formatDateDMY(historyTo)}
+                type="date"
+                value={historyTo}
                 onChange={(e) => setHistoryTo(e.target.value)}
-                onBlur={(e) => {
-                  const parsed = parseDateDMY(e.target.value);
-                  if (parsed) setHistoryTo(parsed.toISOString().split('T')[0]);
-                }}
-                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-black text-black outline-none focus:border-black"
+                className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all"
               />
             </div>
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-4 mb-8">
-          <button
-            onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
-            className={cn(
-              "px-8 py-4 rounded-2xl border-2 font-[1000] text-[10px] uppercase tracking-widest transition-all flex items-center gap-3",
-              showDuplicatesOnly 
-                ? "bg-amber-100 border-amber-600 text-amber-600 shadow-[4px_4px_0px_0px_#d97706]" 
-                : "bg-white border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-surface-subtle"
-            )}
-          >
-            <Sparkles size={16} />
-            {showDuplicatesOnly ? 'Viewing Potential Duplicates' : 'Analyze Double Transactions'}
-          </button>
-          
-          {showDuplicatesOnly && (
-            <p className="text-[10px] font-black uppercase text-amber-600 animate-pulse">
-              Highlighting similar amounts on same dates for same accounts.
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border-l-8 border-l-black border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black">Total Income</p>
-            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.income.toLocaleString()}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-4">Total Credits</p>
+            <p className="text-3xl font-[1000] text-black dark:text-white">Rs {totals.income.toLocaleString()}</p>
+            <div className="mt-4 h-1 w-8 bg-emerald-500 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
-          <div className="bg-white border-l-8 border-l-red-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black">Total Expense</p>
-            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.expense.toLocaleString()}</p>
+          <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-500 mb-4">Total Debits</p>
+            <p className="text-3xl font-[1000] text-black dark:text-white">Rs {totals.expense.toLocaleString()}</p>
+            <div className="mt-4 h-1 w-8 bg-rose-500 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
-          <div className="bg-white border-l-8 border-l-gray-300 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black">Transactions</p>
-            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">{historyStats.count || historyFiltered.length}</p>
+          <div className="bg-gray-500/5 border border-gray-500/10 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4">Record Count</p>
+            <p className="text-3xl font-[1000] text-black dark:text-white">{historyStats.count || historyFiltered.length}</p>
+            <div className="mt-4 h-1 w-8 bg-gray-400 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
-          <div className="bg-white border-l-8 border-l-emerald-600 border border-border-subtle rounded-[2rem] p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black">Net Balance</p>
-            <p className="text-2xl md:text-3xl font-[1000] text-black mt-2">Rs {totals.net.toLocaleString()}</p>
+          <div className="bg-primary/5 border border-primary/10 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-4">Net Liquidity</p>
+            <p className="text-3xl font-[1000] text-black dark:text-white">Rs {totals.net.toLocaleString()}</p>
+            <div className="mt-4 h-1 w-8 bg-primary rounded-full group-hover:w-full transition-all duration-500" />
           </div>
         </div>
 
-        {/* Operational Insights Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Analytics Period</p>
-            <div className="flex items-center justify-between">
-              <h4 className="text-xl font-[1000] uppercase">{historyDateMode.replace('_', ' ')}</h4>
-              <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center">
-                <Calendar size={16} />
-              </div>
-            </div>
-            {historyDateMode === 'range' && (
-              <p className="text-[9px] font-black mt-2 opacity-60">
-                {formatDateDMY(historyFrom)} - {formatDateDMY(historyTo)}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Dynamic Analytics & Insights */}
         {historyDateMode === 'range' && historyFiltered.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
-            <div className="bg-[#FCFBF8] border-4 border-black rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-10 h-10 bg-amber-400 border-2 border-black rounded-xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <Activity size={20} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-16 animate-in fade-in slide-in-from-top-8 duration-1000">
+            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-[3rem] p-10 shadow-2xl shadow-black/5 backdrop-blur-xl">
+              <div className="flex items-center gap-6 mb-10">
+                <div className="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+                  <Activity size={28} />
                 </div>
-                <h3 className="text-xl font-[1000] uppercase tracking-tight">Period Insights</h3>
+                <h3 className="text-2xl font-[1000] uppercase tracking-tight text-black dark:text-white">Matrix Insights</h3>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b-2 border-black/5">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Avg Trans. Value</span>
-                  <span className="text-lg font-black">Rs {Math.round(totals.income / (historyFiltered.filter(t => t.type === 'income').length || 1)).toLocaleString()}</span>
+              <div className="space-y-6">
+                <div className="flex justify-between items-center py-4 border-b border-black/5 dark:border-white/5">
+                  <span className="text-xs font-black uppercase tracking-widest text-gray-400">Mean Transaction</span>
+                  <span className="text-xl font-black text-black dark:text-white">Rs {Math.round(totals.income / (historyFiltered.filter(t => t.type === 'income').length || 1)).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center py-3 border-b-2 border-black/5">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Highest Inflow</span>
-                  <span className="text-lg font-black text-emerald-600">Rs {Math.max(...historyFiltered.filter(t => t.type === 'income').map(t => Number(t.amount || 0)), 0).toLocaleString()}</span>
+                <div className="flex justify-between items-center py-4 border-b border-black/5 dark:border-white/5">
+                  <span className="text-xs font-black uppercase tracking-widest text-gray-400">Peak Inflow</span>
+                  <span className="text-xl font-black text-emerald-500">Rs {Math.max(...historyFiltered.filter(t => t.type === 'income').map(t => Number(t.amount || 0)), 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Unique Accounts</span>
-                  <span className="text-lg font-black">{new Set(historyFiltered.map(t => t.patientId || t.staffId || t.donorId)).size} Identities</span>
+                <div className="flex justify-between items-center py-4">
+                  <span className="text-xs font-black uppercase tracking-widest text-gray-400">Unique Entities</span>
+                  <span className="text-xl font-black text-black dark:text-white">{new Set(historyFiltered.map(t => t.patientId || t.staffId || t.donorId)).size} Identities</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-black text-white rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(255,255,255,0.1)]">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center">
-                  <ShieldCheck size={20} />
+            <div className="bg-black dark:bg-white rounded-[3rem] p-10 shadow-2xl shadow-black/20 group overflow-hidden relative">
+              <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-6 mb-10">
+                  <div className="w-14 h-14 bg-white dark:bg-black text-black dark:text-white rounded-2xl flex items-center justify-center shadow-lg">
+                    <ShieldCheck size={28} />
+                  </div>
+                  <h3 className="text-2xl font-[1000] uppercase tracking-tight text-white dark:text-black">Audit Protocol</h3>
                 </div>
-                <h3 className="text-xl font-[1000] uppercase tracking-tight">Audit Checklist</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? "bg-rose-500" : "bg-emerald-500")}>
-                    {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? <X size={16} /> : <Check size={16} />}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-6 p-6 bg-white/5 dark:bg-black/5 rounded-[2rem] border border-white/10 dark:border-black/10">
+                    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shadow-lg", historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? "bg-rose-500 text-white" : "bg-emerald-500 text-white")}>
+                      {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? <X size={20} /> : <Check size={20} />}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Compliance Factor</p>
+                      <p className="text-lg font-black text-white dark:text-black">
+                        {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 
+                          ? `${historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length} Items Non-Compliant` 
+                          : 'Full Regulatory Integrity'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Proof Compliance</p>
-                    <p className="text-sm font-black">
-                      {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 
-                        ? `${historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length} Items missing compliance` 
-                        : 'All items have proof/notes'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
-                    <History size={16} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Potential Doubles</p>
-                    <p className="text-sm font-black">
-                      {historyFiltered.filter((tx1, idx1) => historyFiltered.some((tx2, idx2) => idx1 !== idx2 && tx1.amount === tx2.amount && (tx1.date || tx1.createdAt) === (tx2.date || tx2.createdAt) && (tx1.patientId || tx1.staffId) === (tx2.patientId || tx2.staffId))).length} flaggable entries
-                    </p>
+                  <div className="flex items-center gap-6 p-6 bg-white/5 dark:bg-black/5 rounded-[2rem] border border-white/10 dark:border-black/10">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg">
+                      <History size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Clone Detection</p>
+                      <p className="text-lg font-black text-white dark:text-black">
+                        {historyFiltered.filter((tx1, idx1) => historyFiltered.some((tx2, idx2) => idx1 !== idx2 && tx1.amount === tx2.amount && (tx1.date || tx1.createdAt) === (tx2.date || tx2.createdAt) && (tx1.patientId || tx1.staffId) === (tx2.patientId || tx2.staffId))).length} flaggable entries
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1876,97 +1850,102 @@ export default function CashierStationPage() {
           </div>
         )}
 
-        <div className="md:hidden space-y-4">
+        <div className="space-y-6 md:hidden">
           {historyLoading ? (
-            <div className="bg-white rounded-[2rem] p-10 border border-border-subtle text-center shadow-sm">
-              <Loader2 className="w-8 h-8 animate-spin text-black mx-auto" />
-              <p className="text-[10px] font-black uppercase tracking-widest mt-4">Retrieving Ledger...</p>
+            <div className="bg-white dark:bg-white/5 rounded-[2.5rem] p-16 border border-black/5 dark:border-white/5 text-center shadow-xl">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-6 text-gray-400">Retrieving Stream...</p>
             </div>
           ) : historyFiltered.length === 0 ? (
-            <div className="bg-white rounded-[2rem] p-8 border border-border-subtle text-center shadow-sm">
-              <p className="text-sm font-black text-black">No records found for this selection.</p>
+            <div className="bg-white dark:bg-white/5 rounded-[2.5rem] p-12 border border-black/5 dark:border-white/5 text-center shadow-xl">
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">No matching records found</p>
             </div>
           ) : historyFiltered.map((tx) => (
-            <div key={tx.id} onClick={() => setDetailModalTx(tx)} className="bg-white rounded-[2rem] p-6 border border-border-subtle shadow-sm active:scale-[0.98] transition-all">
-              <div className="flex items-start justify-between gap-4">
+            <div key={tx.id} onClick={() => setDetailModalTx(tx)} className="bg-white dark:bg-white/5 rounded-[2.5rem] p-8 border border-black/5 dark:border-white/5 shadow-xl active:scale-[0.98] transition-all group">
+              <div className="flex items-start justify-between gap-6">
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-black truncate">{tx.patientName || tx.staffName || 'General Tx'}</div>
-                  <div className="text-[9px] font-black text-black uppercase tracking-widest mt-1">{tx.departmentCode} • {tx.categoryName || tx.category}</div>
+                  <div className="text-lg font-black text-black dark:text-white truncate group-hover:text-primary transition-colors">{tx.patientName || tx.staffName || 'General Tx'}</div>
+                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-black dark:bg-white text-white dark:text-black rounded-md">{tx.departmentCode}</span>
+                    <span>{tx.categoryName || tx.category}</span>
+                  </div>
                 </div>
-                <div className={cn('text-sm font-black shrink-0', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
-                  {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                <div className={cn('text-xl font-[1000] shrink-0 tracking-tighter', tx.type === 'income' ? 'text-black dark:text-white' : 'text-rose-500')}>
+                  {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className={cn('px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border', 
-                  tx.status === 'approved' ? 'bg-black text-white border-black' : 
-                  tx.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' : 
-                  'bg-surface-subtle text-black border-border-subtle'
+              <div className="mt-8 flex items-center justify-between">
+                <span className={cn('px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all', 
+                  tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                  tx.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 
+                  'bg-gray-500/10 text-gray-500 border-gray-500/20'
                 )}>
                   {tx.status || 'pending'}
                 </span>
-                <span className="text-[10px] font-bold text-black">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="hidden md:block bg-white rounded-[2.5rem] border border-border-subtle overflow-hidden shadow-sm">
+        <div className="hidden md:block bg-white dark:bg-[#0A0A0A]/40 border border-black/5 dark:border-white/5 rounded-[3.5rem] overflow-hidden shadow-2xl backdrop-blur-xl mb-24">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left border-separate border-spacing-0">
+            <table className="w-full min-w-[1000px] text-left border-separate border-spacing-0">
               <thead>
-                <tr className="bg-surface-subtle">
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Date</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Dept</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Account / Detail</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Category</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle">Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-border-subtle text-right">Amount</th>
+                <tr className="bg-black dark:bg-white">
+                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Timeline</th>
+                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Node</th>
+                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Identity / Account</th>
+                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Classification</th>
+                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Assurance</th>
+                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black text-right">Magnitude</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-subtle">
+              <tbody className="divide-y divide-black/5 dark:divide-white/5">
                 {historyLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center">
-                      <Loader2 className="w-12 h-12 animate-spin text-black mx-auto" />
-                      <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-6">Securing Live Data Stream...</p>
+                    <td colSpan={6} className="px-10 py-32 text-center">
+                      <div className="flex flex-col items-center gap-6">
+                        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.4em]">Synchronizing Financial Ledger...</p>
+                      </div>
                     </td>
                   </tr>
                 ) : historyFiltered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center text-sm font-black text-black uppercase tracking-widest">No entries found for this query.</td>
+                    <td colSpan={6} className="px-10 py-32 text-center text-sm font-black text-gray-400 uppercase tracking-[0.3em]">No matrix entries found for this query context.</td>
                   </tr>
                 ) : historyFiltered.map((tx: any) => (
-                  <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-surface-subtle transition-colors cursor-pointer group">
-                    <td className="px-8 py-6 text-xs font-black text-black">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
-                    <td className="px-8 py-6">
-                      <span className="px-2 py-0.5 rounded bg-black text-white text-[9px] font-black uppercase tracking-widest">{tx.departmentCode}</span>
+                  <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-all cursor-pointer group h-24">
+                    <td className="px-10 py-6 text-xs font-black text-black dark:text-white tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
+                    <td className="px-10 py-6">
+                      <span className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-black dark:text-white text-[9px] font-[1000] uppercase tracking-widest">{tx.departmentCode}</span>
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="text-sm font-black text-black group-hover:underline underline-offset-4">{tx.patientName || tx.staffName || 'General Account'}</div>
-                      <div className="text-[9px] font-bold text-black tracking-wider uppercase mt-0.5">{tx.id?.slice(0, 12)}</div>
+                    <td className="px-10 py-6">
+                      <div className="text-base font-[1000] text-black dark:text-white group-hover:text-primary transition-colors">{tx.patientName || tx.staffName || 'General Account'}</div>
+                      <div className="text-[9px] font-black text-gray-400 tracking-widest uppercase mt-1.5">{tx.id?.slice(0, 16)}</div>
                     </td>
-                    <td className="px-8 py-6 text-xs font-black text-black uppercase tracking-widest">{tx.categoryName || tx.category}</td>
-                    <td className="px-8 py-6">
-                      <span className={cn('px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border', 
-                        tx.status === 'approved' ? 'bg-black text-white border-black' : 
-                        tx.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' : 
-                        'bg-surface-subtle text-black border-border-subtle'
+                    <td className="px-10 py-6 text-xs font-black text-gray-500 uppercase tracking-widest">{tx.categoryName || tx.category}</td>
+                    <td className="px-10 py-6">
+                      <span className={cn('px-4 py-1.5 rounded-xl text-[9px] font-[1000] uppercase tracking-[0.2em] border transition-all', 
+                        tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                        tx.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 
+                        'bg-gray-500/10 text-gray-500 border-gray-500/20'
                       )}>
                         {tx.status || 'pending'}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <div className={cn('text-sm font-black', tx.type === 'income' ? 'text-black' : 'text-red-600')}>
-                          {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                    <td className="px-10 py-6 text-right">
+                      <div className="flex items-center justify-end gap-6">
+                        <div className={cn('text-xl font-[1000] tracking-tighter tabular-nums', tx.type === 'income' ? 'text-black dark:text-white' : 'text-rose-500')}>
+                          {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
-                          className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all"
-                          title="Delete Transaction Permanently"
+                          className="w-10 h-10 rounded-xl bg-rose-500/5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                          title="Purge Transaction"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -1978,29 +1957,35 @@ export default function CashierStationPage() {
         </div>
       </div>
       {forwardModalTx && (
-        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-xl bg-white border border-border-subtle rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div className="bg-surface-subtle px-8 py-6 border-b border-border-subtle flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-[1000] text-black uppercase tracking-tight">Authorization Proof</h3>
-                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">
-                  {forwardModalTx.patientName || forwardModalTx.patientId || 'Account Holder'} • Rs {Number(forwardModalTx.amount || 0).toLocaleString()}
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 rounded-[3.5rem] overflow-hidden shadow-[0_0_80px_-20px_rgba(0,0,0,0.4)] transition-all">
+            <div className="bg-blue-600 px-10 py-10 flex items-center justify-between text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative z-10">
+                <h3 className="text-2xl font-[1000] uppercase tracking-tighter">Auth Protocol</h3>
+                <p className="text-[10px] font-black opacity-60 uppercase tracking-[0.4em] mt-2">
+                  Commitment Hash: {forwardModalTx.id?.slice(0, 16)}
                 </p>
               </div>
               <button
                 type="button"
                 disabled={forwardProofUploading}
                 onClick={() => setForwardModalTx(null)}
-                className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center text-black hover:bg-black hover:text-white transition-all"
+                className="w-14 h-14 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-md relative z-10"
               >
-                <X size={18} />
+                <X size={24} strokeWidth={3} />
               </button>
             </div>
 
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black px-1">Digital Evidence (Image/PDF)</label>
-                <div className="relative">
+            <div className="p-10 space-y-8">
+              <div className="p-6 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/10 dark:border-blue-500/20 rounded-[2rem] flex justify-between items-center group">
+                <span className="text-[10px] font-black uppercase text-blue-500 tracking-[0.3em]">Quantum Magnitude</span>
+                <span className="text-2xl font-[1000] text-blue-600 dark:text-blue-400">Rs {Number(forwardModalTx.amount || 0).toLocaleString()}</span>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 px-2">Validation Evidence (IMG/PDF)</label>
+                <div className="relative group">
                   <input
                     type="file"
                     accept="image/*,application/pdf"
@@ -2008,44 +1993,44 @@ export default function CashierStationPage() {
                     className="w-full opacity-0 absolute inset-0 cursor-pointer z-10"
                     disabled={forwardProofUploading}
                   />
-                  <div className="w-full bg-surface-subtle border-2 border-dashed border-border-subtle rounded-2xl px-6 py-8 text-center transition-all hover:border-black">
-                    <p className="text-sm font-black text-black">
-                      {forwardProofFile ? forwardProofFile.name : 'Click or Drop Proof File'}
+                  <div className="w-full bg-gray-50 dark:bg-white/5 border-2 border-dashed border-gray-200 dark:border-white/10 rounded-[2rem] px-8 py-10 text-center transition-all group-hover:border-blue-500 group-hover:bg-blue-500/5">
+                    <p className="text-sm font-[1000] text-black dark:text-white transition-colors group-hover:text-blue-500">
+                      {forwardProofFile ? forwardProofFile.name : 'Inject Proof Matrix'}
                     </p>
-                    <p className="text-[9px] font-bold text-black uppercase tracking-widest mt-2">Maximum file size: 5MB</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-3">Maximum Payload: 5MB</p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black px-1">
-                  Compliance Note (Required if no proof)
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 px-2">
+                  Compliance Annotation
                 </label>
                 <textarea
                   value={forwardProofReason}
                   onChange={(e) => setForwardProofReason(e.target.value)}
-                  placeholder="Explain the circumstances if digital proof is unavailable..."
-                  className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black min-h-[100px] resize-none transition-all"
+                  placeholder="Justify this commit for administrative audit..."
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] px-8 py-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 min-h-[120px] resize-none transition-all placeholder:text-gray-400"
                   disabled={forwardProofUploading}
                 />
               </div>
 
-              <div className="flex gap-4 pt-2">
+              <div className="flex gap-4 pt-4">
                 <button
                   type="button"
                   onClick={() => setForwardModalTx(null)}
                   disabled={forwardProofUploading}
-                  className="flex-1 py-4 rounded-2xl bg-white border border-border-subtle text-black font-black text-[10px] uppercase tracking-widest hover:bg-surface-subtle transition-all"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-gray-100 dark:bg-white/5 text-black dark:text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
                 >
-                  Cancel
+                  Abort
                 </button>
                 <button
                   type="button"
                   onClick={() => void confirmForwardToSuperadmin()}
                   disabled={forwardProofUploading}
-                  className="flex-1 py-4 rounded-2xl bg-black text-white font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-blue-600 text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {forwardProofUploading ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Authorize & Commit'}
+                  {forwardProofUploading ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Authorize & Commit'}
                 </button>
               </div>
             </div>
@@ -2054,48 +2039,49 @@ export default function CashierStationPage() {
       )}
 
       {rejectModalTx && (
-        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in zoom-in-95 duration-300">
-          <div className="w-full max-w-xl bg-white border border-border-subtle rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div className="bg-red-50 px-8 py-6 border-b border-red-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-[1000] text-red-600 uppercase tracking-tight">Rejection Protocol</h3>
-                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mt-1">
-                  Final denial for transaction: {rejectModalTx.id?.slice(0, 8)}
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 rounded-[3.5rem] overflow-hidden shadow-[0_0_80px_-20px_rgba(0,0,0,0.4)] transition-all">
+            <div className="bg-rose-600 px-10 py-10 flex items-center justify-between text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative z-10">
+                <h3 className="text-2xl font-[1000] uppercase tracking-tighter">Denial Protocol</h3>
+                <p className="text-[10px] font-black opacity-60 uppercase tracking-[0.4em] mt-2">
+                  Incident Ref: {rejectModalTx.id?.slice(0, 16)}
                 </p>
               </div>
               <button
                 type="button"
                 disabled={rejecting}
                 onClick={() => setRejectModalTx(null)}
-                className="w-10 h-10 rounded-xl bg-white border border-red-100 flex items-center justify-center text-red-600 hover:bg-red-600 hover:text-white transition-all"
+                className="w-14 h-14 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-md relative z-10"
               >
-                <X size={18} />
+                <X size={24} strokeWidth={3} />
               </button>
             </div>
 
-            <div className="p-8 space-y-6">
-              <div className="p-5 bg-surface-subtle border border-border-subtle rounded-2xl flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase text-black">Claim Amount</span>
-                <span className="text-lg font-[1000] text-black">Rs {Number(rejectModalTx.amount || 0).toLocaleString()}</span>
+            <div className="p-10 space-y-8">
+              <div className="p-6 bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/10 dark:border-rose-500/20 rounded-[2rem] flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-rose-500 tracking-[0.3em]">Denied Magnitude</span>
+                <span className="text-2xl font-[1000] text-rose-600 dark:text-rose-400">Rs {Number(rejectModalTx.amount || 0).toLocaleString()}</span>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black px-1">Reason for Rejection</label>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 px-2">Basis for Rejection</label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Clearly state the reason for this rejection..."
-                  className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-black min-h-[120px] resize-none transition-all"
+                  placeholder="State the regulatory or operational conflict..."
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] px-8 py-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 min-h-[150px] resize-none transition-all placeholder:text-gray-400"
                   disabled={rejecting}
                 />
               </div>
 
-              <div className="flex gap-4 pt-2">
+              <div className="flex gap-4 pt-4">
                 <button
                   type="button"
                   onClick={() => setRejectModalTx(null)}
                   disabled={rejecting}
-                  className="flex-1 py-4 rounded-2xl bg-white border border-border-subtle text-black font-black text-[10px] uppercase tracking-widest hover:bg-surface-subtle transition-all"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-gray-100 dark:bg-white/5 text-black dark:text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
@@ -2103,9 +2089,9 @@ export default function CashierStationPage() {
                   type="button"
                   onClick={() => void confirmRejectIncoming()}
                   disabled={rejecting}
-                  className="flex-1 py-4 rounded-2xl bg-red-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-rose-600 text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-700 shadow-xl shadow-rose-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {rejecting ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Confirm Rejection'}
+                  {rejecting ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Confirm Denial'}
                 </button>
               </div>
             </div>
@@ -2114,88 +2100,89 @@ export default function CashierStationPage() {
       )}
 
       {detailModalTx && (
-        <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-lg bg-white border border-border-subtle rounded-[3rem] overflow-hidden shadow-2xl">
-            <div className="relative p-10">
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 rounded-[4rem] overflow-hidden shadow-[0_0_100px_-20px_rgba(0,0,0,0.5)]">
+            <div className="relative p-12">
               <button 
                 onClick={() => setDetailModalTx(null)}
-                className="absolute top-8 right-8 w-10 h-10 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-black hover:bg-black hover:text-white transition-all"
+                className="absolute top-10 right-10 w-14 h-14 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group"
               >
-                <X size={18} />
+                <X size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
               </button>
 
-              <div className="flex flex-col items-center text-center mb-10">
-                <div className="w-16 h-16 bg-black rounded-[1.5rem] flex items-center justify-center text-white mb-5 shadow-2xl shadow-black/20">
-                  <FileText size={32} />
+              <div className="flex flex-col items-center text-center mb-12">
+                <div className="w-24 h-24 bg-black dark:bg-white rounded-[2rem] flex items-center justify-center text-white dark:text-black mb-6 shadow-2xl shadow-black/20 dark:shadow-white/10">
+                  <FileText size={40} strokeWidth={2.5} />
                 </div>
-                <h3 className="text-2xl font-[1000] text-black uppercase tracking-tight">Audit Record</h3>
-                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Log Reference: {detailModalTx.id}</p>
+                <h3 className="text-3xl font-[1000] text-black dark:text-white uppercase tracking-tighter">Audit Dossier</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mt-3">{detailModalTx.id}</p>
               </div>
 
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-5 rounded-2xl bg-surface-subtle border border-border-subtle">
-                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Timestamp</p>
-                    <p className="text-sm font-black text-black">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="p-6 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Matrix Time</p>
+                    <p className="text-sm font-[1000] text-black dark:text-white">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
                   </div>
-                  <div className="p-5 rounded-2xl bg-surface-subtle border border-border-subtle">
-                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Portal Source</p>
-                    <p className="text-sm font-black text-black uppercase">{detailModalTx.departmentCode || 'HQ'}</p>
+                  <div className="p-6 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Node Source</p>
+                    <p className="text-sm font-[1000] text-black dark:text-white uppercase">{detailModalTx.departmentCode || 'HQ-MAIN'}</p>
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-white border-2 border-black/5 shadow-inner">
-                  <p className="text-[9px] font-black text-black uppercase tracking-widest mb-2">Account Entity</p>
-                  <p className="text-lg font-black text-black">{detailModalTx.patientName || detailModalTx.staffName || 'General Account'}</p>
-                  <p className="text-[11px] font-bold text-black mt-1">{detailModalTx.patientId || detailModalTx.staffId || 'ID UNKNOWN'}</p>
+                <div className="p-8 rounded-[2.5rem] bg-black dark:bg-white shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] group">
+                  <p className="text-[9px] font-black text-white/40 dark:text-black/40 uppercase tracking-[0.4em] mb-3">Entity Identity</p>
+                  <p className="text-2xl font-[1000] text-white dark:text-black tracking-tight group-hover:text-primary transition-colors">{detailModalTx.patientName || detailModalTx.staffName || 'General Nexus'}</p>
+                  <p className="text-xs font-black text-white/60 dark:text-black/60 mt-2 font-mono">{detailModalTx.patientId || detailModalTx.staffId || 'ANONYMOUS_VOID'}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="px-1">
-                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Ledger Category</p>
-                    <p className="text-sm font-black text-black">{detailModalTx.categoryName || detailModalTx.category || 'Uncategorized'}</p>
+                <div className="grid grid-cols-2 gap-8 px-4">
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] mb-2">Classification</p>
+                    <p className="text-base font-[1000] text-black dark:text-white">{detailModalTx.categoryName || detailModalTx.category || 'Undefined'}</p>
                   </div>
-                  <div className="text-right px-1">
-                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Value Transacted</p>
-                    <p className="text-xl font-[1000] text-black">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
+                  <div className="text-right">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] mb-2">Magnitude</p>
+                    <p className="text-2xl font-[1000] text-black dark:text-white tabular-nums">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {detailModalTx.description && (
-                  <div className="p-5 rounded-2xl bg-surface-subtle border border-dashed border-border-subtle">
-                    <p className="text-[9px] font-black text-black uppercase tracking-widest mb-2 text-center">Transaction Memo</p>
-                    <p className="text-xs font-bold text-black text-center leading-relaxed italic">
+                  <div className="p-8 rounded-[2.5rem] bg-gray-50 dark:bg-white/5 border-2 border-dashed border-gray-200 dark:border-white/10">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] mb-4 text-center">Context Payload</p>
+                    <p className="text-sm font-[1000] text-black dark:text-white text-center leading-relaxed italic opacity-80">
                       "{detailModalTx.description}"
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="mt-10 flex gap-4">
-                <button 
-                  onClick={() => setDetailModalTx(null)}
-                  className="flex-1 py-5 bg-white border border-border-subtle text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black hover:text-white transition-all"
-                >
-                  Dismiss
-                </button>
+              <div className="mt-12 grid grid-cols-2 gap-4">
                 <button 
                   onClick={() => {
                     setDetailModalTx(null);
                     handleDeleteTransaction(detailModalTx);
                   }}
-                  className="flex-1 py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20"
+                  className="h-16 bg-rose-500/10 text-rose-500 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-500 hover:text-white transition-all"
                 >
-                  Delete Record
+                  Purge Record
                 </button>
-                {detailModalTx.status === 'pending_cashier' && (
+                {detailModalTx.status === 'pending_cashier' ? (
                   <button 
                     onClick={() => {
                       setDetailModalTx(null);
                       openForwardModal(detailModalTx);
                     }}
-                    className="flex-1 py-5 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
+                    className="h-16 bg-emerald-500 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all"
                   >
-                    Authorize Tx
+                    Authorize Node
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setDetailModalTx(null)}
+                    className="h-16 bg-black dark:bg-white text-white dark:text-black rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:opacity-80 transition-all"
+                  >
+                    Dismiss
                   </button>
                 )}
               </div>

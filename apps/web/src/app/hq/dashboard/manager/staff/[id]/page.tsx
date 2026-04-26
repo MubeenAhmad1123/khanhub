@@ -141,7 +141,21 @@ export default function StaffProfilePage() {
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
 
-  // UI standard - forced light theme
+  const getDeptColor = (dept: string) => {
+    switch (dept?.toLowerCase()) {
+      case 'it': return { bg: 'from-indigo-600/20 to-indigo-600/5', border: 'border-indigo-500/30', text: 'text-indigo-600', accent: 'bg-indigo-600', light: 'bg-indigo-50', shadow: 'shadow-indigo-500/20' };
+      case 'rehab': return { bg: 'from-rose-600/20 to-rose-600/5', border: 'border-rose-500/30', text: 'text-rose-600', accent: 'bg-rose-600', light: 'bg-rose-50', shadow: 'shadow-rose-500/20' };
+      case 'sukoon': return { bg: 'from-purple-600/20 to-purple-600/5', border: 'border-purple-500/30', text: 'text-purple-600', accent: 'bg-purple-600', light: 'bg-purple-50', shadow: 'shadow-purple-500/20' };
+      case 'hospital': return { bg: 'from-blue-600/20 to-blue-600/5', border: 'border-blue-500/30', text: 'text-blue-600', accent: 'bg-blue-600', light: 'bg-blue-50', shadow: 'shadow-blue-500/20' };
+      case 'job-center': return { bg: 'from-orange-600/20 to-orange-600/5', border: 'border-orange-500/30', text: 'text-orange-600', accent: 'bg-orange-600', light: 'bg-orange-50', shadow: 'shadow-orange-500/20' };
+      case 'spims': return { bg: 'from-teal-600/20 to-teal-600/5', border: 'border-teal-500/30', text: 'text-teal-600', accent: 'bg-teal-600', light: 'bg-teal-50', shadow: 'shadow-teal-500/20' };
+      case 'welfare': return { bg: 'from-amber-600/20 to-amber-600/5', border: 'border-amber-500/30', text: 'text-amber-600', accent: 'bg-amber-600', light: 'bg-amber-50', shadow: 'shadow-amber-500/20' };
+      case 'social-media': return { bg: 'from-cyan-600/20 to-cyan-600/5', border: 'border-cyan-500/30', text: 'text-cyan-600', accent: 'bg-cyan-600', light: 'bg-cyan-50', shadow: 'shadow-cyan-500/20' };
+      default: return { bg: 'from-gray-600/20 to-gray-600/5', border: 'border-gray-500/30', text: 'text-gray-600', accent: 'bg-gray-600', light: 'bg-gray-50', shadow: 'shadow-gray-500/20' };
+    }
+  };
+
+  const theme = getDeptColor(staff?.dept || 'it');
   const isDark = false;
 
   // Data States
@@ -1257,7 +1271,7 @@ export default function StaffProfilePage() {
           <div className="lg:col-span-4 space-y-6">
             <div className={`rounded-[2.5rem] p-8 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
               }`}>
-              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-600 to-blue-700 opacity-20" />
+              <div className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-br ${theme.bg} opacity-100`} />
 
               <div className="relative mt-4 mb-6 group">
                 {staff?.photoUrl ? (
@@ -1319,12 +1333,12 @@ export default function StaffProfilePage() {
                 </div>
               </div>
 
-              <div className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] ${isDark ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-indigo-50 border-indigo-100 shadow-sm'}`}>
+              <div className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] ${theme.light} ${theme.border} ${theme.shadow}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Till Date Salary</p>
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-500 text-white text-[8px] font-black uppercase">{presentDaysCount} Days</span>
+                  <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Till Date Salary</p>
+                  <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>{presentDaysCount} Days</span>
                 </div>
-                <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-indigo-600'}`}>₨{tillDateSalary.toLocaleString()}</p>
+                <p className={`text-xl font-black ${theme.text}`}>₨{tillDateSalary.toLocaleString()}</p>
                 <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-1">Calculated minus ₨{staff?.totalFines?.toLocaleString() || 0} fines</p>
               </div>
 
@@ -1379,7 +1393,7 @@ export default function StaffProfilePage() {
                     setActiveTab(tab.id as any);
                   }}
                   className={`flex items-center gap-2 px-4 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
-                    ? (isDark ? 'bg-white text-black' : 'bg-black text-white')
+                    ? `${theme.accent} text-white shadow-lg ${theme.shadow}`
                     : 'text-black hover:bg-black/5'
                     }`}
                 >
@@ -1391,71 +1405,73 @@ export default function StaffProfilePage() {
             {/* Panels */}
             {activeTab === 'profile' && (
               <div className="space-y-6 animate-in fade-in duration-500">
-                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                  <div className="flex items-center justify-between mb-10">
+                <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm relative overflow-hidden`}>
+                  <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${theme.bg} blur-3xl opacity-20 -mr-32 -mt-32`} />
+                  
+                  <div className="flex items-center justify-between mb-10 relative z-10">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                      <div className={`w-12 h-12 rounded-2xl ${theme.light} flex items-center justify-center ${theme.text}`}>
                         <User size={24} />
                       </div>
                       <div>
                         <h3 className="text-xl font-black uppercase tracking-tight">Staff Information Card</h3>
-                        <p className="text-[10px] font-bold text-black uppercase tracking-widest">Public profile details</p>
+                        <p className={`text-[10px] font-bold ${theme.text} uppercase tracking-widest`}>Public profile details</p>
                       </div>
                     </div>
-                    <button onClick={() => setActiveTab('edit')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDark ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}>
+                    <button onClick={() => setActiveTab('edit')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-gray-100 text-gray-900 hover:bg-gray-200`}>
                       Request Update
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Full Identity Name</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Full Identity Name</p>
                       <p className="text-sm font-black">{staff?.name || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Guardian / Father</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Guardian / Father</p>
                       <p className="text-sm font-black">{staff?.fatherName || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Professional Designation</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Professional Designation</p>
                       <p className="text-sm font-black">{staff?.designation || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Primary Department</p>
-                      <p className="text-sm font-black uppercase">{staff?.dept || '—'}</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Primary Department</p>
+                      <p className={`text-sm font-black uppercase ${theme.text}`}>{staff?.dept || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Contact Phone</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Contact Phone</p>
                       <p className="text-sm font-black">{staff?.phone || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Gender Identification</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Gender Identification</p>
                       <p className="text-sm font-black capitalize">{staff?.gender || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Blood Group</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Blood Group</p>
                       <p className="text-sm font-black uppercase">{staff?.bloodGroup || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Joining Date</p>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Joining Date</p>
                       <p className="text-sm font-black uppercase">{formatDateDMY(staff?.joiningDate)}</p>
                     </div>
                     {staff?.seniority && (
                       <div>
-                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Staff Seniority Level</p>
-                        <p className="text-sm font-black uppercase text-indigo-600 dark:text-indigo-400">{staff.seniority}</p>
+                        <p className={`text-[9px] font-black ${theme.text} opacity-60 uppercase tracking-widest mb-1`}>Staff Seniority Level</p>
+                        <p className={`text-sm font-black uppercase ${theme.text}`}>{staff.seniority}</p>
                       </div>
                     )}
                   </div>
 
-                  <div className={`mt-10 p-8 rounded-3xl border border-dashed flex flex-col md:flex-row items-center justify-between gap-6 ${isDark ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                  <div className={`mt-10 p-8 rounded-3xl border border-dashed flex flex-col md:flex-row items-center justify-between gap-6 ${theme.light} ${theme.border}`}>
                     <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                      <div className={`w-14 h-14 rounded-2xl ${theme.accent} text-white flex items-center justify-center shadow-lg ${theme.shadow}`}>
                         <Clock size={28} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Calculated Shift Duration</p>
-                        <h4 className="text-2xl font-[1000] tracking-tighter text-emerald-700 dark:text-emerald-400">
+                        <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Calculated Shift Duration</p>
+                        <h4 className={`text-2xl font-[1000] tracking-tighter ${theme.text}`}>
                           {calculateDutyHours(staff?.dutyStartTime || '09:00', staff?.dutyEndTime || '17:00').text}
                         </h4>
                       </div>
@@ -1515,7 +1531,7 @@ export default function StaffProfilePage() {
                   <div className="flex flex-col sm:flex-row justify-between mb-8">
                     <div>
                       <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        <Activity className="text-emerald-500" /> Operational Health Check
+                        <Activity className={theme.text} /> Operational Health Check
                       </h3>
                       <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Audit attendance, duty, and compliance patterns</p>
                     </div>
@@ -1535,8 +1551,8 @@ export default function StaffProfilePage() {
                           key={dateStr}
                           onClick={() => setSelectedDate(dateStr)}
                           className={`min-w-[80px] p-4 rounded-3xl border-2 transition-all group flex flex-col items-center gap-3 ${isSelected
-                            ? 'bg-black border-black shadow-2xl scale-105'
-                            : (isToday ? 'bg-indigo-50/50 border-indigo-200' : 'bg-white border-black/5 hover:border-black/20')
+                            ? `${theme.accent} border-black shadow-2xl scale-105`
+                            : (isToday ? `${theme.light} ${theme.border}` : 'bg-white border-black/5 hover:border-black/20')
                             }`}
                         >
                           <div className="text-center">
@@ -1586,7 +1602,7 @@ export default function StaffProfilePage() {
                       <div className="flex flex-wrap gap-2 mb-8">
                         <button
                           onClick={() => handleAttendanceCell(todayStr)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivalTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-black" : "bg-gray-100 text-black")}`}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivalTime ? `${theme.accent} text-white shadow-lg ${theme.shadow}` : (isDark ? "bg-zinc-800 text-black" : "bg-gray-100 text-black")}`}
                         >
                           <Clock size={12} />
                           {attendanceMap[todayStr]?.arrivalTime || "Set Arrival"}

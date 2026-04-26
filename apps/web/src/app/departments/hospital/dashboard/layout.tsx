@@ -154,163 +154,170 @@ export default function HospitalDashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
-          <p className="text-black font-black uppercase tracking-widest animate-pulse">Syncing Hospital Portal...</p>
+      <div className="min-h-screen bg-[#F0F7FF] dark:bg-[#0A0A0A] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Medical Node...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#FCFBF8] text-black font-bold">
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-[#FCFBF8] border-b-2 border-black px-4 h-16 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-            <Activity className="w-5 h-5 text-white" />
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-white/50 dark:bg-black/50 backdrop-blur-xl border-r border-gray-200/50 dark:border-white/5">
+      {/* Header */}
+      <div className="p-8">
+        <div className="flex items-center gap-4 mb-12">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl -rotate-3 transition-transform hover:rotate-0 duration-500">
+            <Activity size={24} />
           </div>
-          <span className="font-black uppercase tracking-tighter text-black">Hospital Portal</span>
+          <div>
+            <h1 className="font-black text-lg leading-tight tracking-tight dark:text-white uppercase">Hospital</h1>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Nexus Healthcare</p>
+          </div>
         </div>
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
-        >
-          {isSidebarOpen ? <X /> : <Menu />}
-        </button>
-      </header>
 
-      <div className="flex relative min-h-[calc(100-4rem)] lg:min-h-screen">
-        {/* Sidebar Backdrop */}
-        {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside className={`
-          fixed lg:sticky top-0 left-0 z-50
-          w-72 h-screen bg-[#FCFBF8] border-r-2 border-black
-          transition-transform duration-300 ease-in-out
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}>
-          <div className="flex flex-col h-full">
-            {/* Logo Section */}
-            <div className="p-6 hidden lg:block">
-              <div className="flex items-center gap-3 bg-white p-3 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-none">
-                  <Activity className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-black text-black leading-none uppercase tracking-tighter">Hospital</h1>
-                  <p className="text-[10px] text-black/50 font-black uppercase tracking-wider mt-1">Khan Hub Ecosystem</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
-              <div className="mb-4">
-                <p className="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">Main Menu</p>
-                {filteredNavItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-4 py-3 border-2 border-black transition-all duration-200 group mb-2
-                        ${isActive 
-                          ? 'bg-emerald-600 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' 
-                          : 'bg-white text-black hover:bg-emerald-50'}
-                      `}
-                    >
-                      <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'group-hover:text-emerald-600'}`} />
-                      <span className="font-black uppercase text-xs tracking-tight">{item.title}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* Quick Actions / Status */}
-              <div className="pt-4 border-t-2 border-black">
-                <p className="px-4 text-[11px] font-black text-black/40 uppercase tracking-widest mb-2">Account Status</p>
-                <div className="mx-2 p-4 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
-                      {(user?.role?.[0] || 'U').toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-black text-black truncate">{user?.displayName}</p>
-                      <p className="text-[10px] text-black/50 font-black capitalize tracking-widest">{user?.role} Portal</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 w-full" />
-                    </div>
-                    <span className="text-[10px] font-black text-emerald-600 uppercase">Active</span>
-                  </div>
-                </div>
-              </div>
-            </nav>
-
-            {/* Bottom Actions */}
-            <div className="p-4 border-t border-slate-100 dark:border-white/5 space-y-2">
-              <Link 
-                href="/departments/hospital/dashboard/settings"
-                className="flex items-center gap-3 px-4 py-3 text-black hover:bg-emerald-50 border-2 border-transparent hover:border-black transition-all"
+        {/* Navigation */}
+        <nav className="space-y-2">
+          {filteredNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsSidebarOpen(false)}
+                className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-blue-500/10 to-transparent text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/50 dark:hover:bg-white/5'
+                }`}
               >
-                <Settings className="w-5 h-5 text-black" />
-                <span className="font-black uppercase text-xs tracking-tight">Settings</span>
+                {isActive && (
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" />
+                )}
+                <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-blue-500' : ''}`}>
+                  <item.icon size={20} />
+                </div>
+                <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.title}</span>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                )}
               </Link>
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 text-rose-600 hover:bg-red-50 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-black uppercase text-xs tracking-tight">Sign Out</span>
-              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="mt-auto p-8 space-y-6">
+        {/* User Card */}
+        <div className="flex items-center gap-4 px-2">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-white dark:to-gray-300 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-xl">
+            {user?.displayName?.[0]?.toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+            <div className="flex items-center gap-2 mt-1">
+               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+               <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{user?.role} node</p>
             </div>
           </div>
-        </aside>
+        </div>
 
-        {/* Main Content Area */}
-        <main className="flex-1 min-w-0 overflow-x-hidden">
-          {/* Top Bar for Desktop */}
-          <div className="hidden lg:flex items-center justify-between px-8 py-4 bg-[#FCFBF8]/80 backdrop-blur-md sticky top-0 z-30 border-b-2 border-black">
-            <div className="flex items-center gap-4 bg-white px-4 py-2 border-2 border-black w-96">
-              <Search className="w-4 h-4 text-black" />
-              <input 
-                type="text" 
-                placeholder="Search anything..." 
-                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-black/30 font-black text-black"
-              />
+        <button 
+          onClick={handleSignOut} 
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-[11px] font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 transition-all group"
+        >
+          <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
+          DISCONNECT
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex bg-[#FDFDFD] dark:bg-[#050505] text-black dark:text-white transition-colors duration-500 font-sans">
+      {/* Sidebar Desktop */}
+      <aside className="hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 lg:hidden animate-in fade-in duration-500" 
+          onClick={() => setIsSidebarOpen(false)} 
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
+      } bg-white dark:bg-[#0A0A0A] shadow-2xl`}>
+        <button 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white z-50 hover:rotate-90 transition-all"
+        >
+          <X size={18} />
+        </button>
+        <SidebarContent />
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+        {/* Background Decorative Elements */}
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
+
+        {/* Top Header */}
+        <header className="sticky top-0 z-20 bg-white/80 dark:bg-black/80 lg:bg-[#FDFDFD]/80 lg:dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setIsSidebarOpen(true)} 
+              className="lg:hidden w-10 h-10 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="hidden lg:flex flex-col">
+              <h2 className="text-xs font-black uppercase tracking-[0.4em] text-gray-400 leading-none">Medical Grid</h2>
+              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-2">Central Hospital Terminal</p>
             </div>
             
-            <div className="flex items-center gap-4">
-              {user?.uid && <StaffNotifications uid={user.uid} dept="hospital" />}
-              
-              <div className="h-8 w-[2px] bg-black mx-2" />
-              
-              <div className="flex items-center gap-3 pl-2">
-                <div className="text-right">
-                  <p className="text-sm font-black text-black uppercase tracking-tighter">{user?.displayName}</p>
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{user?.role}</p>
-                </div>
-                <div className={`w-10 h-10 border-2 border-black flex items-center justify-center text-white font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
-                  {(user?.displayName?.[0] || 'U').toUpperCase()}
-                </div>
-              </div>
+            <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10" />
+
+            <div className="relative group hidden md:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Search patient records..." 
+                className="bg-gray-100/50 dark:bg-white/5 border border-transparent focus:border-blue-500/30 rounded-2xl pl-12 pr-6 py-2.5 text-xs font-medium w-80 outline-none transition-all"
+              />
             </div>
           </div>
+          
+          <div className="flex items-center gap-4 lg:gap-8">
+             {user?.uid && <StaffNotifications uid={user.uid} dept="hospital" />}
+             
+             <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10" />
 
-          {/* Page Content */}
-          <div className="p-4 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+             <div className="flex items-center gap-4">
+                <div className="hidden sm:flex flex-col items-end">
+                   <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+                   <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-blue-500/20">
+                      {user?.role}
+                   </span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
+                   {user?.displayName?.[0]}
+                </div>
+             </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <div className="max-max-7xl mx-auto relative">
             {children}
           </div>
         </main>

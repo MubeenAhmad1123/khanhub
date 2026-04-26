@@ -125,202 +125,219 @@ export default function ManagerStaffPage() {
     });
   }, [staff, search, deptFilter, statusFilter]);
 
-  if (sessionLoading || loading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${darkMode ? 'bg-[#0A0A0A]' : 'bg-gray-50'}`}>
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  const getDeptColor = (dept: string) => {
+    switch (dept) {
+      case 'rehab': return { base: 'rose', from: 'from-rose-500/20', to: 'to-rose-500/5', text: 'text-rose-600', border: 'border-rose-200/50', icon: 'bg-rose-500' };
+      case 'spims': return { base: 'emerald', from: 'from-emerald-500/20', to: 'to-emerald-500/5', text: 'text-emerald-600', border: 'border-emerald-200/50', icon: 'bg-emerald-500' };
+      case 'hospital': return { base: 'blue', from: 'from-blue-500/20', to: 'to-blue-500/5', text: 'text-blue-600', border: 'border-blue-200/50', icon: 'bg-blue-500' };
+      case 'sukoon': return { base: 'purple', from: 'from-purple-500/20', to: 'to-purple-500/5', text: 'text-purple-600', border: 'border-purple-200/50', icon: 'bg-purple-500' };
+      case 'welfare': return { base: 'amber', from: 'from-amber-500/20', to: 'to-amber-500/5', text: 'text-amber-600', border: 'border-amber-200/50', icon: 'bg-amber-500' };
+      case 'job-center': return { base: 'orange', from: 'from-orange-500/20', to: 'to-orange-500/5', text: 'text-orange-600', border: 'border-orange-200/50', icon: 'bg-orange-500' };
+      case 'social-media': return { base: 'indigo', from: 'from-indigo-500/20', to: 'to-indigo-500/5', text: 'text-indigo-600', border: 'border-indigo-200/50', icon: 'bg-indigo-500' };
+      case 'it': return { base: 'indigo', from: 'from-indigo-500/20', to: 'to-indigo-500/5', text: 'text-indigo-600', border: 'border-indigo-200/50', icon: 'bg-indigo-500' };
+      default: return { base: 'zinc', from: 'from-zinc-500/20', to: 'to-zinc-500/5', text: 'text-zinc-600', border: 'border-zinc-200/50', icon: 'bg-zinc-500' };
+    }
+  };
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 pb-20 w-full overflow-x-hidden ${darkMode ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
+    <div className={`min-h-screen transition-colors duration-500 pb-20 w-full overflow-x-hidden ${darkMode ? 'bg-[#0A0A0A]' : 'bg-[#FDFDFD]'}`}>
       {/* Header */}
-      <div className={`sticky top-0 z-20 border-b transition-all ${darkMode ? 'bg-[#0A0A0A]/80 border-white/5 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'}`}>
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${darkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-900 text-white'}`}>
-                <Users size={20} />
+      <div className={`sticky top-0 z-20 border-b transition-all ${darkMode ? 'bg-[#0A0A0A]/80 border-white/5 backdrop-blur-xl' : 'bg-white/80 border-gray-100 backdrop-blur-xl'}`}>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-5 min-w-0">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all ${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-900 shadow-gray-200/50'}`}>
+                <Users size={28} />
               </div>
               <div className="min-w-0">
-                <h1 className={`text-lg md:text-2xl font-black tracking-tight truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>Staff Management</h1>
-                <p className={`${darkMode ? 'text-slate-500' : 'text-black'} text-[9px] font-black uppercase tracking-widest`}>Global Directory</p>
+                <h1 className={`text-2xl md:text-3xl font-black tracking-tight truncate ${darkMode ? 'text-white' : 'text-gray-900'} uppercase`}>Staff Force</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-[10px] font-black uppercase tracking-[0.2em]`}>Global Personnel Matrix</p>
+                </div>
               </div>
             </div>
 
-            <div className={`rounded-xl px-3 py-2 flex items-center gap-3 border flex-shrink-0 transition-colors ${darkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
-              <div className="text-right">
-                <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-black'}`}>Staff</p>
-                <p className={`text-base font-black transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.total}</p>
-              </div>
-              <div className={`w-px h-6 ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`} />
-              <div className="text-right">
-                <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-black'}`}>Present</p>
-                <p className="text-base font-black text-blue-600">{stats.present}</p>
+            <div className="flex items-center gap-3">
+              <div className={`rounded-[1.5rem] px-5 py-3 flex items-center gap-4 border transition-all ${darkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50/50 border-gray-100 shadow-sm'}`}>
+                <div className="text-right">
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Active Nodes</p>
+                  <p className={`text-xl font-black transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.total}</p>
+                </div>
+                <div className={`w-px h-8 ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`} />
+                <div className="text-right">
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Sync State</p>
+                  <p className="text-xl font-black text-blue-600">{stats.present}</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 mt-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 mt-10">
         {/* Unmarked Duties Alert */}
         {unmarkedStaff.length > 0 && (
-          <div className={`rounded-2xl p-4 md:p-6 mb-6 flex items-start gap-4 border transition-colors ${darkMode ? 'bg-orange-950/20 border-orange-500/20' : 'bg-orange-50 border-orange-100'
-            }`}>
-            <div className={`p-2.5 rounded-xl flex-shrink-0 ${darkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
-              <AlertCircle size={20} />
+          <div className={`rounded-[2rem] p-6 md:p-8 mb-10 flex items-start gap-6 border transition-all ${darkMode ? 'bg-orange-950/20 border-orange-500/20' : 'bg-orange-50/50 border-orange-100 backdrop-blur-sm'}`}>
+            <div className={`p-4 rounded-2xl flex-shrink-0 ${darkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-100 text-orange-600 shadow-lg shadow-orange-200/20'}`}>
+              <AlertCircle size={24} />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className={`font-black text-sm ${darkMode ? 'text-orange-200' : 'text-orange-900'}`}>Unmarked Duties Today</h4>
-              <p className={`text-xs font-bold uppercase tracking-tight mt-1 ${darkMode ? 'text-orange-400/80' : 'text-orange-600'}`}>
-                {unmarkedStaff.length} staff haven't had duties recorded today.
+              <h4 className={`font-black text-base ${darkMode ? 'text-orange-200' : 'text-orange-900'} uppercase tracking-tight`}>Pending Duty Logs</h4>
+              <p className={`text-xs font-bold uppercase tracking-widest mt-1 ${darkMode ? 'text-orange-400/80' : 'text-orange-500'}`}>
+                {unmarkedStaff.length} personnel missing logs for current cycle.
               </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {unmarkedStaff.slice(0, 5).map(s => (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {unmarkedStaff.slice(0, 8).map(s => (
                   <Link
                     key={s.id}
                     href={`/hq/dashboard/manager/staff/${s.id}?collection=${s.dept}`}
-                    className={`text-[10px] px-2 py-1 rounded-lg font-black border transition-all ${darkMode
+                    className={`text-[10px] px-4 py-2 rounded-xl font-black border transition-all ${darkMode
                         ? 'bg-white/5 text-orange-400 border-orange-500/30 hover:bg-orange-500/10'
-                        : 'bg-white text-orange-700 border-orange-200 hover:bg-orange-100'
+                        : 'bg-white text-orange-700 border-orange-200 hover:bg-orange-100 hover:scale-105 active:scale-95'
                       }`}
                   >
                     {s.name}
                   </Link>
                 ))}
-                {unmarkedStaff.length > 5 && <span className={`text-[10px] font-bold ${darkMode ? 'text-orange-500/50' : 'text-orange-400'}`}>+{unmarkedStaff.length - 5} more</span>}
+                {unmarkedStaff.length > 8 && <span className={`text-[10px] font-black flex items-center px-2 ${darkMode ? 'text-orange-500/50' : 'text-orange-400'}`}>+{unmarkedStaff.length - 8} MORE</span>}
               </div>
             </div>
           </div>
         )}
 
         {/* Search & Filters */}
-        <div className={`p-3 md:p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row gap-3 mb-6 transition-colors ${darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100'
-          }`}>
+        <div className={`p-4 md:p-6 rounded-[2rem] shadow-xl border flex flex-col sm:flex-row gap-4 mb-10 transition-all ${darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-gray-200/30'}`}>
           <div className="flex-1 relative group">
-            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-teal-500' : 'text-black group-focus-within:text-gray-900'}`} size={16} />
+            <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-blue-500' : 'text-gray-400 group-focus-within:text-gray-900'}`} size={18} />
             <input
               type="text"
-              placeholder="Search by Name, ID, or Designation..."
-              className={`w-full pl-11 pr-4 py-3 border-none rounded-xl text-sm font-bold outline-none transition-colors ${darkMode ? 'bg-white/5 text-white placeholder:text-slate-600 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900'
+              placeholder="Filter by name, identifier, or node designation..."
+              className={`w-full pl-14 pr-6 py-4 border-none rounded-2xl text-sm font-bold outline-none transition-all ${darkMode ? 'bg-white/5 text-white placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:bg-white shadow-inner'
                 }`}
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
             <select
-              className={`border-none rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer transition-colors flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-black focus:ring-2 focus:ring-gray-900'
+              className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
                 }`}
               value={deptFilter}
               onChange={e => setDeptFilter(e.target.value)}
             >
-              <option value="all">Global Matrix</option>
-              <option value="hq">Khan Hub HQ</option>
-              <option value="rehab">Rehab Center</option>
-              <option value="spims">SPIMS Academy</option>
-              <option value="hospital">Hospital</option>
-              <option value="sukoon">Sukoon Center</option>
-              <option value="welfare">Welfare</option>
-              <option value="job-center">Job Center</option>
-              <option value="social-media">Social Media</option>
-              <option value="it">IT Department</option>
+              <option value="all">Unified System</option>
+              <option value="hq">HQ Command</option>
+              <option value="rehab">Rehab Node</option>
+              <option value="spims">SPIMS Node</option>
+              <option value="hospital">Medical Node</option>
+              <option value="sukoon">Sukoon Node</option>
+              <option value="welfare">Welfare Node</option>
+              <option value="job-center">Workforce Node</option>
+              <option value="social-media">Broadcast Node</option>
+              <option value="it">Digital Node</option>
             </select>
             <select
-              className={`border-none rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer transition-colors flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-teal-500/50' : 'bg-gray-50 text-black focus:ring-2 focus:ring-gray-900'
+              className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
                 }`}
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
-              <option value="all">Active & Inactive</option>
+              <option value="all">Active/Inactive</option>
               <option value="active">Active Only</option>
               <option value="inactive">Inactive Only</option>
-              <option value="resigned">Resigned / Left</option>
+              <option value="resigned">Resigned</option>
               <option value="terminated">Terminated</option>
             </select>
           </div>
         </div>
 
         {/* Staff Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-          {filtered.map(s => (
-            <Link
-              key={s.id}
-              href={`/hq/dashboard/manager/staff/${s.id}`}
-              className={`group rounded-2xl md:rounded-[2.5rem] p-5 md:p-6 border transition-all duration-500 flex flex-col relative overflow-hidden ${darkMode
-                  ? 'bg-white/[0.03] border-white/5 hover:border-teal-500/50 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-teal-900/20'
-                  : 'bg-white border-gray-100 hover:shadow-xl hover:shadow-gray-200/50'
-                }`}
-            >
-              {/* Status Badge */}
-              <div className="absolute top-5 right-5">
-                <div className={`w-2.5 h-2.5 rounded-full ${s.isActive !== false ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.5)]' : 'bg-gray-300'} ring-4 ${darkMode ? 'ring-slate-900' : 'ring-white'}`} />
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+          {filtered.map(s => {
+            const colors = getDeptColor(s.dept);
+            return (
+              <Link
+                key={s.id}
+                href={`/hq/dashboard/manager/staff/${s.id}`}
+                className={`group rounded-[2.5rem] p-8 border transition-all duration-700 flex flex-col relative overflow-hidden bg-gradient-to-br ${colors.from} ${colors.to} ${darkMode
+                    ? 'border-white/5 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(59,130,246,0.1)]'
+                    : `bg-white ${colors.border} hover:shadow-2xl hover:shadow-${colors.base}-200/50 hover:scale-[1.02]`
+                  }`}
+              >
+                {/* Decorative Background Icon */}
+                <div className={`absolute -right-6 -top-6 w-32 h-32 opacity-[0.03] transition-transform duration-1000 group-hover:scale-125 group-hover:rotate-12 ${colors.text}`}>
+                   <Users size={128} strokeWidth={1} />
+                </div>
 
-              {/* Profile Section */}
-              <div className="flex flex-col items-center text-center mb-5">
-                <div className="relative mb-3">
-                  {s.photoUrl ? (
-                    <img src={s.photoUrl} className={`w-20 h-20 rounded-[1.5rem] object-cover ring-4 transition-all duration-500 group-hover:scale-105 shadow-lg ${darkMode ? 'ring-white/5' : 'ring-gray-50'}`} />
-                  ) : (
-                    <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center text-2xl font-black shadow-inner transition-colors ${darkMode ? 'bg-white/5 text-slate-700' : 'bg-gray-100 text-black'}`}>
-                      {s.name?.[0]}
+                {/* Status Indicator */}
+                <div className="absolute top-8 right-8">
+                  <div className={`w-3 h-3 rounded-full ${s.isActive !== false ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)]' : 'bg-gray-300'} ring-8 ${darkMode ? 'ring-slate-900' : 'ring-white/50'}`} />
+                </div>
+
+                {/* Profile Section */}
+                <div className="flex flex-col items-center text-center mb-8 relative">
+                  <div className="relative mb-6">
+                    <div className={`absolute inset-0 rounded-[2rem] blur-2xl transition-all duration-700 opacity-0 group-hover:opacity-40 ${colors.icon}`} />
+                    {s.photoUrl ? (
+                      <img src={s.photoUrl} className={`w-28 h-28 rounded-[2rem] object-cover ring-4 transition-all duration-700 group-hover:scale-105 shadow-2xl relative z-10 ${darkMode ? 'ring-white/10' : 'ring-white'}`} />
+                    ) : (
+                      <div className={`w-28 h-28 rounded-[2rem] flex items-center justify-center text-3xl font-black shadow-inner transition-all duration-700 group-hover:scale-105 relative z-10 ${darkMode ? 'bg-white/10 text-slate-400' : 'bg-gray-100 text-gray-400'}`}>
+                        {s.name?.[0]}
+                      </div>
+                    )}
+                    <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-500 z-20 ${darkMode ? 'bg-slate-800 border-white/10 text-blue-400' : 'bg-gray-900 text-white group-hover:bg-blue-600'}`}>
+                      <Shield size={16} />
                     </div>
-                  )}
-                  <div className={`absolute -bottom-2 -right-2 p-1.5 rounded-xl shadow-md border transition-colors ${darkMode ? 'bg-slate-800 border-white/10 text-teal-400' : 'bg-white border-gray-100 text-gray-900'}`}>
-                    <Shield size={12} />
+                  </div>
+
+                  <h3 className={`text-lg font-black transition-colors leading-tight ${darkMode ? 'text-white group-hover:text-blue-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{s.name}</h3>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] mt-3 px-4 py-2 rounded-xl transition-all ${darkMode ? 'bg-white/5 text-blue-400' : 'bg-gray-900 text-white shadow-lg shadow-gray-200'}`}>
+                    {s.designation || 'Specialist'}
+                  </p>
+
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                      {s.employeeId || 'NODE-00'}
+                    </span>
+                    <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${colors.icon} text-white shadow-lg shadow-current/20`}>
+                      {s.dept}
+                    </span>
                   </div>
                 </div>
 
-                <h3 className={`text-base font-black transition-colors ${darkMode ? 'text-white group-hover:text-teal-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{s.name}</h3>
-                <p className={`text-[10px] font-black uppercase tracking-widest mt-1.5 mb-4 px-3 py-1 rounded-lg border transition-colors ${darkMode ? 'bg-white/5 text-teal-400 border-teal-500/20' : 'bg-gray-900 text-white border-black shadow-sm'}`}>{s.designation || 'Staff Member'}</p>
+                {/* Stats Footer */}
+                <div className={`grid grid-cols-2 gap-3 mt-auto pt-6 border-t transition-colors ${darkMode ? 'border-white/10' : 'border-gray-100'}`}>
+                  <div className={`rounded-2xl p-3 flex flex-col items-center transition-all ${darkMode ? 'bg-white/5' : 'bg-gray-50/80 group-hover:bg-white group-hover:shadow-sm'}`}>
+                    <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>Efficiency</p>
+                    <p className={`text-sm font-black transition-colors ${darkMode ? 'text-slate-200' : 'text-gray-900'}`}>{s.growthPointsTotal || 0}<span className="text-[10px] ml-1 opacity-50">XP</span></p>
+                  </div>
+                  <div className={`rounded-2xl p-3 flex flex-col items-center transition-all ${darkMode ? 'bg-white/5' : 'bg-gray-50/80 group-hover:bg-white group-hover:shadow-sm'}`}>
+                    <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>Availability</p>
+                    <p className={`text-sm font-black ${s.presentCount > 20 ? 'text-blue-500' : 'text-rose-500'}`}>
+                      {((s.presentCount || 0) / 30 * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                </div>
 
-                <div className="flex items-center gap-2 flex-wrap justify-center">
-                  <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-widest transition-colors ${darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-black border-gray-100'
-                    }`}>
-                    {s.employeeId || 'N/A'}
-                  </span>
-                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${s.dept === 'rehab' ? (darkMode ? 'bg-blue-400/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-100') :
-                      s.dept === 'spims' ? (darkMode ? 'bg-green-400/10 text-green-400 border-green-500/20' : 'bg-green-50 text-green-600 border-green-100') :
-                        (darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-black border-gray-100')
-                    }`}>
-                    {s.dept}
-                  </span>
+                {/* Quick Action Overlay */}
+                <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0 duration-500">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-2xl ${darkMode ? 'bg-blue-500 text-white shadow-blue-500/20' : 'bg-gray-900 text-white'}`}>
+                    <ArrowRight size={20} />
+                  </div>
                 </div>
-              </div>
-
-              {/* Stats Footer */}
-              <div className={`grid grid-cols-2 gap-2 mt-auto pt-4 border-t transition-colors ${darkMode ? 'border-white/5' : 'border-gray-50'}`}>
-                <div className={`rounded-xl p-2.5 flex flex-col items-center transition-colors ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
-                  <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-black'}`}>Growth</p>
-                  <p className={`text-sm font-black transition-colors ${darkMode ? 'text-slate-200' : 'text-gray-900'}`}>{s.growthPointsTotal} pts</p>
-                </div>
-                <div className={`rounded-xl p-2.5 flex flex-col items-center transition-colors ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
-                  <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-black'}`}>Attendance</p>
-                  <p className="text-sm font-black text-teal-600">{(s.presentCount / 30 * 100).toFixed(0)}%</p>
-                </div>
-              </div>
-
-              {/* Hover Action */}
-              <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                <div className={`p-2 rounded-xl transition-colors ${darkMode ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20' : 'bg-gray-900 text-white'}`}>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
 
         {filtered.length === 0 && (
-          <div className={`rounded-3xl py-20 border-2 border-dashed flex flex-col items-center justify-center text-center transition-colors ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100'
-            }`}>
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${darkMode ? 'bg-white/5 text-slate-700' : 'bg-gray-50 text-black'}`}>
-              <Users size={32} />
+          <div className={`rounded-[3rem] py-32 border-2 border-dashed flex flex-col items-center justify-center text-center transition-all ${darkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200 shadow-inner'}`}>
+            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 transition-all ${darkMode ? 'bg-white/5 text-slate-700 shadow-2xl' : 'bg-white text-gray-300 shadow-xl'}`}>
+              <Users size={40} strokeWidth={1.5} />
             </div>
-            <h4 className={`text-lg font-black mb-2 transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>No Staff Members Found</h4>
-            <p className={`${darkMode ? 'text-slate-500' : 'text-black'} text-sm max-w-xs mx-auto`}>Try adjusting your search filters.</p>
+            <h4 className={`text-xl font-black mb-2 transition-colors ${darkMode ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>No Nodes Found</h4>
+            <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-xs font-bold uppercase tracking-widest max-w-xs mx-auto`}>Zero records matching current synchronization parameters.</p>
           </div>
         )}
       </div>
