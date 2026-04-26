@@ -544,7 +544,7 @@ export default function StaffProfilePage() {
         updatedAt: new Date().toISOString(),
         arrivedOnTime: prevRecord.arrivedOnTime ?? (next === 'present'),
         departedOnTime: prevRecord.departedOnTime ?? (next === 'present'),
-      };
+      } as any;
 
       // Set default times if presenting for the first time
       if (next === 'present' && !prevRecord.arrivalTime) {
@@ -583,7 +583,7 @@ export default function StaffProfilePage() {
         status: ((next || prevRecord.status === 'present') ? 'present' : prevRecord.status || 'unmarked') as any,
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
-      };
+      } as any;
 
       if (newRecord.status === 'present' && !newRecord.arrivalTime) {
         newRecord.arrivalTime = staff?.dutyStartTime || '09:00';
