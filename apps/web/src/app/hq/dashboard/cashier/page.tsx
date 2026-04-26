@@ -1166,7 +1166,7 @@ export default function CashierStationPage() {
                         </p>
                         {selectedEntity && (
                           <p className="text-[11px] font-black opacity-60 uppercase tracking-widest mt-1">
-                            ID: {selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.customId || 'N/A'} • {activeDepartment.name}
+                            ID: {selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.customId || 'N/A'} • {activeDepartment.label}
                           </p>
                         )}
                       </div>
