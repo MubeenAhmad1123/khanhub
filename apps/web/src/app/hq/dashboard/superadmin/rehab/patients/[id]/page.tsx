@@ -2,11 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, Timestamp, collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { Loader2, ArrowLeft, Heart, Calendar, User, Phone, MapPin, ShieldCheck, Info, Database } from 'lucide-react';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+import { formatDateDMY, toDate } from '@/lib/utils';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { formatDateDMY } from '@/lib/utils';
+
 import { formatPKR } from '@/lib/hq/superadmin/format';
 import { EmptyState } from '@/components/hq/superadmin/DataState';
 
@@ -33,13 +36,43 @@ export default function HqRehabPatientProfilePage() {
       setLoading(true);
       setError(null);
       try {
+        // Fetch Patient
         const snap = await getDoc(doc(db, 'rehab_patients', patientId));
         if (!snap.exists()) {
           setPatient(null);
           setError('Patient not found.');
+          setLoading(false);
           return;
         }
         setPatient({ id: snap.id, ...snap.data() });
+
+        // Fetch Transactions (Cached 60s)
+        const cacheKey = `rehab_tx_${patientId}`;
+        const cachedTx = getCached<any[]>(cacheKey);
+        let txList = [];
+
+        if (cachedTx) {
+          txList = cachedTx;
+        } else {
+          const q = query(
+            collection(db, 'rehab_transactions'),
+            where('patientId', '==', patientId),
+            limit(50)
+          );
+          const txSnap = await getDocs(q);
+          txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setCached(cacheKey, txList, 60);
+        }
+
+        // Client-side sort
+        txList.sort((a: any, b: any) => {
+          const tA = toDate(a.createdAt || a.date).getTime();
+          const tB = toDate(b.createdAt || b.date).getTime();
+          return tB - tA;
+        });
+
+
+        setTx(txList);
       } catch (e: any) {
         console.error('[HQ Superadmin] load patient error:', e);
         setError(e?.message || 'Failed to load patient.');
@@ -48,27 +81,9 @@ export default function HqRehabPatientProfilePage() {
       }
     };
 
-    void run();
-
-    // Also get transactions
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'rehab_transactions'),
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      ),
-      (snap) => setTx(snap.docs.map((d) => ({ id: d.id, ...d.data() } as any))),
-      (err) => {
-        // Only log if necessary, it might fail if index is building but we fallback gracefully
-        console.warn('Tx fetch error or index building:', err);
-      }
-    );
-
-    return () => {
-      unsub();
-    };
+    run();
   }, [sessionLoading, session, router, patientId]);
+
 
   const totals = useMemo(() => {
     const approved = tx.filter((t) => String(t.status) === 'approved');

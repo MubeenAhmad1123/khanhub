@@ -12,7 +12,9 @@ import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
 import { toast } from 'react-hot-toast';
+import { getCached, setCached } from '@/lib/queryCache';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
+
 
 type TxnType = 'income' | 'expense';
 type DateMode = 'today' | 'all' | 'range' | 'created_today';
@@ -195,6 +197,10 @@ export default function CashierStationPage() {
   // Optimized fetchHistory that uses filters and aggregation
   const fetchHistory = useCallback(async () => {
     if (!session) return;
+    const cacheKey = `cashier_history_${historyDateMode}_${historyFrom}_${historyTo}_${historyStatus}_${historyType}_${historyDepartment}`;
+    const cached = getCached<any[]>(cacheKey);
+    // Note: We only return cached if it exists. We might still want to refresh stats.
+    
     try {
       setHistoryLoading(true);
       const all: any[] = [];
@@ -218,7 +224,6 @@ export default function CashierStationPage() {
       for (const dept of targetDepts) {
         const constraints: QueryConstraint[] = [];
         
-        // Date Logic
         if (historyDateMode === 'today') {
           constraints.push(where('date', '>=', todayTimestamp));
           constraints.push(where('date', '<', tomorrowTimestamp));
@@ -249,9 +254,7 @@ export default function CashierStationPage() {
           constraints.push(where('type', '==', historyType));
         }
 
-        // --- Aggregation Step (Efficient Stats) ---
         try {
-          // Better Aggregation approach for Firestore:
           const incomeAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'income')), { total: sum('amount') });
           const expenseAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'expense')), { total: sum('amount') });
           const countAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints), { total: count() });
@@ -260,7 +263,6 @@ export default function CashierStationPage() {
           totalExpense += expenseAgg.data().total || 0;
           totalCount += countAgg.data().total || 0;
 
-          // Unique entity estimation (approximate by transaction count for now, or separate queries)
           if (dept.code === 'spims') studentsTouched += countAgg.data().total;
           if (dept.code === 'rehab' || dept.code === 'hospital') patientsTouched += countAgg.data().total;
           if (dept.code === 'job-center') clientsTouched += countAgg.data().total;
@@ -269,12 +271,10 @@ export default function CashierStationPage() {
           console.warn(`[HQ Cashier] Aggregation failed for ${dept.code}`, err);
         }
 
-        // --- Fetch Step (List View) ---
-        constraints.push(limit(200));
+        constraints.push(limit(100)); // Limit per department to keep it responsive
 
         try {
-          const q = query(collection(db, dept.txCollection), ...constraints);
-          const snap = await getDocs(q);
+          const snap = await getDocs(query(collection(db, dept.txCollection), ...constraints));
           all.push(...snap.docs.map((d) => ({ 
             id: d.id, 
             departmentCode: dept.code, 
@@ -283,21 +283,11 @@ export default function CashierStationPage() {
           })));
         } catch (err: any) {
           console.warn(`[HQ Cashier] List fetch failed for ${dept.code}.`, err);
-          // Simple fallback
-          const qBasic = query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(50));
-          const snapBasic = await getDocs(qBasic);
-          all.push(...snapBasic.docs.map((d) => ({ 
-            id: d.id, 
-            departmentCode: dept.code, 
-            departmentName: dept.label, 
-            ...d.data() 
-          })));
         }
       }
 
       setHistoryStats({ income: totalIncome, expense: totalExpense, count: totalCount, students: studentsTouched, patients: patientsTouched, clients: clientsTouched });
 
-      // Final unified sort for display
       all.sort((a, b) => {
         const dateA = toDate(a.transactionDate || a.date || a.createdAt);
         const dateB = toDate(b.transactionDate || b.date || b.createdAt);
@@ -305,12 +295,14 @@ export default function CashierStationPage() {
       });
       
       setHistoryTxns(all);
+      setCached(cacheKey, all, 60); // Cache results for 60s
     } catch (err) {
       console.error('[HQ Cashier] fetchHistory Error:', err);
     } finally {
       setHistoryLoading(false);
     }
   }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
+
 
   const fetchEntityHistory = useCallback(async (entity: any) => {
     if (!entity?.id) return;
@@ -598,8 +590,18 @@ export default function CashierStationPage() {
     const run = async () => {
       try {
         const entityCollection = isStaffMode ? 'rehab_staff' : activeDepartment.entityCollection;
-        const snap = await getDocs(collection(db, entityCollection));
-        setAllPatients(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const cacheKey = `cashier_entities_${entityCollection}`;
+        const cached = getCached<any[]>(cacheKey);
+        
+        if (cached) {
+          setAllPatients(cached);
+          return;
+        }
+
+        const snap = await getDocs(query(collection(db, entityCollection), limit(1000))); // Cap at 1000 for safety
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAllPatients(data);
+        setCached(cacheKey, data, 300); // 5 minute cache
       } catch {
         setAllPatients([]);
       }
@@ -607,17 +609,27 @@ export default function CashierStationPage() {
     void run();
   }, [session, departmentCode, isStaffMode, activeDepartment.entityCollection]);
 
+
   useEffect(() => {
     if (!session) return;
     const loadSuperadminRecipient = async () => {
+      const cacheKey = 'hq_superadmin_recipient';
+      const cached = getCached<{ id: string; customId: string }>(cacheKey);
+      if (cached) {
+        setSuperadminRecipient(cached);
+        return;
+      }
+
       try {
         const usersSnap = await getDocs(
-          query(collection(db, 'hq_users'), where('role', '==', 'superadmin'))
+          query(collection(db, 'hq_users'), where('role', '==', 'superadmin'), limit(1))
         );
         const firstDoc = usersSnap.docs[0];
         if (firstDoc) {
           const data = firstDoc.data();
-          setSuperadminRecipient({ id: firstDoc.id, customId: data.customId || 'SUPERADMIN' });
+          const result = { id: firstDoc.id, customId: data.customId || 'SUPERADMIN' };
+          setSuperadminRecipient(result);
+          setCached(cacheKey, result, 600); // 10 mins
         }
       } catch {
         setSuperadminRecipient({ id: '', customId: 'SUPERADMIN' });
@@ -625,6 +637,7 @@ export default function CashierStationPage() {
     };
     void loadSuperadminRecipient();
   }, [session]);
+
 
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -642,14 +655,23 @@ export default function CashierStationPage() {
   }, [searchQuery, allPatients]);
 
   async function loadCustomCategories() {
+    const cacheKey = 'hq_cashier_categories_list';
+    const cached = getCached<any[]>(cacheKey);
+    if (cached) {
+      setCustomCategories(cached);
+      return;
+    }
+
     try {
       const snap = await getDocs(collection(db, 'hq_cashier_categories'));
       const list = snap.docs.map((d) => ({ id: d.data().slug || d.id, name: d.data().name || 'Custom', appliesTo: d.data().appliesTo || 'both' }));
       setCustomCategories(list as any);
+      setCached(cacheKey, list, 600); // 10 mins
     } catch (err) {
       console.error(err);
     }
   }
+
 
   async function createCategory() {
     const name = categorySearch.trim();

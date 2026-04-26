@@ -136,8 +136,8 @@ function getAmountBucketPredicate(bucket: AmountBucket) {
 
 function sortComparator(order: SortOrder) {
   return (a: UnifiedTx, b: UnifiedTx) => {
-    const tA = toDate(a.createdAt || a.date || a.transactionDate).getTime();
-    const tB = toDate(b.createdAt || b.date || b.transactionDate).getTime();
+    const tA = toDate(a.createdAt || a.date || a.transactionDate as any).getTime();
+    const tB = toDate(b.createdAt || b.date || b.transactionDate as any).getTime();
     if (order === 'newest') return tB - tA;
     if (order === 'oldest') return tA - tB;
     if (order === 'highest') return (b.amount || 0) - (a.amount || 0);
@@ -145,6 +145,7 @@ function sortComparator(order: SortOrder) {
     return 0;
   };
 }
+
 
 export function typeLabel(tx: UnifiedTx): string {
   const raw = String(tx.categoryName || tx.category || tx.type || 'Transaction');

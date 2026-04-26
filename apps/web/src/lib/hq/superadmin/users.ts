@@ -73,10 +73,9 @@ export async function fetchUserProfile(portal: Portal, uid: string): Promise<Por
 }
 
 export async function listCashiersForFeeRequests(): Promise<Array<{ uid: string; name: string; customId?: string }>> {
-  const snap = await getDocs(query(collection(db, 'hq_users'), orderBy('createdAt', 'desc')));
+  const snap = await getDocs(query(collection(db, 'hq_users'), orderBy('createdAt', 'desc'), limit(100)));
   return snap.docs
     .map((d) => ({ uid: d.id, ...d.data() } as any))
     .filter((u) => String(u.role || '').toLowerCase() === 'cashier' && u.isActive !== false)
     .map((u) => ({ uid: u.uid, name: String(u.name || 'Cashier'), customId: u.customId }));
 }
-

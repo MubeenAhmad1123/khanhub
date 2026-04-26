@@ -7,9 +7,14 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
+  limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
+
+
 import { Loader2, TrendingUp, Wallet } from 'lucide-react';
 import type { SpimsFeePayment, SpimsStudent } from '@/types/spims';
 import { formatDateDMY, toDate } from '@/lib/utils';
@@ -23,30 +28,53 @@ export default function FinanceSummaryTab({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'spims_fees'),
-      where('studentId', '==', student.id),
-      orderBy('date', 'desc')
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setRows(
-          snap.docs.map((d) => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const cacheKey = `spims_fees_summary_${student.id}`;
+        const cached = getCached<any[]>(cacheKey);
+        let fetchedRows: SpimsFeePayment[] = [];
+
+        if (cached) {
+          fetchedRows = cached;
+        } else {
+          const q = query(
+            collection(db, 'spims_fees'),
+            where('studentId', '==', student.id),
+            limit(50)
+          );
+          const snap = await getDocs(q);
+          fetchedRows = snap.docs.map((d) => {
             const x = d.data();
             return {
               id: d.id,
               ...x,
               date: x.date?.toDate ? x.date.toDate() : x.date,
             } as SpimsFeePayment;
-          })
-        );
+          });
+          setCached(cacheKey, fetchedRows, 60);
+        }
+
+
+        // Client-side sort by date desc
+        fetchedRows.sort((a: SpimsFeePayment, b: SpimsFeePayment) => {
+
+          const tA = toDate(a.date).getTime();
+          const tB = toDate(b.date).getTime();
+          return tB - tA;
+        });
+
+        setRows(fetchedRows);
+      } catch (err) {
+        console.error('Error loading finance summary:', err);
+      } finally {
         setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
+      }
+    }
+
+    loadData();
   }, [student.id]);
+
 
   const { totalPaid, remaining, monthlyPaidCurrentMonth, monthlyRemaining } = useMemo(() => {
     const approved = rows.filter((r) => r.status === 'approved');

@@ -1,6 +1,7 @@
 // src/lib/it/publicData.ts
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getCached, setCached } from '../queryCache';
 
 export interface PublicITIntern {
   id: string;
@@ -22,12 +23,17 @@ export interface PublicITClient {
 }
 
 export async function fetchPublicITInterns(): Promise<PublicITIntern[]> {
+  const cacheKey = 'it_public_interns';
+  const cached = getCached<PublicITIntern[]>(cacheKey);
+  if (cached) return cached;
+
   const q = query(
     collection(db, 'it_students'),
-    where('status', '==', 'active')
+    where('status', '==', 'active'),
+    limit(100)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
+  const data = snap.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
@@ -39,15 +45,22 @@ export async function fetchPublicITInterns(): Promise<PublicITIntern[]> {
       skills: data.skills || []
     };
   });
+  setCached(cacheKey, data, 300);
+  return data;
 }
 
 export async function fetchPublicITClients(): Promise<PublicITClient[]> {
+  const cacheKey = 'it_public_clients';
+  const cached = getCached<PublicITClient[]>(cacheKey);
+  if (cached) return cached;
+
   const q = query(
     collection(db, 'it_clients'),
-    where('status', '==', 'active')
+    where('status', '==', 'active'),
+    limit(100)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
+  const data = snap.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
@@ -58,4 +71,7 @@ export async function fetchPublicITClients(): Promise<PublicITClient[]> {
       activeProjects: data.activeProjects || 0
     };
   });
+  setCached(cacheKey, data, 300);
+  return data;
 }
+

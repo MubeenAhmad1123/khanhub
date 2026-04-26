@@ -3,12 +3,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { doc, onSnapshot, collection, limit, orderBy, query, where, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, limit, orderBy, query, where, Timestamp, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+import { formatDateDMY, toDate } from '@/lib/utils';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
+
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 import { formatPKR } from '@/lib/hq/superadmin/format';
-import { formatDateDMY } from '@/lib/utils';
+
+
 import { ArrowLeft, User, Calendar, MapPin, Phone, ShieldCheck, Heart, Info, Database } from 'lucide-react';
 
 export default function SuperadminSpimsStudentProfilePage({ params }: { params: { id: string } }) {
@@ -26,28 +31,53 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
 
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
-    setLoading(true);
-    const unsub1 = onSnapshot(doc(db, 'spims_students', studentId), (snap) => {
-      setStudent(snap.exists() ? ({ id: snap.id, ...snap.data() } as any) : null);
-      setLoading(false);
-    });
 
-    const unsub2 = onSnapshot(
-      query(
-        collection(db, 'spims_transactions'),
-        where('studentId', '==', studentId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      ),
-      (snap) => setTx(snap.docs.map((d) => ({ id: d.id, ...d.data() } as any))),
-      () => {}
-    );
+    async function loadData() {
+      setLoading(true);
+      try {
+        // Fetch Student Profile
+        const studentSnap = await getDoc(doc(db, 'spims_students', studentId));
+        if (studentSnap.exists()) {
+          setStudent({ id: studentSnap.id, ...studentSnap.data() });
+        }
 
-    return () => {
-      unsub1();
-      unsub2();
-    };
+        // Fetch Transactions (Cached 60s)
+        const cacheKey = `spims_tx_${studentId}`;
+        const cachedTx = getCached<any[]>(cacheKey);
+        let txList = [];
+
+        if (cachedTx) {
+          txList = cachedTx;
+        } else {
+          const q = query(
+            collection(db, 'spims_transactions'),
+            where('studentId', '==', studentId),
+            limit(50)
+          );
+          const txSnap = await getDocs(q);
+          txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setCached(cacheKey, txList, 60);
+        }
+
+        // Client-side sort
+        txList.sort((a: any, b: any) => {
+          const tA = toDate(a.createdAt || a.date).getTime();
+          const tB = toDate(b.createdAt || b.date).getTime();
+          return tB - tA;
+        });
+
+
+        setTx(txList);
+      } catch (err) {
+        console.error('Error loading student data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
   }, [session, studentId]);
+
 
   const totals = useMemo(() => {
     const approved = tx.filter((t) => String(t.status) === 'approved');

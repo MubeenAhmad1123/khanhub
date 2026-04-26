@@ -12,6 +12,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Transaction } from '@/types/welfare';
+import { getCached, setCached } from '@/lib/queryCache';
+import { toDate } from '@/lib/utils';
+
+
 
 export async function createTransaction(data: Omit<Transaction, 'id' | 'status' | 'approvedBy' | 'approvedAt'>): Promise<string> {
   const res = await addDoc(collection(db, 'welfare_transactions'), {
@@ -23,40 +27,56 @@ export async function createTransaction(data: Omit<Transaction, 'id' | 'status' 
 }
 
 export async function getTodayTransactions(cashierId: string): Promise<Transaction[]> {
+  const cacheKey = `welfare_today_tx_${cashierId}`;
+  const cached = getCached<Transaction[]>(cacheKey);
+  if (cached) return cached;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const q = query(
     collection(db, 'welfare_transactions'), 
     where('cashierId', '==', cashierId), 
     where('date', '>=', Timestamp.fromDate(today)),
-    orderBy('date', 'desc')
+    limit(50)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
+  const data = snap.docs.map(doc => {
+    const d = doc.data();
     return { 
       id: doc.id, 
-      ...data, 
-      date: data.date.toDate() 
+      ...d, 
+      date: d.date.toDate() 
     } as Transaction;
-  });
+  }).sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime());
+
+
+  setCached(cacheKey, data, 60);
+  return data;
 }
 
 export async function getPendingTransactions(): Promise<Transaction[]> {
+  const cacheKey = 'welfare_pending_tx';
+  const cached = getCached<Transaction[]>(cacheKey);
+  if (cached) return cached;
+
   const q = query(
     collection(db, 'welfare_transactions'), 
     where('status', '==', 'pending'),
-    orderBy('date', 'desc')
+    limit(50)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
+  const data = snap.docs.map(doc => {
+    const d = doc.data();
     return { 
       id: doc.id, 
-      ...data, 
-      date: data.date.toDate() 
+      ...d, 
+      date: d.date.toDate() 
     } as Transaction;
-  });
+  }).sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime());
+
+
+  setCached(cacheKey, data, 60);
+  return data;
 }
 
 export async function approveTransaction(id: string, superAdminId: string): Promise<void> {
@@ -76,36 +96,45 @@ export async function rejectTransaction(id: string, superAdminId: string): Promi
 }
 
 export async function getTransactionsByDateRange(start: Date, end: Date): Promise<Transaction[]> {
+  const cacheKey = `welfare_tx_range_${start.getTime()}_${end.getTime()}`;
+  const cached = getCached<Transaction[]>(cacheKey);
+  if (cached) return cached;
+
   const q = query(
     collection(db, 'welfare_transactions'), 
     where('date', '>=', Timestamp.fromDate(start)),
     where('date', '<=', Timestamp.fromDate(end)),
-    orderBy('date', 'desc')
+    limit(100)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
+  const data = snap.docs.map(doc => {
+    const d = doc.data();
     return { 
       id: doc.id, 
-      ...data, 
-      date: data.date.toDate() 
+      ...d, 
+      date: d.date.toDate() 
     } as Transaction;
-  });
+  }).sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime());
+
+
+  setCached(cacheKey, data, 60);
+  return data;
 }
 
 export async function getRecentTransactions(limitCount: number = 10): Promise<Transaction[]> {
     const q = query(
       collection(db, 'welfare_transactions'), 
-      orderBy('date', 'desc'),
-      limit(limitCount)
+      limit(Math.min(limitCount, 50))
     );
     const snap = await getDocs(q);
     return snap.docs.map(doc => {
-      const data = doc.data();
+      const d = doc.data();
       return { 
         id: doc.id, 
-        ...data, 
-        date: data.date.toDate() 
+        ...d, 
+        date: d.date.toDate() 
       } as Transaction;
-    });
+    }).sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime());
+
   }
+

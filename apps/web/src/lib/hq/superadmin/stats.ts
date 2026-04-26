@@ -11,17 +11,13 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
 
 export type OverviewStats = {
-  /** Total registered rehab patients (all time) */
   rehabPatientsTotal: number;
-  /** Total enrolled SPIMS students (all time) */
   spimsStudentsTotal: number;
-  /** Total job center seekers (all time) */
   jobSeekersTotal: number;
-  /** Legacy alias kept for backward compat — same as rehabPatientsTotal */
   rehabPatientsToday: number;
-  /** Legacy alias kept for backward compat — same as spimsStudentsTotal */
   spimsStudentsToday: number;
   pendingApprovals: number;
   txAmountToday: number;
@@ -29,7 +25,8 @@ export type OverviewStats = {
   pendingReconciliations: number;
 };
 
-/** PKT day key: YYYY-MM-DD in Asia/Karachi timezone */
+const CACHE_TTL = 120; // 2 minutes for dashboard stats
+
 function pktDayKey(d: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Karachi',
@@ -39,34 +36,26 @@ function pktDayKey(d: Date): string {
   }).format(d);
 }
 
-/** Start of today in PKT as a UTC Date (for Firestore Timestamp comparison) */
 function pktStartOfToday(): Date {
   const now = new Date();
-  // Format: YYYY-MM-DDT00:00:00 in PKT = YYYY-MM-DDT00:00:00+05:00
   const pktStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Karachi',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(now);
-  // midnight PKT in UTC
   return new Date(`${pktStr}T00:00:00+05:00`);
 }
 
-/** End of today in PKT as a UTC Date */
 function pktEndOfToday(): Date {
   const start = pktStartOfToday();
   return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 
-let cachedStats: { data: OverviewStats; timestamp: number } | null = null;
-const CACHE_TTL = 300000; // 5 minutes cache for superadmin dashboard stats
-
 export async function fetchOverviewStats(): Promise<OverviewStats> {
-  const now = Date.now();
-  if (cachedStats && now - cachedStats.timestamp < CACHE_TTL) {
-    return cachedStats.data;
-  }
+  const cacheKey = 'hq_superadmin_overview_stats';
+  const cached = getCached<OverviewStats>(cacheKey);
+  if (cached) return cached;
 
   const PENDING_LIST = ['pending', 'pending_cashier'];
 
@@ -79,29 +68,13 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     pendingJob,
     pendingRecs,
   ] = await Promise.all([
-    // Total counts — no date filter so they always show real numbers
-    getCountFromServer(query(collection(db, 'rehab_patients')))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_students')))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_seekers')))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    // Pending approvals
-    getCountFromServer(query(collection(db, 'rehab_transactions'), where('status', 'in', PENDING_LIST)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_transactions'), where('status', 'in', PENDING_LIST)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_transactions'), where('status', 'in', PENDING_LIST)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending')))
-      .then((r) => r.data().count)
-      .catch(() => 0),
+    getCountFromServer(collection(db, 'rehab_patients')).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(collection(db, 'spims_students')).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(collection(db, 'job_center_seekers')).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'rehab_transactions'), where('status', 'in', PENDING_LIST))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'spims_transactions'), where('status', 'in', PENDING_LIST))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_transactions'), where('status', 'in', PENDING_LIST))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then((r) => r.data().count).catch(() => 0),
   ]);
 
   const txToday = await fetchTodayTxAmount();
@@ -111,7 +84,6 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     rehabPatientsTotal,
     spimsStudentsTotal,
     jobSeekersTotal,
-    // Legacy aliases for backward compat
     rehabPatientsToday: rehabPatientsTotal,
     spimsStudentsToday: spimsStudentsTotal,
     pendingApprovals: pendingRehab + pendingSpims + pendingJob,
@@ -120,77 +92,53 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     pendingReconciliations: pendingRecs,
   };
 
-  cachedStats = { data, timestamp: now };
+  setCached(cacheKey, data, CACHE_TTL);
   return data;
 }
 
 export async function fetchTodayTxAmount(): Promise<number> {
+  const cacheKey = 'hq_superadmin_tx_amount_today';
+  const cached = getCached<number>(cacheKey);
+  if (cached !== undefined && cached !== null) return cached;
+
+
   const todayKey = pktDayKey(new Date());
-
-  /** Extract a JS Date from a Firestore document's date field */
-  function resolveDate(data: Record<string, any>): Date | null {
-    const raw =
-      data.transactionDate ??
-      data.date ??
-      data.createdAt ??
-      null;
-    if (!raw) return null;
-    if (raw instanceof Timestamp) return raw.toDate();
-    if (raw?.toDate) return raw.toDate();
-    if (typeof raw === 'string') return new Date(raw);
-    if (raw instanceof Date) return raw;
-    return null;
-  }
-
   const startOfToday = pktStartOfToday();
   const endOfToday = pktEndOfToday();
 
   const [rehabSnap, spimsSnap, jobSnap, hqSnap] = await Promise.all([
-    getDocs(query(collection(db, 'rehab_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
-      (): { docs: any[] } => ({ docs: [] })
-    ),
-    getDocs(query(collection(db, 'spims_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
-      (): { docs: any[] } => ({ docs: [] })
-    ),
-    getDocs(query(collection(db, 'job_center_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
-      (): { docs: any[] } => ({ docs: [] })
-    ),
-    getDocs(query(collection(db, 'cashierTransactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)))).catch(
-      (): { docs: any[] } => ({ docs: [] })
-    ),
+    getDocs(query(collection(db, 'rehab_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'spims_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'job_center_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'cashierTransactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
   ]);
 
   const sumSnap = (docs: any[]) =>
     docs.reduce((acc: number, d: any) => {
       const data = d.data();
       if (data.status === 'rejected') return acc;
-      const date = resolveDate(data);
-      if (!date || pktDayKey(date) !== todayKey) return acc;
       return acc + (Number(data.amount) || 0);
     }, 0);
 
-  return (
-    sumSnap(rehabSnap.docs) +
-    sumSnap(spimsSnap.docs) +
-    sumSnap(jobSnap.docs) +
-    sumSnap(hqSnap.docs)
-  );
+  const total = sumSnap(rehabSnap.docs) + sumSnap(spimsSnap.docs) + sumSnap(jobSnap.docs) + sumSnap(hqSnap.docs);
+  setCached(cacheKey, total, CACHE_TTL);
+  return total;
 }
 
 export async function fetchActiveStaffCount(): Promise<number> {
+  const cacheKey = 'hq_superadmin_active_staff';
+  const cached = getCached<number>(cacheKey);
+  if (cached !== undefined && cached !== null) return cached;
+
+
   const [hq, rehab, spims, job] = await Promise.all([
-    getCountFromServer(query(collection(db, 'hq_staff'), where('isActive', '==', true)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'rehab_staff'), where('isActive', '==', true)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_staff'), where('isActive', '==', true)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_staff'), where('isActive', '==', true)))
-      .then((r) => r.data().count)
-      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'hq_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'rehab_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'spims_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
   ]);
-  return hq + rehab + spims + job;
+  const total = hq + rehab + spims + job;
+  setCached(cacheKey, total, 300); // Staff count can be cached longer (5 mins)
+  return total;
 }
+

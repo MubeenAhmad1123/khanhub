@@ -7,8 +7,10 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
+  limit,
   addDoc,
+
   updateDoc,
   doc,
   getDoc,
@@ -16,10 +18,15 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
+
+
 import { Plus, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { SpimsFeePayment, SpimsFeePaymentType, SpimsStudent } from '@/types/spims';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, toDate } from '@/lib/utils';
+
 import type { SpimsSessionLike } from './AdmissionTab';
 
 export default function FeeRecordTab({
@@ -44,34 +51,55 @@ export default function FeeRecordTab({
   const readOnlyStudent = role === 'student';
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'spims_fees'),
-      where('studentId', '==', student.id),
-      orderBy('date', 'asc')
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list: SpimsFeePayment[] = snap.docs.map((d) => {
-          const x = d.data();
-          return {
-            id: d.id,
-            ...x,
-            date: x.date?.toDate ? x.date.toDate() : x.date,
-            createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : x.createdAt,
-          } as SpimsFeePayment;
+    async function loadData() {
+      setLoading(true);
+      try {
+        const cacheKey = `spims_fees_record_${student.id}`;
+        const cached = getCached<any[]>(cacheKey);
+        let list: SpimsFeePayment[] = [];
+
+        if (cached) {
+          list = cached;
+        } else {
+          const q = query(
+            collection(db, 'spims_fees'),
+            where('studentId', '==', student.id),
+            limit(100)
+          );
+          const snap = await getDocs(q);
+          list = snap.docs.map((d) => {
+            const x = d.data();
+            return {
+              id: d.id,
+              ...x,
+              date: x.date?.toDate ? x.date.toDate() : x.date,
+              createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : x.createdAt,
+            } as SpimsFeePayment;
+          });
+          setCached(cacheKey, list, 60);
+        }
+
+        // Client-side sort by date asc
+        list.sort((a: SpimsFeePayment, b: SpimsFeePayment) => {
+
+          const tA = toDate(a.date).getTime();
+          const tB = toDate(b.date).getTime();
+          return tA - tB;
+
         });
+
         setRows(list);
-        setLoading(false);
-      },
-      (err) => {
-        console.error(err);
+      } catch (err) {
+        console.error('Error loading fee records:', err);
         toast.error('Could not load fee records');
+      } finally {
         setLoading(false);
       }
-    );
-    return () => unsub();
+    }
+
+    loadData();
   }, [student.id]);
+
 
   const { totalReceived, displayRemaining } = useMemo(() => {
     const approved = rows.filter((r) => r.status === 'approved');

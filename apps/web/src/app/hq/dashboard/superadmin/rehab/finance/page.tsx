@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, getDocs, where, Timestamp, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, where, Timestamp, orderBy, limit, getAggregateFromServer, sum } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
 import { 
@@ -33,29 +35,23 @@ export default function HqRehabFinancePage() {
     }
   }, [session, sessionLoading, router]);
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!session || session.role !== 'superadmin') return;
+    setLoading(true);
 
-    const q = query(collection(db, 'rehab_transactions'), orderBy('createdAt', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const txList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setTransactions(txList);
+    try {
+      const colRef = collection(db, 'rehab_transactions');
       
-      // Calculate Summary
-      let revenue = 0;
-      let expenses = 0;
-      let pending = 0;
+      // 1. Get Summary Stats via Aggregates
+      const [revSum, expSum, pendSum] = await Promise.all([
+        getAggregateFromServer(query(colRef, where('status', '==', 'approved'), where('type', '==', 'income')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) })),
+        getAggregateFromServer(query(colRef, where('status', '==', 'approved'), where('type', '==', 'expense')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) })),
+        getAggregateFromServer(query(colRef, where('status', '==', 'pending')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) }))
+      ]);
 
-      txList.forEach((tx: any) => {
-        const amount = Number(tx.amount) || 0;
-        if (tx.status === 'approved') {
-          if (tx.type === 'income') revenue += amount;
-          else if (tx.type === 'expense') expenses += amount;
-        } else if (tx.status === 'pending') {
-          pending += amount;
-        }
-      });
+      const revenue = (revSum as any).data().total || 0;
+      const expenses = (expSum as any).data().total || 0;
+      const pending = (pendSum as any).data().total || 0;
 
       setSummary({
         totalRevenue: revenue,
@@ -63,12 +59,30 @@ export default function HqRehabFinancePage() {
         netBalance: revenue - expenses,
         pendingAmount: pending
       });
-      
-      setLoading(false);
-    });
 
-    return () => unsubscribe();
+      // 2. Get Recent Transactions (Limited & Cached)
+      const cacheKey = 'rehab_finance_txs_recent';
+      let txList = getCached<any[]>(cacheKey);
+
+      if (!txList) {
+        const q = query(colRef, orderBy('createdAt', 'desc'), limit(100));
+        const snapshot = await getDocs(q);
+        txList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        setCached(cacheKey, txList, 60);
+      }
+
+      setTransactions(txList);
+    } catch (err) {
+      console.error("Error loading rehab finance data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [session]);
+
 
   const filteredTransactions = transactions.filter(tx => {
     const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;

@@ -4,8 +4,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 
@@ -29,30 +31,41 @@ export default function SuperadminSpimsStudentsListPage() {
     if (!session || session.role !== 'superadmin') router.push('/hq/login');
   }, [sessionLoading, session, router]);
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!session || session.role !== 'superadmin') return;
     setLoading(true);
-    const unsub = onSnapshot(
-      query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(500)),
-      (snap) => {
-        setRows(
-          snap.docs.map((d) => {
-            const data = d.data() as any;
-            return {
-              id: d.id,
-              name: String(data.name || '—'),
-              className: data.className || data.class || data.grade,
-              createdAt: data.createdAt,
-              remaining: Number(data.remaining ?? data.amountRemaining ?? 0) || 0,
-            };
-          })
-        );
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
+
+    try {
+      const cacheKey = 'spims_students_list';
+      let studentList = getCached<StudentRow[]>(cacheKey);
+
+      if (!studentList) {
+        const q = query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(100));
+        const snap = await getDocs(q);
+        studentList = snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            name: String(data.name || '—'),
+            className: data.className || data.class || data.grade,
+            createdAt: data.createdAt,
+            remaining: Number(data.remaining ?? data.amountRemaining ?? 0) || 0,
+          };
+        });
+        setCached(cacheKey, studentList, 300); // 5 mins cache
+      }
+      setRows(studentList);
+    } catch (err) {
+      console.error("Error loading SPIMS students:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [session]);
+
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();

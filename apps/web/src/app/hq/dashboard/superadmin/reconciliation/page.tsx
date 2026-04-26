@@ -3,8 +3,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, limit, onSnapshot, orderBy, query, addDoc, Timestamp, where } from 'firebase/firestore';
+import { collection, limit, getDocs, orderBy, query, addDoc, Timestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { decideReconciliation } from '@/app/hq/actions/reconciliation';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
@@ -39,17 +41,32 @@ export default function SuperadminReconciliationPage() {
     if (!session || session.role !== 'superadmin') router.push('/hq/login');
   }, [sessionLoading, session, router]);
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!session || session.role !== 'superadmin') return;
     setLoading(true);
-    const colRef = collection(db, 'hq_reconciliation');
-    let baseQuery = query(colRef, orderBy('createdAt', 'desc'), limit(100));
-    
-    return onSnapshot(baseQuery, (snap) => {
-      setRows(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
+    try {
+      const cacheKey = 'reconciliation_list';
+      let recList = getCached<any[]>(cacheKey);
+
+      if (!recList) {
+        const q = query(collection(db, 'hq_reconciliation'), orderBy('createdAt', 'desc'), limit(100));
+        const snap = await getDocs(q);
+        recList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setCached(cacheKey, recList, 60); // 1 min cache
+      }
+      setRows(recList);
+    } catch (err) {
+      console.error("Error loading reconciliation data:", err);
+    } finally {
       setLoading(false);
-    }, () => setLoading(false));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [session]);
+
 
   const filtered = useMemo(() => {
     let list = rows;

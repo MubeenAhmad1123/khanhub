@@ -8,8 +8,11 @@ import {
   query,
   Timestamp,
   where,
+  getCountFromServer,
+  limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +47,6 @@ export interface TodayClientsResult {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** YYYY-MM-DD string in Asia/Karachi (PKT = UTC+5) */
 export function pktDayKey(d: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Karachi',
@@ -54,19 +56,16 @@ export function pktDayKey(d: Date = new Date()): string {
   }).format(d);
 }
 
-/** Midnight PKT as a UTC Date — for Firestore Timestamp comparisons */
 export function pktStartOfToday(): Date {
   const key = pktDayKey(new Date());
   return new Date(`${key}T00:00:00+05:00`);
 }
 
-/** 23:59:59.999 PKT as a UTC Date */
 export function pktEndOfToday(): Date {
   const start = pktStartOfToday();
   return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 
-/** Resolve a Firestore Timestamp / ISO string / Date to a JS Date */
 function toDate(raw: any): Date | null {
   if (!raw) return null;
   if (raw instanceof Timestamp) return raw.toDate();
@@ -79,7 +78,6 @@ function toDate(raw: any): Date | null {
   return null;
 }
 
-/** Format a Date as "HH:MM" in PKT */
 export function formatPKTTime(d: Date | null): string {
   if (!d) return '—';
   return new Intl.DateTimeFormat('en-PK', {
@@ -90,7 +88,6 @@ export function formatPKTTime(d: Date | null): string {
   }).format(d);
 }
 
-/** Format a Date as "15 Apr 2026" in PKT */
 export function formatPKTDate(d: Date | null): string {
   if (!d) return '—';
   return new Intl.DateTimeFormat('en-PK', {
@@ -111,8 +108,8 @@ const DEPT_CONFIG: Record<
     bgColor: string;
     borderColor: string;
     dotColor: string;
-    collections: string[];   // one or more Firestore collection names to try
-    metaField: string;       // department-specific descriptor field
+    collections: string[];
+    metaField: string;
     phoneField: string[];
     profileBase: string;
   }
@@ -145,7 +142,6 @@ const DEPT_CONFIG: Record<
     bgColor: 'bg-emerald-500/5',
     borderColor: 'border-emerald-500/20',
     dotColor: 'bg-emerald-500',
-    // Try both collection name variants used across the codebase
     collections: ['jobcenter_seekers', 'job_center_seekers'],
     metaField: 'jobType',
     phoneField: ['phone', 'contactNumber', 'contact'],
@@ -153,45 +149,31 @@ const DEPT_CONFIG: Record<
   },
 };
 
-let cachedCounts: { data: TodayClientsResult; timestamp: number } | null = null;
-const CACHE_TTL = 60000; // 1 minute
+const COUNT_CACHE_TTL = 60; // 1 minute for counts
+const LIST_CACHE_TTL = 180; // 3 minutes for lists
 
-/**
- * Fetches today's (PKT) new clients from all three departments.
- * Returns summary counts by dept for the dashboard card / breakdown modal.
- */
 export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
-  const now = Date.now();
-  if (cachedCounts && now - cachedCounts.timestamp < CACHE_TTL) {
-    return cachedCounts.data;
-  }
+  const cacheKey = 'hq_today_client_counts';
+  const cached = getCached<TodayClientsResult>(cacheKey);
+  if (cached) return cached;
 
   const from = Timestamp.fromDate(pktStartOfToday());
   const to = Timestamp.fromDate(pktEndOfToday());
-
   const depts = Object.keys(DEPT_CONFIG) as ClientDept[];
 
   const counts = await Promise.all(
     depts.map(async (dept) => {
       const cfg = DEPT_CONFIG[dept];
       let count = 0;
-
       for (const col of cfg.collections) {
         try {
-          const snap = await getDocs(
-            query(
-              collection(db, col),
-              where('createdAt', '>=', from),
-              where('createdAt', '<=', to)
-            )
+          const res = await getCountFromServer(
+            query(collection(db, col), where('createdAt', '>=', from), where('createdAt', '<=', to))
           );
-          count += snap.size;
-          break; // stop at the first collection that doesn't throw
-        } catch {
-          // try next collection variant
-        }
+          count = res.data().count;
+          break;
+        } catch { }
       }
-
       return {
         dept,
         label: cfg.label,
@@ -208,24 +190,22 @@ export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
     total: counts.reduce((s, c) => s + c.count, 0),
     byDept: counts,
   };
-
-  cachedCounts = { data, timestamp: now };
+  setCached(cacheKey, data, COUNT_CACHE_TTL);
   return data;
 }
 
-/**
- * Fetches the full list of clients registered TODAY for a single department.
- * Used when the user drills into a specific department.
- */
 export async function fetchTodayClientsByDept(
   dept: ClientDept
 ): Promise<TodayClient[]> {
+  const cacheKey = `hq_today_clients_${dept}`;
+  const cached = getCached<TodayClient[]>(cacheKey);
+  if (cached) return cached;
+
   const cfg = DEPT_CONFIG[dept];
   const from = Timestamp.fromDate(pktStartOfToday());
   const to = Timestamp.fromDate(pktEndOfToday());
 
   let docs: any[] = [];
-
   for (const col of cfg.collections) {
     try {
       const snap = await getDocs(
@@ -233,36 +213,20 @@ export async function fetchTodayClientsByDept(
           collection(db, col),
           where('createdAt', '>=', from),
           where('createdAt', '<=', to),
-          orderBy('createdAt', 'desc')
+          limit(50)
         )
       );
       docs = snap.docs;
       break;
-    } catch {
-      // try next variant
-    }
+    } catch { }
   }
 
-  return docs.map((d) => {
+  const results = docs.map((d) => {
     const data = d.data() as Record<string, any>;
-
-    const phone =
-      cfg.phoneField.map((f) => data[f]).find(Boolean) ?? undefined;
-
-    const meta =
-      data[cfg.metaField] ||
-      data['course'] ||
-      data['class'] ||
-      data['grade'] ||
-      data['diagnosis'] ||
-      undefined;
-
+    const phone = cfg.phoneField.map((f) => data[f]).find(Boolean) ?? undefined;
+    const meta = data[cfg.metaField] || data['course'] || data['class'] || data['grade'] || data['diagnosis'] || undefined;
     const registeredAt = toDate(data.createdAt);
-
-    const profilePath =
-      dept === 'job-center'
-        ? `${cfg.profileBase}/${d.id}`
-        : `${cfg.profileBase}/${d.id}`;
+    const profilePath = `${cfg.profileBase}/${d.id}`;
 
     return {
       id: d.id,
@@ -273,5 +237,9 @@ export async function fetchTodayClientsByDept(
       dept,
       profilePath,
     } satisfies TodayClient;
-  });
+  }).sort((a, b) => (b.registeredAt?.getTime() || 0) - (a.registeredAt?.getTime() || 0));
+
+  setCached(cacheKey, results, LIST_CACHE_TTL);
+  return results;
 }
+

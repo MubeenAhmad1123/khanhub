@@ -16,6 +16,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { toDate } from '../utils';
+import { getCached, setCached } from '../queryCache';
+
 import type { 
   Patient, 
   FeeRecord, 
@@ -63,9 +65,13 @@ export async function getPatient(id: string): Promise<Patient | null> {
 }
 
 export async function getPatients(): Promise<Patient[]> {
-  const q = query(collection(db, 'rehab_patients'), orderBy('serialNumber', 'desc'));
+  const cacheKey = 'rehab_patients_list';
+  const cached = getCached<Patient[]>(cacheKey);
+  if (cached) return cached;
+
+  const q = query(collection(db, 'rehab_patients'), orderBy('serialNumber', 'desc'), limit(100));
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
+  const patients = snap.docs.map(doc => {
     const data = doc.data();
     return { 
       id: doc.id, 
@@ -75,7 +81,10 @@ export async function getPatients(): Promise<Patient[]> {
       dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
     } as Patient;
   });
+  setCached(cacheKey, patients, 180); // 3 min cache
+  return patients;
 }
+
 
 export async function createPatient(data: Omit<Patient, 'id' | 'createdAt'>): Promise<string> {
   const res = await addDoc(collection(db, 'rehab_patients'), {
@@ -246,17 +255,36 @@ export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'creat
 // ─── FINANCE HQ VIEW ──────────────────────────────────────────────────────────
 
 export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinanceSummary[]> {
-  // Load all active patients
-  const patientsSnap = await getDocs(collection(db, 'rehab_patients'));
+  const cacheKey = 'rehab_patients_finance_summary';
+  const cached = getCached<PatientFinanceSummary[]>(cacheKey);
+  if (cached) return cached;
+
+  // Load limited patients
+  const q = query(collection(db, 'rehab_patients'), orderBy('serialNumber', 'desc'), limit(100));
+  const patientsSnap = await getDocs(q);
   const patients = patientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
   
-  // Load ALL fees
-  const feesSnap = await getDocs(collection(db, 'rehab_fees'));
-  const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeeRecord));
+  if (patients.length === 0) return [];
+
+  const patientIds = patients.map(p => p.id);
   
-  // Load ALL canteen records
-  const canteenSnap = await getDocs(collection(db, 'rehab_canteen'));
-  const allCanteen = canteenSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CanteenRecord));
+  // Batch fetch fees and canteen records for THESE patients ONLY
+  // Firestore 'in' limit is 30, so we chunk
+  const fetchInChunks = async (col: string, ids: string[]) => {
+    const results: any[] = [];
+    for (let i = 0; i < ids.length; i += 30) {
+      const chunk = ids.slice(i, i + 30);
+      const q = query(collection(db, col), where('patientId', 'in', chunk));
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => results.push({ id: d.id, ...d.data() }));
+    }
+    return results;
+  };
+
+  const [allFees, allCanteen] = await Promise.all([
+    fetchInChunks('rehab_fees', patientIds),
+    fetchInChunks('rehab_canteen', patientIds)
+  ]);
   
   // Map fees/canteen by patientId
   const feesByPatient: Record<string, FeeRecord[]> = {};
@@ -271,7 +299,7 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
     canteenByPatient[c.patientId].push(c);
   });
   
-  return patients.map(p => {
+  const summary = patients.map(p => {
     const pFees = feesByPatient[p.id] || [];
     const pCanteen = canteenByPatient[p.id] || [];
     
@@ -284,8 +312,8 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
     const totalDues = totalFees + otherExpenses;
     
     const totalReceived = pFees.reduce((acc, f) => {
-      const approvedPayments = (f.payments || []).filter(pay => pay.status === 'approved');
-      return acc + approvedPayments.reduce((pacc, pay) => pacc + pay.amount, 0);
+      const approvedPayments = (f.payments || []).filter((pay: any) => pay.status === 'approved');
+      return acc + approvedPayments.reduce((pacc: any, pay: any) => pacc + pay.amount, 0);
     }, 0);
     
     const totalCanteenDeposited = pCanteen.reduce((acc, c) => acc + (c.totalDeposited || 0), 0);
@@ -312,8 +340,12 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
       guardianNumber: p.contactNumber,
       isActive: p.isActive
     };
-  }).sort((a, b) => b.serialNumber - a.serialNumber);
+  });
+
+  setCached(cacheKey, summary, 180); // 3 min cache
+  return summary;
 }
+
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 

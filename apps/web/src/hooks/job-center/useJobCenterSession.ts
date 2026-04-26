@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { getCached, setCached } from '@/lib/queryCache';
 
 export interface JobCenterSession {
   uid: string;
@@ -12,6 +13,8 @@ export interface JobCenterSession {
   seekerId?: string | null;
   loginTime: number;
 }
+
+const CACHE_TTL = 600;
 
 export function useJobCenterSession() {
   const [session, setSession] = useState<JobCenterSession | null>(null);
@@ -27,7 +30,28 @@ export function useJobCenterSession() {
 
     // Real-time remote logout listener
     let unsubDoc: (() => void) | undefined;
-    const startListener = (uid: string, loginTime: number) => {
+    
+    const startSync = async (uid: string, loginTime: number) => {
+      const cacheKey = `jobcenter_profile_${uid}`;
+      const cached = getCached<JobCenterSession>(cacheKey);
+      
+      if (cached) {
+        setSession(prev => prev ? { ...cached, loginTime: prev.loginTime } : { ...cached, loginTime });
+      } else {
+        try {
+          const snap = await getDoc(doc(db, 'jobcenter_users', uid));
+          if (snap.exists()) {
+            const data = snap.data() as JobCenterSession;
+            const updated = { ...data, uid, loginTime };
+            setCached(cacheKey, updated, CACHE_TTL);
+            setSession(updated);
+            localStorage.setItem('jobcenter_session', JSON.stringify(updated));
+          }
+        } catch (err) {
+          console.error('[JobCenterSession] Profile sync error:', err);
+        }
+      }
+
       if (unsubDoc) unsubDoc();
       unsubDoc = onSnapshot(doc(db, 'jobcenter_users', uid), (snap) => {
         const data = snap.data();
@@ -48,7 +72,7 @@ export function useJobCenterSession() {
       const parsed = raw ? (JSON.parse(raw) as JobCenterSession) : null;
       
       if (user && parsed && user.uid === parsed.uid) {
-        startListener(user.uid, parsed.loginTime);
+        startSync(user.uid, parsed.loginTime);
       }
       setLoading(false);
     });
@@ -61,4 +85,5 @@ export function useJobCenterSession() {
 
   return { session, loading };
 }
+
 

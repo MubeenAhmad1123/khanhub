@@ -15,6 +15,8 @@ import ProgressTab from '@/components/hospital/patient-profile/ProgressTab';
 import TherapyTab from '@/components/hospital/patient-profile/TherapyTab';
 import MedicationTab from '@/components/hospital/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
+import { getCached, setCached } from '@/lib/queryCache';
+
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -35,6 +37,14 @@ export default function HospitalPatientViewPage() {
 
   const fetchPatientData = useCallback(async () => {
     try {
+      const cacheKey = `hospital_patient_profile_${patientId}`;
+      const cached = getCached<any>(cacheKey);
+      if (cached) {
+        setPatient(cached);
+        setLoading(false);
+        return;
+      }
+
       const pDoc = await getDoc(doc(db, 'hospital_patients', patientId));
       if (!pDoc.exists()) { router.push('/departments/hospital/login'); return; }
       const data = pDoc.data();
@@ -67,7 +77,7 @@ export default function HospitalPatientViewPage() {
         totalCanteenSpent += (cData.totalSpent || 0);
       });
 
-      setPatient({ 
+      const patientData = { 
         id: pDoc.id, 
         ...data, 
         admissionDate, 
@@ -81,13 +91,17 @@ export default function HospitalPatientViewPage() {
         canteenBalance: totalCanteenDeposited - totalCanteenSpent,
         canteenDeposit: totalCanteenDeposited,
         canteenSpent: totalCanteenSpent,
-      });
+      };
+
+      setPatient(patientData);
+      setCached(cacheKey, patientData, 180); // Cache for 180s
     } catch (error) {
       console.error("Error fetching hospital patient data:", error);
     } finally {
       setLoading(false);
     }
   }, [patientId, router]);
+
 
   useEffect(() => {
     const sessionData = localStorage.getItem('hospital_session');

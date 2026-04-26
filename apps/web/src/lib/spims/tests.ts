@@ -15,6 +15,8 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { toDate } from '@/lib/utils';
+
 
 export type SpimsTestScope = 'all' | 'course_session' | 'student';
 
@@ -68,10 +70,11 @@ export function subscribeStudentTests(params: {
     const uniq = merged.filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true)));
     params.onData(
       uniq.sort((a, b) => {
-        const aMs = (a.createdAt as any)?.toMillis?.() ?? 0;
-        const bMs = (b.createdAt as any)?.toMillis?.() ?? 0;
+        const aMs = toDate(a.createdAt).getTime();
+        const bMs = toDate(b.createdAt).getTime();
         return bMs - aMs;
       })
+
     );
   };
 
