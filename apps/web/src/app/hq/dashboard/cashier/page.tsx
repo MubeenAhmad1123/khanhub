@@ -308,14 +308,39 @@ export default function CashierStationPage() {
     if (!entity?.id) return;
     try {
       setEntityHistoryLoading(true);
-      const q = query(
-        collection(db, activeDepartment.txCollection),
-        where(isStaffMode ? 'staffId' : (activeDepartment.code === 'welfare' ? 'donorId' : (activeDepartment.code === 'spims' ? 'studentId' : 'patientId')), '==', entity.id),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-      const snap = await getDocs(q);
-      setEntityHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      
+      let list: any[] = [];
+      const col = collection(db, activeDepartment.txCollection);
+
+      if (activeDepartment.code === 'spims' && !isStaffMode) {
+        // Option A: Fetch both studentId and patientId for SPIMS to ensure no legacy/new data is missed
+        const [snap1, snap2] = await Promise.all([
+          getDocs(query(col, where('studentId', '==', entity.id), limit(50))),
+          getDocs(query(col, where('patientId', '==', entity.id), limit(50)))
+        ]);
+        
+        const map = new Map();
+        snap1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+        snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+        list = Array.from(map.values());
+      } else {
+        const q = query(
+          col,
+          where(isStaffMode ? 'staffId' : (activeDepartment.code === 'welfare' ? 'donorId' : 'patientId'), '==', entity.id),
+          limit(50)
+        );
+        const snap = await getDocs(q);
+        list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+
+      // Client-side sort by createdAt desc
+      list.sort((a: any, b: any) => {
+        const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
+        const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
+        return tB - tA;
+      });
+      
+      setEntityHistory(list.slice(0, 50));
     } catch (err) {
       console.error('[HQ Cashier] fetchEntityHistory Error:', err);
     } finally {

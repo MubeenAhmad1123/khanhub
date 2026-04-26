@@ -179,19 +179,18 @@ export default function SpimsCleanupPage() {
       });
       
       // 2. Update Transactions
-      // Handle both studentId and patientId
-      const txSnap1 = await getDocs(query(collection(db, 'spims_transactions'), where('studentId', 'in', duplicateIds)));
-      txSnap1.docs.forEach(d => {
-        batch.update(d.ref, { 
-          studentId: primaryId,
-          patientId: primaryId,
-          _mergedFrom: d.data().studentId || d.data().patientId,
-          _mergedAt: serverTimestamp()
-        });
-      });
-      
-      const txSnap2 = await getDocs(query(collection(db, 'spims_transactions'), where('patientId', 'in', duplicateIds)));
-      txSnap2.docs.forEach(d => {
+      // Handle both studentId and patientId with deduplication
+      const [txSnap1, txSnap2] = await Promise.all([
+        getDocs(query(collection(db, 'spims_transactions'), where('studentId', 'in', duplicateIds))),
+        getDocs(query(collection(db, 'spims_transactions'), where('patientId', 'in', duplicateIds)))
+      ]);
+
+      const processedTxs = new Set<string>();
+
+      [...txSnap1.docs, ...txSnap2.docs].forEach(d => {
+        if (processedTxs.has(d.id)) return;
+        processedTxs.add(d.id);
+        
         batch.update(d.ref, { 
           studentId: primaryId,
           patientId: primaryId,

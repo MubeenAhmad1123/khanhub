@@ -157,7 +157,6 @@ export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayme
   const q = query(
     collection(db, 'spims_fees'),
     where('studentId', '==', studentId),
-    orderBy('date', 'desc'),
     limit(50) // Limit tx history
   );
   const snap = await getDocs(q);
@@ -170,6 +169,14 @@ export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayme
       createdAt: row.createdAt?.toDate ? row.createdAt.toDate() : row.createdAt,
     } as SpimsFeePayment;
   });
+
+  // Client-side sort by date desc
+  fees.sort((a, b) => {
+    const tA = toDate(a.date).getTime();
+    const tB = toDate(b.date).getTime();
+    return tB - tA;
+  });
+
   setCached(cacheKey, fees, 60); // 1 min cache for finance
   return fees;
 }

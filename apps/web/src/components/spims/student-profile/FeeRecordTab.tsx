@@ -54,16 +54,17 @@ export default function FeeRecordTab({
     async function loadData() {
       setLoading(true);
       try {
-        const cacheKey = `spims_fees_record_${student.id}`;
+        const cacheKey = `spims_transactions_record_${student.id}`;
         const cached = getCached<any[]>(cacheKey);
-        let list: SpimsFeePayment[] = [];
+        let list: any[] = [];
 
         if (cached) {
           list = cached;
         } else {
+          // Query transactions for this student
           const q = query(
-            collection(db, 'spims_fees'),
-            where('studentId', '==', student.id),
+            collection(db, 'spims_transactions'),
+            where('patientId', '==', student.id),
             limit(100)
           );
           const snap = await getDocs(q);
@@ -74,21 +75,39 @@ export default function FeeRecordTab({
               ...x,
               date: x.date?.toDate ? x.date.toDate() : x.date,
               createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : x.createdAt,
-            } as SpimsFeePayment;
+            };
           });
           setCached(cacheKey, list, 60);
         }
 
-        // Client-side sort by date asc
-        list.sort((a: SpimsFeePayment, b: SpimsFeePayment) => {
+        // Filter for fee-related entries and map to SpimsFeePayment type
+        const feeRecords = list
+          .filter(tx => tx.category === 'fee' || tx.feePaymentId)
+          .map(tx => ({
+            id: tx.id,
+            studentId: tx.studentId || tx.patientId,
+            studentName: tx.patientName || student.name,
+            course: student.course,
+            session: student.session,
+            date: tx.date,
+            amount: tx.amount,
+            remaining: tx.remaining || 0,
+            receivedBy: tx.receivedBy || tx.createdByName || 'HQ',
+            type: tx.feePaymentType || 'monthly',
+            note: tx.description || tx.note,
+            status: tx.status,
+            createdAt: tx.createdAt,
+            linkedTransactionId: tx.id
+          } as SpimsFeePayment));
 
+        // Client-side sort by date asc
+        feeRecords.sort((a, b) => {
           const tA = toDate(a.date).getTime();
           const tB = toDate(b.date).getTime();
           return tA - tB;
-
         });
 
-        setRows(list);
+        setRows(feeRecords);
       } catch (err) {
         console.error('Error loading fee records:', err);
         toast.error('Could not load fee records');
@@ -98,7 +117,7 @@ export default function FeeRecordTab({
     }
 
     loadData();
-  }, [student.id]);
+  }, [student.id, student.name, student.course, student.session]);
 
 
   const { totalReceived, displayRemaining } = useMemo(() => {

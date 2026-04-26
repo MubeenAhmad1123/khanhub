@@ -31,40 +31,49 @@ export default function FinanceSummaryTab({
     async function loadData() {
       setLoading(true);
       try {
-        const cacheKey = `spims_fees_summary_${student.id}`;
+        const cacheKey = `spims_transactions_summary_${student.id}`;
         const cached = getCached<any[]>(cacheKey);
-        let fetchedRows: SpimsFeePayment[] = [];
+        let list: any[] = [];
 
         if (cached) {
-          fetchedRows = cached;
+          list = cached;
         } else {
           const q = query(
-            collection(db, 'spims_fees'),
-            where('studentId', '==', student.id),
-            limit(50)
+            collection(db, 'spims_transactions'),
+            where('patientId', '==', student.id),
+            limit(100)
           );
           const snap = await getDocs(q);
-          fetchedRows = snap.docs.map((d) => {
+          list = snap.docs.map((d) => {
             const x = d.data();
             return {
               id: d.id,
               ...x,
               date: x.date?.toDate ? x.date.toDate() : x.date,
-            } as SpimsFeePayment;
+            };
           });
-          setCached(cacheKey, fetchedRows, 60);
+          setCached(cacheKey, list, 60);
         }
 
+        // Map transactions to SpimsFeePayment type for summary calculations
+        const feeRecords = list
+          .filter(tx => tx.category === 'fee' || tx.feePaymentId)
+          .map(tx => ({
+            id: tx.id,
+            amount: tx.amount,
+            date: tx.date,
+            status: tx.status,
+            type: tx.feePaymentType || 'monthly',
+          } as SpimsFeePayment));
 
         // Client-side sort by date desc
-        fetchedRows.sort((a: SpimsFeePayment, b: SpimsFeePayment) => {
-
+        feeRecords.sort((a, b) => {
           const tA = toDate(a.date).getTime();
           const tB = toDate(b.date).getTime();
           return tB - tA;
         });
 
-        setRows(fetchedRows);
+        setRows(feeRecords);
       } catch (err) {
         console.error('Error loading finance summary:', err);
       } finally {

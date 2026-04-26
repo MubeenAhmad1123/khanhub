@@ -10,7 +10,7 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isDiscoveryQuery() {
-      return request.query.limit != null && request.query.limit <= 1;
+      return request.query != null && request.query.limit <= 50;
     }
     function isSystemAdmin() {
       return request.auth != null && request.auth.token.email == 'khanhubnetwork@gmail.com';
@@ -828,10 +828,33 @@ service cloud.firestore {
     // hq_notifications — in-app notifications for HQ users
     match /hq_notifications/{docId} {
       allow read: if isHqAuth()
-        && resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
+        && (
+          isHqSuperOrManager()
+          || resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        );
       allow create: if isHqAuth();
       allow update: if isHqAuth()
-        && resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        && (
+          isHqSuperOrManager()
+          || resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
+    // staff_notifications — in-app notifications for staff members
+    match /staff_notifications/{docId} {
+      allow read: if isAuth() 
+        && (
+          resource.data.recipientId == request.auth.uid
+          || isHqSuperOrManager()
+        );
+      allow create: if isAuth();
+      allow update: if isAuth() 
+        && (
+          resource.data.recipientId == request.auth.uid
+          || isHqSuperOrManager()
+        )
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
       allow delete: if false;
     }
