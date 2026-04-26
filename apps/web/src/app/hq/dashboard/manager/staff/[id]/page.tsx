@@ -1733,6 +1733,74 @@ export default function StaffProfilePage() {
                   </button>
                 </div>
 
+                {/* Professional Meeting Scheduler */}
+                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-black/5 animate-in slide-in-from-bottom-4 duration-700'}`}>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-14 h-14 rounded-3xl bg-black text-white flex items-center justify-center shadow-2xl">
+                      <Calendar size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-[1000] uppercase tracking-tight">Schedule Professional Meeting</h3>
+                      <p className="text-[10px] font-black text-black opacity-40 uppercase tracking-[0.2em]">Notify staff member of formal discussions</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 lg:col-span-1">
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Meeting Title</label>
+                      <input 
+                        type="text" 
+                        placeholder="Performance Review / Policy Update"
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-black'}`}
+                        value={meetingForm.title}
+                        onChange={e => setMeetingForm({ ...meetingForm, title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Date</label>
+                      <input 
+                        type="date" 
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-black'}`}
+                        value={meetingForm.date}
+                        onChange={e => setMeetingForm({ ...meetingForm, date: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Time</label>
+                      <input 
+                        type="time" 
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-black'}`}
+                        value={meetingForm.time}
+                        onChange={e => setMeetingForm({ ...meetingForm, time: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Location</label>
+                    <input 
+                      type="text" 
+                      placeholder="Conference Room / Manager Office"
+                      className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-black'}`}
+                      value={meetingForm.location}
+                      onChange={e => setMeetingForm({ ...meetingForm, location: e.target.value })}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleScheduleMeeting}
+                    disabled={schedulingMeeting || !meetingForm.title || !meetingForm.date}
+                    className="w-full h-16 mt-8 rounded-3xl bg-black text-white text-[11px] font-[1000] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-black/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                  >
+                    {schedulingMeeting ? 'Synchronizing...' : (
+                      <>
+                        <Shield size={18} />
+                        Schedule & Notify Staff
+                      </>
+                    )}
+                  </button>
+                </div>
+
                 {/* Duty Logs (Audit) moved to Action tab */}
                 {dutyLogs.length === 0 ? <div className="p-20 text-center text-black font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
                   dutyLogs.map(log => (

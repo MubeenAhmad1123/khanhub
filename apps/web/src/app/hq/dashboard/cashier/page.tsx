@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -152,19 +152,45 @@ export default function CashierStationPage() {
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
   
+  // 1. Consolidated History Filtering (Base Filters + Duplicate Analysis)
   const historyFiltered = useMemo(() => {
-    if (!showDuplicatesOnly) return historyTxns;
-    return historyTxns.filter((tx1, idx1) => {
-      return historyTxns.some((tx2, idx2) => {
+    // Stage 1: Base Application of Filters (Dept, Status, Type, Search)
+    const base = historyTxns.filter((tx) => {
+      // Department Filter
+      if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
+
+      // Status Filter
+      if (historyStatus !== 'all') {
+        if (historyStatus === 'pending') {
+          if (!['pending', 'pending_cashier'].includes(tx.status)) return false;
+        } else if (tx.status !== historyStatus) return false;
+      }
+
+      // Type Filter
+      if (historyType !== 'all' && tx.type !== historyType) return false;
+
+      // Search Query Filter
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      
+      const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.donorName || ''} ${tx.donorId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
+      return searchStr.includes(q);
+    });
+
+    // Stage 2: Optional Duplicate Analysis
+    if (!showDuplicatesOnly) return base;
+
+    return base.filter((tx1, idx1) => {
+      return base.some((tx2, idx2) => {
         if (idx1 === idx2) return false;
         const date1 = getLocalDateString(tx1.transactionDate || tx1.date || tx1.createdAt);
         const date2 = getLocalDateString(tx2.transactionDate || tx2.date || tx2.createdAt);
-        const entity1 = tx1.patientId || tx1.staffId || tx1.entityId;
-        const entity2 = tx2.patientId || tx2.staffId || tx2.entityId;
+        const entity1 = tx1.patientId || tx1.staffId || tx1.entityId || tx1.donorId;
+        const entity2 = tx2.patientId || tx2.staffId || tx2.entityId || tx2.donorId;
         return tx1.amount === tx2.amount && date1 === date2 && entity1 === entity2 && !!entity1;
       });
     });
-  }, [historyTxns, showDuplicatesOnly]);
+  }, [historyTxns, searchQuery, historyDepartment, historyStatus, historyType, showDuplicatesOnly]);
 
   // Optimized fetchHistory that uses filters and aggregation
   const fetchHistory = useCallback(async () => {
@@ -851,29 +877,7 @@ export default function CashierStationPage() {
     });
   }, [historyTxns, incomingFeeReqs]);
 
-  const filteredHistory = useMemo(() => {
-    return historyTxns.filter((tx) => {
-      // 1. Department Filter (Immediate UI responsiveness)
-      if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
-
-      // 2. Status Filter
-      if (historyStatus !== 'all') {
-        if (historyStatus === 'pending') {
-          if (!['pending', 'pending_cashier'].includes(tx.status)) return false;
-        } else if (tx.status !== historyStatus) return false;
-      }
-
-      // 3. Type Filter
-      if (historyType !== 'all' && tx.type !== historyType) return false;
-
-      // 4. Search Query Filter
-      const q = searchQuery.trim().toLowerCase();
-      if (!q) return true;
-      
-      const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.donorName || ''} ${tx.donorId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
-      return searchStr.includes(q);
-    });
-  }, [historyTxns, searchQuery, historyDepartment, historyStatus, historyType]);
+  // historyFiltered now handles both base filtering and duplicate analysis
 
   const totals = useMemo(() => {
     // We use historyStats if we just fetched, otherwise calculate from historyFiltered
@@ -1226,25 +1230,44 @@ export default function CashierStationPage() {
                       {entityHistoryLoading && <Loader2 size={12} className="animate-spin text-black" />}
                     </div>
                     
-                    <div className="space-y-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                       {entityHistory.length === 0 ? (
                         <p className="text-[10px] font-black text-black/40 uppercase text-center py-8 italic">No previous history found for this account.</p>
                       ) : entityHistory.map((tx) => (
-                        <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-surface-subtle border border-border-subtle group relative">
+                        <div 
+                          key={tx.id} 
+                          onClick={() => setDetailModalTx({ ...tx, departmentCode: activeDepartment.code })}
+                          className="flex items-center justify-between p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:border-black hover:shadow-sm cursor-pointer transition-all group relative"
+                        >
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black text-black truncate uppercase">{tx.categoryName || tx.category}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-[10px] font-black text-black truncate uppercase">{tx.categoryName || tx.category}</p>
+                              <span className={cn('px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter border', 
+                                tx.status === 'approved' ? 'bg-black text-white border-black' : 
+                                tx.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' : 
+                                'bg-white text-black border-border-subtle'
+                              )}>
+                                {tx.status || 'pending'}
+                              </span>
+                            </div>
                             <p className="text-[8px] font-bold text-black/40 uppercase">{formatDateDMY(tx.date || tx.createdAt)}</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <p className={cn('text-[10px] font-[1000]', tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600')}>
+                          <div className="flex items-center gap-3">
+                            <p className={cn('text-[11px] font-[1000]', tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600')}>
                               {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
                             </p>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
-                              className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 size={10} />
-                            </button>
+                            {(tx.status === 'pending' || tx.status === 'pending_cashier' || !tx.status) && (
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  handleDeleteTransaction({ ...tx, departmentCode: activeDepartment.code }); 
+                                }}
+                                className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                title="Delete Pending Transaction"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1706,34 +1729,84 @@ export default function CashierStationPage() {
 
         {/* Operational Insights Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-black text-white rounded-[2rem] p-6 flex items-center justify-between shadow-2xl">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Patients Records</p>
-              <p className="text-3xl font-[1000] mt-1">{historyStats.patients}</p>
+          <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-4">Analytics Period</p>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xl font-[1000] uppercase">{historyDateMode.replace('_', ' ')}</h4>
+              <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center">
+                <Calendar size={16} />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-              <Plus size={20} />
-            </div>
-          </div>
-          <div className="bg-white border border-black rounded-[2rem] p-6 flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Students Records</p>
-              <p className="text-3xl font-[1000] mt-1">{historyStats.students}</p>
-            </div>
-            <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center">
-              <TrendingUp size={20} />
-            </div>
-          </div>
-          <div className="bg-white border border-border-subtle rounded-[2rem] p-6 flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Client Records</p>
-              <p className="text-3xl font-[1000] mt-1">{historyStats.clients}</p>
-            </div>
-            <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center">
-              <ShieldCheck size={20} />
-            </div>
+            {historyDateMode === 'range' && (
+              <p className="text-[9px] font-black mt-2 opacity-60">
+                {formatDateDMY(historyFrom)} - {formatDateDMY(historyTo)}
+              </p>
+            )}
           </div>
         </div>
+
+        {/* Dynamic Analytics & Insights */}
+        {historyDateMode === 'range' && historyFiltered.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
+            <div className="bg-[#FCFBF8] border-4 border-black rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-10 h-10 bg-amber-400 border-2 border-black rounded-xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <Activity size={20} />
+                </div>
+                <h3 className="text-xl font-[1000] uppercase tracking-tight">Period Insights</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b-2 border-black/5">
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Avg Trans. Value</span>
+                  <span className="text-lg font-black">Rs {Math.round(totals.income / (historyFiltered.filter(t => t.type === 'income').length || 1)).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b-2 border-black/5">
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Highest Inflow</span>
+                  <span className="text-lg font-black text-emerald-600">Rs {Math.max(...historyFiltered.filter(t => t.type === 'income').map(t => Number(t.amount || 0)), 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Unique Accounts</span>
+                  <span className="text-lg font-black">{new Set(historyFiltered.map(t => t.patientId || t.staffId || t.donorId)).size} Identities</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black text-white rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(255,255,255,0.1)]">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center">
+                  <ShieldCheck size={20} />
+                </div>
+                <h3 className="text-xl font-[1000] uppercase tracking-tight">Audit Checklist</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? "bg-rose-500" : "bg-emerald-500")}>
+                    {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? <X size={16} /> : <Check size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Proof Compliance</p>
+                    <p className="text-sm font-black">
+                      {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 
+                        ? `${historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length} Items missing compliance` 
+                        : 'All items have proof/notes'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
+                    <History size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Potential Doubles</p>
+                    <p className="text-sm font-black">
+                      {historyFiltered.filter((tx1, idx1) => historyFiltered.some((tx2, idx2) => idx1 !== idx2 && tx1.amount === tx2.amount && (tx1.date || tx1.createdAt) === (tx2.date || tx2.createdAt) && (tx1.patientId || tx1.staffId) === (tx2.patientId || tx2.staffId))).length} flaggable entries
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="md:hidden space-y-4">
           {historyLoading ? (
@@ -2037,37 +2110,25 @@ export default function CashierStationPage() {
                 >
                   Dismiss
                 </button>
+                <button 
+                  onClick={() => {
+                    setDetailModalTx(null);
+                    handleDeleteTransaction(detailModalTx);
+                  }}
+                  className="flex-1 py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20"
+                >
+                  Delete Record
+                </button>
                 {detailModalTx.status === 'pending_cashier' && (
-                  <>
-                    <button 
-                      onClick={async () => {
-                        if (confirm('Are you sure you want to PERMANENTLY DELETE this pending transaction?')) {
-                          try {
-                            const { deleteDoc, doc } = await import('firebase/firestore');
-                            const coll = DEPARTMENTS.find(d => d.code === detailModalTx.departmentCode)?.txCollection || 'hq_transactions';
-                            await deleteDoc(doc(db, coll, detailModalTx.id));
-                            toast.success('Transaction Deleted Permanently');
-                            setDetailModalTx(null);
-                            fetchHistory();
-                          } catch (err) {
-                            toast.error('Failed to delete transaction');
-                          }
-                        }
-                      }}
-                      className="flex-1 py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20"
-                    >
-                      Delete Record
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setDetailModalTx(null);
-                        openForwardModal(detailModalTx);
-                      }}
-                      className="flex-1 py-5 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
-                    >
-                      Authorize Tx
-                    </button>
-                  </>
+                  <button 
+                    onClick={() => {
+                      setDetailModalTx(null);
+                      openForwardModal(detailModalTx);
+                    }}
+                    className="flex-1 py-5 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all"
+                  >
+                    Authorize Tx
+                  </button>
                 )}
               </div>
             </div>
