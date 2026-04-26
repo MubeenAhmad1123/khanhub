@@ -243,94 +243,131 @@ function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
   return (
     <Link
       href={`/hq/dashboard/superadmin/staff/${r.id}`}
-      className="group relative flex flex-col bg-white dark:bg-[#121212] rounded-[3rem] border border-gray-100 dark:border-white/5 overflow-hidden shadow-2xl shadow-black/5 hover:shadow-black/10 hover:-translate-y-2 transition-all duration-500"
+      className="group relative flex flex-col bg-white dark:bg-[#0F0F0F] rounded-[3.5rem] border border-gray-100 dark:border-white/5 overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] hover:shadow-primary/20 hover:-translate-y-4 transition-all duration-700"
     >
-      {/* Background Accent */}
-      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-40 group-hover:opacity-60 transition-opacity", info.gradient)} />
+      {/* Background Gradient Layer */}
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-5 dark:opacity-10 group-hover:opacity-20 transition-opacity duration-700", info.gradient)} />
+      
+      {/* Top Banner Accent */}
+      <div className={cn("absolute top-0 left-0 w-full h-2 bg-gradient-to-r", 
+        r.dept === 'hq' ? 'from-purple-500 to-indigo-500' :
+        r.dept === 'rehab' ? 'from-teal-500 to-emerald-500' :
+        r.dept === 'spims' ? 'from-sky-500 to-blue-500' :
+        r.dept === 'hospital' ? 'from-rose-500 to-pink-500' :
+        'from-violet-500 to-fuchsia-500'
+      )} />
 
-      <div className="relative z-10 p-10">
-        <div className="flex items-start justify-between mb-10">
+      <div className="relative z-10 p-12">
+        <div className="flex items-start justify-between mb-12">
           <div className="flex-1 min-w-0">
-            <div className={cn("inline-flex px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] mb-4 shadow-sm", info.bg, info.text)}>
+            <div className={cn("inline-flex px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] mb-6 shadow-xl", info.bg, info.text)}>
               {info.label}
             </div>
-            <h3 className="text-3xl font-black text-black dark:text-white leading-none mb-3 tracking-tighter group-hover:text-primary transition-colors truncate">
-              {r.name}
+            <h3 className="text-4xl font-[1000] text-black dark:text-white leading-none mb-4 tracking-tight group-hover:text-primary transition-colors">
+              {r.name.split(' ')[0]}
+              <span className="block text-xl font-bold text-gray-400 dark:text-gray-500 mt-2 tracking-normal">{r.name.split(' ').slice(1).join(' ')}</span>
             </h3>
-            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">
-              ID: {r.id.split('_')[1].slice(0, 8)} • {r.designation}
+            <p className="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.4em] flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-primary" />
+              {r.designation}
             </p>
           </div>
-          <div className="w-24 h-24 rounded-[2.5rem] border-2 border-white dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-white/5 flex items-center justify-center shrink-0 ml-6 shadow-2xl transition-transform group-hover:scale-110">
-            {r.photoUrl ? (
-              <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
-            ) : (
-              <Users2 size={40} className="text-gray-200 dark:text-white/10" />
-            )}
+          <div className="relative group/avatar">
+            <div className={cn("absolute -inset-1 rounded-[3rem] bg-gradient-to-br blur-lg opacity-0 group-hover/avatar:opacity-40 transition-opacity duration-500", info.gradient)} />
+            <div className="w-28 h-28 rounded-[2.8rem] border-4 border-white dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-white/5 flex items-center justify-center shrink-0 ml-6 shadow-2xl transition-all duration-700 group-hover:rotate-6 group-hover:scale-110 relative z-10">
+              {r.photoUrl ? (
+                <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className={cn("w-full h-full flex items-center justify-center", info.bg, info.text)}>
+                   <Users2 size={48} strokeWidth={2.5} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Performance Score Dashboard */}
-        <div className="bg-black/5 dark:bg-white/5 rounded-[2.5rem] p-8 mb-10 border border-black/5 dark:border-white/5 backdrop-blur-xl">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl">
-                <Zap size={24} className="fill-emerald-400 text-emerald-400" />
+        {/* Dynamic Performance Matrix */}
+        <div className="bg-gray-50 dark:bg-white/[0.03] rounded-[3rem] p-10 mb-12 border border-black/5 dark:border-white/5 backdrop-blur-3xl relative overflow-hidden group/matrix">
+          <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover/matrix:opacity-10 transition-opacity duration-1000", info.gradient)} />
+          
+          <div className="flex items-center justify-between mb-10 relative z-10">
+            <div className="flex items-center gap-5">
+              <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl", 
+                (r.todayDailyScore || 0) >= 3 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+              )}>
+                <Zap size={28} className="fill-white/20" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none mb-2">Efficiency Rating</p>
-                <p className="text-xl font-black text-black dark:text-white uppercase leading-none">Level {r.todayDailyScore || 0}</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-2">Efficiency Rating</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-[1000] text-black dark:text-white uppercase leading-none">{r.todayDailyScore || 0}</p>
+                  <p className="text-[10px] font-black text-gray-400">/ 5.0</p>
+                </div>
               </div>
             </div>
             <div className={cn(
-              "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg",
-              (r.todayDailyScore || 0) >= 3 ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'
+              "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl animate-in zoom-in duration-500",
+              (r.todayDailyScore || 0) >= 3 ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 'bg-rose-500 text-white shadow-rose-500/30'
             )}>
-              {(r.todayDailyScore || 0) >= 3 ? 'Optimal' : 'Review'}
+              {(r.todayDailyScore || 0) >= 3 ? 'Optimal Matrix' : 'Audit Required'}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <MetricStatus label="Uniform" status={r.todayUniformStatus || 'na'} />
-            <MetricStatus label="Duties" status={r.todayDutyStatus || 'na'} />
+          <div className="grid grid-cols-2 gap-5 relative z-10">
+            <MetricStatus label="Dress Protocol" status={r.todayUniformStatus || 'na'} color={info.text} />
+            <MetricStatus label="Duty Lifecycle" status={r.todayDutyStatus || 'na'} color={info.text} />
           </div>
         </div>
 
-        {/* Core Stats Matrix */}
-        <div className="grid grid-cols-2 gap-6 mb-10">
-          <div className="p-8 rounded-[2.5rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-xl shadow-black/5 transition-all group-hover:bg-gray-50 dark:hover:bg-white/10">
-            <div className="flex flex-col items-center gap-2">
-              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600">
-                <TrendingUp size={20} />
+        {/* Vital Stats Dashboard */}
+        <div className="grid grid-cols-2 gap-8 mb-12">
+          <div className="relative group/stat">
+            <div className="absolute inset-0 bg-emerald-500/20 blur-2xl opacity-0 group-hover/stat:opacity-100 transition-opacity duration-700" />
+            <div className="relative p-10 rounded-[3rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-xl transition-all group-hover:scale-105 group-hover:border-emerald-500/30">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="p-4 rounded-2xl bg-emerald-500 text-white shadow-xl shadow-emerald-500/20">
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 block mb-2">Growth Matrix</span>
+                  <span className="text-4xl font-[1000] text-black dark:text-white tracking-tighter">{r.growthPointsTotal}</span>
+                </div>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Growth</span>
-              <span className="text-3xl font-black text-black dark:text-white tracking-tighter">{r.growthPointsTotal}</span>
             </div>
           </div>
-          <div className="p-8 rounded-[2.5rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-xl shadow-black/5 transition-all group-hover:bg-gray-50 dark:hover:bg-white/10">
-            <div className="flex flex-col items-center gap-2">
-              <div className="p-3 rounded-xl bg-rose-500/10 text-rose-600">
-                <Star size={20} />
+          
+          <div className="relative group/stat">
+            <div className="absolute inset-0 bg-rose-500/20 blur-2xl opacity-0 group-hover/stat:opacity-100 transition-opacity duration-700" />
+            <div className="relative p-10 rounded-[3rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-xl transition-all group-hover:scale-105 group-hover:border-rose-500/30">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="p-4 rounded-2xl bg-rose-500 text-white shadow-xl shadow-rose-500/20">
+                  <Star size={24} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 block mb-2">Liability</span>
+                  <span className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">₨{Number(r.totalFines || 0).toLocaleString()}</span>
+                </div>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Fines</span>
-              <span className="text-3xl font-black text-black dark:text-white tracking-tighter">₨{Number(r.totalFines || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         <div className="pt-10 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-4 group/btn">
-            <div className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center transition-transform group-hover/btn:translate-x-1 shadow-lg">
-              <ChevronRight size={20} strokeWidth={3} />
+          <div className="flex items-center gap-5 group/btn">
+            <div className="w-12 h-12 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center transition-all group-hover/btn:scale-110 group-hover/btn:rotate-12 shadow-2xl">
+              <ChevronRight size={24} strokeWidth={3} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black dark:text-white">Full Dossier</span>
+            <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-black dark:text-white">View Full Dossier</span>
           </div>
+          
           <div className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-full text-[8px] font-black uppercase tracking-[0.2em]",
-            r.isActive ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
+            "flex items-center gap-3 px-6 py-3 rounded-full text-[9px] font-black uppercase tracking-[0.3em] backdrop-blur-xl border",
+            r.isActive ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
           )}>
-            <div className={cn("w-2 h-2 rounded-full", r.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
-            {r.isActive ? 'Online' : 'Offline'}
+            <div className={cn("w-2.5 h-2.5 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.2)]", 
+              r.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+            )} />
+            {r.isActive ? 'Network Active' : 'Protocol Halted'}
           </div>
         </div>
       </div>
@@ -338,7 +375,7 @@ function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
   );
 }
 
-function MetricStatus({ label, status }: { label: string; status: string }) {
+function MetricStatus({ label, status, color }: { label: string; status: string; color?: string }) {
   const isOk = status === 'yes';
   const isNa = status === 'na';
   const isIncomplete = status === 'incomplete';
@@ -349,9 +386,9 @@ function MetricStatus({ label, status }: { label: string; status: string }) {
                       'bg-rose-500 text-white shadow-rose-500/20';
 
   return (
-    <div className="p-6 rounded-[2rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex flex-col items-center justify-center gap-3 shadow-xl shadow-black/5">
-      <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">{label}</span>
-      <div className={cn("px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md", statusColors)}>
+    <div className="p-6 rounded-[2rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex flex-col items-center justify-center gap-4 shadow-xl shadow-black/5 hover:scale-105 transition-transform">
+      <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-60", color)}>{label}</span>
+      <div className={cn("px-5 py-2 rounded-full text-[9px] font-[1000] uppercase tracking-widest shadow-lg", statusColors)}>
         {status}
       </div>
     </div>

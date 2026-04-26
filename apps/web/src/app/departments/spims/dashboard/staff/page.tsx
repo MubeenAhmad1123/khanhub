@@ -148,7 +148,8 @@ export default function StaffSelfPage() {
         const lateByMinutes = Math.floor(lateByMs / 60000);
         const isLate = lateByMinutes > 15; // 15 min grace period
 
-        await addDoc(collection(db, 'spims_attendance'), {
+        const ref = doc(db, 'spims_attendance', `${staffProfile.id}_${today}`);
+        await setDoc(ref, {
           staffId: staffProfile.id,
           date: today,
           status: 'present',

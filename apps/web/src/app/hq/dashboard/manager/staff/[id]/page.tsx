@@ -739,26 +739,22 @@ export default function StaffProfilePage() {
       const departedOnTime = departure >= staffOut;
 
       const payload = {
+        ...attendanceMap[timePopup.date],
+        staffId: uid,
+        date: timePopup.date,
         arrivalTime: timePopup.arrivalTime,
         departureTime: timePopup.departureTime,
         arrivedOnTime,
         departedOnTime,
+        status: 'present',
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
-      };
-
-      const newRecord: HqDailyAttendanceRecord = {
-        ...(attendanceMap[timePopup.date] || {}),
-        ...payload,
-        staffId: uid,
-        date: timePopup.date,
-        status: 'present'
       };
 
       // Update Local State
       setAttendanceMap(prev => ({
         ...prev,
-        [timePopup.date]: newRecord
+        [timePopup.date]: payload
       }));
 
       // Single setDoc call as requested

@@ -443,7 +443,7 @@ export default function SuperadminFinancePage() {
       </header>
 
       {/* ── Today's Summary Cards ────────────────────────────────────────────── */}
-      <div className="px-4 lg:px-6 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="px-2 lg:px-4 mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
         {/* 1. Today's Collection */}
         <div className="p-10 rounded-[3rem] bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl" />
@@ -531,7 +531,7 @@ export default function SuperadminFinancePage() {
       </div>
 
       {/* ── Date Filter Panel ────────────────────────────────────────────────── */}
-      <div className="px-4 lg:px-6 mt-8">
+      <div className="px-2 lg:px-4 mt-6">
         <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-[3rem] p-10 shadow-2xl shadow-black/5 backdrop-blur-xl">
           <div className="flex flex-col lg:flex-row lg:items-center gap-10">
             {/* Label */}
@@ -637,7 +637,7 @@ export default function SuperadminFinancePage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="px-4 lg:px-6 mt-8"
+            className="px-2 lg:px-4 mt-6"
           >
             {/* Grand Summary Bar */}
             <div className="rounded-[4rem] bg-black dark:bg-white p-12 mb-8 flex flex-wrap items-center gap-16 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] dark:shadow-white/5">
@@ -708,7 +708,7 @@ export default function SuperadminFinancePage() {
       </AnimatePresence>
 
       {/* ── Main Data Hub ────────────────────────────────────────────────────── */}
-      <main className="relative min-h-[85vh] flex flex-col p-4 lg:p-6 overflow-hidden">
+      <main className="relative min-h-[85vh] flex flex-col p-2 lg:p-4 overflow-hidden">
         <AnimatePresence mode="wait">
           {viewMode === 'visual' ? (
             <motion.div

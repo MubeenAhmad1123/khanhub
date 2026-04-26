@@ -300,7 +300,8 @@ service cloud.firestore {
     match /rehab_canteen/{docId} {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
       allow create, update: if isRehabRole('cashier') || isRehabSuperAdmin();
       allow delete: if isRehabSuperAdmin();
     }
@@ -399,7 +400,8 @@ service cloud.firestore {
     // Admin/superadmin can read and write all.
     match /rehab_videos/{docId} {
       allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -409,7 +411,8 @@ service cloud.firestore {
     // Admin/superadmin can read and write all.
     match /rehab_visits/{docId} {
       allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -566,7 +569,8 @@ service cloud.firestore {
 
     match /spims_student_documents/{docId} {
       allow read: if isSpimsAdminOrAbove()
-        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId)
+        || isHqTier1();
       allow create, update, delete: if isSpimsAdminOrAbove();
     }
 

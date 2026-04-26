@@ -195,9 +195,9 @@ export default function HqSuperadminPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/hq/dashboard/superadmin/approvals"
-              className="px-10 py-5 bg-black dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+              className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 border border-emerald-400/20"
             >
-              <BadgeCheck size={18} />
+              <BadgeCheck size={18} className="fill-white/20" />
               Review Matrix Approvals
             </Link>
           </div>
@@ -257,10 +257,10 @@ export default function HqSuperadminPage() {
                 { label: 'Finance Center',   href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, tone: 'primary', desc: 'Global financial ledger' },
               ].map((btn) => {
                 const colors = {
-                  rehab: 'from-emerald-500/20 text-emerald-600 dark:text-emerald-400',
-                  spims: 'from-sky-500/20 text-sky-600 dark:text-sky-400',
-                  hq: 'from-purple-500/20 text-purple-600 dark:text-purple-400',
-                  primary: 'from-gray-500/20 text-gray-900 dark:text-white'
+                  rehab: 'from-emerald-500 to-teal-600 text-white shadow-emerald-500/40',
+                  spims: 'from-sky-500 to-blue-600 text-white shadow-sky-500/40',
+                  hq: 'from-violet-500 to-purple-600 text-white shadow-violet-500/40',
+                  primary: 'from-rose-500 to-pink-600 text-white shadow-rose-500/40'
                 };
                 return (
                   <Link
