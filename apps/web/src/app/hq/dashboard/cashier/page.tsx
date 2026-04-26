@@ -112,6 +112,15 @@ export default function CashierStationPage() {
   });
   const [entityHistory, setEntityHistory] = useState<any[]>([]);
   const [entityHistoryLoading, setEntityHistoryLoading] = useState(false);
+
+  const getProfileLink = (entity: any) => {
+    if (!entity?.id) return null;
+    if (isStaffMode) return `/hq/dashboard/manager/staff/${entity.id}`;
+    if (activeDepartment.code === 'spims') return `/departments/spims/dashboard/admin/students/${entity.id}`;
+    if (activeDepartment.code === 'rehab') return `/departments/rehab/dashboard/admin/patients/${entity.id}`;
+    return null;
+  };
+
   const [historyTo, setHistoryTo] = useState('');
   const [historyStats, setHistoryStats] = useState({ income: 0, expense: 0, count: 0, students: 0, patients: 0, clients: 0 });
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
@@ -1133,13 +1142,58 @@ export default function CashierStationPage() {
         <div className="lg:col-span-8 min-w-0">
           <div className="bg-white border border-border-subtle rounded-[2rem] p-6 md:p-10 shadow-sm">
             <form onSubmit={submitTx} className="space-y-6">
-              <div className="p-8 rounded-[2rem] bg-black text-white min-w-0 shadow-2xl shadow-black/20">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Action Required'}</p>
-                <div className="flex items-center justify-between gap-4 mt-2">
-                  <p className="text-xl sm:text-2xl font-black truncate">{selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Select account from search'}</p>
-                  {selectedEntity && (
-                    <button type="button" onClick={() => { setSelectedEntity(null); setAmount(''); }} className="text-[10px] font-black text-white underline underline-offset-8 uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Change</button>
-                  )}
+              <div className="p-8 rounded-[3.5rem] bg-black text-white min-w-0 shadow-2xl shadow-black/20 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/10 transition-all duration-700" />
+                
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-center gap-6">
+                    {selectedEntity && (
+                      <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center text-2xl font-black border border-white/20 shadow-inner group-hover:scale-105 transition-transform duration-500">
+                        {selectedEntity.photoUrl ? (
+                          <img src={selectedEntity.photoUrl} alt="" className="w-full h-full object-cover rounded-3xl" />
+                        ) : (
+                          <span>{(selectedEntity.name || selectedEntity.fullName || '?')[0]?.toUpperCase()}</span>
+                        )}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-1">
+                        {selectedEntity ? 'Verified Account Identity' : departmentCode === 'hospital' ? 'General Hospital Stream' : 'Account Identity Required'}
+                      </p>
+                      <div className="flex flex-col">
+                        <p className="text-2xl sm:text-3xl font-[1000] tracking-tight truncate max-w-[300px]">
+                          {selectedEntity ? (selectedEntity.name || selectedEntity.fullName) : departmentCode === 'hospital' ? 'General Hospital Account' : 'Select identity...'}
+                        </p>
+                        {selectedEntity && (
+                          <p className="text-[11px] font-black opacity-60 uppercase tracking-widest mt-1">
+                            ID: {selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.customId || 'N/A'} • {activeDepartment.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {selectedEntity && (
+                      <Link 
+                        href={getProfileLink(selectedEntity) || '#'}
+                        target="_blank"
+                        className="h-12 px-6 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-1"
+                      >
+                        <Eye size={14} /> Visit Profile
+                      </Link>
+                    )}
+                    {selectedEntity && (
+                      <button 
+                        type="button" 
+                        onClick={() => { setSelectedEntity(null); setAmount(''); }} 
+                        className="h-12 w-12 rounded-2xl bg-rose-500/20 hover:bg-rose-500 text-rose-500 hover:text-white transition-all border border-rose-500/20 flex items-center justify-center"
+                        title="Change Account"
+                      >
+                        <X size={18} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
                 {selectedEntity && isStaffMode && (

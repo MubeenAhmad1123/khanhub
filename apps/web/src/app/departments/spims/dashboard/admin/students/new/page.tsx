@@ -13,6 +13,21 @@ import { createStudent, firestoreDate } from '@/lib/spims/students';
 import { createSpimsStudentUserServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { SPIMS_COURSES, type SpimsStudentStatus } from '@/types/spims';
 
+const formatCnic = (val: string) => {
+  const digits = val.replace(/\D/g, '').substring(0, 13);
+  let formatted = '';
+  if (digits.length > 0) {
+    formatted = digits.substring(0, 5);
+    if (digits.length > 5) {
+      formatted += '-' + digits.substring(5, 12);
+      if (digits.length > 12) {
+        formatted += '-' + digits.substring(12, 13);
+      }
+    }
+  }
+  return formatted;
+};
+
 export default function NewSpimsStudentPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -227,7 +242,12 @@ export default function NewSpimsStudentPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Name" value={name} onChange={setName} />
               <Field label="Father name" value={fatherName} onChange={setFatherName} />
-              <Field label="CNIC" value={cnic} onChange={setCnic} placeholder="00000-0000000-0" />
+              <Field 
+                label="CNIC" 
+                value={cnic} 
+                onChange={(v) => setCnic(formatCnic(v))} 
+                placeholder="00000-0000000-0" 
+              />
               <Field label="Contact" value={contact} onChange={setContact} />
               <Field label="Father contact" value={fatherContact} onChange={setFatherContact} />
               <Field label="Student occupation (optional)" value={studentOcc} onChange={setStudentOcc} />
@@ -363,17 +383,14 @@ function Field({
     return (
       <div>
         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{label}</label>
-        <input
-          type="text"
-          placeholder="DD MM YYYY"
-          className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
-          value={formatDateDMY(value)}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={(e) => {
-            const parsed = parseDateDMY(e.target.value);
-            if (parsed) onChange(parsed.toISOString().split('T')[0]);
-          }}
-        />
+        <div className="relative group">
+          <input
+            type="date"
+            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold cursor-pointer transition-all hover:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none bg-white"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
       </div>
     );
   }
