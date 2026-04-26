@@ -161,6 +161,7 @@ export default function FeeRecordTab({
         categoryName: 'Student Fee',
         departmentCode: 'spims',
         departmentName: 'SPIMS College',
+        studentId: student.id,
         patientId: student.id,
         patientName: student.name,
         status: 'pending_cashier',

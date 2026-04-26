@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
   { label: 'Student portal', href: '/departments/spims/dashboard/student', icon: <User size={16} />, roles: ['student'] },
   { label: 'My Profile', href: '/departments/spims/dashboard/profile', icon: <UserCog size={16} />, roles: ['admin', 'staff', 'student', 'cashier', 'superadmin'] },
+  { label: 'Data Cleanup', href: '/departments/spims/dashboard/superadmin/cleanup', icon: <Shield size={16} />, roles: ['superadmin'] },
 ];
 
 const ROLE_COLORS: Record<SpimsDashRole, string> = {

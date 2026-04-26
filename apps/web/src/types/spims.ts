@@ -204,6 +204,8 @@ export interface SpimsFeeTrackerRecord {
 export interface Transaction {
   id: string;
   patientId?: string;
+  /** SPIMS specific student document ID */
+  studentId?: string;
   patientName?: string;
   staffId?: string;
   staffName?: string;

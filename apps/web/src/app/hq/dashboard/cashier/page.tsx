@@ -310,7 +310,7 @@ export default function CashierStationPage() {
       setEntityHistoryLoading(true);
       const q = query(
         collection(db, activeDepartment.txCollection),
-        where(isStaffMode ? 'staffId' : (activeDepartment.code === 'welfare' ? 'donorId' : 'patientId'), '==', entity.id),
+        where(isStaffMode ? 'staffId' : (activeDepartment.code === 'welfare' ? 'donorId' : (activeDepartment.code === 'spims' ? 'studentId' : 'patientId')), '==', entity.id),
         orderBy('createdAt', 'desc'),
         limit(50)
       );
@@ -726,6 +726,7 @@ export default function CashierStationPage() {
               }
             : { 
                 patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : undefined), 
+                studentId: departmentCode === 'spims' ? selectedEntity?.id : undefined,
                 patientName: selectedEntity?.name || selectedEntity?.fullName || (departmentCode === 'hospital' ? 'General Hospital Account' : 'Unknown') 
               }),
         description,
@@ -789,6 +790,26 @@ export default function CashierStationPage() {
       }
 
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
+
+      // CREATE SPIMS FEE DOC IF NEEDED
+      if (departmentCode === 'spims' && selectedCategory.id === 'fee' && selectedEntity) {
+        console.log('Fetching fees for studentId:', selectedEntity.id);
+        await addDoc(collection(db, 'spims_fees'), {
+          studentId: selectedEntity.id,
+          studentName: selectedEntity.name || selectedEntity.fullName || 'Unknown Student',
+          course: selectedEntity.course || 'Unknown Course',
+          session: selectedEntity.session || 'Unknown Session',
+          date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
+          amount: Number(amount),
+          receivedBy: session?.displayName || session?.name || 'HQ Cashier',
+          type: spimsFeeSubtype || 'monthly',
+          note: description || `Payment via HQ Cashier`,
+          status: 'pending', // Match transaction status
+          createdBy: session?.uid,
+          createdAt: Timestamp.now(),
+          linkedTransactionId: txRef.id
+        });
+      }
 
       // Handle Fine Reset for Staff Salary
       if (isStaffMode && selectedCategoryId === 'staff_salary' && selectedEntity) {
