@@ -282,7 +282,7 @@ export default function CashierHistoryPage() {
                      onClick={() => setStatusFilter(s)}
                      className={cn(
                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
-                       statusFilter === s ? "bg-amber-500/20 text-amber-500 border-amber-500/30" : "bg-white/5 border-white/10 text-slate-500 hover:text-white"
+                       statusFilter === s ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/10" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-900"
                      )}
                    >
                      {s.replace('_', ' ')}
@@ -293,7 +293,7 @@ export default function CashierHistoryPage() {
               {dateMode === 'range' && (
                 <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ml-auto">
                    <div className="relative group">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-within:text-amber-500 transition-colors" />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 group-within:text-indigo-600 transition-colors" />
                       <input
                         type="text"
                         placeholder="DD MM YYYY"
@@ -341,7 +341,7 @@ export default function CashierHistoryPage() {
               </thead>
               <tbody className="divide-y divide-zinc-50">
                 {filtered.map((tx) => (
-                  <tr key={tx.id} className="group hover:bg-white/[0.04] transition-colors duration-150">
+                  <tr key={tx.id} className="group hover:bg-zinc-50/50 transition-colors duration-150">
                     <td className="px-8 py-6">
                        <div className="text-sm font-black text-zinc-900">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</div>
                        <div className="text-[10px] font-black text-zinc-400 uppercase mt-1">
@@ -351,10 +351,10 @@ export default function CashierHistoryPage() {
                     <td className="px-8 py-6">
                        <span className={cn(
                          "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                         tx.dept === 'rehab' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                         tx.dept === 'spims' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                         tx.dept === 'hospital' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
-                         "bg-white/5 text-slate-400 border-white/10"
+                         tx.dept === 'rehab' ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
+                         tx.dept === 'spims' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                         tx.dept === 'hospital' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                         "bg-zinc-50 text-zinc-600 border-zinc-100"
                        )}>
                           {tx.departmentName || tx.dept}
                        </span>
@@ -366,7 +366,7 @@ export default function CashierHistoryPage() {
                        </div>
                     </td>
                     <td className="px-8 py-6">
-                       <div className="text-xs font-bold text-slate-300 max-w-[240px] truncate leading-relaxed">
+                       <div className="text-xs font-bold text-zinc-600 max-w-[240px] truncate leading-relaxed">
                           {tx.categoryName || tx.category}: {tx.description || tx.note || 'Internal Flow'}
                        </div>
                        <div className="text-[9px] font-black text-zinc-400 uppercase mt-1 italic">
@@ -387,12 +387,12 @@ export default function CashierHistoryPage() {
                     <td className="px-8 py-6 text-right">
                        <div className={cn(
                          "text-base font-black flex items-center justify-end gap-1.5",
-                         tx.type === 'income' ? "text-emerald-400" : "text-rose-400"
+                         tx.type === 'income' ? "text-emerald-600" : "text-rose-600"
                        )}>
                           {tx.type === 'income' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                           Rs {Number(tx.amount || 0).toLocaleString()}
                        </div>
-                       <div className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-widest">
+                       <div className="text-[10px] font-black text-zinc-400 uppercase mt-1 tracking-widest">
                           {tx.paymentMethod?.replace('_', ' ') || 'CASH'}
                        </div>
                     </td>
@@ -401,10 +401,10 @@ export default function CashierHistoryPage() {
                 {!loading && filtered.length === 0 && (
                   <tr>
                      <td colSpan={6} className="px-8 py-32 text-center">
-                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 opacity-20">
-                           <History className="w-8 h-8" />
+                        <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-100">
+                           <History className="w-8 h-8 text-zinc-300" />
                         </div>
-                        <p className="text-slate-500 font-bold italic">No records match your current filters.</p>
+                        <p className="text-zinc-400 font-bold italic">No records match your current filters.</p>
                      </td>
                   </tr>
                 )}
@@ -414,7 +414,7 @@ export default function CashierHistoryPage() {
         </div>
 
         <div className="text-center py-10 opacity-30">
-           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">End of Financial Record • {filtered.length} Entries</p>
+           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">End of Financial Record • {filtered.length} Entries</p>
         </div>
       </main>
 

@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, User, Phone, Save, LogOut, ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function CashierProfilePage() {
   const router = useRouter();
@@ -55,80 +56,90 @@ export default function CashierProfilePage() {
   if (sessionLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
-        <Loader2 className="animate-spin text-indigo-600" size={32} />
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Loading Preferences</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF8] p-4 md:p-8 pb-24 font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      <div className="max-w-lg mx-auto space-y-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => router.back()}
-            className="p-2.5 hover:bg-zinc-100 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">Account Settings</h1>
-        </div>
-
-        <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-[3rem] border border-zinc-100 shadow-sm">
-          <div className="w-28 h-28 rounded-full bg-indigo-50 border-4 border-white shadow-xl flex items-center justify-center relative overflow-hidden group">
-            <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover:opacity-10 transition-opacity" />
-            <span className="text-indigo-600 font-black text-4xl">
-              {(name || session?.name || 'C')[0].toUpperCase()}
-            </span>
-          </div>
-          <div className="text-center">
-            <p className="text-zinc-900 font-black text-2xl">{name || session?.name}</p>
-            <div className="flex items-center gap-2 justify-center mt-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-              <p className="text-indigo-600 text-[10px] font-black uppercase tracking-widest">{session?.role} · {session?.customId}</p>
+    <div className="min-h-screen bg-[#FCFBF8] p-4 md:p-8 pb-32 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <div className="max-w-xl mx-auto space-y-12">
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => router.back()}
+              className="p-3 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900 border border-transparent hover:border-zinc-100 shadow-sm bg-white"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+                <h1 className="text-3xl font-black text-zinc-900 tracking-tight">Security & Profile</h1>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Personnel Authentication Node</p>
             </div>
           </div>
+        </header>
+
+        <div className="relative group">
+            <div className="absolute inset-0 bg-indigo-600/5 rounded-[4rem] blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <div className="relative flex flex-col items-center gap-6 py-12 bg-white rounded-[4rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden">
+                <div className="w-32 h-32 rounded-full bg-zinc-50 border-8 border-white shadow-2xl flex items-center justify-center relative overflow-hidden group/avatar">
+                    <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover/avatar:opacity-10 transition-opacity" />
+                    <span className="text-zinc-900 font-black text-4xl">
+                    {(name || session?.name || 'C')[0].toUpperCase()}
+                    </span>
+                </div>
+                <div className="text-center space-y-2">
+                    <p className="text-zinc-900 font-black text-3xl tracking-tighter">{name || session?.name}</p>
+                    <div className="flex items-center gap-3 justify-center">
+                        <div className="px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-lg">
+                            <p className="text-indigo-600 text-[10px] font-black uppercase tracking-widest">{session?.role}</p>
+                        </div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200" />
+                        <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{session?.customId}</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div className="bg-white rounded-[3rem] p-8 border border-zinc-100 shadow-sm space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Display Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+        <div className="bg-white rounded-[3.5rem] p-10 border border-zinc-100 shadow-2xl shadow-zinc-200/30 space-y-10">
+          <div className="grid grid-cols-1 gap-8">
+            <div className="space-y-4">
+              <label className="text-zinc-900 text-[11px] font-black uppercase tracking-[0.2em] block px-1">Personal Identity</label>
+              <div className="relative group">
+                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-indigo-600 transition-colors" size={20} />
                 <input
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="Enter your name"
-                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-12 pr-4 py-4 text-zinc-900 text-sm font-bold outline-none focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all"
+                  placeholder="Official Name"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-[2rem] pl-14 pr-6 py-5 text-zinc-900 text-sm font-bold outline-none focus:bg-white focus:border-indigo-500 focus:shadow-xl focus:shadow-indigo-100/50 transition-all"
                 />
               </div>
             </div>
             
-            <div>
-              <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Phone Contact</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+            <div className="space-y-4">
+              <label className="text-zinc-900 text-[11px] font-black uppercase tracking-[0.2em] block px-1">Contact Channel</label>
+              <div className="relative group">
+                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-indigo-600 transition-colors" size={20} />
                 <input
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-12 pr-4 py-4 text-zinc-900 text-sm font-bold outline-none focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all"
+                  placeholder="Primary Phone"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-[2rem] pl-14 pr-6 py-5 text-zinc-900 text-sm font-bold outline-none focus:bg-white focus:border-indigo-500 focus:shadow-xl focus:shadow-indigo-100/50 transition-all"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Identifier</label>
-                <div className="px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 text-sm font-black uppercase">
-                  {session?.customId || 'N/A'}
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+              <div className="p-6 bg-zinc-50/50 border border-zinc-100 rounded-[2rem] space-y-2">
+                <label className="text-zinc-400 text-[9px] font-black uppercase tracking-widest block">Access ID</label>
+                <p className="text-sm font-black text-zinc-900 uppercase">{session?.customId || 'N/A'}</p>
               </div>
-              <div>
-                <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Email Address</label>
-                <div className="px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 text-sm font-bold truncate">
-                  {userData?.email || 'N/A'}
-                </div>
+              <div className="p-6 bg-zinc-50/50 border border-zinc-100 rounded-[2rem] space-y-2">
+                <label className="text-zinc-400 text-[9px] font-black uppercase tracking-widest block">Email Link</label>
+                <p className="text-sm font-bold text-zinc-900 truncate">{userData?.email || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -136,18 +147,28 @@ export default function CashierProfilePage() {
           <button
             disabled={saving || !name.trim()}
             onClick={() => { void handleSave(); }}
-            className={`w-full font-black text-xs uppercase tracking-widest py-4.5 rounded-2xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-3 shadow-xl ${saved ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-indigo-600 hover:bg-zinc-900 text-white shadow-indigo-100 disabled:opacity-50'}`}
+            className={cn(
+              "w-full font-black text-xs uppercase tracking-[0.2em] py-6 rounded-[2rem] transition-all duration-500 active:scale-95 flex items-center justify-center gap-4 shadow-2xl",
+              saved 
+                ? "bg-emerald-500 text-white shadow-emerald-200" 
+                : "bg-indigo-600 hover:bg-zinc-900 text-white shadow-indigo-200 disabled:opacity-50"
+            )}
           >
-            {saving ? <Loader2 className="animate-spin" size={18} /> : saved ? '✓ Profile Updated' : <><Save size={18} /> Save Preferences</>}
+            {saving ? <Loader2 className="animate-spin" size={20} /> : saved ? 'Authentication Updated' : <><Save size={20} /> Commit Changes</>}
           </button>
         </div>
 
         <button
           onClick={handleLogout}
-          className="w-full bg-white hover:bg-rose-50 border border-zinc-100 hover:border-rose-100 text-zinc-400 hover:text-rose-600 font-black text-xs uppercase tracking-widest py-4.5 rounded-[2rem] transition-all duration-300 flex items-center justify-center gap-3 shadow-sm"
+          className="w-full bg-white hover:bg-rose-500 hover:text-white border border-zinc-100 text-zinc-400 font-black text-xs uppercase tracking-[0.3em] py-6 rounded-[3rem] transition-all duration-500 flex items-center justify-center gap-4 shadow-sm hover:shadow-2xl hover:shadow-rose-100 active:scale-95 group"
         >
-          <LogOut size={18} /> End Session
+          <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> 
+          Terminate Session
         </button>
+
+        <footer className="pt-20 text-center">
+            <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.5em] italic">Secure Personnel Management Node</p>
+        </footer>
       </div>
     </div>
   );

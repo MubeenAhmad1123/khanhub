@@ -60,8 +60,24 @@ export function useHqSession() {
             setSession(updatedSession);
             localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('[useHqSession] Profile refresh error:', err);
+          // If permission error, it might be due to a stale token that wasn't caught by onAuthStateChanged
+          if (err.code === 'permission-denied') {
+            console.warn('[useHqSession] Attempting emergency token refresh...');
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+              await getIdToken(currentUser, true).catch(e => console.error('[useHqSession] Emergency refresh failed:', e));
+              // Retry once
+              const retrySnap = await getDoc(doc(db, 'hq_users', uid)).catch(() => null);
+              if (retrySnap?.exists()) {
+                const data = retrySnap.data() as HqSession;
+                const updatedSession = { ...data, uid, loginTime };
+                setSession(updatedSession);
+                localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
+              }
+            }
+          }
         }
       }
 
@@ -82,7 +98,6 @@ export function useHqSession() {
         },
         (err) => {
           console.warn('[useHqSession] Snapshot error (likely permissions):', err);
-          // Removed forced token refresh here to prevent infinite loops on quota/permission errors
         }
       );
     };
@@ -101,18 +116,19 @@ export function useHqSession() {
         return;
       }
 
-      // ── Start listener only when we have auth AND session matching ──
-      if (user && parsed && user.uid === parsed.uid) {
-        startListener(user.uid, parsed.loginTime);
-      }
-
-      // ── Force-refresh the ID token so Firestore rules see a valid auth ──
+      // ── Force-refresh the ID token BEFORE starting listeners ──
       if (user) {
         try {
           await getIdToken(user, true);
+          console.log('[useHqSession] Token refreshed successfully');
         } catch (e) {
           console.warn('[useHqSession] Token refresh failed:', e);
         }
+      }
+
+      // ── Start listener only when we have auth AND session matching ──
+      if (user && parsed && user.uid === parsed.uid) {
+        await startListener(user.uid, parsed.loginTime);
       }
 
       setLoading(false);
@@ -128,4 +144,3 @@ export function useHqSession() {
 
   return { session: memoizedSession, loading, clearSession };
 }
-

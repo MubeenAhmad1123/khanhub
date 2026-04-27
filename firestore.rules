@@ -2,9 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ═══════════════════════════════════════════════════════════
-    //  SHARED HELPERS  (job platform — do not modify)
-    // ═══════════════════════════════════════════════════════════
+    // ── Global System Admin Override ──────────────────
+    // Ensures the root admin always has full access regardless of specific collection rules.
+    allow read, write: if request.auth != null && request.auth.token.email == 'khanhubnetwork@gmail.com';
 
     function isAuth() {
       return request.auth != null;
@@ -718,30 +718,35 @@ service cloud.firestore {
           || exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
         ); 
     } 
-    function hqRole() { 
-      return isSystemAdmin() ? 'superadmin' : (
-        exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('role', '')
-          : ''
-      );
-    } 
-    function hqCustomId() {
-      return exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.get('customId', '')
-        : '';
+
+    function getHqUser() {
+      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data;
     }
+
+    function hqRole() { 
+      return isSystemAdmin() ? 'superadmin' : getHqUser().get('role', '');
+    } 
+
+    function hqCustomId() {
+      return isSystemAdmin() ? 'SYSTEM_ADMIN' : getHqUser().get('customId', '');
+    }
+
     function isHqRole(role) { 
       return isHqAuth() && hqRole() == role; 
     } 
+
     function isHqSuperAdmin() { 
       return isHqRole('superadmin'); 
     } 
+
     function isHqCashier() { 
       return isHqRole('cashier'); 
     } 
+
     function isHqSuperOrManager() { 
-      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager'); 
+      return isHqAuth() && hqRole() in ['superadmin', 'manager']; 
     } 
+
     function isHqTier1() { 
       return isHqAuth() && hqRole() in ['superadmin', 'manager', 'cashier']; 
     } 

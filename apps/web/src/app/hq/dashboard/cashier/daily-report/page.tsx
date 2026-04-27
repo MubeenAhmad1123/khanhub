@@ -342,10 +342,10 @@ export default function DailyReportPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
         <div className="text-center animate-pulse">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">Gathering Financial Data...</p>
+          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          <p className="text-zinc-400 font-black uppercase tracking-[0.2em] text-[10px]">Gathering Financial Data...</p>
         </div>
       </div>
     );
@@ -522,42 +522,42 @@ export default function DailyReportPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <div className="flex items-center justify-between px-2">
-                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                  <h2 className="text-lg font-black text-zinc-900 flex items-center gap-3">
                     <div className="w-2 h-8 bg-emerald-500 rounded-full" />
                     Income Streams
                   </h2>
-                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.income).length} Categories</span>
+                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.income).length} Categories</span>
                 </div>
                  <div className="space-y-3">
                   {Object.entries(stats.categoryBreakdown.income).map(([cat, data]) => (
-                    <div key={cat} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all hover:border-emerald-200">
+                    <div key={cat} className="bg-white rounded-3xl border border-zinc-100 shadow-sm overflow-hidden transition-all hover:border-emerald-200">
                       <button 
                         onClick={() => toggleCat(`in-${cat}`)}
-                        className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                        className="w-full px-6 py-5 flex items-center justify-between hover:bg-zinc-50 transition-colors"
                       >
                         <div className="flex items-center gap-4">
                           <div className="bg-emerald-50 p-2.5 rounded-xl">
                             <ArrowLeft className="w-5 h-5 text-emerald-600 rotate-135" />
                           </div>
                           <div className="text-left">
-                            <p className="font-black text-slate-900 leading-none">{cat}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1.5">{data.txs.length} Transactions</p>
+                            <p className="font-black text-zinc-900 leading-none">{cat}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase mt-1.5">{data.txs.length} Transactions</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-lg font-black text-slate-900">PKR {data.total.toLocaleString()}</span>
-                          {expandedCats.includes(`in-${cat}`) ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                          <span className="text-lg font-black text-zinc-900">PKR {data.total.toLocaleString()}</span>
+                          {expandedCats.includes(`in-${cat}`) ? <ChevronUp className="w-5 h-5 text-zinc-400" /> : <ChevronDown className="w-5 h-5 text-zinc-400" />}
                         </div>
                       </button>
                       
                       {expandedCats.includes(`in-${cat}`) && (
-                        <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/30">
+                        <div className="px-6 pb-6 pt-2 border-t border-zinc-50 bg-zinc-50/30">
                           <div className="space-y-2">
                             {data.txs.map(tx => (
-                              <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100/50 shadow-sm">
+                              <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-zinc-100/50 shadow-sm">
                                 <div className="space-y-0.5">
-                                  <p className="text-xs font-bold text-slate-800">{tx.description || 'General Receipt'}</p>
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                  <p className="text-xs font-bold text-zinc-800">{tx.description || 'General Receipt'}</p>
+                                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
                                     {tx.departmentName} • {tx.paymentMethod}
                                   </p>
                                 </div>
@@ -570,8 +570,8 @@ export default function DailyReportPage() {
                     </div>
                   ))}
                   {Object.keys(stats.categoryBreakdown.income).length === 0 && (
-                    <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
-                      <p className="text-slate-400 font-bold italic">No Income Recorded Today</p>
+                    <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200">
+                      <p className="text-zinc-400 font-bold italic">No Income Recorded Today</p>
                     </div>
                   )}
                 </div>
@@ -579,42 +579,42 @@ export default function DailyReportPage() {
 
               <div className="space-y-6">
                 <div className="flex items-center justify-between px-2">
-                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                  <h2 className="text-lg font-black text-zinc-900 flex items-center gap-3">
                     <div className="w-2 h-8 bg-rose-500 rounded-full" />
                     Operating Expenses
                   </h2>
-                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.expense).length} Categories</span>
+                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.expense).length} Categories</span>
                 </div>
                 <div className="space-y-3">
                   {Object.entries(stats.categoryBreakdown.expense).map(([cat, data]) => (
-                    <div key={cat} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all hover:border-rose-200">
+                    <div key={cat} className="bg-white rounded-3xl border border-zinc-100 shadow-sm overflow-hidden transition-all hover:border-rose-200">
                       <button 
                         onClick={() => toggleCat(`ex-${cat}`)}
-                        className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                        className="w-full px-6 py-5 flex items-center justify-between hover:bg-zinc-50 transition-colors"
                       >
                         <div className="flex items-center gap-4">
                           <div className="bg-rose-50 p-2.5 rounded-xl">
                             <ArrowLeft className="w-5 h-5 text-rose-600 -rotate-45" />
                           </div>
                           <div className="text-left">
-                            <p className="font-black text-slate-900 leading-none">{cat}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1.5">{data.txs.length} Transactions</p>
+                            <p className="font-black text-zinc-900 leading-none">{cat}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase mt-1.5">{data.txs.length} Transactions</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-lg font-black text-slate-900">PKR {data.total.toLocaleString()}</span>
-                          {expandedCats.includes(`ex-${cat}`) ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                          <span className="text-lg font-black text-zinc-900">PKR {data.total.toLocaleString()}</span>
+                          {expandedCats.includes(`ex-${cat}`) ? <ChevronUp className="w-5 h-5 text-zinc-400" /> : <ChevronDown className="w-5 h-5 text-zinc-400" />}
                         </div>
                       </button>
                       
                       {expandedCats.includes(`ex-${cat}`) && (
-                        <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/30">
+                        <div className="px-6 pb-6 pt-2 border-t border-zinc-50 bg-zinc-50/30">
                           <div className="space-y-2">
                             {data.txs.map(tx => (
-                              <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100/50 shadow-sm">
+                              <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-zinc-100/50 shadow-sm">
                                 <div className="space-y-0.5">
-                                  <p className="text-xs font-bold text-slate-800">{tx.description || 'Operational Cost'}</p>
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                  <p className="text-xs font-bold text-zinc-800">{tx.description || 'Operational Cost'}</p>
+                                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
                                     {tx.departmentName} • {tx.receivedBy || tx.cashierId || 'Staff'}
                                   </p>
                                 </div>
@@ -627,8 +627,8 @@ export default function DailyReportPage() {
                     </div>
                   ))}
                    {Object.keys(stats.categoryBreakdown.expense).length === 0 && (
-                    <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
-                      <p className="text-slate-400 font-bold italic">No Expenses Recorded Today</p>
+                    <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200">
+                      <p className="text-zinc-400 font-bold italic">No Expenses Recorded Today</p>
                     </div>
                   )}
                 </div>
@@ -692,26 +692,26 @@ export default function DailyReportPage() {
                       <th className="px-6 py-4 text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-zinc-50">
                     {transactions.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors group">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 font-bold">
                           {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-xs font-bold text-slate-900 px-2 py-0.5 bg-slate-100 rounded-md uppercase">
+                          <span className="text-[10px] font-black text-zinc-900 px-2.5 py-1 bg-zinc-100 rounded-lg uppercase tracking-wider border border-zinc-200/50">
                             {tx.departmentCode}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-xs font-semibold text-slate-500">
+                          <span className="text-xs font-black text-zinc-400 uppercase tracking-tighter">
                             {tx.categoryName || tx.category}
                           </span>
                         </td>
-                        <td className="px-6 py-4 max-w-xs truncate text-sm text-slate-700 font-medium">
+                        <td className="px-6 py-4 max-w-xs truncate text-sm text-zinc-900 font-bold">
                           {tx.description || '-'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500 capitalize">
+                        <td className="px-6 py-4 whitespace-nowrap text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                           {tx.paymentMethod?.replace('_', ' ')}
                         </td>
                         <td className="px-6 py-4 text-right whitespace-nowrap">
@@ -724,10 +724,10 @@ export default function DailyReportPage() {
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap">
                           <span className={cn(
-                            "text-[10px] font-black uppercase px-2 py-1 rounded-full",
-                            tx.status === 'approved' ? "bg-emerald-100 text-emerald-700" :
-                            tx.status === 'rejected' ? "bg-rose-100 text-rose-700" :
-                            "bg-amber-100 text-amber-700"
+                            "text-[10px] font-black uppercase px-3 py-1.5 rounded-full border",
+                            tx.status === 'approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                            tx.status === 'rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                            "bg-amber-50 text-amber-600 border-amber-100"
                           )}>
                             {tx.status}
                           </span>
@@ -736,7 +736,7 @@ export default function DailyReportPage() {
                     ))}
                     {transactions.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="px-6 py-20 text-center text-slate-400 font-medium">
+                        <td colSpan={8} className="px-6 py-20 text-center text-zinc-400 font-bold italic">
                           No transactions found for this date.
                         </td>
                       </tr>
@@ -747,41 +747,41 @@ export default function DailyReportPage() {
 
               <div className="md:hidden space-y-3 px-4 pb-6 print:hidden">
                 {transactions.map((tx) => (
-                  <div key={tx.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+                  <div key={tx.id} className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm space-y-4">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">
                             {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || (tx.createdAt.seconds * 1000)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                           </p>
-                          <span className="text-[9px] font-black text-slate-600 px-1.5 py-0.5 bg-slate-100 rounded uppercase">
+                          <span className="text-[9px] font-black text-zinc-900 px-2 py-0.5 bg-zinc-100 rounded-lg uppercase tracking-wider border border-zinc-200/50">
                             {tx.departmentCode}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900">{tx.categoryName || tx.category}</h3>
+                        <h3 className="text-sm font-black text-zinc-900">{tx.categoryName || tx.category}</h3>
                       </div>
                       <div className="text-right">
                         <p className={cn("text-sm font-black", tx.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
                           {tx.type === 'income' ? '+' : '-'} {tx.amount.toLocaleString()}
                         </p>
                         <span className={cn(
-                          "text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full inline-block mt-1",
-                          tx.status === 'approved' ? "bg-emerald-100 text-emerald-700" : 
-                          tx.status === 'rejected' ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+                          "text-[9px] font-black uppercase px-2 py-1 rounded-full inline-block mt-1.5 border",
+                          tx.status === 'approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
+                          tx.status === 'rejected' ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-amber-50 text-amber-600 border-amber-100"
                         )}>{tx.status}</span>
                       </div>
                     </div>
-                    <div className="text-xs text-slate-600 line-clamp-2 border-t border-slate-50 pt-2 italic">
+                    <div className="text-xs text-zinc-600 line-clamp-2 border-t border-zinc-50 pt-3 italic font-bold">
                       {tx.description || 'No description'}
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-1">
+                    <div className="flex items-center justify-between text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em] pt-1">
                       <span>{tx.paymentMethod?.replace('_', ' ')}</span>
                       <span>By {tx.receivedBy || tx.cashierId || 'N/A'}</span>
                     </div>
                   </div>
                 ))}
                 {transactions.length === 0 && (
-                  <div className="text-center py-20 text-slate-400 font-medium">
+                  <div className="text-center py-20 text-zinc-400 font-bold italic">
                     No transactions found for this date.
                   </div>
                 )}
@@ -801,49 +801,36 @@ export default function DailyReportPage() {
               </div>
               <button 
                 onClick={() => setShowCloseModal(false)}
-                className="p-3 hover:bg-zinc-100 rounded-2xl transition-colors"
+                className="p-3 hover:bg-zinc-100 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
               >
-                <X className="w-6 h-6 text-zinc-400" />
+                <X className="w-6 h-6" />
               </button>
             </div>
-
+            
             <div className="p-8 space-y-8">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-6 bg-white rounded-3xl border border-zinc-100">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Expected</p>
-                  <p className="text-xl font-black text-zinc-900">PKR {(openingBalance + stats.totalIncome - stats.totalExpense).toLocaleString()}</p>
-                </div>
-                <div className="p-6 bg-white rounded-3xl border border-zinc-100">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total Inflow</p>
-                  <p className="text-xl font-black text-emerald-600">+{stats.totalIncome.toLocaleString()}</p>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block px-1">Actual Cash in Hand</label>
+                <div className="relative">
+                  <Calculator className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                  <input 
+                    type="number"
+                    value={actualCash}
+                    onChange={(e) => setActualCash(e.target.value)}
+                    placeholder="Enter amount..."
+                    className="w-full pl-12 pr-6 py-5 bg-white border border-zinc-100 rounded-[2rem] text-xl font-black text-zinc-900 focus:ring-4 focus:ring-indigo-50 outline-none transition-all placeholder:text-zinc-200"
+                  />
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block px-1">Actual Cash in Hand</label>
-                  <div className="relative">
-                    <Calculator className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                    <input 
-                      type="number"
-                      value={actualCash}
-                      onChange={(e) => setActualCash(e.target.value)}
-                      placeholder="Enter amount..."
-                      className="w-full pl-12 pr-6 py-5 bg-white border border-zinc-100 rounded-[2rem] text-xl font-black text-zinc-900 focus:ring-4 focus:ring-indigo-50 outline-none transition-all placeholder:text-zinc-200"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block px-1">Internal Note (Optional)</label>
-                  <textarea 
-                    value={closingNote}
-                    onChange={(e) => setClosingNote(e.target.value)}
-                    placeholder="Any discrepancies or notes..."
-                    rows={3}
-                    className="w-full px-6 py-5 bg-white border border-zinc-100 rounded-[2rem] text-sm font-bold text-zinc-900 focus:ring-4 focus:ring-indigo-50 outline-none transition-all placeholder:text-zinc-200 resize-none"
-                  />
-                </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block px-1">Internal Note (Optional)</label>
+                <textarea 
+                  value={closingNote}
+                  onChange={(e) => setClosingNote(e.target.value)}
+                  placeholder="Any discrepancies or notes..."
+                  rows={3}
+                  className="w-full px-6 py-5 bg-white border border-zinc-100 rounded-[2rem] text-sm font-bold text-zinc-900 focus:ring-4 focus:ring-indigo-50 outline-none transition-all placeholder:text-zinc-200 resize-none"
+                />
               </div>
 
               <button 
@@ -870,3 +857,4 @@ export default function DailyReportPage() {
     </div>
   );
 }
+
