@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
+import { addDoc, collection, doc, deleteDoc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
 import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -845,22 +845,31 @@ export default function CashierStationPage() {
 
       // CREATE SPIMS FEE DOC IF NEEDED
       if (departmentCode === 'spims' && selectedCategory.id === 'fee' && selectedEntity) {
-        console.log('Fetching fees for studentId:', selectedEntity.id);
-        await addDoc(collection(db, 'spims_fees'), {
-          studentId: selectedEntity.id,
-          studentName: selectedEntity.name || selectedEntity.fullName || 'Unknown Student',
-          course: selectedEntity.course || 'Unknown Course',
-          session: selectedEntity.session || 'Unknown Session',
-          date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
-          amount: Number(amount),
-          receivedBy: session?.displayName || session?.name || 'HQ Cashier',
-          type: spimsFeeSubtype || 'monthly',
-          note: description || `Payment via HQ Cashier`,
-          status: 'pending', // Match transaction status
-          createdBy: session?.uid,
-          createdAt: Timestamp.now(),
-          linkedTransactionId: txRef.id
-        });
+        try {
+          const feeRef = await addDoc(collection(db, 'spims_fees'), {
+            studentId: selectedEntity.id,
+            studentName: selectedEntity.name || selectedEntity.fullName || 'Unknown Student',
+            course: selectedEntity.course || 'Unknown Course',
+            session: selectedEntity.session || 'Unknown Session',
+            date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
+            amount: Number(amount),
+            receivedBy: session?.displayName || session?.name || 'HQ Cashier',
+            type: spimsFeeSubtype || 'monthly',
+            note: description || `Payment via HQ Cashier`,
+            status: 'pending', // Match transaction status
+            createdBy: session?.uid,
+            createdAt: Timestamp.now(),
+            linkedTransactionId: txRef.id
+          });
+
+          // Link back to transaction
+          await updateDoc(txRef, { feePaymentId: feeRef.id });
+        } catch (err) {
+          console.error('[HQ Cashier] SPIMS Fee Sync Error:', err);
+          // Rollback main transaction if fee sync fails to prevent orphaned records
+          await deleteDoc(txRef).catch(() => {});
+          throw new Error('Transaction failed: Could not sync with SPIMS fees system. Please try again.');
+        }
       }
 
       // Handle Fine Reset for Staff Salary
