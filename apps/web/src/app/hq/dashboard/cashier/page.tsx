@@ -254,33 +254,34 @@ export default function CashierStationPage() {
           constraints.push(where('type', '==', historyType));
         }
 
-        try {
-          const incomeAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'income')), { total: sum('amount') });
-          const expenseAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints, where('type', '==', 'expense')), { total: sum('amount') });
-          const countAgg = await getAggregateFromServer(query(collection(db, dept.txCollection), ...constraints), { total: count() });
-
-          totalIncome += incomeAgg.data().total || 0;
-          totalExpense += expenseAgg.data().total || 0;
-          totalCount += countAgg.data().total || 0;
-
-          if (dept.code === 'spims') studentsTouched += countAgg.data().total;
-          if (dept.code === 'rehab' || dept.code === 'hospital') patientsTouched += countAgg.data().total;
-          if (dept.code === 'job-center') clientsTouched += countAgg.data().total;
-
-        } catch (err) {
-          console.warn(`[HQ Cashier] Aggregation failed for ${dept.code}`, err);
-        }
+        // Removed expensive aggregation queries to prevent "Quota exceeded" (429) errors on Spark plan.
+        // We will calculate stats from the fetched documents instead.
 
         constraints.push(limit(100)); // Limit per department to keep it responsive
 
         try {
           const snap = await getDocs(query(collection(db, dept.txCollection), ...constraints));
-          all.push(...snap.docs.map((d) => ({ 
+          const docs = snap.docs.map((d) => ({ 
             id: d.id, 
             departmentCode: dept.code, 
             departmentName: dept.label, 
             ...d.data() 
-          })));
+          }));
+          
+          all.push(...docs);
+
+          // Calculate stats from the fetched slice (compromise for quota)
+          docs.forEach(tx => {
+            const amt = Number(tx.amount) || 0;
+            if (tx.type === 'income') totalIncome += amt;
+            else if (tx.type === 'expense') totalExpense += amt;
+            totalCount++;
+            
+            if (dept.code === 'spims') studentsTouched++;
+            if (dept.code === 'rehab' || dept.code === 'hospital') patientsTouched++;
+            if (dept.code === 'job-center') clientsTouched++;
+          });
+
         } catch (err: any) {
           console.warn(`[HQ Cashier] List fetch failed for ${dept.code}.`, err);
         }
@@ -394,13 +395,17 @@ export default function CashierStationPage() {
     }
     void loadCustomCategories();
     void fetchHistory();
+  }, [sessionLoading, session, router, fetchHistory]);
+
+  useEffect(() => {
+    if (!session?.customId || sessionLoading) return;
     const unsub = subscribeIncoming();
     return () => {
       if (typeof unsub === 'function') unsub();
     };
-  }, [sessionLoading, session, router, fetchHistory]);
+  }, [sessionLoading, session?.customId, subscribeIncoming]);
 
-  function subscribeIncoming() {
+  const subscribeIncoming = useCallback(() => {
     if (!session?.customId) return;
     setIncomingLoading(true);
     setIncomingError(null);
@@ -414,20 +419,11 @@ export default function CashierStationPage() {
           rowsMap[dept.txCollection].map((tx: any) => ({ ...tx, _txCollection: dept.txCollection }))
         );
         
-        console.log(`[HQ Cashier] Merging ${allTx.length} total pending transactions from ${DEPARTMENTS.length} departments.`);
-        
         const visible = allTx.filter((tx: any) => {
           const txCashier = String(tx.cashierId || '').trim().toUpperCase();
-          if (!txCashier || txCashier === 'CASHIER') return true; // Show universal or explicitly assigned
-          
-          const match = txCashier === cashierCustomId;
-          if (!match) {
-            console.debug(`[HQ Cashier] Filtering out TX ${tx.id} - assigned to ${txCashier}, current is ${cashierCustomId}`);
-          }
-          return match;
+          if (!txCashier || txCashier === 'CASHIER') return true;
+          return txCashier === cashierCustomId;
         });
-
-        console.log(`[HQ Cashier] Visible transactions for ${cashierCustomId}: ${visible.length}`);
 
         const createdMs = (row: any) => {
           const c = row.createdAt;
@@ -442,7 +438,7 @@ export default function CashierStationPage() {
       };
 
       const onErr = (err: unknown) => {
-        console.error('[HQ Cashier] subscribeIncoming error:', err);
+        console.warn('[HQ Cashier] subscribeIncoming error:', err);
         setIncomingError(
           `${(err as any)?.code || 'error'}: ${(err as any)?.message || 'Failed to load incoming requests.'}`
         );
@@ -473,7 +469,7 @@ export default function CashierStationPage() {
       setIncomingError('Failed to load incoming requests.');
       setIncomingLoading(false);
     }
-  }
+  }, [session?.customId]);
 
   function openForwardModal(tx: any) {
     setForwardModalTx(tx);

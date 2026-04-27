@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, getIdToken, signOut } from 'firebase/auth';
@@ -81,10 +81,8 @@ export function useHqSession() {
           }
         },
         (err) => {
-          console.error('[useHqSession] Snapshot error (likely permissions):', err);
-          if (auth.currentUser) {
-            getIdToken(auth.currentUser, true).catch(() => {});
-          }
+          console.warn('[useHqSession] Snapshot error (likely permissions):', err);
+          // Removed forced token refresh here to prevent infinite loops on quota/permission errors
         }
       );
     };
@@ -126,6 +124,8 @@ export function useHqSession() {
     };
   }, []);
 
-  return { session, loading, clearSession };
+  const memoizedSession = useMemo(() => session, [session]);
+
+  return { session: memoizedSession, loading, clearSession };
 }
 
