@@ -15,7 +15,11 @@ service cloud.firestore {
       return request.query != null && request.query.limit <= 50;
     }
     function isSystemAdmin() {
-      return request.auth != null && (request.auth.token.email == 'khanhubnetwork@gmail.com' || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2');
+      return request.auth != null && (
+        request.auth.token.email == 'khanhubnetwork@gmail.com' 
+        || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2'
+        || request.auth.uid == 'zOZHk8xzM8aCeoV4dhLg31cRD943'
+      );
     }
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;

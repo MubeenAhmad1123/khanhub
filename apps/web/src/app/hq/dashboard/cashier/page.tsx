@@ -27,7 +27,7 @@ const DEPARTMENTS = [
   { code: 'hospital', label: 'Khan Hospital', txCollection: 'hospital_transactions', entityCollection: 'hospital_patients' },
   { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions', entityCollection: 'sukoon_clients' },
   { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions', entityCollection: 'welfare_donors' },
-  { code: 'job-center', label: 'Job Center', txCollection: 'job_center_transactions', entityCollection: 'job_center_seekers' },
+  { code: 'job-center', label: 'Job Center', txCollection: 'jobcenter_transactions', entityCollection: 'jobcenter_seekers' },
 ];
 
 const BASE_CATEGORIES = [
@@ -724,7 +724,7 @@ export default function CashierStationPage() {
         { coll: 'hospital_patients', code: 'hospital', label: 'Hospital' },
         { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon' },
         { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
-        { coll: 'job_center_seekers', code: 'job-center', label: 'Job Center' },
+        { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center' },
         { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Staff' },
         { coll: 'spims_staff', code: 'spims', label: 'SPIMS Staff' },
       ];
