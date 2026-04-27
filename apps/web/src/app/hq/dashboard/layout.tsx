@@ -10,8 +10,9 @@ import {
   Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import type { HqRole, HqSession } from '@/types/hq';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
@@ -219,7 +220,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
     : DEPARTMENT_NAV[viewMode] || [];
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('[Logout] Auth signout error:', err);
+    }
     localStorage.removeItem(SESSION_KEY);
     router.push('/hq/login');
   };

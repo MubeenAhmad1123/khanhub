@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
+import { provisionSuperadminAndSetSession, loginHqUser, setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
@@ -73,7 +73,7 @@ export default function HqLoginPage() {
     setError('');
 
     try {
-      const result = await loginUniversal(customId, password);
+      const result = await loginHqUser({ customId, password });
 
       if (!result.success) {
         setError(result.error || 'Authentication failed.');
@@ -81,10 +81,41 @@ export default function HqLoginPage() {
         return;
       }
 
-      // Success is handled by loginUniversal via window.location.href
+      if (result.customToken && result.uid) {
+        // 1. Sign into Firebase Auth so Firestore rules work
+        const userCred = await signInWithCustomToken(auth, result.customToken);
+        
+        // 2. Set HQ Session Cookie (Server Action)
+        const idToken = await userCred.user.getIdToken();
+        await setHqSessionCookieFromIdToken(idToken);
+
+        // 3. Set Local Session for client-side persistence
+        const session: HqSession = {
+          uid: result.uid,
+          customId: result.user.customId,
+          name: result.user.name,
+          role: result.user.role,
+          loginTime: Date.now(),
+          ...result.user
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        localStorage.setItem('hq_login_time', Date.now().toString());
+
+        // 4. Redirect based on role
+        const roleRoutes: Record<HqRole, string> = {
+          superadmin: '/hq/dashboard/superadmin',
+          manager: '/hq/dashboard/manager',
+          cashier: '/hq/dashboard/cashier',
+        };
+        const dest = roleRoutes[result.user.role as HqRole] || '/hq/dashboard';
+        window.location.href = dest;
+      } else {
+        setError('Login failed: No authentication token received.');
+        setLoading(false);
+      }
     } catch (err: any) {
       console.error('[HQ Login] Error:', err);
-      setError('Something went wrong. Try again.');
+      setError(err.message || 'Something went wrong. Try again.');
       setLoading(false);
     }
   };
@@ -148,7 +179,7 @@ export default function HqLoginPage() {
     <div className="min-h-screen bg-[#fcfdfd] flex items-center justify-center p-6">
       <div className="w-full max-w-lg bg-white p-12 rounded-[50px] shadow-2xl shadow-gray-200/50 border border-gray-100 flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <div className="text-center">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">Khan Hub HQ Portal</h1>
+          <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">Khan Hub Master Panel</h1>
           <p className="text-[#1D9E75] font-black uppercase text-xs tracking-[0.4em] ml-1">Superadmin · Manager · Cashier</p>
         </div>
 

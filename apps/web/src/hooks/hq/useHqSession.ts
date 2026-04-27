@@ -107,8 +107,18 @@ export function useHqSession() {
       const raw = localStorage.getItem(SESSION_KEY);
       const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
 
+      if (!user) {
+        // Firebase Auth session lost — clear HQ session too
+        if (parsed) {
+          localStorage.removeItem(SESSION_KEY);
+        }
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
       // Clear on UID mismatch
-      if (user && parsed && user.uid !== parsed.uid) {
+      if (parsed && user.uid !== parsed.uid) {
         console.warn('[useHqSession] UID mismatch, clearing session');
         localStorage.removeItem(SESSION_KEY);
         setSession(null);
@@ -117,17 +127,15 @@ export function useHqSession() {
       }
 
       // ── Force-refresh the ID token BEFORE starting listeners ──
-      if (user) {
-        try {
-          await getIdToken(user, true);
-          console.log('[useHqSession] Token refreshed successfully');
-        } catch (e) {
-          console.warn('[useHqSession] Token refresh failed:', e);
-        }
+      try {
+        await getIdToken(user, true);
+        console.log('[useHqSession] Token refreshed successfully');
+      } catch (e) {
+        console.warn('[useHqSession] Token refresh failed:', e);
       }
 
       // ── Start listener only when we have auth AND session matching ──
-      if (user && parsed && user.uid === parsed.uid) {
+      if (parsed && user.uid === parsed.uid) {
         await startListener(user.uid, parsed.loginTime);
       }
 

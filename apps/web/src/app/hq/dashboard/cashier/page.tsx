@@ -321,17 +321,23 @@ export default function CashierStationPage() {
       const staffMode = entity._entityType === 'staff' || (targetDeptCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary');
 
       if (targetDeptCode === 'spims' && !staffMode) {
-        const [snap1, snap2] = await Promise.all([
+        const [snap1, snap2, snap3] = await Promise.all([
           getDocs(query(col, where('studentId', '==', entity.id), limit(100))),
-          getDocs(query(col, where('patientId', '==', entity.id), limit(100)))
+          getDocs(query(col, where('patientId', '==', entity.id), limit(100))),
+          getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', entity.id), limit(100)))
         ]);
         
         const map = new Map();
         snap1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
         snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+        snap3.docs.forEach(d => {
+           if (!map.has(d.id)) {
+             map.set(d.id, { id: d.id, categoryName: 'FEE PAYMENT', ...d.data(), type: 'income', departmentCode: 'spims' });
+           }
+        });
         list = Array.from(map.values());
       } else {
-        const idField = staffMode ? 'staffId' : (targetDeptCode === 'welfare' ? 'donorId' : 'patientId');
+        const idField = staffMode ? 'staffId' : (targetDeptCode === 'welfare' ? 'donorId' : targetDeptCode === 'sukoon-center' ? 'clientId' : 'patientId');
         const q = query(
           col,
           where(idField, '==', entity.id),
@@ -623,60 +629,7 @@ export default function CashierStationPage() {
     setSearchQuery('');
   }, [departmentCode]);
 
-  // Global Entity Loader: Fetch entities from ALL departments for unified search
-  useEffect(() => {
-    if (!session || sessionLoading) return;
 
-    const loadAllEntities = async () => {
-      try {
-        const cacheKey = 'cashier_all_global_entities';
-        const cached = getCached<any[]>(cacheKey);
-        if (cached) {
-          setAllEntities(cached);
-          return;
-        }
-
-        const fetchPromises = DEPARTMENTS.map(async (dept) => {
-          try {
-            const snap = await getDocs(query(collection(db, dept.entityCollection), limit(500)));
-            return snap.docs.map(d => ({ 
-              id: d.id, 
-              ...d.data(), 
-              _deptCode: dept.code, 
-              _deptLabel: dept.label,
-              _entityType: dept.entityCollection.split('_')[1] // 'patients', 'students', etc.
-            }));
-          } catch (err) {
-            console.warn(`[HQ Cashier] Failed to fetch entities for ${dept.code}:`, err);
-            return [];
-          }
-        });
-
-        // Also fetch staff
-        const staffPromise = (async () => {
-          try {
-            const snap = await getDocs(query(collection(db, 'rehab_staff'), limit(500)));
-            return snap.docs.map(d => ({ 
-              id: d.id, 
-              ...d.data(), 
-              _deptCode: 'hq', 
-              _deptLabel: 'HQ Staff',
-              _entityType: 'staff'
-            }));
-          } catch { return []; }
-        })();
-
-        const results = await Promise.all([...fetchPromises, staffPromise]);
-        const flat = results.flat();
-        setAllEntities(flat);
-        setCached(cacheKey, flat, 300); // 5 min cache
-      } catch (err) {
-        console.error('[HQ Cashier] Global fetch error:', err);
-      }
-    };
-
-    void loadAllEntities();
-  }, [session, sessionLoading]);
 
 
   useEffect(() => {
@@ -1752,12 +1705,14 @@ export default function CashierStationPage() {
                           )}>
                             {tx.status || 'pending'}
                           </span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
-                            className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center shadow-xl shadow-rose-500/10"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {['pending', 'pending_cashier'].includes(tx.status) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
+                              className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center shadow-xl shadow-rose-500/10"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1987,15 +1942,17 @@ export default function CashierStationPage() {
               </div>
 
               <div className="mt-12 grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => {
-                    setDetailModalTx(null);
-                    handleDeleteTransaction(detailModalTx);
-                  }}
-                  className="h-16 bg-rose-50 text-rose-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-600 hover:text-white transition-all shadow-xl shadow-rose-600/5"
-                >
-                  Purge Record
-                </button>
+                {['pending', 'pending_cashier'].includes(detailModalTx.status) && (
+                  <button 
+                    onClick={() => {
+                      setDetailModalTx(null);
+                      handleDeleteTransaction(detailModalTx);
+                    }}
+                    className="h-16 bg-rose-50 text-rose-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-600 hover:text-white transition-all shadow-xl shadow-rose-600/5"
+                  >
+                    Purge Record
+                  </button>
+                )}
                 {detailModalTx.status === 'pending_cashier' ? (
                   <button 
                     onClick={() => {
@@ -2037,7 +1994,14 @@ function EntityProfileModal({
   const entityHistory = useMemo(() => {
     const entityId = entity.id || entity.uid || entity.customId;
     return allTransactions
-      .filter(t => (t.patientId === entityId || t.staffId === entityId) && t.status === 'approved')
+      .filter(t => (
+        t.patientId === entityId || 
+        t.staffId === entityId || 
+        t.studentId === entityId || 
+        t.donorId === entityId || 
+        t.clientId === entityId || 
+        t.seekerId === entityId
+      ) && t.status === 'approved')
       .sort((a, b) => {
         const dateA = toDate(a.transactionDate || a.date || a.createdAt);
         const dateB = toDate(b.transactionDate || b.date || b.createdAt);

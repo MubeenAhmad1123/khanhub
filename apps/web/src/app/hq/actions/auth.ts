@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { HqRole } from '@/types/hq';
 
 const COOKIE_NAME = 'hq_session';
@@ -197,4 +198,49 @@ export async function requireHqSuperadmin(): Promise<HqSessionCookie> {
   if (!session) throw new Error('Unauthorized');
   if (session.role !== 'superadmin') throw new Error('Unauthorized');
   return session;
+}
+
+export async function loginHqUser(credentials: { customId: string; password: string }): Promise<{
+  success: boolean;
+  error?: string;
+  user?: any;
+  uid?: string;
+  customToken?: string;
+}> {
+  try {
+    const { customId, password } = credentials;
+    const q = adminDb.collection('hq_users').where('customId', '==', customId).limit(1);
+    const snap = await q.get();
+
+    if (snap.empty) {
+      return { success: false, error: 'Invalid User ID or password.' };
+    }
+
+    const userDoc = snap.docs[0];
+    const userData = userDoc.data();
+
+    if (userData.password !== password) {
+      return { success: false, error: 'Invalid User ID or password.' };
+    }
+
+    if (userData.isActive === false) {
+      return { success: false, error: 'Account is disabled.' };
+    }
+
+    const uid = userDoc.id;
+    const customToken = await adminAuth.createCustomToken(uid, {
+      role: userData.role,
+      customId: userData.customId,
+    });
+
+    return {
+      success: true,
+      user: userData,
+      uid,
+      customToken,
+    };
+  } catch (err: any) {
+    console.error('[loginHqUser] Error:', err);
+    return { success: false, error: err.message || 'Internal server error during login.' };
+  }
 }

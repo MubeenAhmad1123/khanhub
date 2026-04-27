@@ -5,7 +5,7 @@ service cloud.firestore {
     // ── Global System Admin Override ──────────────────
     // Ensures the root admin always has full access regardless of specific collection rules.
     match /{document=**} {
-      allow read, write: if request.auth != null && (request.auth.token.email == 'khanhubnetwork@gmail.com' || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2');
+      allow read, write: if isSystemAdmin();
     }
 
     function isAuth() {
@@ -351,7 +351,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     // ── Staff profiles ─────────────────────────────────
@@ -620,7 +620,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /spims_staff/{staffId} {
@@ -915,7 +915,7 @@ service cloud.firestore {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     // hq_fees — global fee records (direct HQ collections)
@@ -1158,7 +1158,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /hospital_staff/{staffId} {
@@ -1297,7 +1297,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /sukoon_staff/{staffId} {
@@ -1444,7 +1444,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /welfare_staff/{staffId} {
@@ -1672,7 +1672,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /jobcenter_transactions/{docId} {
@@ -1695,7 +1695,7 @@ service cloud.firestore {
             'cashierForwardedByName'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /job_center_staff/{staffId} {
