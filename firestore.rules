@@ -4,7 +4,9 @@ service cloud.firestore {
 
     // ── Global System Admin Override ──────────────────
     // Ensures the root admin always has full access regardless of specific collection rules.
-    allow read, write: if request.auth != null && request.auth.token.email == 'khanhubnetwork@gmail.com';
+    match /{document=**} {
+      allow read, write: if request.auth != null && (request.auth.token.email == 'khanhubnetwork@gmail.com' || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2');
+    }
 
     function isAuth() {
       return request.auth != null;
@@ -13,7 +15,7 @@ service cloud.firestore {
       return request.query != null && request.query.limit <= 50;
     }
     function isSystemAdmin() {
-      return request.auth != null && request.auth.token.email == 'khanhubnetwork@gmail.com';
+      return request.auth != null && (request.auth.token.email == 'khanhubnetwork@gmail.com' || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2');
     }
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
@@ -712,11 +714,10 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════ 
 
     function isHqAuth() { 
-      return request.auth != null 
-        && (
-          isSystemAdmin()
-          || exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
-        ); 
+      return request.auth != null && (
+        isSystemAdmin()
+        || exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
+      ); 
     } 
 
     function getHqUser() {

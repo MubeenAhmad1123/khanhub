@@ -707,6 +707,55 @@ export default function CashierStationPage() {
     void loadSuperadminRecipient();
   }, [session]);
 
+  const loadAllEntities = useCallback(async () => {
+    if (!session) return;
+    const cacheKey = 'cashier_all_entities';
+    const cached = getCached<any[]>(cacheKey);
+    if (cached) {
+      setAllEntities(cached);
+      return;
+    }
+
+    try {
+      const all: any[] = [];
+      const sources = [
+        { coll: 'rehab_patients', code: 'rehab', label: 'Rehab' },
+        { coll: 'spims_students', code: 'spims', label: 'SPIMS' },
+        { coll: 'hospital_patients', code: 'hospital', label: 'Hospital' },
+        { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon' },
+        { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
+        { coll: 'job_center_seekers', code: 'job-center', label: 'Job Center' },
+        { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Staff' },
+        { coll: 'spims_staff', code: 'spims', label: 'SPIMS Staff' },
+      ];
+
+      for (const source of sources) {
+        try {
+          const snap = await getDocs(query(collection(db, source.coll), limit(50)));
+          const docs = snap.docs.map(d => ({ 
+            ...d.data(), 
+            id: d.id, 
+            _deptCode: source.code, 
+            _deptLabel: source.label,
+            _entityType: source.coll.includes('staff') ? 'staff' : source.coll.split('_')[1].slice(0, -1)
+          }));
+          all.push(...docs);
+        } catch (err) {
+          console.error(`[HQ Cashier] Failed to fetch entities for ${source.coll}:`, err);
+        }
+      }
+
+      setAllEntities(all);
+      setCached(cacheKey, all, 300); // 5 mins
+    } catch (err) {
+      console.error('[HQ Cashier] Universal Search Load Error:', err);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    void loadAllEntities();
+  }, [loadAllEntities]);
+
 
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -1070,7 +1119,7 @@ export default function CashierStationPage() {
                        setDepartmentCode(p._deptCode || 'rehab');
                        setSearchQuery('');
                        setSearchOpen(false);
-                       setShowProfileModal(true); // Open statement immediately on selection
+                       setShowProfileModal(true);
                     }}
                     className="group p-6 bg-zinc-50 border border-transparent rounded-[2rem] hover:border-indigo-500 hover:bg-white hover:shadow-2xl transition-all flex items-center justify-between text-left"
                   >
