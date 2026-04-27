@@ -744,11 +744,11 @@ service cloud.firestore {
     } 
 
     function isHqSuperOrManager() { 
-      return isHqAuth() && hqRole() in ['superadmin', 'manager']; 
+      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager'); 
     } 
 
     function isHqTier1() { 
-      return isHqAuth() && hqRole() in ['superadmin', 'manager', 'cashier']; 
+      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager' || hqRole() == 'cashier'); 
     } 
 
     // ═══════════════════════════════════════════════════════════ 
@@ -884,7 +884,7 @@ service cloud.firestore {
     // Nobody edits or deletes.
     match /hq_reconciliation/{docId} {
       allow read: if isHqSuperOrManager()
-        || (isHqCashier() && string(resource.data.get('cashierId', '')).upper() == string(hqCustomId()).upper());
+        || (isHqCashier() && resource.data.cashierId == hqCustomId());
       allow create: if isHqCashier() || isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if false;

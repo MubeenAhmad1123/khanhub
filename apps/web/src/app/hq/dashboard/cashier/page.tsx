@@ -79,8 +79,9 @@ export default function CashierStationPage() {
   const [entityResults, setEntityResults] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [allEntities, setAllEntities] = useState<any[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
+  const [selectedEntityType, setSelectedEntityType] = useState<string>('');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [searchType, setSearchType] = useState<'patient' | 'student' | 'staff' | 'other'>('patient');
 
@@ -307,19 +308,22 @@ export default function CashierStationPage() {
   }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
 
 
-  const fetchEntityHistory = useCallback(async (entity: any) => {
+  const fetchEntityHistory = useCallback(async (entity: any, deptOverride?: string) => {
     if (!entity?.id) return;
     try {
       setEntityHistoryLoading(true);
       
-      let list: any[] = [];
-      const col = collection(db, activeDepartment.txCollection);
+      const targetDeptCode = deptOverride || entity._deptCode || departmentCode;
+      const dept = DEPARTMENTS.find(d => d.code === targetDeptCode) || activeDepartment;
+      const col = collection(db, dept.txCollection);
 
-      if (activeDepartment.code === 'spims' && !isStaffMode) {
-        // Option A: Fetch both studentId and patientId for SPIMS to ensure no legacy/new data is missed
+      let list: any[] = [];
+      const staffMode = entity._entityType === 'staff' || (targetDeptCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary');
+
+      if (targetDeptCode === 'spims' && !staffMode) {
         const [snap1, snap2] = await Promise.all([
-          getDocs(query(col, where('studentId', '==', entity.id), limit(50))),
-          getDocs(query(col, where('patientId', '==', entity.id), limit(50)))
+          getDocs(query(col, where('studentId', '==', entity.id), limit(100))),
+          getDocs(query(col, where('patientId', '==', entity.id), limit(100)))
         ]);
         
         const map = new Map();
@@ -327,29 +331,29 @@ export default function CashierStationPage() {
         snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
         list = Array.from(map.values());
       } else {
+        const idField = staffMode ? 'staffId' : (targetDeptCode === 'welfare' ? 'donorId' : 'patientId');
         const q = query(
           col,
-          where(isStaffMode ? 'staffId' : (activeDepartment.code === 'welfare' ? 'donorId' : 'patientId'), '==', entity.id),
-          limit(50)
+          where(idField, '==', entity.id),
+          limit(100)
         );
         const snap = await getDocs(q);
         list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
 
-      // Client-side sort by createdAt desc
       list.sort((a: any, b: any) => {
-        const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
-        const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
+        const tA = toDate(a.transactionDate || a.date || a.createdAt).getTime();
+        const tB = toDate(b.transactionDate || b.date || b.createdAt).getTime();
         return tB - tA;
       });
       
-      setEntityHistory(list.slice(0, 50));
+      setEntityHistory(list);
     } catch (err) {
       console.error('[HQ Cashier] fetchEntityHistory Error:', err);
     } finally {
       setEntityHistoryLoading(false);
     }
-  }, [activeDepartment, isStaffMode]);
+  }, [activeDepartment, departmentCode, txnType, selectedCategoryId]);
 
   useEffect(() => {
     if (selectedEntity) {
@@ -613,43 +617,66 @@ export default function CashierStationPage() {
   }
 
   useEffect(() => {
-    setSelectedEntity(null);
     setEntityResults([]);
     setSearchResults([]);
     setSearchOpen(false);
     setSearchQuery('');
   }, [departmentCode]);
 
+  // Global Entity Loader: Fetch entities from ALL departments for unified search
   useEffect(() => {
-    if (!session) return;
-    
-    // CHANGE BEHAVIOR FOR HOSPITAL: Skip automatic fetching of all patients
-    if (departmentCode === 'hospital') {
-      setAllPatients([]);
-      return;
-    }
+    if (!session || sessionLoading) return;
 
-    const run = async () => {
+    const loadAllEntities = async () => {
       try {
-        const entityCollection = isStaffMode ? 'rehab_staff' : activeDepartment.entityCollection;
-        const cacheKey = `cashier_entities_${entityCollection}`;
+        const cacheKey = 'cashier_all_global_entities';
         const cached = getCached<any[]>(cacheKey);
-        
         if (cached) {
-          setAllPatients(cached);
+          setAllEntities(cached);
           return;
         }
 
-        const snap = await getDocs(query(collection(db, entityCollection), limit(1000))); // Cap at 1000 for safety
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setAllPatients(data);
-        setCached(cacheKey, data, 300); // 5 minute cache
-      } catch {
-        setAllPatients([]);
+        const fetchPromises = DEPARTMENTS.map(async (dept) => {
+          try {
+            const snap = await getDocs(query(collection(db, dept.entityCollection), limit(500)));
+            return snap.docs.map(d => ({ 
+              id: d.id, 
+              ...d.data(), 
+              _deptCode: dept.code, 
+              _deptLabel: dept.label,
+              _entityType: dept.entityCollection.split('_')[1] // 'patients', 'students', etc.
+            }));
+          } catch (err) {
+            console.warn(`[HQ Cashier] Failed to fetch entities for ${dept.code}:`, err);
+            return [];
+          }
+        });
+
+        // Also fetch staff
+        const staffPromise = (async () => {
+          try {
+            const snap = await getDocs(query(collection(db, 'rehab_staff'), limit(500)));
+            return snap.docs.map(d => ({ 
+              id: d.id, 
+              ...d.data(), 
+              _deptCode: 'hq', 
+              _deptLabel: 'HQ Staff',
+              _entityType: 'staff'
+            }));
+          } catch { return []; }
+        })();
+
+        const results = await Promise.all([...fetchPromises, staffPromise]);
+        const flat = results.flat();
+        setAllEntities(flat);
+        setCached(cacheKey, flat, 300); // 5 min cache
+      } catch (err) {
+        console.error('[HQ Cashier] Global fetch error:', err);
       }
     };
-    void run();
-  }, [session, departmentCode, isStaffMode, activeDepartment.entityCollection]);
+
+    void loadAllEntities();
+  }, [session, sessionLoading]);
 
 
   useEffect(() => {
@@ -688,13 +715,13 @@ export default function CashierStationPage() {
       setSearchOpen(false);
       return;
     }
-    const matches = allPatients.filter((p) =>
+    const matches = allEntities.filter((p) =>
       (p.name || p.fullName || '').toLowerCase().includes(q) ||
       (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id || '').toLowerCase().includes(q)
     );
-    setSearchResults(matches.slice(0, 10));
+    setSearchResults(matches.slice(0, 15));
     setSearchOpen(true);
-  }, [searchQuery, allPatients]);
+  }, [searchQuery, allEntities]);
 
 
 
@@ -975,38 +1002,96 @@ export default function CashierStationPage() {
             <div className="w-16 h-16 md:w-20 md:h-20 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-600/20">
               <Terminal size={32} />
             </div>
-            <div>
-              <h1 className="text-3xl md:text-5xl lg:text-7xl font-[1000] text-zinc-900 uppercase tracking-tighter leading-none">
-                Cash <span className="text-indigo-600">Station</span>
-              </h1>
-              <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.3em] mt-2 md:mt-3 ml-1">HQ Centralized Financial Terminal</p>
-            </div>
-          </div>
+        </div>
+      </div>
+
+      {/* NEW: UNIVERSAL SEARCH - PRIMARY ENTRY POINT */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-12 mt-8 md:mt-12">
+        <div className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-14 border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 rounded-full -mr-48 -mt-48 blur-3xl group-hover:scale-125 transition-transform duration-1000" />
           
-          <div className="flex items-center gap-3">
-            {[
-              { href: "/hq/dashboard/cashier/history", icon: History, label: "History" },
-              { href: "/hq/dashboard/cashier/daily-report", icon: LayoutDashboard, label: "Daily Sheet" },
-              { href: "/hq/dashboard/cashier/reconciliation", icon: ShieldCheck, label: "Audit" }
-            ].map(link => (
-              <Link 
-                key={link.label}
-                href={link.href}
-                className="flex items-center gap-2 px-6 py-4 bg-white hover:bg-indigo-600 hover:text-white rounded-2xl border border-zinc-100 text-[10px] font-black uppercase tracking-widest text-zinc-900 transition-all active:scale-95 shadow-xl shadow-zinc-200/50"
-              >
-                <link.icon size={16} />
-                <span className="hidden lg:inline">{link.label}</span>
-              </Link>
-            ))}
-            <Link 
-              href="/hq/dashboard/cashier/day-close"
-              className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-2xl shadow-indigo-600/20"
-            >
-              <Lock size={16} />
-              <span className="hidden lg:inline">Terminal Lock</span>
-            </Link>
+          <div className="relative z-10 space-y-10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 md:w-16 md:h-16 bg-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl shadow-indigo-600/30">
+                  <Search size={28} />
+                </div>
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Locate records across all dimensions</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 p-2 bg-zinc-100 rounded-[1.5rem]">
+                {(['patient', 'student', 'staff', 'other'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setSearchType(t)}
+                    className={cn(
+                      "px-6 md:px-8 py-3 md:py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all",
+                      searchType === t ? "bg-white text-indigo-600 shadow-xl" : "text-zinc-400 hover:text-zinc-600"
+                    )}
+                  >
+                    {t}s
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-8 md:pl-10 flex items-center pointer-events-none">
+                <User size={24} className="text-indigo-400" />
+              </div>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
+                className="w-full h-20 md:h-24 bg-zinc-50 border-2 border-transparent rounded-[2rem] md:rounded-[2.5rem] pl-20 md:pl-24 pr-10 text-lg md:text-xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-300"
+              />
+            </div>
+
+            {searchOpen && searchResults.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500">
+                {searchResults.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                       setSelectedEntity(p);
+                       setSelectedEntityType(p._entityType || 'unknown');
+                       setDepartmentCode(p._deptCode || 'rehab');
+                       setSearchQuery('');
+                       setSearchOpen(false);
+                       setShowProfileModal(true); // Open statement immediately on selection
+                    }}
+                    className="group p-6 bg-zinc-50 border border-transparent rounded-[2rem] hover:border-indigo-500 hover:bg-white hover:shadow-2xl transition-all flex items-center justify-between text-left"
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-zinc-300 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[150px]">{p.name || p.fullName || 'Unknown'}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[8px] font-black uppercase tracking-widest">{p._deptLabel || 'HQ'}</span>
+                          <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">ID: {p.patientId || p.studentId || p.customId || p.id.slice(0, 8)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-200 transition-all">
+                        <FileText size={18} />
+                      </div>
+                      <ChevronRight size={18} className="text-zinc-200 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      <div className="max-w-[1600px] mx-auto px-4 md:px-12">
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
         <div className="lg:col-span-4 space-y-8 md:space-y-12 min-w-0 order-2 lg:order-1">
@@ -1105,95 +1190,7 @@ export default function CashierStationPage() {
             </div>
           </div>
 
-          {/* Prominent Search Section */}
-          <div className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-14 border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 rounded-full -mr-48 -mt-48 blur-3xl group-hover:scale-125 transition-transform duration-1000" />
-            
-            <div className="relative z-10 space-y-10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div className="flex items-center gap-6">
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl shadow-indigo-600/30">
-                    <Search size={28} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Locate records across all dimensions</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2 p-2 bg-zinc-100 rounded-[1.5rem]">
-                  {(['patient', 'student', 'staff', 'other'] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSearchType(t)}
-                      className={cn(
-                        "px-6 md:px-8 py-3 md:py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all",
-                        searchType === t ? "bg-white text-indigo-600 shadow-xl" : "text-zinc-400 hover:text-zinc-600"
-                      )}
-                    >
-                      {t}s
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-8 md:pl-10 flex items-center pointer-events-none">
-                  <User size={24} className="text-indigo-400" />
-                </div>
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
-                  className="w-full h-20 md:h-24 bg-zinc-50 border-2 border-transparent rounded-[2rem] md:rounded-[2.5rem] pl-20 md:pl-24 pr-10 text-lg md:text-xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-300"
-                />
-              </div>
-
-              {searchOpen && searchResults.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-4 duration-500">
-                  {searchResults.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={async () => {
-                         if (isStaffMode) {
-                            const prefix = departmentCode.replace('-', '_');
-                            const finesSnap = await getDocs(query(
-                              collection(db, `${prefix}_fines`),
-                              where('staffId', '==', p.id),
-                              where('status', '==', 'unpaid')
-                            ));
-                            const totalFines = finesSnap.docs.reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0);
-                            const baseSalary = Number(p.monthlySalary || p.salary || 0);
-                            const daysPresent = Number(p.presentDays || 0);
-                            const perDay = baseSalary / 30;
-                            const calculatedSalary = Math.round(perDay * daysPresent);
-                            const net = Math.max(0, calculatedSalary - totalFines);
-                            setSelectedEntity({ ...p, totalFines, calculatedSalary, daysPresent });
-                            setAmount(String(net));
-                         } else {
-                            setSelectedEntity(p);
-                         }
-                         setSearchQuery('');
-                         setSearchOpen(false);
-                      }}
-                      className="group p-6 md:p-8 bg-white border border-zinc-100 rounded-[2rem] hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-100 transition-all flex items-center justify-between text-left relative overflow-hidden"
-                    >
-                      <div className="flex items-center gap-6 relative z-10">
-                        <div className="w-14 h-14 md:w-16 md:h-16 bg-zinc-50 rounded-[1.2rem] flex items-center justify-center text-zinc-300 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
-                          <User size={24} />
-                        </div>
-                        <div>
-                          <h4 className="text-base md:text-lg font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[200px]">{p.name || p.fullName || 'Unknown'}</h4>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">ID: {p.patientId || p.studentId || p.employeeId || p.rollNo || p.id.slice(0, 8)}</p>
-                        </div>
-                      </div>
-                      <ChevronRight size={20} className="text-zinc-200 group-hover:text-indigo-600 group-hover:translate-x-2 transition-all relative z-10" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* The old search section was here, it's now at the top */}
         </div>
 
         <div className="lg:col-span-8 min-w-0 space-y-8 md:space-y-12 order-1 lg:order-2">
@@ -1964,6 +1961,7 @@ export default function CashierStationPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   </div>
 );
