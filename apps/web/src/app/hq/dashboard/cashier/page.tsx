@@ -1617,6 +1617,7 @@ export default function CashierStationPage() {
               </button>
             </form>
           </div>
+          </div>
         </div>
       </div>
 
@@ -1951,6 +1952,8 @@ export default function CashierStationPage() {
               </tbody>
             </table>
         </div>
+        </div>
+      </div>
       </div>
       {forwardModalTx && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">

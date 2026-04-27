@@ -165,7 +165,6 @@ export default function CashierHistoryPage() {
 
   if (loading && transactions.length === 0) {
     return (
-    return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />

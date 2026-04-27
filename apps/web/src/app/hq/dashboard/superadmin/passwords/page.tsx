@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { resetPortalUserPassword } from '@/app/hq/actions/resetPortalUserPassword';
 import { logoutPortalUser } from '@/app/hq/actions/logoutPortalUser';
 import { LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type CredentialUser = {
   id: string;

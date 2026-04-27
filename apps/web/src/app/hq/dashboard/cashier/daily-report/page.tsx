@@ -784,6 +784,7 @@ export default function DailyReportPage() {
                   <div className="text-center py-20 text-slate-400 font-medium">
                     No transactions found for this date.
                   </div>
+                )}
               </div>
             </div>
           </div>

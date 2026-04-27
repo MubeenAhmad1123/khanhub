@@ -18,6 +18,7 @@ import {
   CheckCircle, Edit2, Key, LogOut, AlertTriangle,
   Clock, ShieldCheck, Save, X, Info
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function HqProfilePage() {
   const router = useRouter();
