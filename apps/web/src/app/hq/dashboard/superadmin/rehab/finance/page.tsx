@@ -42,23 +42,31 @@ export default function HqRehabFinancePage() {
     try {
       const colRef = collection(db, 'rehab_transactions');
       
-      // 1. Get Summary Stats via Aggregates
-      const [revSum, expSum, pendSum] = await Promise.all([
-        getAggregateFromServer(query(colRef, where('status', '==', 'approved'), where('type', '==', 'income')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) })),
-        getAggregateFromServer(query(colRef, where('status', '==', 'approved'), where('type', '==', 'expense')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) })),
-        getAggregateFromServer(query(colRef, where('status', '==', 'pending')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) }))
-      ]);
+      // 1. Get Summary Stats (Cached for 15 mins to avoid 429s)
+      const summaryCacheKey = 'rehab_finance_summary_agg';
+      let summaryData = getCached<any>(summaryCacheKey);
 
-      const revenue = (revSum as any).data().total || 0;
-      const expenses = (expSum as any).data().total || 0;
-      const pending = (pendSum as any).data().total || 0;
+      if (!summaryData) {
+        const [revSum, expSum, pendSum] = await Promise.all([
+          getAggregateFromServer(query(colRef, where('status', '==', 'approved'), where('type', '==', 'income')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) })),
+          getAggregateFromServer(query(colRef, where('status', '==', 'approved'), where('type', '==', 'expense')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) })),
+          getAggregateFromServer(query(colRef, where('status', '==', 'pending')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) }))
+        ]);
 
-      setSummary({
-        totalRevenue: revenue,
-        totalExpenses: expenses,
-        netBalance: revenue - expenses,
-        pendingAmount: pending
-      });
+        const revenue = (revSum as any).data().total || 0;
+        const expenses = (expSum as any).data().total || 0;
+        const pending = (pendSum as any).data().total || 0;
+
+        summaryData = {
+          totalRevenue: revenue,
+          totalExpenses: expenses,
+          netBalance: revenue - expenses,
+          pendingAmount: pending
+        };
+        setCached(summaryCacheKey, summaryData, 900); // 15 mins
+      }
+
+      setSummary(summaryData);
 
       // 2. Get Recent Transactions (Limited & Cached)
       const cacheKey = 'rehab_finance_txs_recent';

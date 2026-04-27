@@ -149,8 +149,8 @@ const DEPT_CONFIG: Record<
   },
 };
 
-const COUNT_CACHE_TTL = 60; // 1 minute for counts
-const LIST_CACHE_TTL = 180; // 3 minutes for lists
+const COUNT_CACHE_TTL = 300; // 5 minutes for counts
+const LIST_CACHE_TTL = 600; // 10 minutes for lists
 
 export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
   const cacheKey = 'hq_today_client_counts';
@@ -165,12 +165,13 @@ export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
     depts.map(async (dept) => {
       const cfg = DEPT_CONFIG[dept];
       let count = 0;
+      // Use getDocs instead of getCountFromServer to save aggregation quota on Spark plan
       for (const col of cfg.collections) {
         try {
-          const res = await getCountFromServer(
-            query(collection(db, col), where('createdAt', '>=', from), where('createdAt', '<=', to))
+          const snap = await getDocs(
+            query(collection(db, col), where('createdAt', '>=', from), where('createdAt', '<=', to), limit(100))
           );
-          count = res.data().count;
+          count = snap.size;
           break;
         } catch { }
       }

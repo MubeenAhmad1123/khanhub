@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getCached, setCached } from '@/lib/queryCache';
+import { pktStartOfToday, pktEndOfToday } from '@/lib/utils';
 
 export type OverviewStats = {
   rehabPatientsTotal: number;
@@ -25,31 +26,16 @@ export type OverviewStats = {
   pendingReconciliations: number;
 };
 
-const CACHE_TTL = 120; // 2 minutes for dashboard stats
+const CACHE_TTL = 600; // 10 minutes for dashboard stats
 
-function pktDayKey(d: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Karachi',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
-}
-
-function pktStartOfToday(): Date {
-  const now = new Date();
-  const pktStr = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Karachi',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
-  return new Date(`${pktStr}T00:00:00+05:00`);
-}
-
-function pktEndOfToday(): Date {
-  const start = pktStartOfToday();
-  return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+async function getCountByDocs(q: any, max = 100): Promise<number> {
+  try {
+    const snap = await getDocs(query(q, limit(max)));
+    return snap.size;
+  } catch (err) {
+    console.error('[Stats] getCountByDocs error:', err);
+    return 0;
+  }
 }
 
 export async function fetchOverviewStats(): Promise<OverviewStats> {
@@ -59,6 +45,8 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
 
   const PENDING_LIST = ['pending', 'pending_cashier'];
 
+  // We use getCountFromServer only for TOTALS (which could be large)
+  // and getDocs.size for PENDING/TODAY (which should be small/manageable)
   const [
     rehabPatientsTotal,
     spimsStudentsTotal,
@@ -71,10 +59,10 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     getCountFromServer(collection(db, 'rehab_patients')).then((r) => r.data().count).catch(() => 0),
     getCountFromServer(collection(db, 'spims_students')).then((r) => r.data().count).catch(() => 0),
     getCountFromServer(collection(db, 'job_center_seekers')).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'rehab_transactions'), where('status', 'in', PENDING_LIST))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_transactions'), where('status', 'in', PENDING_LIST))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_transactions'), where('status', 'in', PENDING_LIST))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then((r) => r.data().count).catch(() => 0),
+    getCountByDocs(query(collection(db, 'rehab_transactions'), where('status', 'in', PENDING_LIST))),
+    getCountByDocs(query(collection(db, 'spims_transactions'), where('status', 'in', PENDING_LIST))),
+    getCountByDocs(query(collection(db, 'job_center_transactions'), where('status', 'in', PENDING_LIST))),
+    getCountByDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))),
   ]);
 
   const txToday = await fetchTodayTxAmount();
@@ -84,7 +72,7 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     rehabPatientsTotal,
     spimsStudentsTotal,
     jobSeekersTotal,
-    rehabPatientsToday: rehabPatientsTotal,
+    rehabPatientsToday: rehabPatientsTotal, // Placeholder or simple proxy
     spimsStudentsToday: spimsStudentsTotal,
     pendingApprovals: pendingRehab + pendingSpims + pendingJob,
     txAmountToday: txToday,
@@ -101,16 +89,14 @@ export async function fetchTodayTxAmount(): Promise<number> {
   const cached = getCached<number>(cacheKey);
   if (cached !== undefined && cached !== null) return cached;
 
-
-  const todayKey = pktDayKey(new Date());
   const startOfToday = pktStartOfToday();
   const endOfToday = pktEndOfToday();
 
   const [rehabSnap, spimsSnap, jobSnap, hqSnap] = await Promise.all([
-    getDocs(query(collection(db, 'rehab_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'spims_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'job_center_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'cashierTransactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(500))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'rehab_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(300))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'spims_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(300))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'job_center_transactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(300))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'cashierTransactions'), where('createdAt', '>=', Timestamp.fromDate(startOfToday)), where('createdAt', '<=', Timestamp.fromDate(endOfToday)), limit(300))).catch(() => ({ docs: [] })),
   ]);
 
   const sumSnap = (docs: any[]) =>
@@ -120,7 +106,7 @@ export async function fetchTodayTxAmount(): Promise<number> {
       return acc + (Number(data.amount) || 0);
     }, 0);
 
-  const total = sumSnap(rehabSnap.docs) + sumSnap(spimsSnap.docs) + sumSnap(jobSnap.docs) + sumSnap(hqSnap.docs);
+  const total = sumSnap((rehabSnap as any).docs) + sumSnap((spimsSnap as any).docs) + sumSnap((jobSnap as any).docs) + sumSnap((hqSnap as any).docs);
   setCached(cacheKey, total, CACHE_TTL);
   return total;
 }
@@ -130,15 +116,15 @@ export async function fetchActiveStaffCount(): Promise<number> {
   const cached = getCached<number>(cacheKey);
   if (cached !== undefined && cached !== null) return cached;
 
-
+  // Use getDocs for staff as the count is usually small (<500)
   const [hq, rehab, spims, job] = await Promise.all([
-    getCountFromServer(query(collection(db, 'hq_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'rehab_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
+    getCountByDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true)), 500),
+    getCountByDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)), 500),
+    getCountByDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)), 500),
+    getCountByDocs(query(collection(db, 'job_center_staff'), where('isActive', '==', true)), 500),
   ]);
   const total = hq + rehab + spims + job;
-  setCached(cacheKey, total, 300); // Staff count can be cached longer (5 mins)
+  setCached(cacheKey, total, 1800); // 30 minutes for staff
   return total;
 }
 

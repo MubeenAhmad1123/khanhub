@@ -58,9 +58,9 @@ export default function ITAdminDashboardPage() {
       const studentsSnap = await getDocs(recentStudentsQuery);
       setRecentStudents(studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // 2. Count Students
-      const totalStudentsSnap = await getCountFromServer(query(collection(db, 'it_students'), where('status', '==', 'active')));
-      setTotalStudents(totalStudentsSnap.data().count);
+      // 2. Count Students by fetching limited slice
+      const totalStudentsSnap = await getDocs(query(collection(db, 'it_students'), where('status', '==', 'active'), limit(100)));
+      setTotalStudents(totalStudentsSnap.size);
 
       // 3. Fetch Clients (Recent 5)
       const recentClientsQuery = query(
@@ -71,9 +71,9 @@ export default function ITAdminDashboardPage() {
       const clientsSnap = await getDocs(recentClientsQuery);
       setRecentClients(clientsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // 4. Count Clients
-      const totalClientsSnap = await getCountFromServer(query(collection(db, 'it_clients'), where('status', '==', 'active')));
-      setTotalClients(totalClientsSnap.data().count);
+      // 4. Count Clients by fetching limited slice
+      const totalClientsSnap = await getDocs(query(collection(db, 'it_clients'), where('status', '==', 'active'), limit(100)));
+      setTotalClients(totalClientsSnap.size);
 
     } catch (error) {
       console.error('IT Dashboard load error:', error);
@@ -91,7 +91,7 @@ export default function ITAdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-10 pb-20 w-full animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="min-h-screen bg-[#FCFBF8] p-4 md:p-10 space-y-10 pb-20 w-full animate-in fade-in slide-in-from-bottom-4 duration-1000">
 
       {/* Greeting Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-black/5 pb-10">

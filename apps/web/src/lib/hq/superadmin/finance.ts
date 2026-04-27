@@ -137,6 +137,16 @@ export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'h
   return loadRecentTx(dept, days, ['approved']);
 }
 
+async function getCountByDocs(q: any, max = 100): Promise<number> {
+  try {
+    const snap = await getDocs(query(q, limit(max)));
+    return snap.size;
+  } catch (err) {
+    console.error('[Finance] getCountByDocs error:', err);
+    return 0;
+  }
+}
+
 /**
  * Fetches data specifically tailored for the Finance Hub visualization.
  */
@@ -168,10 +178,12 @@ export async function fetchFinanceHubData() {
     else if (d.id === 'hospital') col = 'hospital_transactions';
     else col = 'cashierTransactions';
 
-    const [pendingCountSnap, pendingSumSnap] = await Promise.all([
-      getCountFromServer(query(collection(db, col), where('status', '==', 'pending'))).catch(() => ({ data: () => ({ count: 0 }) })),
-      getAggregateFromServer(query(collection(db, col), where('status', '==', 'pending')), { total: sum('amount') }).catch(() => ({ data: () => ({ total: 0 }) }))
-    ]);
+    // Use getCountByDocs to save aggregation quota
+    const pendingCount = await getCountByDocs(query(collection(db, col), where('status', '==', 'pending')), 100);
+    
+    // For pending sum, we fetch the actual docs and sum them locally (limited to 100)
+    const pendingSnap = await getDocs(query(collection(db, col), where('status', '==', 'pending'), limit(100))).catch(() => ({ docs: [] }));
+    const pendingAmount = pendingSnap.docs.reduce((s, d) => s + (Number(d.data().amount) || 0), 0);
     
     const income = todayTxs.reduce((acc, t) => (t.type !== 'expense' ? acc + (Number(t.amount) || 0) : acc), 0);
     const expense = todayTxs.reduce((acc, t) => (t.type === 'expense' ? acc + (Number(t.amount) || 0) : acc), 0);
@@ -189,42 +201,21 @@ export async function fetchFinanceHubData() {
       deptName: d.name,
       totalIncome: income,
       totalExpense: expense,
-      pendingCount: (pendingCountSnap as any).data().count,
-      pendingAmount: (pendingSumSnap as any).data().total,
+      pendingCount,
+      pendingAmount,
       ways,
       percentOfTotal: 0
     };
   }));
 
   const grandTotal = results.reduce((acc, r) => acc + r.totalIncome, 0);
-  
   const finalData = results.map(r => ({
     ...r,
     percentOfTotal: grandTotal > 0 ? (r.totalIncome / grandTotal) * 100 : 0
   }));
 
-  setCached(cacheKey, finalData, 60);
+  setCached(cacheKey, finalData, 300); // 5 mins
   return finalData;
-}
-
-
-/**
- * Approves a transaction across any department collection.
- */
-export async function approveTransaction(deptId: string, txId: string) {
-  let col = '';
-  if (deptId === 'rehab') col = 'rehab_transactions';
-  else if (deptId === 'spims') col = 'spims_transactions';
-  else if (deptId === 'job-center') col = 'job_center_transactions';
-  else if (deptId === 'hospital') col = 'hospital_transactions';
-  else col = 'cashierTransactions';
-
-  const txRef = doc(db, col, txId);
-  await updateDoc(txRef, {
-    status: 'approved',
-    approvedAt: Timestamp.now(),
-  });
-  return true;
 }
 
 export async function fetchFinanceSummary(): Promise<FinanceSummary> {
@@ -268,12 +259,13 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   const pendingCountToday = pendingTodayTx.length;
 
   const [rehabPending, spimsPending, jcPending, hosPending, hqPending, recPending, rehabSum, spimsSum, jcSum, hospitalSum] = await Promise.all([
-    getCountFromServer(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then(s => s.data().count).catch(() => 0),
+    getCountByDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))),
+    // Use getAggregateFromServer for these only once every 15 mins
     getAggregateFromServer(collection(db, 'rehab_patients'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
     getAggregateFromServer(collection(db, 'spims_students'), { t: sum('totalCourseFee') }).then(s => s.data().t).catch(() => 0),
     getAggregateFromServer(collection(db, 'job_center_seekers'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
@@ -292,7 +284,7 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
     collectedDailyTrend,
     collectedMonthlyTrend: 0,
   };
-  setCached(cacheKey, result, 60);
+  setCached(cacheKey, result, 900); // 15 mins for heavy summary
   return result;
 }
 
@@ -651,4 +643,25 @@ export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDa
     start,
     end
   };
+}
+
+/**
+ * Approves a transaction across any department.
+ */
+export async function approveTransaction(deptId: string, txId: string) {
+  let col = '';
+  if (deptId === 'rehab') col = 'rehab_transactions';
+  else if (deptId === 'spims') col = 'spims_transactions';
+  else if (deptId === 'job-center') col = 'job_center_transactions';
+  else col = 'cashierTransactions';
+
+  const docRef = doc(db, col, txId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) throw new Error('Transaction not found');
+
+  await updateDoc(docRef, {
+    status: 'approved',
+    approvedAt: Timestamp.now(),
+    updatedAt: Timestamp.now()
+  });
 }

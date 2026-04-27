@@ -148,3 +148,22 @@ export function debounce<T extends (...args: any[]) => any>(fn: T, delay: number
     timer = setTimeout(() => fn(...args), delay);
   }) as T;
 }
+
+// ─── PKT Date Helpers ─────────────────────────────────────
+// Handles Pakistan Standard Time (UTC+5)
+
+export function pktStartOfToday(): Date {
+  const now = new Date();
+  // Get time in PKT (UTC+5)
+  const pktTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
+  pktTime.setUTCHours(0, 0, 0, 0);
+  // Convert back to local/UTC for Firestore comparison (subtract the 5h shift)
+  return new Date(pktTime.getTime() - (5 * 60 * 60 * 1000));
+}
+
+export function pktEndOfToday(): Date {
+  const now = new Date();
+  const pktTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
+  pktTime.setUTCHours(23, 59, 59, 999);
+  return new Date(pktTime.getTime() - (5 * 60 * 60 * 1000));
+}

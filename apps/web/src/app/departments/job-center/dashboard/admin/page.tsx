@@ -59,9 +59,9 @@ export default function AdminDashboardPage() {
       const seekersSnap = await getDocs(recentSeekersQuery);
       setRecentSeekers(seekersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // 2. Optimized Count for Seekers (1 Read Cost)
-      const totalSeekersSnap = await getCountFromServer(query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true)));
-      setTotalSeekers(totalSeekersSnap.data().count);
+      // 2. Count Seekers by fetching limited slice (Save aggregation quota)
+      const totalSeekersSnap = await getDocs(query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true), limit(100)));
+      setTotalSeekers(totalSeekersSnap.size);
 
       // 3. Fetch Employers (Recent 5)
       const recentEmployersQuery = query(
@@ -73,9 +73,9 @@ export default function AdminDashboardPage() {
       const employersSnap = await getDocs(recentEmployersQuery);
       setRecentEmployers(employersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // 4. Optimized Count for Employers (1 Read Cost)
-      const totalEmployersSnap = await getCountFromServer(query(collection(db, 'jobcenter_employers'), where('isActive', '==', true)));
-      setTotalEmployers(totalEmployersSnap.data().count);
+      // 4. Count Employers by fetching limited slice (Save aggregation quota)
+      const totalEmployersSnap = await getDocs(query(collection(db, 'jobcenter_employers'), where('isActive', '==', true), limit(100)));
+      setTotalEmployers(totalEmployersSnap.size);
 
     } catch (error) {
       console.error('Dashboard load error:', error);
