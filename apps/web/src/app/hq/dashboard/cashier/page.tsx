@@ -1889,15 +1889,11 @@ export default function CashierStationPage() {
           ))}
         </div>
 
-        <div className="hidden md:block bg-white dark:bg-[#0A0A0A]/40 border border-black/5 dark:border-white/5 rounded-[3.5rem] overflow-hidden shadow-2xl backdrop-blur-xl mb-24">
+        <div className="hidden md:block bg-white rounded-[3.5rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden mb-24">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-left border-separate border-spacing-0">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-black dark:bg-white">
-        <div className="hidden md:block bg-white rounded-[3.5rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-zinc-50 border-b border-zinc-100 h-24">
+                <tr className="bg-zinc-50 border-b border-zinc-100 h-24">
                 <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Time-Stamp</th>
                 <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Identity Nodes</th>
                 <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Class</th>

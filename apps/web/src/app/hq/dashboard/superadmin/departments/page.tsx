@@ -99,7 +99,6 @@ export default function SuperadminDepartmentsPage() {
           ))}
         </div>
 
-        </div>
       </div>
     </div>
   );
