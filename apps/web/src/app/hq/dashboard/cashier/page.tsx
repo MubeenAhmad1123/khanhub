@@ -271,7 +271,7 @@ export default function CashierStationPage() {
           all.push(...docs);
 
           // Calculate stats from the fetched slice (compromise for quota)
-          docs.forEach(tx => {
+          docs.forEach((tx: any) => {
             const amt = Number(tx.amount) || 0;
             if (tx.type === 'income') totalIncome += amt;
             else if (tx.type === 'expense') totalExpense += amt;
@@ -386,6 +386,25 @@ export default function CashierStationPage() {
     }
   };
 
+  // ─── 4. Hooks & Effects (Ordered by Dependency) ───────────────────────────
+
+  async function loadCustomCategories() {
+    const cacheKey = 'hq_cashier_categories_list';
+    const cached = getCached<any[]>(cacheKey);
+    if (cached) {
+      setCustomCategories(cached);
+      return;
+    }
+    try {
+      const snap = await getDocs(collection(db, 'hq_cashier_categories'));
+      const list = snap.docs.map((d) => ({ id: d.data().slug || d.id, name: d.data().name || 'Custom', appliesTo: d.data().appliesTo || 'both' }));
+      setCustomCategories(list as any);
+      setCached(cacheKey, list, 600);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   useEffect(() => {
     setMounted(true);
     if (sessionLoading) return;
@@ -396,14 +415,6 @@ export default function CashierStationPage() {
     void loadCustomCategories();
     void fetchHistory();
   }, [sessionLoading, session, router, fetchHistory]);
-
-  useEffect(() => {
-    if (!session?.customId || sessionLoading) return;
-    const unsub = subscribeIncoming();
-    return () => {
-      if (typeof unsub === 'function') unsub();
-    };
-  }, [sessionLoading, session?.customId, subscribeIncoming]);
 
   const subscribeIncoming = useCallback(() => {
     if (!session?.customId) return;
@@ -470,6 +481,14 @@ export default function CashierStationPage() {
       setIncomingLoading(false);
     }
   }, [session?.customId]);
+
+  useEffect(() => {
+    if (!session?.customId || sessionLoading) return;
+    const unsub = subscribeIncoming();
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [sessionLoading, session?.customId, subscribeIncoming]);
 
   function openForwardModal(tx: any) {
     setForwardModalTx(tx);
@@ -675,23 +694,6 @@ export default function CashierStationPage() {
     setSearchOpen(true);
   }, [searchQuery, allPatients]);
 
-  async function loadCustomCategories() {
-    const cacheKey = 'hq_cashier_categories_list';
-    const cached = getCached<any[]>(cacheKey);
-    if (cached) {
-      setCustomCategories(cached);
-      return;
-    }
-
-    try {
-      const snap = await getDocs(collection(db, 'hq_cashier_categories'));
-      const list = snap.docs.map((d) => ({ id: d.data().slug || d.id, name: d.data().name || 'Custom', appliesTo: d.data().appliesTo || 'both' }));
-      setCustomCategories(list as any);
-      setCached(cacheKey, list, 600); // 10 mins
-    } catch (err) {
-      console.error(err);
-    }
-  }
 
 
   async function createCategory() {
