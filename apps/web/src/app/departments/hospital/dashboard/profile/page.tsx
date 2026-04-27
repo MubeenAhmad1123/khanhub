@@ -209,7 +209,21 @@ export default function ProfilePage() {
               >
                 <Camera size={18} />
               </button>
-              <input ref={fileRef} type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadPhoto(e.target.files[0])} />
+              <input 
+                ref={fileRef} 
+                type="file" 
+                className="hidden" 
+                accept="image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
+                  handleUploadPhoto(file);
+                }} 
+              />
             </div>
 
             <h2 className="mt-6 text-2xl font-black text-center">{profile?.displayName}</h2>

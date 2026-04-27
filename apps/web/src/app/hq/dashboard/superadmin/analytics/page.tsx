@@ -88,7 +88,7 @@ export default function SuperadminAnalyticsPage() {
 
   if (loading && !metrics) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-white dark:bg-black space-y-8">
+      <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF8] dark:bg-black space-y-8">
         <div className="relative w-24 h-24">
           <div className="absolute inset-0 border-8 border-primary/20 rounded-full"></div>
           <div className="absolute inset-0 border-8 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -102,7 +102,7 @@ export default function SuperadminAnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background dark:bg-black font-sans selection:bg-primary selection:text-white pb-20">
+    <div className="min-h-screen bg-[#FCFBF8] dark:bg-black font-sans selection:bg-primary selection:text-white pb-20">
       {/* Premium Header */}
       <header className="sticky top-0 z-50 px-8 py-8 backdrop-blur-3xl border-b border-border/20 flex flex-wrap items-center justify-between gap-6">
         <div className="relative">
@@ -165,7 +165,7 @@ export default function SuperadminAnalyticsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="group p-8 rounded-[3rem] bg-white dark:bg-black border border-border/50 hover:border-primary/40 transition-all duration-500 relative overflow-hidden"
+              className="group p-8 rounded-[2.5rem] bg-white dark:bg-black border border-gray-100 dark:border-white/10 hover:border-primary/40 transition-all duration-500 relative overflow-hidden shadow-2xl shadow-gray-200/50"
             >
               <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-20 transition-all duration-500 group-hover:rotate-12">
                 <stat.icon className="w-16 h-16" />
@@ -186,7 +186,7 @@ export default function SuperadminAnalyticsPage() {
         {/* High-Fidelity Charts Matrix */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Performance Area Chart */}
-          <div className="lg:col-span-2 p-10 rounded-[4rem] bg-white dark:bg-[#0a0a0a] border border-border/50 shadow-sm relative overflow-hidden group">
+          <div className="lg:col-span-2 p-10 rounded-[2.5rem] bg-white dark:bg-[#0a0a0a] border border-gray-100 dark:border-white/10 shadow-2xl shadow-gray-200/50 relative overflow-hidden group">
             <div className="flex items-center justify-between mb-10">
               <div>
                 <h2 className="text-2xl font-black uppercase tracking-tighter italic text-black dark:text-white mb-2">Network Velocity</h2>
@@ -245,7 +245,7 @@ export default function SuperadminAnalyticsPage() {
           </div>
 
           {/* Departmental Weight Pie Chart */}
-          <div className="p-10 rounded-[4rem] bg-white dark:bg-[#0a0a0a] border border-border/50 shadow-sm relative overflow-hidden group">
+          <div className="p-10 rounded-[2.5rem] bg-white dark:bg-[#0a0a0a] border border-gray-100 dark:border-white/10 shadow-2xl shadow-gray-200/50 relative overflow-hidden group">
             <h2 className="text-2xl font-black uppercase tracking-tighter italic text-black dark:text-white mb-2 text-center">Departmental Weight</h2>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 italic text-center mb-8">Revenue distribution by domain</p>
             
@@ -288,7 +288,7 @@ export default function SuperadminAnalyticsPage() {
         </div>
 
         {/* Dormant Capital Surveillance (Outstanding Table) */}
-        <div className="p-12 rounded-[4rem] bg-white dark:bg-[#050505] border border-border/50 shadow-2xl relative overflow-hidden">
+        <div className="p-12 rounded-[2.5rem] bg-white dark:bg-[#050505] border border-gray-100 dark:border-white/10 shadow-2xl shadow-gray-200/50 relative overflow-hidden">
           <div className="flex items-center justify-between mb-12">
             <div>
               <h2 className="text-3xl font-black uppercase tracking-tighter italic text-black dark:text-white mb-2">Liquidity Leakage Audit</h2>

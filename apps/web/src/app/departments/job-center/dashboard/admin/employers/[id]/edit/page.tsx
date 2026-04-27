@@ -274,10 +274,14 @@ export default function UniversalEditProfilePage() {
                   type="file" 
                   ref={photoInputRef} 
                   className="hidden" 
-                  accept="image/*"
+                  accept="image/webp"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+                        toast.error('Only WebP images are allowed');
+                        return;
+                      }
                       setPhotoFile(file);
                       setPhotoPreview(URL.createObjectURL(file));
                     }

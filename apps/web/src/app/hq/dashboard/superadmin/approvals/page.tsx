@@ -153,10 +153,6 @@ function DesignTokensStyle() {
         --approved: #000000;
         --rejected: #64748b;
       }
-      .dark :root {
-        --approved: #ffffff;
-        --rejected: #475569;
-      }
       @keyframes tx-approve-pop {
         0% { transform: scale(0); opacity: 0; }
         40% { transform: scale(1); opacity: 1; }
@@ -222,10 +218,10 @@ function PillGroup<T extends string>({
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`px-3 py-1.5 rounded-full text-xs font-black transition border shadow-sm ${
+          className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
             value === opt 
-              ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white' 
-              : 'bg-white dark:bg-black text-black dark:text-black border-gray-200 dark:border-white/10 hover:border-black dark:hover:border-white'
+              ? 'bg-black text-white border-black' 
+              : 'bg-white text-gray-500 border-gray-100 hover:border-black hover:text-black'
           }`}
         >
           {labelMap?.[opt] ?? opt}
@@ -478,20 +474,20 @@ function TxCard({
 
   const deptBadge =
     tx.dept === 'rehab'
-      ? 'bg-black dark:bg-white text-white dark:text-black border-transparent'
+      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
       : tx.dept === 'spims'
-        ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-transparent'
-        : 'bg-gray-200 dark:bg-white/20 text-black dark:text-black border-transparent';
+        ? 'bg-sky-50 text-sky-600 border-sky-100'
+        : 'bg-rose-50 text-rose-600 border-rose-100';
 
-  const typeColors = 'bg-gray-50 dark:bg-white/5 text-black dark:text-black border border-gray-100 dark:border-white/10';
+  const typeBadge = 'bg-gray-50 text-gray-500 border-gray-100';
 
   const st = tx.status;
   const statusUi =
     st === 'approved'
-      ? 'bg-black dark:bg-white text-white dark:text-black border-transparent'
+      ? 'bg-black text-white border-transparent'
       : st === 'rejected' || st === 'rejected_cashier'
-        ? 'bg-gray-100 dark:bg-white/10 text-black dark:text-black border-transparent'
-        : 'bg-white dark:bg-black text-black dark:text-black border-gray-100 dark:border-white/10';
+        ? 'bg-rose-50 text-rose-600 border-rose-100'
+        : 'bg-white text-gray-900 border-gray-200';
 
   const runningPaid = enrich?.totalReceived;
   const pkg = enrich?.totalPackage;
@@ -504,239 +500,201 @@ function TxCard({
 
   return (
     <div
-      className={`relative rounded-[2rem] border transition-all duration-300 overflow-hidden max-w-[680px] mx-auto w-full mb-4 ${
+      className={`relative rounded-[2.5rem] border transition-all duration-500 overflow-hidden max-w-[680px] mx-auto w-full mb-6 ${
         phase === 'success' 
-          ? 'border-emerald-500 ring-4 ring-emerald-500/10 bg-emerald-50 dark:bg-emerald-500/5' 
+          ? 'border-emerald-500 ring-8 ring-emerald-500/5 bg-emerald-50' 
           : phase === 'fail' 
-            ? 'border-rose-500 ring-4 ring-rose-500/10 bg-rose-50 dark:bg-rose-500/5' 
-            : 'border-gray-100 bg-white shadow-sm dark:border-white/10 dark:bg-black'
+            ? 'border-rose-500 ring-8 ring-rose-500/5 bg-rose-50' 
+            : 'border-gray-100 bg-white shadow-2xl shadow-gray-200/60 hover:shadow-gray-300/80 hover:-translate-y-1'
       } ${phase === 'idle' ? '' : 'tx-card-exit'}`}
     >
       {phase === 'success' ? (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40">
-          <div className="tx-approve-overlay w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex items-center justify-center shadow-xl">
-            <Check className="w-8 h-8" strokeWidth={3} />
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
+          <div className="tx-approve-overlay w-24 h-24 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40">
+            <Check className="w-12 h-12" strokeWidth={4} />
           </div>
         </div>
       ) : null}
       {phase === 'fail' ? (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40">
-          <div className="tx-approve-overlay w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 flex items-center justify-center shadow-xl">
-            <X className="w-8 h-8" strokeWidth={3} />
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
+          <div className="tx-approve-overlay w-24 h-24 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-2xl shadow-rose-500/40">
+            <X className="w-12 h-12" strokeWidth={4} />
           </div>
         </div>
       ) : null}
 
       {showSelect ? (
-        <div className="absolute left-3 top-3 z-10">
+        <div className="absolute left-6 top-8 z-10">
           <input
             type="checkbox"
             checked={checked}
             onChange={(e) => onCheckedChange(e.target.checked)}
-            className="w-5 h-5 accent-gray-900"
+            className="w-6 h-6 accent-black rounded-lg border-2 border-gray-200 cursor-pointer transition-all hover:scale-110"
             aria-label="Select transaction"
           />
         </div>
       ) : null}
 
-      <div className={`p-4 sm:p-6 ${showSelect ? 'pl-10 sm:pl-12' : ''}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className={`p-8 sm:p-10 ${showSelect ? 'pl-16 sm:pl-20' : ''}`}>
+        {/* Header: Badges & Amount */}
+        <div className="flex flex-wrap items-start justify-between gap-6 mb-10">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${deptBadge}`}>
-              {tx.dept === 'rehab' ? 'Rehab' : tx.dept === 'spims' ? 'SPIMS' : 'Job Center'}
+            <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${deptBadge}`}>
+              {tx.dept === 'rehab' ? 'Rehab Center' : tx.dept === 'spims' ? 'SPIMS Academy' : 'Job Center'}
             </span>
-            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${typeColors}`}>{typ}</span>
+            <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${typeBadge}`}>{typ}</span>
           </div>
-          <div className="text-right shrink-0">
-            <div className="text-2xl font-extrabold text-[#111827] dark:text-white">{fmtPKR(tx.amount)}</div>
-            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border mt-1 shadow-sm ${statusUi}`}>
+          <div className="text-right">
+            <div className="text-4xl font-black text-gray-900 tracking-tighter leading-none">{fmtPKR(tx.amount)}</div>
+            <span className={`inline-flex px-4 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border mt-3 shadow-sm ${statusUi}`}>
               {statusLabel(st)}
             </span>
           </div>
         </div>
 
-        <div className="mt-4 space-y-4">
-          <section className="rounded-2xl bg-[#F9FAFB] dark:bg-white/5 border border-gray-100 dark:border-white/10 p-4 space-y-2 shadow-inner">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black">Entity info</p>
-            <div className="flex gap-2 text-sm">
-              <span aria-hidden>👤</span>
-              <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">
-                  {tx.dept === 'rehab' ? 'Patient' : tx.dept === 'spims' ? 'Student' : 'Seeker'}
-                </p>
-                <p className="text-lg font-bold text-[#111827] dark:text-gray-200">{name}</p>
+        <div className="space-y-8">
+          {/* Entity Block */}
+          <section className="rounded-[2rem] bg-gray-50/50 border border-gray-100 p-8 group/entity">
+            <div className="flex items-start justify-between">
+              <div className="flex gap-6 items-center">
+                <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-xl border border-gray-50 transition-transform group-hover/entity:scale-110 group-hover/entity:rotate-2">
+                  <span className="text-2xl" aria-hidden>👤</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1 italic">Authorized Entity</p>
+                  <p className="text-2xl font-black text-gray-900 uppercase tracking-tight">{name}</p>
+                  {tx.dept === 'spims' && (enrich?.course || enrich?.session) && (
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                      {enrich?.course} • {enrich?.session}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-            {tx.dept === 'spims' && (enrich?.course || enrich?.session) ? (
-              <div className="flex gap-2 text-sm text-[#111827] dark:text-gray-100">
-                <span aria-hidden>🎓</span>
-                <div>
-                  <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Course · Session</p>
-                  <p className="text-sm font-medium text-[#4B5563] dark:text-black">
-                    {enrich?.course || '—'} · {enrich?.session || '—'}
-                  </p>
-                </div>
-              </div>
-            ) : null}
-            {tx.dept === 'rehab' ? (
-              <div className="flex gap-2 text-sm text-[#111827] dark:text-gray-100">
-                <span aria-hidden>🏥</span>
-                <div>
-                  <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Department</p>
-                  <p className="text-sm font-medium text-[#4B5563] dark:text-black">Rehab Center</p>
-                </div>
-              </div>
-            ) : tx.dept === 'job-center' ? (
-              <div className="flex gap-2 text-sm text-[#111827] dark:text-gray-100">
-                <span aria-hidden>💼</span>
-                <div>
-                  <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Department</p>
-                  <p className="text-sm font-medium text-[#4B5563] dark:text-black">Job Center</p>
-                </div>
-              </div>
-            ) : null}
-            {tx.dept === 'spims' && enrich?.rollNo ? (
-              <div className="flex gap-2 text-sm text-[#4B5563] dark:text-gray-200">
-                <span aria-hidden>📋</span>
-                <span>
-                  Roll No: <span className="font-semibold">{enrich.rollNo}</span>
-                </span>
-              </div>
-            ) : null}
+            
             {phref ? (
-              <Link href={phref} className="inline-flex items-center justify-center w-full mt-4 px-4 py-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black border border-transparent hover:scale-[1.02] text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95">
-                VERIFY ENTITY RECORD →
+              <Link href={phref} className="inline-flex items-center justify-center w-full mt-8 h-14 rounded-2xl bg-white text-gray-900 border border-gray-100 hover:border-black hover:shadow-xl hover:-translate-y-1 text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95">
+                Audit Master Profile →
               </Link>
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-[#D1D5DB] dark:border-white/10 p-4 space-y-2 bg-white dark:bg-[#111111] shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black">Payment details</p>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Amount</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{fmtPKR(tx.amount)}</p>
+          {/* Payment Detail Matrix */}
+          <section className="grid sm:grid-cols-2 gap-4">
+            <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 italic">Submission Node</p>
+              <div className="space-y-1">
+                <p className="text-sm font-black text-gray-900 uppercase">{tx.cashierName || tx.cashierId || '—'}</p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{tx.cashierRole || 'System Agent'}</p>
               </div>
-              <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Payment date</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{fmtDate(tx.createdAt || tx.date || tx.transactionDate)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Type</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{typ}</p>
-              </div>
-              {tx.description ? (
-                <div className="sm:col-span-2">
-                  <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Note</p>
-                  <p className="text-sm font-medium text-[#4B5563] dark:text-gray-200 break-words">&quot;{tx.description}&quot;</p>
-                </div>
-              ) : null}
-              {runningPaid != null && pkg != null ? (
-                <div className="sm:col-span-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                  <span>
-                    💳 Running total paid: <span className="font-semibold">{fmtPKR(runningPaid)}</span> / {fmtPKR(pkg)}
-                  </span>
-                </div>
-              ) : null}
-              {remAfter != null ? (
-                <div className="sm:col-span-2 text-sm">
-                  📊 Remaining after this: <span className="font-semibold">{fmtPKR(remAfter)}</span>
-                </div>
-              ) : null}
             </div>
-          </section>
-
-          <section className="rounded-2xl bg-[#F9FAFB] dark:bg-white/5 border border-gray-100 dark:border-white/10 p-4 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black">Submitted by</p>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Cashier</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{tx.cashierName || tx.cashierId || '—'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Cashier role</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{tx.cashierRole || '—'}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Submitted at</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{fmtTime(tx.createdAt || tx.date)}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-[10px] text-[#6B7280] dark:text-black uppercase tracking-wide">Forwarded from</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">
-                  {tx.forwardedFromLabel || tx.departmentName || (tx.dept === 'rehab' ? 'Rehab Portal' : tx.dept === 'spims' ? 'SPIMS Portal' : 'Job Center Portal')}
-                </p>
-              </div>
-              <div className="sm:col-span-2">
-                <button
-                  type="button"
-                  onClick={copyId}
-                  className="text-left text-[10px] text-black dark:text-black hover:text-black dark:text-black font-mono break-all w-full"
-                >
-                  🆔 {tx.id} {copied ? <span className="text-green-600 font-bold">Copied</span> : <Copy className="inline w-3 h-3 opacity-50" />}
-                </button>
+            <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 italic">Temporal Stamp</p>
+              <div className="space-y-1">
+                <p className="text-sm font-black text-gray-900 uppercase">{fmtDate(tx.createdAt || tx.date || tx.transactionDate)}</p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{fmtTime(tx.createdAt || tx.date)}</p>
               </div>
             </div>
           </section>
 
+          {/* Progress Ledger if applicable */}
+          {pkg != null && (
+            <section className="rounded-[2rem] bg-indigo-600 p-8 text-white shadow-2xl shadow-indigo-600/20 relative overflow-hidden group/progress">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover/progress:scale-110 transition-transform">
+                <TrendingUp size={80} />
+              </div>
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-4 italic">Ledger Synchronization</p>
+                <div className="flex justify-between items-baseline mb-3">
+                  <div className="text-3xl font-black tracking-tighter">{fmtPKR(runningPaid || 0)}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest opacity-60">of {fmtPKR(pkg)}</div>
+                </div>
+                <div className="h-2 rounded-full bg-white/20 overflow-hidden mb-4">
+                  <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, ((runningPaid || 0) / pkg) * 100)}%` }} />
+                </div>
+                {remAfter != null && (
+                  <p className="text-[10px] font-black uppercase tracking-widest">
+                    Residual Balance: <span className="text-emerald-300">{fmtPKR(remAfter)}</span>
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Note Section */}
+          {tx.description && (
+            <section className="rounded-2xl border-l-4 border-indigo-600 bg-indigo-50/50 p-6 italic">
+              <p className="text-xs font-bold text-indigo-900 leading-relaxed">&quot;{tx.description}&quot;</p>
+            </section>
+          )}
+
+          {/* Proof / Evidence */}
           <div>
             {tx.proofUrl ? (
               <button
                 type="button"
                 onClick={() => setShowProof(true)}
-                className="w-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 flex items-center gap-6 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group text-left shadow-sm"
+                className="w-full rounded-[2.5rem] bg-gray-900 p-10 flex items-center gap-8 hover:scale-[1.02] hover:shadow-2xl transition-all group text-left relative overflow-hidden"
               >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tx.proofUrl} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-transparent shadow-2xl group-hover:scale-110 transition-transform" />
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">Credential Secured ✓</div>
-                  <div className="text-[9px] font-black opacity-40 uppercase mt-1">Tap to visualize evidentiary node</div>
+                <img src={tx.proofUrl} alt="" className="w-20 h-20 rounded-2xl object-cover shrink-0 border border-white/10 shadow-2xl group-hover:rotate-3 transition-transform" />
+                <div className="relative z-10">
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-2 italic">Secured Evidence ✓</div>
+                  <div className="text-xl font-black text-white uppercase tracking-tight">Expand Credential</div>
                 </div>
               </button>
             ) : (
-              <div className="rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-inner">
-                <div className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] italic">⚠ Evidence missing in transmission</div>
-                {tx.proofMissingReason ? (
-                  <p className="text-[10px] font-bold text-black dark:text-black mt-2 italic uppercase tracking-widest leading-relaxed">{tx.proofMissingReason}</p>
-                ) : tx.description ? (
-                  <p className="text-[10px] font-bold text-black dark:text-black mt-2 italic uppercase tracking-widest leading-relaxed">{tx.description}</p>
-                ) : null}
+              <div className="rounded-[2.5rem] border border-rose-100 bg-rose-50/30 p-10 text-center relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <ImageIcon size={80} className="text-rose-600" />
+                </div>
+                <div className="text-[10px] font-black text-rose-600 uppercase tracking-[0.3em] italic mb-2">⚠ Evidence Gap Detected</div>
+                <p className="text-xs font-bold text-rose-800 uppercase tracking-widest">{tx.proofMissingReason || 'No digital proof attached to this node.'}</p>
               </div>
             )}
           </div>
-
-
+          
+          <button
+            type="button"
+            onClick={copyId}
+            className="w-full text-center text-[10px] text-gray-400 hover:text-black font-mono transition-colors"
+          >
+            HASHID: {tx.id} {copied ? <span className="text-emerald-600 font-bold ml-2">COPIED</span> : <Copy className="inline w-3 h-3 ml-2 opacity-30" />}
+          </button>
         </div>
 
         {showActions && isPending && (onApprove || onReject) ? (
-          <div className="mt-5 grid grid-cols-1 gap-4">
+          <div className="mt-12 space-y-4">
             <button
               type="button"
               onClick={() => onApprove?.(tx)}
               disabled={isDisabled}
-              className="w-full h-16 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-[12px] uppercase tracking-[0.3em] hover:scale-[1.02] transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 shadow-2xl active:scale-95"
+              className="w-full h-20 rounded-[2rem] bg-indigo-600 text-white font-black text-[12px] uppercase tracking-[0.4em] hover:scale-105 hover:shadow-2xl hover:shadow-indigo-600/30 transition-all disabled:opacity-40 inline-flex items-center justify-center gap-4 active:scale-95"
             >
-              {isBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+              {isBusy ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" strokeWidth={3} />}
               Authorize Flow
             </button>
-            <button
-              type="button"
-              onClick={() => onRemove?.(tx)}
-              disabled={isDisabled}
-              className="w-full h-14 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-500 hover:text-white transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95 border border-rose-500/20"
-            >
-              <Minus size={16} />
-              Remove Transaction
-            </button>
-            <button
-              type="button"
-              onClick={() => onReject?.(tx)}
-              disabled={isDisabled}
-              className="w-full h-14 rounded-2xl bg-gray-100 dark:bg-white/10 text-black dark:text-black font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95"
-            >
-              <XCircle className="w-5 h-5" />
-              Terminate with Reason
-            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => onRemove?.(tx)}
+                disabled={isDisabled}
+                className="h-14 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-600 hover:text-white transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95 border border-rose-100"
+              >
+                <Minus size={16} strokeWidth={3} />
+                Remove
+              </button>
+              <button
+                type="button"
+                onClick={() => onReject?.(tx)}
+                disabled={isDisabled}
+                className="h-14 rounded-2xl bg-gray-50 text-gray-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95 border border-gray-100"
+              >
+                <XCircle className="w-5 h-5" strokeWidth={3} />
+                Reject
+              </button>
+            </div>
           </div>
         ) : null}
       </div>
@@ -1169,22 +1127,30 @@ export default function HqApprovalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black overflow-x-hidden w-full max-w-full pb-36 text-black dark:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-[#FCFBF8] overflow-x-hidden w-full max-w-full pb-36 text-gray-900 transition-colors duration-300">
       <DesignTokensStyle />
 
       <div className="max-w-6xl mx-auto px-3 sm:px-5 py-6 space-y-5">
-        {/* 1 Title */}
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-black dark:text-white flex flex-wrap items-center gap-3">
-              Financial Approvals
-              {pendingCount > 0 ? (
-                <span className="inline-flex items-center justify-center min-w-[2.5rem] h-10 px-3 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-black border border-black/10 dark:border-white/10 shadow-lg">
-                  {pendingCount > 99 ? '99+' : pendingCount}
-                </span>
-              ) : null}
-            </h1>
-            <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-black dark:text-black italic">Governance Intelligence Hub</p>
+        {/* 1 Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
+          <div className="flex items-center gap-6">
+            <div className="w-20 h-20 bg-white rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-gray-200 border border-gray-100 group overflow-hidden relative transition-all duration-700 hover:scale-105 hover:rotate-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <BadgeCheck className="text-indigo-600 relative z-10" size={36} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h1 className="text-5xl font-black tracking-tight text-gray-900 uppercase leading-none flex items-center gap-4">
+                Approvals
+                {pendingCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[3rem] h-12 px-4 rounded-2xl bg-indigo-600 text-white text-sm font-black shadow-xl shadow-indigo-600/30">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
+              </h1>
+              <p className="mt-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.5em]">
+                Governance Matrix • Authorization Node
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1248,10 +1214,10 @@ export default function HqApprovalsPage() {
                     setTab(t.id);
                     setTabDropdownOpen(isOpen ? null : t.id);
                   }}
-                  className={`w-full py-2.5 px-2 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition border flex flex-col items-center gap-0.5 ${
+                  className={`w-full py-4 px-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all border flex flex-col items-center gap-0.5 ${
                     isActive
-                      ? 'bg-[#111827] text-white border-[#111827] shadow-md dark:bg-white dark:text-gray-900 dark:border-white'
-                      : 'bg-white dark:bg-[#111111] text-[#4B5563] dark:text-black border-[#D1D5DB] dark:border-white/10 hover:border-gray-400 shadow-sm'
+                      ? 'bg-gray-900 text-white border-gray-900 shadow-xl'
+                      : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300 shadow-sm'
                   }`}
                 >
                   <span>{t.label}</span>
@@ -1394,11 +1360,11 @@ export default function HqApprovalsPage() {
         ) : (
           <>
             {/* 3 Filters */}
-            <div className="lg:sticky lg:top-0 lg:z-10 mb-6">
-              <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-md border border-[#D1D5DB] dark:border-gray-700 overflow-hidden">
+            <div className="lg:sticky lg:top-0 lg:z-10 mb-8">
+              <div className="rounded-[2.5rem] bg-white shadow-2xl shadow-gray-200/60 border border-gray-100 overflow-hidden">
                 <button
                   type="button"
-                  className="lg:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-black text-[#111827] dark:text-gray-100 bg-[#F9FAFB] dark:bg-gray-900"
+                  className="lg:hidden w-full flex items-center justify-between px-6 py-4 text-[10px] font-black text-gray-900 bg-gray-50 uppercase tracking-widest"
                   onClick={() => setFiltersPanelOpen((v) => !v)}
                 >
                   <span className="flex items-center gap-2">
@@ -1599,35 +1565,33 @@ export default function HqApprovalsPage() {
                     </div>
                   ) : null}
 
-                  {hasAnyFilter ? (
                     <button
                       type="button"
                       onClick={clearAllFilters}
-                      className="text-sm font-black text-red-600 hover:text-red-800 dark:text-red-400 underline underline-offset-4"
+                      className="text-[10px] font-black text-rose-600 hover:text-rose-800 uppercase tracking-widest underline underline-offset-4"
                     >
-                      Clear All Filters
+                      Reset All Filters
                     </button>
-                  ) : null}
                 </div>
               </div>
             </div>
 
             {/* 4 Summary */}
             {!loading && !error ? (
-              <div className="rounded-2xl bg-purple-600 text-white px-4 py-3 text-sm font-bold flex flex-wrap gap-x-3 gap-y-1 items-baseline">
+              <div className="rounded-3xl bg-indigo-600 text-white px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] flex flex-wrap gap-x-6 gap-y-2 items-center shadow-xl shadow-indigo-600/20">
                 <span>
                   {filteredRows.length > visibleRows.length
-                    ? `Showing ${visibleRows.length} of ${filteredRows.length} transactions`
-                    : `Showing ${filteredRows.length} transaction${filteredRows.length === 1 ? '' : 's'}`}
+                    ? `Displaying ${visibleRows.length} / ${filteredRows.length} nodes`
+                    : `Active Nodes: ${filteredRows.length}`}
                 </span>
-                <span className="text-purple-200 hidden sm:inline">·</span>
-                <span>Total Amount: {fmtPKR(totalAmount)}</span>
-                {missingProof > 0 ? (
+                <div className="w-1.5 h-1.5 rounded-full bg-white/30 hidden sm:block" />
+                <span>Aggregated: {fmtPKR(totalAmount)}</span>
+                {missingProof > 0 && (
                   <>
-                    <span className="text-purple-200 hidden sm:inline">·</span>
-                    <span className="text-amber-200">{missingProof} missing proof</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/30 hidden sm:block" />
+                    <span className="text-rose-200">⚠ {missingProof} Evidence Gaps</span>
                   </>
-                ) : null}
+                )}
               </div>
             ) : null}
 

@@ -884,11 +884,15 @@ export default function SeekerDetailPage() {
                       <input
                         ref={photoInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/webp"
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
+                          if (file.type !== 'image/webp') {
+                            toast.error('Only WebP images are allowed');
+                            return;
+                          }
                           setPhotoFile(file);
                           setPhotoPreview(URL.createObjectURL(file));
                         }}
@@ -1287,8 +1291,16 @@ export default function SeekerDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Select File *</label>
                 <input
                   type="file"
-                  accept="video/*,image/*,.pdf"
-                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                  accept="video/*,image/webp,.pdf"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+                      toast.error('Only WebP images are allowed');
+                      return;
+                    }
+                    setSelectedFile(file);
+                  }}
                   className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 outline-none"
                   required
                 />

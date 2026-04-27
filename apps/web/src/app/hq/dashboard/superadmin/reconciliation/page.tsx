@@ -26,6 +26,16 @@ import {
 import { cn } from '@/lib/utils';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 
+const DEPT_THEMES: Record<string, { bg: string; text: string; border: string }> = {
+  hq: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' },
+  rehab: { bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-100' },
+  spims: { bg: 'bg-sky-50', text: 'text-sky-600', border: 'border-sky-100' },
+  hospital: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100' },
+  sukoon: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-100' },
+  welfare: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
+  'job-center': { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' },
+};
+
 export default function SuperadminReconciliationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -93,7 +103,6 @@ export default function SuperadminReconciliationPage() {
       const res = await decideReconciliation({ id: row.id, status });
       if (!res.success) throw new Error(res.error || 'Operation failed');
 
-      // Audit Log for the action
       await addDoc(collection(db, 'hq_audit'), {
         action: status === 'verified' ? 'approved' : 'rejected',
         actorName: session?.name || 'Superadmin',
@@ -111,174 +120,177 @@ export default function SuperadminReconciliationPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 bg-white dark:bg-black min-h-screen text-black dark:text-white transition-colors duration-300">
-      <div className="flex items-center gap-4 mb-10">
-        <div className="rounded-2xl bg-black dark:bg-white p-3 shadow-xl">
-          <ShieldCheck className="h-7 w-7 text-white dark:text-black" />
+    <div className="mx-auto max-w-7xl px-8 py-20 bg-[#FCFBF8] min-h-screen">
+      <div className="flex items-center gap-8 mb-16">
+        <div className="rounded-[2.5rem] bg-black p-6 shadow-2xl shadow-gray-200">
+          <ShieldCheck className="h-10 w-10 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tight">Ledger Verification</h1>
-          <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.2em] italic">Governance Node Audit Hub</p>
+          <h1 className="text-5xl font-black uppercase tracking-tight text-black">Verifications</h1>
+          <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.5em] italic mt-2">Governance Ledger Audit Hub</p>
         </div>
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-           <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-3">Pending Verification</p>
-           <p className="text-4xl font-black text-black dark:text-white">{stats.pending}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/50">
+           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-4">Pending Nodes</p>
+           <p className="text-5xl font-black text-black tracking-tighter">{stats.pending}</p>
         </div>
-        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-           <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-3">Cleared Today</p>
-           <p className="text-4xl font-black text-black dark:text-white">{stats.verifiedToday}</p>
+        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/50">
+           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-4">Verified Today</p>
+           <p className="text-5xl font-black text-black tracking-tighter">{stats.verifiedToday}</p>
         </div>
-        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-           <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-3">Aggregate Variance</p>
-           <p className="text-4xl font-black text-black dark:text-white">{formatPKR(stats.totalVariance)}</p>
+        <div className="bg-black rounded-[2.5rem] p-10 shadow-2xl shadow-black/20">
+           <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Total Variance</p>
+           <p className="text-4xl font-black text-white tracking-tighter">{formatPKR(stats.totalVariance)}</p>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="flex flex-col md:flex-row gap-6 items-center justify-between mb-8">
-        <div className="flex bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-1.5 w-full md:w-auto">
+      <div className="flex flex-col xl:flex-row gap-8 items-center justify-between mb-12">
+        <div className="flex bg-white border border-gray-100 rounded-[2rem] p-2 shadow-xl shadow-gray-200/50 w-full xl:w-auto overflow-x-auto no-scrollbar">
           {['all', 'pending', 'verified', 'flagged'].map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s as any)}
               className={cn(
-                "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                "px-10 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                 filterStatus === s 
-                  ? "bg-black text-white dark:bg-white dark:text-black shadow-lg" 
-                  : "text-black dark:text-black hover:text-black dark:hover:text-white"
+                  ? "bg-black text-white shadow-xl scale-105" 
+                  : "text-gray-400 hover:text-black hover:bg-gray-50"
               )}
             >
               {s}
             </button>
           ))}
         </div>
-        <div className="relative w-full md:w-72 group">
-           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-black group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
+        <div className="relative w-full xl:w-96 group">
+           <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-300 group-focus-within:text-black transition-colors" />
            <input 
              value={q}
              onChange={(e) => setQ(e.target.value)}
-             placeholder="NODE SEARCH SEQUENCE..."
-             className="w-full bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-black dark:focus:border-white/40 transition-all shadow-sm"
+             placeholder="SEARCH AUDIT STREAM..."
+             className="w-full h-20 bg-white border border-gray-100 rounded-[2.5rem] pl-16 pr-8 text-sm font-bold text-black outline-none focus:ring-8 focus:ring-black/5 transition-all shadow-2xl shadow-gray-200/50"
            />
         </div>
       </div>
 
-      <div className="mt-5 space-y-4">
+      <div className="space-y-6">
         {loading ? (
-          <div className="py-20 flex justify-center"><InlineLoading label="Sychronizing Audit Stream..." /></div>
+          <div className="py-40 flex justify-center"><InlineLoading label="Sychronizing Audit Stream..." /></div>
         ) : !filtered.length ? (
-          <EmptyState title="Clear Ledger" message="All nodes reconciled or no data matching filters." />
+          <div className="py-20"><EmptyState title="Clear Ledger" message="All nodes reconciled or no data matching filters." /></div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-             {filtered.map((r) => (
-              <div 
-                key={r.id} 
-                className={cn(
-                  "rounded-[2.5rem] border transition-all overflow-hidden border-l-[12px] cursor-pointer bg-white dark:bg-[#050505] shadow-sm",
-                  (r.status || 'pending') === 'verified' ? "border-black dark:border-white opacity-100" : (r.status || 'pending') === 'flagged' ? "border-gray-300 dark:border-gray-700 opacity-80" : "border-gray-100 dark:border-white/5 opacity-60",
-                  expandedId === r.id ? "shadow-2xl translate-x-1 ring-1 ring-black/5 dark:ring-white/5" : "hover:border-black dark:hover:border-white"
-                )}
-                onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex gap-4">
-                       <div className="rounded-2xl bg-white/5 p-4 border border-white/5 hidden sm:block">
-                          <BadgePercent className="h-5 w-5 text-black" />
-                       </div>
-                       <div>
-                         <div className="flex items-center gap-2 mb-1">
-                           <h3 className="text-lg font-black uppercase leading-none">{r.date || r.dateStr || '—'}</h3>
-                           <span className={cn(
-                             "text-[9px] font-black uppercase px-3 py-1 rounded-lg border",
-                             r.portal === 'rehab' ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-xl" : "bg-gray-100 dark:bg-white/10 text-black dark:text-black border-transparent"
-                           )}>
-                             {r.portal || 'hq'}
-                           </span>
+          <div className="grid grid-cols-1 gap-8">
+             {filtered.map((r) => {
+               const theme = DEPT_THEMES[r.portal] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100' };
+               return (
+                <div 
+                  key={r.id} 
+                  className={cn(
+                    "rounded-[3rem] border transition-all overflow-hidden bg-white shadow-2xl shadow-gray-200/50",
+                    (r.status || 'pending') === 'verified' ? "border-black opacity-100" : "border-gray-100 opacity-90",
+                    expandedId === r.id ? "scale-[1.02] ring-8 ring-black/5" : "hover:border-black hover:-translate-y-1"
+                  )}
+                  onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                >
+                  <div className="p-10">
+                    <div className="flex flex-col md:flex-row items-start justify-between gap-8">
+                      <div className="flex gap-8">
+                         <div className={cn("w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-xl", theme.bg, theme.text)}>
+                            <BadgePercent size={36} strokeWidth={2.5} />
                          </div>
-                         <div className="flex items-center gap-3 text-[10px] font-bold text-black uppercase tracking-widest">
-                            <span className="flex items-center gap-1"><User size={12}/> {r.cashierName}</span>
-                            <span className="flex items-center gap-1"><Clock size={12}/> {r.totalTransactions || 0} TX</span>
-                         </div>
-                       </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                       <p className="text-2xl font-black text-black dark:text-white font-mono">{formatPKR(r.actualClosing || 0)}</p>
-                        <span className={cn(
-                         "text-[10px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-2xl border transition-all shadow-sm",
-                         (r.status || 'pending') === 'verified' ? "bg-black dark:bg-white text-white dark:text-black border-transparent" : 
-                         (r.status || 'pending') === 'flagged' ? "bg-gray-100 dark:bg-white/5 text-black border-gray-100 dark:border-white/10 italic" : 
-                         "bg-white dark:bg-black text-black border-dashed border-gray-100 dark:border-white/10"
-                       )}>
-                         {r.status || 'pending'}
-                       </span>
-                    </div>
-                  </div>
-
-                  {expandedId === r.id && (
-                    <div className="mt-8 border-t border-white/5 pt-6 animate-in slide-in-from-top-4 duration-300">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-black uppercase mb-1">Expected</p>
-                            <p className="text-sm font-black text-white">{formatPKR(r.expectedBalance || 0)}</p>
-                         </div>
-                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-black uppercase mb-1">Actual</p>
-                            <p className="text-sm font-black text-white">{formatPKR(r.actualClosing || 0)}</p>
-                         </div>
-                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-black uppercase mb-1">Variance</p>
-                            <p className={cn("text-sm font-black", (r.variance || 0) !== 0 ? "text-white dark:text-black bg-black dark:bg-white px-3 py-1 rounded-xl shadow-2xl" : "text-black dark:text-black italic")}>
-                               {formatPKR(r.variance || r.difference || 0)}
-                            </p>
-                         </div>
-                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[9px] font-black text-black uppercase mb-1">Inflow/Outflow</p>
-                            <p className="text-sm font-black text-white">{formatPKR(r.incomeTotal || 0)} / {formatPKR(r.expenseTotal || 0)}</p>
+                         <div>
+                           <div className="flex items-center gap-4 mb-4">
+                             <h3 className="text-3xl font-black uppercase tracking-tighter leading-none">{r.date || r.dateStr || '—'}</h3>
+                             <span className={cn(
+                               "text-[10px] font-black uppercase px-5 py-2 rounded-xl shadow-lg",
+                               theme.bg, theme.text
+                             )}>
+                               {r.portal || 'hq'}
+                             </span>
+                           </div>
+                           <div className="flex items-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                              <span className="flex items-center gap-2"><User size={14} className="text-indigo-600"/> {r.cashierName}</span>
+                              <span className="flex items-center gap-2"><Clock size={14} className="text-indigo-600"/> {r.totalTransactions || 0} TX</span>
+                           </div>
                          </div>
                       </div>
 
-                      {r.varianceNote && (
-                        <div className="bg-gray-50 dark:bg-white/5 border border-dashed border-black/10 dark:border-white/10 p-8 rounded-[2rem] mb-6 shadow-inner">
-                           <p className="text-[10px] font-black text-black dark:text-white uppercase mb-4 tracking-[0.2em] italic opacity-40">Cashier Remark Node</p>
-                           <p className="text-sm font-bold text-black dark:text-black leading-relaxed italic border-l-4 border-black dark:border-white pl-6">"{r.note || r.varianceNote}"</p>
-                        </div>
-                      )}
-
-                       {(r.status === 'pending' || !r.status || r.status === 'submitted') && (
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <button
-                            type="button"
-                            disabled={!!busyId}
-                            onClick={(e) => { e.stopPropagation(); act(r, 'flagged'); }}
-                            className="flex-1 h-16 rounded-2xl border border-gray-100 bg-white dark:bg-white/5 dark:border-white/10 text-[11px] font-black uppercase tracking-[0.3em] text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-center gap-3 active:scale-95 shadow-sm"
-                          >
-                            <XCircle size={20} /> Terminate Flow
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!!busyId}
-                            onClick={(e) => { e.stopPropagation(); act(r, 'verified'); }}
-                            className="flex-1 h-16 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-[12px] font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
-                          >
-                            <CheckCircle2 size={24} /> Authorize Ledger
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex flex-col items-end gap-4 w-full md:w-auto">
+                         <p className="text-4xl font-black text-black tracking-tighter">{formatPKR(r.actualClosing || 0)}</p>
+                          <span className={cn(
+                           "text-[11px] font-black uppercase tracking-[0.3em] px-8 py-3 rounded-2xl transition-all shadow-xl",
+                           (r.status || 'pending') === 'verified' ? "bg-black text-white" : 
+                           (r.status || 'pending') === 'flagged' ? "bg-rose-500 text-white" : 
+                           "bg-gray-50 text-gray-400"
+                         )}>
+                           {r.status || 'pending'}
+                         </span>
+                      </div>
                     </div>
-                  )}
-                  
-                  <div className="mt-4 flex justify-center text-black">
-                    {expandedId === r.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+
+                    {expandedId === r.id && (
+                      <div className="mt-12 border-t border-gray-100 pt-10 animate-in fade-in slide-in-from-top-6 duration-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                           <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 shadow-inner">
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Expected</p>
+                              <p className="text-xl font-black text-black">{formatPKR(r.expectedBalance || 0)}</p>
+                           </div>
+                           <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 shadow-inner">
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Actual</p>
+                              <p className="text-xl font-black text-black">{formatPKR(r.actualClosing || 0)}</p>
+                           </div>
+                           <div className="bg-black p-8 rounded-[2rem] shadow-2xl">
+                              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Variance</p>
+                              <p className={cn("text-xl font-black", (r.variance || 0) !== 0 ? "text-rose-400" : "text-emerald-400")}>
+                                 {formatPKR(r.variance || r.difference || 0)}
+                              </p>
+                           </div>
+                           <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 shadow-inner">
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">In/Out Flow</p>
+                              <p className="text-xl font-black text-black">{formatPKR(r.incomeTotal || 0)} / {formatPKR(r.expenseTotal || 0)}</p>
+                           </div>
+                        </div>
+
+                        {r.varianceNote && (
+                          <div className="bg-indigo-50/30 border border-indigo-100 p-10 rounded-[2.5rem] mb-10 shadow-inner">
+                             <p className="text-[11px] font-black text-indigo-400 uppercase mb-5 tracking-[0.4em] italic">Cashier Remark Node</p>
+                             <p className="text-lg font-bold text-gray-900 leading-relaxed italic pl-8 border-l-8 border-indigo-500">"{r.note || r.varianceNote}"</p>
+                          </div>
+                        )}
+
+                         {(r.status === 'pending' || !r.status || r.status === 'submitted') && (
+                          <div className="flex flex-col sm:flex-row gap-6">
+                            <button
+                              type="button"
+                              disabled={!!busyId}
+                              onClick={(e) => { e.stopPropagation(); act(r, 'flagged'); }}
+                              className="flex-1 h-24 rounded-[2.5rem] bg-white border border-gray-100 text-[12px] font-black uppercase tracking-[0.4em] text-rose-600 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-4 active:scale-95 shadow-xl shadow-gray-200/50"
+                            >
+                              <XCircle size={28} /> Terminate Flow
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!!busyId}
+                              onClick={(e) => { e.stopPropagation(); act(r, 'verified'); }}
+                              className="flex-1 h-24 rounded-[2.5rem] bg-black text-white text-[13px] font-black uppercase tracking-[0.5em] shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-6"
+                            >
+                              <CheckCircle2 size={32} /> Authorize Ledger
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="mt-8 flex justify-center text-gray-300">
+                      {expandedId === r.id ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+               );
+             })}
           </div>
         )}
       </div>

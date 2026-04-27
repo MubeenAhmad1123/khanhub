@@ -397,12 +397,16 @@ return (
                   </>
                 )}
               </div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setPhotoFile(file);
-                setPhotoPreview(URL.createObjectURL(file));
-              }} />
+                <input ref={fileRef} type="file" accept="image/webp" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
+                  setPhotoFile(file);
+                  setPhotoPreview(URL.createObjectURL(file));
+                }} />
               <div>
                 <p className="text-sm font-bold text-gray-700">Profile Photo</p>
                 <p className="text-[10px] text-gray-400 mt-0.5 uppercase font-bold tracking-tight">JPG, PNG up to 5MB</p>

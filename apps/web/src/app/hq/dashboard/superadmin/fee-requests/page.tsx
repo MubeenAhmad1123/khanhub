@@ -123,23 +123,23 @@ export default function SuperadminFeeRequestsPage() {
 
   if (sessionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <Loader2 className="w-10 h-10 animate-spin text-black dark:text-white" />
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+        <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black overflow-x-hidden w-full max-w-full transition-colors duration-300 py-12">
-      <div className="space-y-10">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl lg:text-4xl font-black text-black dark:text-white uppercase tracking-tighter">Protocol Requests</h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black italic">
+    <div className="min-h-screen bg-[#FCFBF8] transition-colors duration-500 py-16 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto space-y-12">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Protocol Requests</h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic">
             Manual Authorization Cascade • Global Ledger Injection
           </p>
         </div>
 
-        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-10 shadow-2xl overflow-hidden">
+        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-12 shadow-2xl shadow-gray-200/50 overflow-hidden">
           <form onSubmit={createFeeRequest} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="min-w-0">

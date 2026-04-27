@@ -958,23 +958,23 @@ export default function CashierStationPage() {
   if (sessionLoading || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
-        <Loader2 className="w-10 h-10 animate-spin text-black" />
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] py-16 transition-colors duration-500">
+    <div className="min-h-screen bg-[#FCFBF8] py-16 transition-colors duration-500">
       <div className="mx-auto max-w-7xl px-6">
         
         {/* Header Section */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10 mb-16">
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-black dark:bg-white rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-black/20 dark:shadow-white/10">
-              <CreditCard className="text-white dark:text-black" size={40} strokeWidth={2.5} />
+            <div className="w-20 h-20 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-indigo-600/20">
+              <CreditCard className="text-white" size={40} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-5xl font-black tracking-tighter text-black dark:text-white uppercase leading-none">Cashier Terminal</h1>
+              <h1 className="text-5xl font-black tracking-tighter text-zinc-900 uppercase leading-none">Cashier Terminal</h1>
               <p className="mt-3 text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic pl-1">
                 Central Financial Gateway • Secure Transaction Hub
               </p>
@@ -990,7 +990,7 @@ export default function CashierStationPage() {
               <Link 
                 key={link.label}
                 href={link.href}
-                className="flex items-center gap-2 px-6 py-4 bg-white dark:bg-white/5 hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black rounded-2xl border border-black/5 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-black dark:text-white transition-all active:scale-95 shadow-xl shadow-black/5"
+                className="flex items-center gap-2 px-6 py-4 bg-white hover:bg-indigo-600 hover:text-white rounded-2xl border border-zinc-100 text-[10px] font-black uppercase tracking-widest text-zinc-900 transition-all active:scale-95 shadow-xl shadow-zinc-200/50"
               >
                 <link.icon size={16} />
                 <span className="hidden lg:inline">{link.label}</span>
@@ -998,7 +998,7 @@ export default function CashierStationPage() {
             ))}
             <Link 
               href="/hq/dashboard/cashier/day-close"
-              className="flex items-center gap-2 px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-black/20 transition-all active:scale-95"
+              className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-2xl shadow-indigo-600/20"
             >
               <Lock size={16} />
               <span className="hidden lg:inline">Terminal Lock</span>
@@ -1008,21 +1008,16 @@ export default function CashierStationPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         <div className="lg:col-span-4 space-y-12 min-w-0">
-          <div className="bg-white dark:bg-[#121212] rounded-[3.5rem] border border-black/5 dark:border-white/5 p-10 shadow-2xl shadow-black/5">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <Activity className="text-white" size={24} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tighter">Incoming</h2>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Action Required</p>
-                </div>
+          <div className="bg-white rounded-[3rem] p-10 border border-zinc-100 shadow-2xl shadow-zinc-200/50 h-full">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-black text-zinc-900 tracking-tight uppercase">Queue</h2>
+              <div className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-indigo-100">
+                {incomingFeeReqs.length} Pending
               </div>
             </div>
             
             {incomingError ? (
-              <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[10px] font-black uppercase tracking-widest">
+              <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-[10px] font-black uppercase tracking-widest">
                 {incomingError}
               </div>
             ) : null}
@@ -1033,7 +1028,7 @@ export default function CashierStationPage() {
               </div>
             ) : incomingFeeReqs.length === 0 ? (
               <div className="py-20 text-center space-y-6">
-                <div className="w-20 h-20 bg-gray-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
+                <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
                   <FileText className="text-gray-300" size={32} />
                 </div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Queue is clear</p>
@@ -1044,15 +1039,15 @@ export default function CashierStationPage() {
                   <div 
                     key={tx.id} 
                     onClick={() => setDetailModalTx(tx)}
-                    className="group cursor-pointer bg-gray-50 dark:bg-white/5 border border-transparent hover:border-black/5 dark:hover:border-white/10 rounded-[2.5rem] p-8 transition-all hover:shadow-2xl hover:-translate-y-1"
+                    className="group cursor-pointer bg-zinc-50 border border-transparent hover:border-indigo-100 rounded-[2.5rem] p-8 transition-all hover:shadow-2xl hover:-translate-y-1"
                   >
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black font-black text-xs">
+                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs">
                           {String(tx.patientName || tx.donorName || '?')[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-black text-black dark:text-white uppercase tracking-tight truncate max-w-[120px]">
+                          <p className="text-sm font-black text-zinc-900 uppercase tracking-tight truncate max-w-[120px]">
                             {tx.patientName || tx.donorName || 'Entity'}
                           </p>
                           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
@@ -1061,7 +1056,7 @@ export default function CashierStationPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-black text-black dark:text-white tracking-tighter">Rs {Number(tx.amount || 0).toLocaleString()}</p>
+                        <p className="text-lg font-black text-zinc-900 tracking-tighter">Rs {Number(tx.amount || 0).toLocaleString()}</p>
                       </div>
                     </div>
 
@@ -1070,7 +1065,7 @@ export default function CashierStationPage() {
                         type="button"
                         disabled={incomingActionId === tx.id}
                         onClick={(e) => { e.stopPropagation(); openForwardModal(tx); }}
-                        className="w-full h-12 rounded-[1.2rem] bg-black dark:bg-white text-white dark:text-black text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                        className="w-full h-12 rounded-[1.2rem] bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
                       >
                         {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Authorize'}
                       </button>
@@ -1078,7 +1073,7 @@ export default function CashierStationPage() {
                         type="button"
                         disabled={incomingActionId === tx.id}
                         onClick={(e) => { e.stopPropagation(); openRejectModal(tx); }}
-                        className="w-full h-12 rounded-[1.2rem] bg-rose-500/10 text-rose-600 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                        className="w-full h-12 rounded-[1.2rem] bg-rose-50 text-rose-600 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
                       >
                         Reject
                       </button>
@@ -1108,7 +1103,7 @@ export default function CashierStationPage() {
           </div>
 
           {/* Search Section */}
-          <div className="bg-white dark:bg-[#121212] rounded-[3.5rem] border border-black/5 dark:border-white/5 p-10 shadow-2xl shadow-black/5">
+          <div className="bg-white rounded-[3rem] border border-zinc-100 p-10 shadow-2xl shadow-zinc-200/50">
             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-8 flex items-center gap-3">
               <Search size={16} strokeWidth={4} /> {isStaffMode ? 'Fleet Directory' : 'Global Accounts'}
             </h2>
@@ -1116,20 +1111,20 @@ export default function CashierStationPage() {
               <select 
                 value={departmentCode} 
                 onChange={(e) => setDepartmentCode(e.target.value)} 
-                className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[1.5rem] px-6 text-black dark:text-white text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
+                className="w-full h-14 bg-zinc-50 border border-transparent rounded-[1.5rem] px-6 text-zinc-900 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner"
               >
                 {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
               </select>
               
               <div className="relative group">
-                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={20} />
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-zinc-900 transition-colors" size={20} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery && setSearchOpen(true)}
                   placeholder="Search by name or ID..."
-                  className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[1.5rem] pl-16 pr-12 text-black dark:text-white text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-inner placeholder:text-gray-400"
+                  className="w-full h-14 bg-zinc-50 border border-transparent rounded-[1.5rem] pl-16 pr-12 text-zinc-900 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner placeholder:text-gray-400"
                 />
                 {searchQuery && (
                   <button
@@ -1143,7 +1138,7 @@ export default function CashierStationPage() {
               </div>
 
               {searchOpen && searchResults.length > 0 && (
-                <div className="bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/10 rounded-[2rem] shadow-2xl mt-4 overflow-hidden divide-y divide-black/5 dark:divide-white/5">
+                <div className="bg-white border border-zinc-100 rounded-[2rem] shadow-2xl mt-4 overflow-hidden divide-y divide-zinc-50">
                   {searchResults.map((p) => (
                     <button
                       key={p.id}
@@ -1172,13 +1167,13 @@ export default function CashierStationPage() {
                          setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
                          setSearchOpen(false);
                       }}
-                      className="w-full flex items-center gap-4 px-6 py-5 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-left"
+                      className="w-full flex items-center gap-4 px-6 py-5 hover:bg-zinc-50 transition-all text-left"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-black text-xs shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center text-white font-black text-xs shrink-0">
                         {String(p.name || p.fullName || '?')[0]?.toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-black dark:text-white text-sm font-black truncate">{p.name || p.fullName || 'Unknown'}</p>
+                        <p className="text-zinc-900 text-sm font-black truncate">{p.name || p.fullName || 'Unknown'}</p>
                         <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest truncate">
                           {p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id}
                         </p>
@@ -1192,15 +1187,15 @@ export default function CashierStationPage() {
         </div>
 
         <div className="lg:col-span-8 min-w-0 space-y-12">
-          <div className="bg-white dark:bg-[#121212] rounded-[3.5rem] border border-black/5 dark:border-white/5 p-10 shadow-2xl shadow-black/5">
+          <div className="bg-white rounded-[3.5rem] border border-zinc-100 p-10 shadow-2xl shadow-zinc-200/50">
             <form onSubmit={submitTx} className="space-y-10">
-              <div className="p-10 rounded-[3rem] bg-black dark:bg-white text-white dark:text-black min-w-0 shadow-2xl shadow-black/20 group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="p-10 rounded-[3rem] bg-zinc-900 text-white min-w-0 shadow-2xl shadow-zinc-900/20 group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                   <div className="flex items-center gap-8">
                     {selectedEntity && (
-                      <div className="w-20 h-20 rounded-[2rem] bg-white/10 dark:bg-black/5 flex items-center justify-center text-3xl font-black border border-white/20 dark:border-black/5 shadow-inner group-hover:scale-105 transition-transform duration-500 overflow-hidden">
+                      <div className="w-20 h-20 rounded-[2rem] bg-white/10 flex items-center justify-center text-3xl font-black border border-white/20 shadow-inner group-hover:scale-105 transition-transform duration-500 overflow-hidden">
                         {selectedEntity.photoUrl ? (
                           <img src={selectedEntity.photoUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -1230,7 +1225,7 @@ export default function CashierStationPage() {
                       <Link 
                         href={getProfileLink(selectedEntity) || '#'}
                         target="_blank"
-                        className="h-14 px-8 rounded-2xl bg-white/10 dark:bg-black/5 hover:bg-white/20 dark:hover:bg-black/10 text-white dark:text-black text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 dark:border-black/5 flex items-center gap-2 hover:-translate-y-1"
+                        className="h-14 px-8 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-1"
                       >
                         <Eye size={16} /> Profile
                       </Link>
@@ -1248,7 +1243,7 @@ export default function CashierStationPage() {
                 </div>
                 
                 {selectedEntity && isStaffMode && (
-                  <div className="mt-8 p-8 rounded-[2rem] bg-white/5 dark:bg-black/5 border border-white/10 dark:border-black/5 backdrop-blur-md">
+                  <div className="mt-8 p-8 rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-md">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                       <div>
                         <span className="text-[9px] font-black uppercase opacity-40 tracking-widest block mb-2">Days Present</span>
@@ -1271,9 +1266,9 @@ export default function CashierStationPage() {
                 )}
 
                 {selectedEntity && (
-                  <div className="mt-10 bg-white dark:bg-[#1A1A1A] rounded-[2.5rem] p-10 shadow-2xl">
+                  <div className="mt-10 bg-white rounded-[2.5rem] p-10 shadow-2xl text-zinc-900">
                     <div className="flex items-center justify-between mb-8">
-                      <h4 className="text-xs font-[1000] uppercase tracking-[0.3em] text-black dark:text-white flex items-center gap-3">
+                      <h4 className="text-xs font-[1000] uppercase tracking-[0.3em] text-zinc-900 flex items-center gap-3">
                         <History size={18} /> Account Ledger
                       </h4>
                       {entityHistoryLoading && <Loader2 size={16} className="animate-spin text-gray-400" />}
@@ -1289,16 +1284,16 @@ export default function CashierStationPage() {
                         <div 
                           key={tx.id} 
                           onClick={() => setDetailModalTx({ ...tx, departmentCode: activeDepartment.code })}
-                          className="flex items-center justify-between p-5 rounded-[1.5rem] bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5 group relative cursor-pointer"
+                          className="flex items-center justify-between p-5 rounded-[1.5rem] bg-zinc-50 hover:bg-zinc-100 transition-all border border-transparent hover:border-zinc-200 group relative cursor-pointer"
                         >
                           <div className="min-w-0 flex-1 mr-4">
                             <div className="flex items-center gap-3 mb-1">
-                              <p className="text-sm font-black text-black dark:text-white truncate uppercase">{tx.categoryName || tx.category}</p>
+                              <p className="text-sm font-black text-zinc-900 truncate uppercase">{tx.categoryName || tx.category}</p>
                               <span className={cn(
                                 "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
-                                tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
-                                tx.status === 'rejected' ? "bg-rose-500/10 text-rose-500 border-rose-500/20" :
-                                "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                tx.status === 'approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
+                                tx.status === 'rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                                "bg-amber-50 text-amber-600 border-amber-100"
                               )}>
                                 {tx.status || 'pending'}
                               </span>
@@ -1315,7 +1310,7 @@ export default function CashierStationPage() {
                                   e.stopPropagation(); 
                                   handleDeleteTransaction({ ...tx, departmentCode: activeDepartment.code }); 
                                 }}
-                                className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                 title="Delete Pending Transaction"
                               >
                                 <Trash2 size={16} />
@@ -1336,13 +1331,13 @@ export default function CashierStationPage() {
                   className={cn(
                     'p-8 rounded-[2.5rem] border transition-all flex flex-col items-center gap-4 group',
                     txnType === 'income' 
-                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500 ring-4 ring-emerald-500/5' 
-                      : 'border-black/5 dark:border-white/5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-600 ring-4 ring-emerald-500/5' 
+                      : 'border-zinc-100 bg-white text-gray-400 hover:text-zinc-900 hover:bg-zinc-50'
                   )}
                 >
                   <div className={cn(
                     'w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110',
-                    txnType === 'income' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20' : 'bg-white dark:bg-black text-gray-400'
+                    txnType === 'income' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20' : 'bg-zinc-100 text-gray-400'
                   )}>
                     <TrendingUp size={28} />
                   </div>
@@ -1354,13 +1349,13 @@ export default function CashierStationPage() {
                   className={cn(
                     'p-8 rounded-[2.5rem] border transition-all flex flex-col items-center gap-4 group',
                     txnType === 'expense' 
-                      ? 'border-rose-500/20 bg-rose-500/10 text-rose-500 ring-4 ring-rose-500/5' 
-                      : 'border-black/5 dark:border-white/5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+                      ? 'border-rose-500 bg-rose-50 text-rose-600 ring-4 ring-rose-500/5' 
+                      : 'border-zinc-100 bg-white text-gray-400 hover:text-zinc-900 hover:bg-zinc-50'
                   )}
                 >
                   <div className={cn(
                     'w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110',
-                    txnType === 'expense' ? 'bg-rose-500 text-white shadow-xl shadow-rose-500/20' : 'bg-white dark:bg-black text-gray-400'
+                    txnType === 'expense' ? 'bg-rose-500 text-white shadow-xl shadow-rose-500/20' : 'bg-zinc-100 text-gray-400'
                   )}>
                     <TrendingDown size={28} />
                   </div>
@@ -1373,15 +1368,15 @@ export default function CashierStationPage() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Classification</label>
                     <div className="relative group">
-                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-zinc-900 transition-colors" size={18} />
                       <input 
                          value={categorySearch} 
                          onChange={(e) => setCategorySearch(e.target.value)} 
                          placeholder="Search or define new field..." 
-                         className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[1.5rem] pl-16 pr-6 text-black dark:text-white text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-inner" 
+                         className="w-full h-14 bg-zinc-50 border border-transparent rounded-[1.5rem] pl-16 pr-6 text-zinc-900 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner" 
                       />
                     </div>
-                    <div className="mt-4 bg-gray-50 dark:bg-white/5 rounded-[2rem] p-3 border border-black/5 dark:border-white/5 shadow-inner">
+                    <div className="mt-4 bg-zinc-50 rounded-[2rem] p-3 border border-zinc-100 shadow-inner">
                       <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
                         {visibleCategories.map((c) => (
                           <button 
@@ -1391,8 +1386,8 @@ export default function CashierStationPage() {
                             className={cn(
                               'px-4 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all text-center', 
                               selectedCategoryId === c.id 
-                                ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' 
-                                : 'text-gray-500 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                                ? 'bg-zinc-900 text-white shadow-lg' 
+                                : 'text-gray-500 hover:text-zinc-900 hover:bg-zinc-100'
                             )}
                           >
                             {c.name}
@@ -1400,7 +1395,7 @@ export default function CashierStationPage() {
                         ))}
                       </div>
                       {visibleCategories.length === 0 && categorySearch.trim() && (
-                        <button type="button" onClick={createCategory} className="w-full mt-2 px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 rounded-xl hover:bg-primary/20 transition-all">
+                        <button type="button" onClick={createCategory} className="w-full mt-2 px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all">
                           Create "{categorySearch.trim()}"
                         </button>
                       )}
@@ -1408,12 +1403,12 @@ export default function CashierStationPage() {
                   </div>
 
                   {departmentCode === 'spims' && selectedCategoryId === 'fee' && (
-                    <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 space-y-4">
+                    <div className="p-6 rounded-[2rem] bg-indigo-50 border border-indigo-100 space-y-4">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400">Academic Fee Context</label>
                       <select
                         value={spimsFeeSubtype}
                         onChange={(e) => setSpimsFeeSubtype(e.target.value as any)}
-                        className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-black dark:text-white text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-zinc-900 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500/20"
                       >
                         <option value="admission">Admission Fee</option>
                         <option value="registration">Registration Fee</option>
@@ -1425,13 +1420,13 @@ export default function CashierStationPage() {
                 </div>
                 <div className="space-y-8">
                   {departmentCode === 'hospital' && (
-                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-8 space-y-6">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-[2.5rem] p-8 space-y-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Service Category</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Service Category</label>
                         <select 
                           value={hospCategory} 
                           onChange={(e) => setHospCategory(e.target.value as any)} 
-                          className="w-full h-14 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-2xl px-6 text-black dark:text-white text-sm font-black outline-none focus:ring-4 focus:ring-emerald-500/10"
+                          className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-zinc-900 text-sm font-black outline-none focus:ring-4 focus:ring-emerald-500/10"
                         >
                           <option value="opd_reception">OPD Reception</option>
                           <option value="lab_test">Lab Test</option>
@@ -1446,41 +1441,41 @@ export default function CashierStationPage() {
 
                       {['opd_reception', 'lab_test', 'operation'].includes(hospCategory) && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
-                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
-                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
+                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm text-zinc-900 font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
+                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name" className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm text-zinc-900 font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
                           <div className="grid grid-cols-2 gap-4">
-                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
-                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
+                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm text-zinc-900 font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
+                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm text-zinc-900 font-bold outline-none focus:ring-4 focus:ring-emerald-500/10" />
                           </div>
                           
                           {hospCategory === 'opd_reception' && (
                             <div className="grid grid-cols-2 gap-4">
-                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-xs font-black uppercase">
+                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-black uppercase">
                                 <option value="morning">Morning</option>
                                 <option value="evening">Evening</option>
                               </select>
-                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose" className="h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm text-black dark:text-white font-bold outline-none" />
+                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose" className="h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm text-zinc-900 font-bold outline-none" />
                             </div>
                           )}
 
                           {hospCategory === 'lab_test' && (
                             <div className="space-y-4">
-                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm font-bold outline-none" />
-                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm font-bold outline-none" />
+                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm font-bold outline-none" />
+                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By" className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm font-bold outline-none" />
                             </div>
                           )}
 
                           {hospCategory === 'operation' && (
                             <div className="space-y-4">
-                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Surgery Type" className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-6 text-sm font-bold outline-none" />
+                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Surgery Type" className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-6 text-sm font-bold outline-none" />
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <label className="text-[9px] font-black uppercase text-emerald-500 ml-2">Admit</label>
-                                  <input type="date" value={hospAdmitDate} onChange={e => setHospAdmitDate(e.target.value)} className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-xs font-black" />
+                                  <input type="date" value={hospAdmitDate} onChange={e => setHospAdmitDate(e.target.value)} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-black" />
                                 </div>
                                 <div className="space-y-2">
                                   <label className="text-[9px] font-black uppercase text-emerald-500 ml-2">Discharge</label>
-                                  <input type="date" value={hospDischargeDate} onChange={e => setHospDischargeDate(e.target.value)} className="w-full h-12 bg-white dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 rounded-xl px-4 text-xs font-black" />
+                                  <input type="date" value={hospDischargeDate} onChange={e => setHospDischargeDate(e.target.value)} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-black" />
                                 </div>
                               </div>
                             </div>
@@ -1499,7 +1494,7 @@ export default function CashierStationPage() {
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="0.00"
-                        className="mt-2 w-full h-24 bg-gray-50 dark:bg-white/5 border border-transparent rounded-[2rem] px-10 text-5xl font-[1000] text-black dark:text-white outline-none focus:ring-8 focus:ring-primary/5 transition-all shadow-inner tracking-tighter placeholder:text-gray-200 dark:placeholder:text-white/5"
+                        className="mt-2 w-full h-24 bg-zinc-50 border border-transparent rounded-[2rem] px-10 text-5xl font-[1000] text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-500/5 transition-all shadow-inner tracking-tighter placeholder:text-gray-200"
                       />
                     </div>
                     
@@ -1510,7 +1505,7 @@ export default function CashierStationPage() {
                           type="date"
                           value={txDate}
                           onChange={(e) => setTxDate(e.target.value)}
-                          className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all"
+                          className="w-full h-14 bg-zinc-50 border border-transparent rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1518,7 +1513,7 @@ export default function CashierStationPage() {
                         <select
                           value={paymentMethod}
                           onChange={(e) => setPaymentMethod(e.target.value as any)}
-                          className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all"
+                          className="w-full h-14 bg-zinc-50 border border-transparent rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
                         >
                           <option value="cash">Cash</option>
                           <option value="bank_transfer">Bank Transfer</option>
@@ -1535,7 +1530,7 @@ export default function CashierStationPage() {
                         value={referenceNo} 
                         onChange={(e) => setReferenceNo(e.target.value)} 
                         placeholder="Cheque #, Bank ID, etc." 
-                        className="w-full h-14 bg-gray-50 dark:bg-white/5 border border-transparent rounded-2xl px-6 text-sm font-bold text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all" 
+                        className="w-full h-14 bg-zinc-50 border border-transparent rounded-2xl px-6 text-sm font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" 
                       />
                     </div>
 
@@ -1545,19 +1540,27 @@ export default function CashierStationPage() {
                         <div className="relative group h-full">
                           <input
                             type="file"
-                            accept="image/*,application/pdf"
-                            onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                            accept="image/webp,application/pdf"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file && file.type.startsWith('image/') && file.type !== 'image/webp') {
+                                toast.error("Only .webp images are allowed");
+                                e.target.value = '';
+                                return;
+                              }
+                              setProofFile(file || null);
+                            }}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             disabled={processing}
                           />
-                          <div className="h-full min-h-[120px] bg-gray-50 dark:bg-white/5 border-2 border-dashed border-black/5 dark:border-white/5 rounded-[2rem] p-8 flex flex-col items-center justify-center text-center transition-all group-hover:border-primary/40 group-hover:bg-primary/5">
-                            <div className="w-12 h-12 rounded-2xl bg-white dark:bg-black flex items-center justify-center shadow-lg mb-4 text-primary group-hover:scale-110 transition-transform">
+                          <div className="h-full min-h-[120px] bg-zinc-50 border-2 border-dashed border-zinc-100 rounded-[2rem] p-8 flex flex-col items-center justify-center text-center transition-all group-hover:border-indigo-400 group-hover:bg-indigo-50">
+                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg mb-4 text-indigo-600 group-hover:scale-110 transition-transform">
                               <Camera size={24} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white truncate max-w-[200px]">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-900 truncate max-w-[200px]">
                               {proofFile ? proofFile.name : "Secure Proof Upload"}
                             </span>
-                            <span className="text-[8px] font-bold text-gray-400 uppercase mt-2">JPG, PNG or PDF</span>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase mt-2">WEBP or PDF</span>
                           </div>
                         </div>
                       </div>
@@ -1567,7 +1570,7 @@ export default function CashierStationPage() {
                           value={proofReason}
                           onChange={(e) => setProofReason(e.target.value)}
                           placeholder="Why is proof missing?"
-                          className="w-full h-full min-h-[120px] bg-gray-50 dark:bg-white/5 border border-transparent rounded-[2rem] px-6 py-6 text-sm font-bold text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none"
+                          className="w-full h-full min-h-[120px] bg-zinc-50 border border-transparent rounded-[2rem] px-6 py-6 text-sm font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all resize-none"
                           disabled={processing}
                         />
                       </div>
@@ -1579,7 +1582,7 @@ export default function CashierStationPage() {
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
                         placeholder="Narrative description of transaction purpose..." 
-                        className="w-full min-h-[120px] bg-gray-50 dark:bg-white/5 border border-transparent rounded-[2rem] px-8 py-8 text-sm font-bold text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none" 
+                        className="w-full min-h-[120px] bg-zinc-50 border border-transparent rounded-[2rem] px-8 py-8 text-sm font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all resize-none" 
                       />
                     </div>
                   </div>
@@ -1589,7 +1592,7 @@ export default function CashierStationPage() {
               {message && (
                 <div className={cn(
                   'p-6 rounded-[2rem] border flex items-center gap-4 animate-in fade-in slide-in-from-top-2', 
-                  message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                  message.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-rose-50 border-rose-100 text-rose-600'
                 )}>
                   {message.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
                   <p className="text-sm font-black uppercase tracking-tight">{message.text}</p>
@@ -1599,7 +1602,7 @@ export default function CashierStationPage() {
               <button 
                 type="submit" 
                 disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                className="w-full h-20 bg-black dark:bg-white hover:bg-black/90 dark:hover:bg-white/90 active:scale-[0.98] text-white dark:text-black font-black text-xs uppercase tracking-[0.4em] rounded-[2rem] transition-all shadow-2xl shadow-black/20 disabled:opacity-30 flex items-center justify-center gap-6"
+                className="w-full h-20 bg-indigo-600 hover:bg-zinc-900 active:scale-[0.98] text-white font-black text-xs uppercase tracking-[0.4em] rounded-[2rem] transition-all shadow-2xl shadow-indigo-600/20 disabled:opacity-30 flex items-center justify-center gap-6"
               >
                 {processing ? (
                   <>
@@ -1621,11 +1624,11 @@ export default function CashierStationPage() {
         <div className="max-w-[1600px] mx-auto px-4 md:px-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-black dark:bg-white rounded-[2rem] flex items-center justify-center text-white dark:text-black shadow-2xl shadow-black/20">
+              <div className="w-20 h-20 bg-zinc-900 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-zinc-900/20">
                 <History size={32} />
               </div>
               <div>
-                <h2 className="text-4xl sm:text-6xl font-[1000] text-black dark:text-white uppercase tracking-tight leading-none">Journal Log</h2>
+                <h2 className="text-4xl sm:text-6xl font-[1000] text-zinc-900 uppercase tracking-tight leading-none">Journal Log</h2>
                 <p className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mt-3 ml-1">Universal Financial Stream</p>
               </div>
             </div>
@@ -1637,7 +1640,7 @@ export default function CashierStationPage() {
                   "h-14 flex items-center gap-3 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border",
                   showDuplicatesOnly 
                     ? "bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20" 
-                    : "bg-white dark:bg-white/5 border-black/5 dark:border-white/5 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/10"
+                    : "bg-white border-zinc-100 text-zinc-900 hover:bg-zinc-50"
                 )}
               >
                 <RefreshCw size={16} className={cn(showDuplicatesOnly && "animate-pulse")} />
@@ -1647,7 +1650,7 @@ export default function CashierStationPage() {
                 type="button" 
                 onClick={() => void fetchHistory()} 
                 disabled={historyLoading}
-                className="h-14 flex items-center gap-3 px-8 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-black/20"
+                className="h-14 flex items-center gap-3 px-8 rounded-2xl bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-indigo-600/20"
               >
                 <RefreshCw size={16} className={cn(historyLoading && 'animate-spin')} />
                 {historyLoading ? 'Syncing...' : 'Sync Records'}
@@ -1656,47 +1659,47 @@ export default function CashierStationPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 animate-in fade-in slide-in-from-top-8 duration-1000 delay-200">
-            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+            <div className="bg-white border border-zinc-100 p-8 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 group hover:translate-y-[-4px] transition-all">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Total Inbound</p>
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
                   <TrendingUp size={18} />
                 </div>
               </div>
-              <h4 className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">Rs {intelStats.todayRevenue.toLocaleString()}</h4>
+              <h4 className="text-3xl font-[1000] text-zinc-900 tracking-tighter">Rs {intelStats.todayRevenue.toLocaleString()}</h4>
               <div className="mt-4 h-1 w-12 bg-emerald-500 rounded-full group-hover:w-full transition-all duration-700" />
             </div>
 
-            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+            <div className="bg-white border border-zinc-100 p-8 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 group hover:translate-y-[-4px] transition-all">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Total Outbound</p>
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
                   <TrendingDown size={18} />
                 </div>
               </div>
-              <h4 className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">Rs {intelStats.todayExpense.toLocaleString()}</h4>
+              <h4 className="text-3xl font-[1000] text-zinc-900 tracking-tighter">Rs {intelStats.todayExpense.toLocaleString()}</h4>
               <div className="mt-4 h-1 w-12 bg-rose-500 rounded-full group-hover:w-full transition-all duration-700" />
             </div>
 
-            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+            <div className="bg-white border border-zinc-100 p-8 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 group hover:translate-y-[-4px] transition-all">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Pending Review</p>
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
                   <Clock size={18} />
                 </div>
               </div>
-              <h4 className="text-3xl font-[1000] text-black dark:text-white tracking-tighter">{incomingFeeReqs.length} Units</h4>
+              <h4 className="text-3xl font-[1000] text-zinc-900 tracking-tighter">{incomingFeeReqs.length} Units</h4>
               <div className="mt-4 h-1 w-12 bg-amber-500 rounded-full group-hover:w-full transition-all duration-700" />
             </div>
 
-            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 p-8 rounded-[2.5rem] shadow-xl shadow-black/5 backdrop-blur-md group hover:translate-y-[-4px] transition-all">
+            <div className="bg-white border border-zinc-100 p-8 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 group hover:translate-y-[-4px] transition-all">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Top Velocity</p>
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center">
                   <Activity size={18} />
                 </div>
               </div>
-              <h4 className="text-3xl font-[1000] text-black dark:text-white uppercase tracking-tighter">{intelStats.topDept}</h4>
+              <h4 className="text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">{intelStats.topDept}</h4>
               <div className="mt-4 h-1 w-12 bg-indigo-500 rounded-full group-hover:w-full transition-all duration-700" />
             </div>
           </div>
@@ -1704,7 +1707,7 @@ export default function CashierStationPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Temporal Filter</label>
-            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm">
               <option value="today">Daily Active: Today</option>
               <option value="created_today">Entry Point: Today</option>
               <option value="range">Custom Matrix Range</option>
@@ -1713,7 +1716,7 @@ export default function CashierStationPage() {
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Verification State</label>
-            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm">
               <option value="all">All Assertions</option>
               <option value="pending">Awaiting Validation</option>
               <option value="approved">Verified / Success</option>
@@ -1722,7 +1725,7 @@ export default function CashierStationPage() {
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Flow Vector</label>
-            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm">
               <option value="all">Bi-Directional</option>
               <option value="income">Inbound (Credit)</option>
               <option value="expense">Outbound (Debit)</option>
@@ -1730,7 +1733,7 @@ export default function CashierStationPage() {
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 ml-4">Department Node</label>
-            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm">
               <option value="all">All Entry Points</option>
               {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
             </select>
@@ -1745,7 +1748,7 @@ export default function CashierStationPage() {
                 type="date"
                 value={historyFrom}
                 onChange={(e) => setHistoryFrom(e.target.value)}
-                className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
             </div>
             <div className="space-y-2">
@@ -1754,90 +1757,90 @@ export default function CashierStationPage() {
                 type="date"
                 value={historyTo}
                 onChange={(e) => setHistoryTo(e.target.value)}
-                className="w-full h-14 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl px-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-8 shadow-sm group">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-4">Total Credits</p>
-            <p className="text-3xl font-[1000] text-black dark:text-white">Rs {totals.income.toLocaleString()}</p>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600 mb-4">Total Credits</p>
+            <p className="text-3xl font-[1000] text-zinc-900">Rs {totals.income.toLocaleString()}</p>
             <div className="mt-4 h-1 w-8 bg-emerald-500 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
-          <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2.5rem] p-8 shadow-sm group">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-500 mb-4">Total Debits</p>
-            <p className="text-3xl font-[1000] text-black dark:text-white">Rs {totals.expense.toLocaleString()}</p>
+          <div className="bg-rose-50 border border-rose-100 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-600 mb-4">Total Debits</p>
+            <p className="text-3xl font-[1000] text-zinc-900">Rs {totals.expense.toLocaleString()}</p>
             <div className="mt-4 h-1 w-8 bg-rose-500 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
-          <div className="bg-gray-500/5 border border-gray-500/10 rounded-[2.5rem] p-8 shadow-sm group">
+          <div className="bg-zinc-50 border border-zinc-100 rounded-[2.5rem] p-8 shadow-sm group">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4">Record Count</p>
-            <p className="text-3xl font-[1000] text-black dark:text-white">{historyStats.count || historyFiltered.length}</p>
-            <div className="mt-4 h-1 w-8 bg-gray-400 rounded-full group-hover:w-full transition-all duration-500" />
+            <p className="text-3xl font-[1000] text-zinc-900">{historyStats.count || historyFiltered.length}</p>
+            <div className="mt-4 h-1 w-8 bg-zinc-400 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
-          <div className="bg-primary/5 border border-primary/10 rounded-[2.5rem] p-8 shadow-sm group">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-4">Net Liquidity</p>
-            <p className="text-3xl font-[1000] text-black dark:text-white">Rs {totals.net.toLocaleString()}</p>
-            <div className="mt-4 h-1 w-8 bg-primary rounded-full group-hover:w-full transition-all duration-500" />
+          <div className="bg-indigo-50 border border-indigo-100 rounded-[2.5rem] p-8 shadow-sm group">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600 mb-4">Net Liquidity</p>
+            <p className="text-3xl font-[1000] text-zinc-900">Rs {totals.net.toLocaleString()}</p>
+            <div className="mt-4 h-1 w-8 bg-indigo-600 rounded-full group-hover:w-full transition-all duration-500" />
           </div>
         </div>
 
         {historyDateMode === 'range' && historyFiltered.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-16 animate-in fade-in slide-in-from-top-8 duration-1000">
-            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-[3rem] p-10 shadow-2xl shadow-black/5 backdrop-blur-xl">
+            <div className="bg-white border border-zinc-100 rounded-[3rem] p-10 shadow-2xl shadow-zinc-200/50 backdrop-blur-xl">
               <div className="flex items-center gap-6 mb-10">
                 <div className="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
                   <Activity size={28} />
                 </div>
-                <h3 className="text-2xl font-[1000] uppercase tracking-tight text-black dark:text-white">Matrix Insights</h3>
+                <h3 className="text-2xl font-[1000] uppercase tracking-tight text-zinc-900">Matrix Insights</h3>
               </div>
               <div className="space-y-6">
-                <div className="flex justify-between items-center py-4 border-b border-black/5 dark:border-white/5">
+                <div className="flex justify-between items-center py-4 border-b border-zinc-100">
                   <span className="text-xs font-black uppercase tracking-widest text-gray-400">Mean Transaction</span>
-                  <span className="text-xl font-black text-black dark:text-white">Rs {Math.round(totals.income / (historyFiltered.filter(t => t.type === 'income').length || 1)).toLocaleString()}</span>
+                  <span className="text-xl font-black text-zinc-900">Rs {Math.round(totals.income / (historyFiltered.filter(t => t.type === 'income').length || 1)).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center py-4 border-b border-black/5 dark:border-white/5">
+                <div className="flex justify-between items-center py-4 border-b border-zinc-100">
                   <span className="text-xs font-black uppercase tracking-widest text-gray-400">Peak Inflow</span>
                   <span className="text-xl font-black text-emerald-500">Rs {Math.max(...historyFiltered.filter(t => t.type === 'income').map(t => Number(t.amount || 0)), 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-4">
                   <span className="text-xs font-black uppercase tracking-widest text-gray-400">Unique Entities</span>
-                  <span className="text-xl font-black text-black dark:text-white">{new Set(historyFiltered.map(t => t.patientId || t.staffId || t.donorId)).size} Identities</span>
+                  <span className="text-xl font-black text-zinc-900">{new Set(historyFiltered.map(t => t.patientId || t.staffId || t.donorId)).size} Identities</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-black dark:bg-white rounded-[3rem] p-10 shadow-2xl shadow-black/20 group overflow-hidden relative">
-              <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+            <div className="bg-zinc-900 rounded-[3rem] p-10 shadow-2xl shadow-zinc-900/20 group overflow-hidden relative">
+              <div className="absolute inset-0 bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
               <div className="relative z-10">
                 <div className="flex items-center gap-6 mb-10">
-                  <div className="w-14 h-14 bg-white dark:bg-black text-black dark:text-white rounded-2xl flex items-center justify-center shadow-lg">
+                  <div className="w-14 h-14 bg-white text-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
                     <ShieldCheck size={28} />
                   </div>
-                  <h3 className="text-2xl font-[1000] uppercase tracking-tight text-white dark:text-black">Audit Protocol</h3>
+                  <h3 className="text-2xl font-[1000] uppercase tracking-tight text-white">Audit Protocol</h3>
                 </div>
                 <div className="space-y-6">
-                  <div className="flex items-center gap-6 p-6 bg-white/5 dark:bg-black/5 rounded-[2rem] border border-white/10 dark:border-black/10">
+                  <div className="flex items-center gap-6 p-6 bg-white/5 rounded-[2rem] border border-white/10">
                     <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shadow-lg", historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? "bg-rose-500 text-white" : "bg-emerald-500 text-white")}>
                       {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 ? <X size={20} /> : <Check size={20} />}
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Compliance Factor</p>
-                      <p className="text-lg font-black text-white dark:text-black">
+                      <p className="text-lg font-black text-white">
                         {historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length > 0 
                           ? `${historyFiltered.filter(t => !t.proofUrl && !t.proofMissingReason).length} Items Non-Compliant` 
                           : 'Full Regulatory Integrity'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6 p-6 bg-white/5 dark:bg-black/5 rounded-[2rem] border border-white/10 dark:border-black/10">
+                  <div className="flex items-center gap-6 p-6 bg-white/5 rounded-[2rem] border border-white/10">
                     <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg">
                       <History size={20} />
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Clone Detection</p>
-                      <p className="text-lg font-black text-white dark:text-black">
+                      <p className="text-lg font-black text-white">
                         {historyFiltered.filter((tx1, idx1) => historyFiltered.some((tx2, idx2) => idx1 !== idx2 && tx1.amount === tx2.amount && (tx1.date || tx1.createdAt) === (tx2.date || tx2.createdAt) && (tx1.patientId || tx1.staffId) === (tx2.patientId || tx2.staffId))).length} flaggable entries
                       </p>
                     </div>
@@ -1850,16 +1853,16 @@ export default function CashierStationPage() {
 
         <div className="space-y-6 md:hidden">
           {historyLoading ? (
-            <div className="bg-white dark:bg-white/5 rounded-[2.5rem] p-16 border border-black/5 dark:border-white/5 text-center shadow-xl">
-              <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-6 text-gray-400">Retrieving Stream...</p>
+            <div className="bg-white rounded-[3rem] p-12 shadow-2xl shadow-zinc-200/60 border border-zinc-100 mb-16 relative overflow-hidden">
+              <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mx-auto" />
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-6 text-gray-400 text-center">Retrieving Stream...</p>
             </div>
           ) : historyFiltered.length === 0 ? (
             <div className="bg-white dark:bg-white/5 rounded-[2.5rem] p-12 border border-black/5 dark:border-white/5 text-center shadow-xl">
               <p className="text-xs font-black text-gray-400 uppercase tracking-widest">No matching records found</p>
             </div>
           ) : historyFiltered.map((tx) => (
-            <div key={tx.id} onClick={() => setDetailModalTx(tx)} className="bg-white dark:bg-white/5 rounded-[2.5rem] p-8 border border-black/5 dark:border-white/5 shadow-xl active:scale-[0.98] transition-all group">
+            <div key={tx.id} onClick={() => setDetailModalTx(tx)} className="bg-white rounded-[2.5rem] p-8 border border-zinc-100 shadow-xl active:scale-[0.98] transition-all group">
               <div className="flex items-start justify-between gap-6">
                 <div className="min-w-0">
                   <div className="text-lg font-black text-black dark:text-white truncate group-hover:text-primary transition-colors">{tx.patientName || tx.staffName || 'General Tx'}</div>
@@ -1891,20 +1894,23 @@ export default function CashierStationPage() {
             <table className="w-full min-w-[1000px] text-left border-separate border-spacing-0">
               <thead>
                 <tr className="bg-black dark:bg-white">
-                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Timeline</th>
-                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Node</th>
-                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Identity / Account</th>
-                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Classification</th>
-                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black">Assurance</th>
-                  <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-white dark:text-black text-right">Magnitude</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/5 dark:divide-white/5">
+        <div className="hidden md:block bg-white rounded-[3.5rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-zinc-50 border-b border-zinc-100 h-24">
+                <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Time-Stamp</th>
+                <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Identity Nodes</th>
+                <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Class</th>
+                <th className="px-10 text-right text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Flow</th>
+                <th className="px-10 text-right text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Audit</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-50">
                 {historyLoading ? (
                   <tr>
                     <td colSpan={6} className="px-10 py-32 text-center">
                       <div className="flex flex-col items-center gap-6">
-                        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                        <Loader2 className="w-16 h-16 animate-spin text-indigo-600" />
                         <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.4em]">Synchronizing Financial Ledger...</p>
                       </div>
                     </td>
@@ -1914,33 +1920,30 @@ export default function CashierStationPage() {
                     <td colSpan={6} className="px-10 py-32 text-center text-sm font-black text-gray-400 uppercase tracking-[0.3em]">No matrix entries found for this query context.</td>
                   </tr>
                 ) : historyFiltered.map((tx: any) => (
-                  <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-all cursor-pointer group h-24">
-                    <td className="px-10 py-6 text-xs font-black text-black dark:text-white tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
+                  <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-zinc-50 transition-all cursor-pointer group h-24">
+                    <td className="px-10 py-6 text-xs font-black text-zinc-900 tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
                     <td className="px-10 py-6">
-                      <span className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-black dark:text-white text-[9px] font-[1000] uppercase tracking-widest">{tx.departmentCode}</span>
-                    </td>
-                    <td className="px-10 py-6">
-                      <div className="text-base font-[1000] text-black dark:text-white group-hover:text-primary transition-colors">{tx.patientName || tx.staffName || 'General Account'}</div>
+                      <div className="text-base font-[1000] text-zinc-900 group-hover:text-indigo-600 transition-colors">{tx.patientName || tx.staffName || 'General Account'}</div>
                       <div className="text-[9px] font-black text-gray-400 tracking-widest uppercase mt-1.5">{tx.id?.slice(0, 16)}</div>
                     </td>
                     <td className="px-10 py-6 text-xs font-black text-gray-500 uppercase tracking-widest">{tx.categoryName || tx.category}</td>
-                    <td className="px-10 py-6">
-                      <span className={cn('px-4 py-1.5 rounded-xl text-[9px] font-[1000] uppercase tracking-[0.2em] border transition-all', 
-                        tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                        tx.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 
-                        'bg-gray-500/10 text-gray-500 border-gray-500/20'
-                      )}>
-                        {tx.status || 'pending'}
-                      </span>
+                    <td className="px-10 py-6 text-right">
+                        <div className={cn('text-xl font-[1000] tracking-tighter tabular-nums', tx.type === 'income' ? 'text-zinc-900' : 'text-rose-500')}>
+                          {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
+                        </div>
                     </td>
                     <td className="px-10 py-6 text-right">
                       <div className="flex items-center justify-end gap-6">
-                        <div className={cn('text-xl font-[1000] tracking-tighter tabular-nums', tx.type === 'income' ? 'text-black dark:text-white' : 'text-rose-500')}>
-                          {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
-                        </div>
+                        <span className={cn('px-4 py-1.5 rounded-xl text-[9px] font-[1000] uppercase tracking-[0.2em] border transition-all', 
+                          tx.status === 'approved' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 
+                          tx.status === 'rejected' ? 'bg-rose-50 text-rose-500 border-rose-100' : 
+                          'bg-zinc-50 text-zinc-500 border-zinc-100'
+                        )}>
+                          {tx.status || 'pending'}
+                        </span>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
-                          className="w-10 h-10 rounded-xl bg-rose-500/5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                          className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
                           title="Purge Transaction"
                         >
                           <Trash2 size={16} />
@@ -1951,13 +1954,12 @@ export default function CashierStationPage() {
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
       </div>
       {forwardModalTx && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-500">
-          <div className="w-full max-w-xl bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 rounded-[3.5rem] overflow-hidden shadow-[0_0_80px_-20px_rgba(0,0,0,0.4)] transition-all">
-            <div className="bg-blue-600 px-10 py-10 flex items-center justify-between text-white relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[3.5rem] overflow-hidden shadow-2xl shadow-indigo-600/10 transition-all">
+            <div className="bg-indigo-600 px-10 py-10 flex items-center justify-between text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
               <div className="relative z-10">
                 <h3 className="text-2xl font-[1000] uppercase tracking-tighter">Auth Protocol</h3>
@@ -1976,9 +1978,9 @@ export default function CashierStationPage() {
             </div>
 
             <div className="p-10 space-y-8">
-              <div className="p-6 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/10 dark:border-blue-500/20 rounded-[2rem] flex justify-between items-center group">
-                <span className="text-[10px] font-black uppercase text-blue-500 tracking-[0.3em]">Quantum Magnitude</span>
-                <span className="text-2xl font-[1000] text-blue-600 dark:text-blue-400">Rs {Number(forwardModalTx.amount || 0).toLocaleString()}</span>
+              <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-[2rem] flex justify-between items-center group">
+                <span className="text-[10px] font-black uppercase text-indigo-500 tracking-[0.3em]">Quantum Magnitude</span>
+                <span className="text-2xl font-[1000] text-indigo-600">Rs {Number(forwardModalTx.amount || 0).toLocaleString()}</span>
               </div>
 
               <div className="space-y-4">
@@ -1986,13 +1988,21 @@ export default function CashierStationPage() {
                 <div className="relative group">
                   <input
                     type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => setForwardProofFile(e.target.files?.[0] || null)}
+                    accept="image/webp,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.type.startsWith('image/') && file.type !== 'image/webp') {
+                        toast.error("Only .webp images are allowed");
+                        e.target.value = '';
+                        return;
+                      }
+                      setForwardProofFile(file || null);
+                    }}
                     className="w-full opacity-0 absolute inset-0 cursor-pointer z-10"
                     disabled={forwardProofUploading}
                   />
-                  <div className="w-full bg-gray-50 dark:bg-white/5 border-2 border-dashed border-gray-200 dark:border-white/10 rounded-[2rem] px-8 py-10 text-center transition-all group-hover:border-blue-500 group-hover:bg-blue-500/5">
-                    <p className="text-sm font-[1000] text-black dark:text-white transition-colors group-hover:text-blue-500">
+                  <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-[2rem] px-8 py-10 text-center transition-all group-hover:border-indigo-500 group-hover:bg-indigo-500/5">
+                    <p className="text-sm font-[1000] text-zinc-900 transition-colors group-hover:text-indigo-600">
                       {forwardProofFile ? forwardProofFile.name : 'Inject Proof Matrix'}
                     </p>
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-3">Maximum Payload: 5MB</p>
@@ -2008,7 +2018,7 @@ export default function CashierStationPage() {
                   value={forwardProofReason}
                   onChange={(e) => setForwardProofReason(e.target.value)}
                   placeholder="Justify this commit for administrative audit..."
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] px-8 py-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 min-h-[120px] resize-none transition-all placeholder:text-gray-400"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-[2rem] px-8 py-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 min-h-[120px] resize-none transition-all placeholder:text-gray-400"
                   disabled={forwardProofUploading}
                 />
               </div>
@@ -2018,7 +2028,7 @@ export default function CashierStationPage() {
                   type="button"
                   onClick={() => setForwardModalTx(null)}
                   disabled={forwardProofUploading}
-                  className="flex-1 h-16 rounded-[1.5rem] bg-gray-100 dark:bg-white/5 text-black dark:text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-zinc-100 text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-zinc-200 transition-all"
                 >
                   Abort
                 </button>
@@ -2026,7 +2036,7 @@ export default function CashierStationPage() {
                   type="button"
                   onClick={() => void confirmForwardToSuperadmin()}
                   disabled={forwardProofUploading}
-                  className="flex-1 h-16 rounded-[1.5rem] bg-blue-600 text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-indigo-600 text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                   {forwardProofUploading ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Authorize & Commit'}
                 </button>
@@ -2037,8 +2047,8 @@ export default function CashierStationPage() {
       )}
 
       {rejectModalTx && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-500">
-          <div className="w-full max-w-xl bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 rounded-[3.5rem] overflow-hidden shadow-[0_0_80px_-20px_rgba(0,0,0,0.4)] transition-all">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[3.5rem] overflow-hidden shadow-2xl shadow-rose-600/10 transition-all">
             <div className="bg-rose-600 px-10 py-10 flex items-center justify-between text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
               <div className="relative z-10">
@@ -2058,9 +2068,9 @@ export default function CashierStationPage() {
             </div>
 
             <div className="p-10 space-y-8">
-              <div className="p-6 bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/10 dark:border-rose-500/20 rounded-[2rem] flex justify-between items-center">
+              <div className="p-6 bg-rose-50 border border-rose-100 rounded-[2rem] flex justify-between items-center">
                 <span className="text-[10px] font-black uppercase text-rose-500 tracking-[0.3em]">Denied Magnitude</span>
-                <span className="text-2xl font-[1000] text-rose-600 dark:text-rose-400">Rs {Number(rejectModalTx.amount || 0).toLocaleString()}</span>
+                <span className="text-2xl font-[1000] text-rose-600">Rs {Number(rejectModalTx.amount || 0).toLocaleString()}</span>
               </div>
 
               <div className="space-y-4">
@@ -2069,7 +2079,7 @@ export default function CashierStationPage() {
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="State the regulatory or operational conflict..."
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] px-8 py-6 text-sm font-black text-black dark:text-white outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 min-h-[150px] resize-none transition-all placeholder:text-gray-400"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-[2rem] px-8 py-6 text-sm font-black text-zinc-900 outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 min-h-[150px] resize-none transition-all placeholder:text-gray-400"
                   disabled={rejecting}
                 />
               </div>
@@ -2079,7 +2089,7 @@ export default function CashierStationPage() {
                   type="button"
                   onClick={() => setRejectModalTx(null)}
                   disabled={rejecting}
-                  className="flex-1 h-16 rounded-[1.5rem] bg-gray-100 dark:bg-white/5 text-black dark:text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
+                  className="flex-1 h-16 rounded-[1.5rem] bg-zinc-100 text-zinc-900 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-zinc-200 transition-all"
                 >
                   Cancel
                 </button>
@@ -2098,12 +2108,12 @@ export default function CashierStationPage() {
       )}
 
       {detailModalTx && (
-        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-500">
-          <div className="w-full max-w-xl bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 rounded-[4rem] overflow-hidden shadow-[0_0_100px_-20px_rgba(0,0,0,0.5)]">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[4rem] overflow-hidden shadow-2xl shadow-indigo-600/10">
             <div className="relative p-12">
               <button 
                 onClick={() => setDetailModalTx(null)}
-                className="absolute top-10 right-10 w-14 h-14 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group"
+                className="absolute top-10 right-10 w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900 hover:bg-zinc-900 hover:text-white transition-all group"
               >
                 <X size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
               </button>
@@ -2128,7 +2138,7 @@ export default function CashierStationPage() {
                   </div>
                 </div>
 
-                <div className="p-8 rounded-[2.5rem] bg-black dark:bg-white shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] group">
+                <div className="p-8 rounded-[2.5rem] bg-indigo-600 shadow-[0_20px_40px_-15px_rgba(79,70,229,0.3)] group text-white">
                   <p className="text-[9px] font-black text-white/40 dark:text-black/40 uppercase tracking-[0.4em] mb-3">Entity Identity</p>
                   <p className="text-2xl font-[1000] text-white dark:text-black tracking-tight group-hover:text-primary transition-colors">{detailModalTx.patientName || detailModalTx.staffName || 'General Nexus'}</p>
                   <p className="text-xs font-black text-white/60 dark:text-black/60 mt-2 font-mono">{detailModalTx.patientId || detailModalTx.staffId || 'ANONYMOUS_VOID'}</p>
@@ -2188,8 +2198,6 @@ export default function CashierStationPage() {
           </div>
         </div>
       )}
-    </div>
-    </div>
     </div>
   );
 }

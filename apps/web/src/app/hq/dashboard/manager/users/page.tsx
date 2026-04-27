@@ -346,6 +346,10 @@ export default function ManagerUsersPage() {
   };
 
   const handleFileUpload = async (file: File, type: string = 'profile') => {
+    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+      toast.error("Only .webp images are allowed.");
+      return;
+    }
     const fieldId = type === 'profile' ? 'photoUrl' : 'document';
     setUploading(fieldId);
     try {
@@ -928,7 +932,7 @@ export default function ManagerUsersPage() {
                           <input
                             type="file"
                             className="absolute inset-0 opacity-0 cursor-pointer"
-                            accept="image/*"
+                            accept="image/webp"
                             onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'profile')}
                           />
                           {uploading === 'photoUrl' && (
@@ -1601,10 +1605,17 @@ export default function ManagerUsersPage() {
                             type="file"
                             className="absolute inset-0 opacity-0 cursor-pointer"
                             multiple
+                            accept="image/webp,application/pdf"
                             onChange={(e) => {
                               const files = e.target.files;
                               if (files) {
-                                Array.from(files).forEach(file => handleFileUpload(file, 'document'));
+                                Array.from(files).forEach(file => {
+                                  if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+                                    toast.error(`File ${file.name} is not a WebP image`);
+                                    return;
+                                  }
+                                  handleFileUpload(file, 'document');
+                                });
                               }
                             }}
                           />

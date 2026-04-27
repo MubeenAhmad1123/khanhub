@@ -879,7 +879,7 @@ service cloud.firestore {
     // Nobody edits or deletes.
     match /hq_reconciliation/{docId} {
       allow read: if isHqSuperOrManager()
-        || (isHqCashier() && resource.data.get('cashierId', '').upper() == hqCustomId().upper());
+        || (isHqCashier() && string(resource.data.get('cashierId', '')).upper() == string(hqCustomId()).upper());
       allow create: if isHqCashier() || isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if false;

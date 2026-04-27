@@ -180,7 +180,8 @@ export default function SuperadminAuditPage() {
   })), [filtered]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="min-h-screen bg-[#FCFBF8] dark:bg-black pb-20">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       {/* Retention Settings Modal */}
       {showRetention && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in">
@@ -250,15 +251,15 @@ export default function SuperadminAuditPage() {
           { label: 'Active Sources', value: dynamicSources.length - 1, color: 'text-black dark:text-white' },
           { label: 'Last Pulse', value: stats.lastActivity, color: 'text-black italic' },
         ].map((s, i) => (
-          <div key={i} className="rounded-3xl border border-gray-100 bg-white p-6 dark:border-white/10 dark:bg-black shadow-sm">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black mb-2">{s.label}</p>
+          <div key={i} className="rounded-[2rem] border border-gray-100 bg-white p-6 dark:border-white/10 dark:bg-black shadow-2xl shadow-gray-200/50">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">{s.label}</p>
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Filter Section */}
-      <div className="flex flex-col gap-6 p-6 rounded-3xl border border-gray-100 bg-gray-50 dark:bg-white/5 dark:border-white/10">
+      <div className="flex flex-col gap-6 p-8 rounded-[2.5rem] border border-gray-100 bg-white dark:bg-white/5 dark:border-white/10 shadow-2xl shadow-gray-200/40">
         <section>
           <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-black flex items-center gap-2 italic">
             <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
@@ -434,6 +435,7 @@ export default function SuperadminAuditPage() {
           onClose={() => setSelectedAudit(null)} 
         />
       )}
+    </div>
     </div>
   );
 }

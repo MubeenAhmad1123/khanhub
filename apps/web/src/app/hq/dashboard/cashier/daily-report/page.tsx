@@ -352,28 +352,28 @@ export default function DailyReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-20 print:bg-white print:pb-0 font-sans">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 px-4 py-4 md:px-8 print:hidden">
+    <div className="min-h-screen bg-[#FCFBF8] pb-20 print:bg-white print:pb-0 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <button 
               onClick={() => router.back()}
-              className="p-2.5 hover:bg-slate-100/80 rounded-2xl transition-all active:scale-95 text-slate-400 hover:text-slate-900"
+              className="p-2.5 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Daily Report</h1>
+              <h1 className="text-2xl font-black text-zinc-900 tracking-tight leading-tight">Daily Report</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">HQ Financial Intelligence</p>
+                <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">HQ Financial Intelligence</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative group overflow-hidden rounded-2xl border border-slate-200 shadow-sm bg-white">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors z-10" />
+            <div className="relative group overflow-hidden rounded-2xl border border-zinc-100 shadow-sm bg-white">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-hover:text-indigo-600 transition-colors z-10" />
               <input 
                 type="text" 
                 placeholder="DD MM YYYY"
@@ -383,12 +383,12 @@ export default function DailyReportPage() {
                   const parsed = parseDateDMY(e.target.value);
                   if (parsed) setReportDate(parsed.toISOString().split('T')[0]);
                 }}
-                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 outline-none transition-all cursor-pointer relative z-0"
+                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-zinc-50 border-none rounded-2xl text-sm font-bold text-zinc-900 outline-none transition-all cursor-pointer relative z-0"
               />
             </div>
             <button 
               onClick={handlePrint}
-              className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center gap-2 border border-slate-200 shadow-sm"
+              className="px-5 py-2.5 bg-white hover:bg-zinc-50 text-zinc-900 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center gap-2 border border-zinc-100 shadow-sm"
             >
               <Printer className="w-4 h-4" />
               Print
@@ -397,7 +397,7 @@ export default function DailyReportPage() {
             {!isDayClosed ? (
               <button 
                 onClick={() => setShowCloseModal(true)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center gap-2"
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-zinc-900 text-white rounded-2xl text-sm font-black transition-all shadow-xl shadow-indigo-600/10 active:scale-95 flex items-center gap-2"
               >
                 <FileCheck className="w-4 h-4" />
                 Close Day
@@ -438,14 +438,14 @@ export default function DailyReportPage() {
         )}
 
         <div className="flex justify-center mb-12 print:hidden">
-          <div className="bg-slate-200/50 p-1.5 rounded-[22px] flex items-center border border-slate-200/50 gap-1">
+          <div className="bg-zinc-100/80 p-1.5 rounded-[2.5rem] flex items-center border border-zinc-200/50 gap-1">
             <button 
               onClick={() => setViewMode('summary')}
               className={cn(
-                "flex items-center gap-2.5 px-8 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap",
+                "flex items-center gap-2.5 px-8 py-3 rounded-[2rem] text-sm font-black transition-all whitespace-nowrap",
                 viewMode === 'summary' 
-                  ? "bg-white text-slate-900 shadow-xl shadow-slate-200/50 scale-100" 
-                  : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                  ? "bg-white text-zinc-900 shadow-xl shadow-zinc-200/50 scale-100" 
+                  : "text-zinc-400 hover:text-zinc-900 hover:bg-white/50"
               )}
             >
               <LayoutDashboard className="w-4 h-4" />
@@ -454,10 +454,10 @@ export default function DailyReportPage() {
             <button 
               onClick={() => setViewMode('detail')}
               className={cn(
-                "flex items-center gap-2.5 px-8 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap",
+                "flex items-center gap-2.5 px-8 py-3 rounded-[2rem] text-sm font-black transition-all whitespace-nowrap",
                 viewMode === 'detail' 
-                  ? "bg-white text-slate-900 shadow-xl shadow-slate-200/50 scale-100" 
-                  : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                  ? "bg-white text-zinc-900 shadow-xl shadow-zinc-200/50 scale-100" 
+                  : "text-zinc-400 hover:text-zinc-900 hover:bg-white/50"
               )}
             >
               <List className="w-4 h-4" />
@@ -469,51 +469,51 @@ export default function DailyReportPage() {
         {viewMode === 'summary' ? (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white p-7 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden group">
+              <div className="bg-white p-7 rounded-[2.5rem] border border-zinc-100 shadow-sm relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 transition-transform group-hover:rotate-12">
                    <div className="bg-emerald-50 p-3 rounded-2xl">
                     <TrendingUp className="w-6 h-6 text-emerald-600" />
                    </div>
                 </div>
-                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Income</h3>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">PKR {stats.totalIncome.toLocaleString()}</p>
+                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Income</h3>
+                <p className="text-3xl font-black text-zinc-900 tracking-tight">PKR {stats.totalIncome.toLocaleString()}</p>
                 <div className="mt-4 flex items-center gap-1.5">
-                   <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                   <div className="h-1 w-full bg-zinc-50 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }} />
                    </div>
                 </div>
               </div>
 
-              <div className="bg-white p-7 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden group">
+              <div className="bg-white p-7 rounded-[2.5rem] border border-zinc-100 shadow-sm relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 transition-transform group-hover:-rotate-12">
                    <div className="bg-rose-50 p-3 rounded-2xl">
                     <TrendingDown className="w-6 h-6 text-rose-600" />
                    </div>
                 </div>
-                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Expenses</h3>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">PKR {stats.totalExpense.toLocaleString()}</p>
+                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Expenses</h3>
+                <p className="text-3xl font-black text-zinc-900 tracking-tight">PKR {stats.totalExpense.toLocaleString()}</p>
                 <div className="mt-4 flex items-center gap-1.5">
-                   <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                   <div className="h-1 w-full bg-zinc-50 rounded-full overflow-hidden">
                       <div className="h-full bg-rose-500 rounded-full" style={{ width: `${(stats.totalExpense / (stats.totalIncome || 1)) * 100}%` }} />
                    </div>
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-7 rounded-[32px] shadow-2xl shadow-slate-200 relative overflow-hidden group col-span-1 md:col-span-2">
+              <div className="bg-indigo-600 p-7 rounded-[2.5rem] shadow-2xl shadow-indigo-200/50 relative overflow-hidden group col-span-1 md:col-span-2">
                 <div className="absolute top-0 right-0 p-4 opacity-20">
                     <Wallet className="w-20 h-20 text-white" />
                 </div>
-                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Net Flow Balance</h3>
+                <h3 className="text-sm font-black text-indigo-200 uppercase tracking-widest mb-1">Net Flow Balance</h3>
                 <p className="text-4xl font-black text-white tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
                 <div className="mt-6 flex items-center gap-4">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Expected Cash</span>
-                    <span className="text-emerald-400 font-black">PKR {stats.cashExpected.toLocaleString()}</span>
+                    <span className="text-[10px] font-black text-indigo-200/60 uppercase tracking-widest">Expected Cash</span>
+                    <span className="text-white font-black">PKR {stats.cashExpected.toLocaleString()}</span>
                   </div>
-                  <div className="h-8 w-[1px] bg-slate-800" />
+                  <div className="h-8 w-[1px] bg-white/20" />
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digital/Bank</span>
-                    <span className="text-indigo-400 font-black">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
+                    <span className="text-[10px] font-black text-indigo-200/60 uppercase tracking-widest">Digital/Bank</span>
+                    <span className="text-white font-black">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -635,31 +635,31 @@ export default function DailyReportPage() {
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                <h2 className="text-lg font-black text-slate-900 mb-8 px-2">Cash Flow by Department</h2>
+            <div className="bg-white p-8 rounded-[3rem] border border-zinc-100 shadow-sm">
+                <h2 className="text-lg font-black text-zinc-900 mb-8 px-2">Cash Flow by Department</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {Object.entries(stats.deptTotals).map(([dept, totals]) => (
-                        <div key={dept} className="p-6 rounded-3xl bg-slate-50 border border-slate-100 relative group transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-200/50">
+                        <div key={dept} className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100 relative group transition-all hover:bg-white hover:shadow-xl hover:shadow-zinc-200/50">
                             <div className="flex justify-between items-start mb-6">
-                                <span className="p-2 bg-white rounded-xl text-[10px] font-black uppercase text-slate-500 shadow-sm border border-slate-100">{dept}</span>
-                                <span className="text-sm font-black text-slate-900">PKR {(totals.income - totals.expense).toLocaleString()}</span>
+                                <span className="p-2 bg-white rounded-xl text-[10px] font-black uppercase text-zinc-400 shadow-sm border border-zinc-100">{dept}</span>
+                                <span className="text-sm font-black text-zinc-900">PKR {(totals.income - totals.expense).toLocaleString()}</span>
                             </div>
                             <div className="space-y-4">
                                 <div>
-                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-1.5">
+                                    <div className="flex justify-between text-[10px] font-black text-zinc-400 uppercase mb-1.5">
                                         <span>Income</span>
                                         <span className="text-emerald-600">PKR {totals.income.toLocaleString()}</span>
                                     </div>
-                                    <div className="h-1.5 w-full bg-slate-200 rounded-full">
+                                    <div className="h-1.5 w-full bg-zinc-100 rounded-full">
                                         <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }} />
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-1.5">
+                                    <div className="flex justify-between text-[10px] font-black text-zinc-400 uppercase mb-1.5">
                                         <span>Expense</span>
                                         <span className="text-rose-600">PKR {totals.expense.toLocaleString()}</span>
                                     </div>
-                                    <div className="h-1.5 w-full bg-slate-200 rounded-full">
+                                    <div className="h-1.5 w-full bg-zinc-100 rounded-full">
                                         <div className="h-full bg-rose-500 rounded-full" style={{ width: `${(totals.expense / (totals.income || 1)) * 100}%` }} />
                                     </div>
                                 </div>
@@ -670,9 +670,9 @@ export default function DailyReportPage() {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-            <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <h2 className="font-bold text-slate-800 flex items-center gap-2">
+          <div className="bg-white rounded-[2.5rem] border border-zinc-100 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-zinc-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h2 className="font-bold text-zinc-900 flex items-center gap-2">
                 <List className="w-5 h-5 text-indigo-600" />
                 Transaction Audit Logs
               </h2>
@@ -682,7 +682,7 @@ export default function DailyReportPage() {
               <div className="hidden md:block overflow-x-auto print:block">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/80 text-[10px] uppercase tracking-widest font-black text-slate-500">
+                    <tr className="bg-zinc-50 text-[10px] uppercase tracking-widest font-black text-zinc-400">
                       <th className="px-6 py-4">Time</th>
                       <th className="px-6 py-4">Dept</th>
                       <th className="px-6 py-4">Category</th>
@@ -784,87 +784,81 @@ export default function DailyReportPage() {
                   <div className="text-center py-20 text-slate-400 font-medium">
                     No transactions found for this date.
                   </div>
-                )}
               </div>
             </div>
           </div>
         )}
       </main>
-
       {showCloseModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowCloseModal(false)} />
-          <div className="bg-white w-full max-w-xl rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="flex items-center justify-between p-8 border-b border-slate-100">
+          <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" onClick={() => setShowCloseModal(false)} />
+          <div className="bg-[#FCFBF8] w-full max-w-xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+            <div className="flex items-center justify-between p-8 border-b border-zinc-100">
               <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Day Settlement</h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 italic">Audit Ref: {reportDate}</p>
+                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">Day Settlement</h2>
+                <p className="text-xs font-black text-zinc-400 uppercase tracking-widest mt-1">Finalize all transactions</p>
               </div>
-              <button onClick={() => setShowCloseModal(false)} className="p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
-                <X className="w-6 h-6" />
+              <button 
+                onClick={() => setShowCloseModal(false)}
+                className="p-3 hover:bg-zinc-100 rounded-2xl transition-colors"
+              >
+                <X className="w-6 h-6 text-zinc-400" />
               </button>
             </div>
 
             <div className="p-8 space-y-8">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] uppercase font-black text-slate-400 mb-1.5 leading-none">Opening</p>
-                  <p className="text-lg font-black text-slate-900">Rs {openingBalance.toLocaleString()}</p>
+                <div className="p-6 bg-white rounded-3xl border border-zinc-100">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Expected</p>
+                  <p className="text-xl font-black text-zinc-900">PKR {(openingBalance + stats.totalIncome - stats.totalExpense).toLocaleString()}</p>
                 </div>
-                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] uppercase font-black text-slate-400 mb-1.5 leading-none">Today's Flow</p>
-                  <p className="text-lg font-black text-slate-900">Rs {stats.netTotal.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="bg-indigo-600 p-8 rounded-[32px] text-center text-white shadow-xl shadow-indigo-200">
-                <div className="flex flex-col items-center">
-                   <div className="bg-white/20 p-3 rounded-2xl mb-4 backdrop-blur-sm">
-                      <Calculator className="w-6 h-6 text-white" />
-                   </div>
-                   <h3 className="text-xs font-black text-white/70 uppercase tracking-widest mb-1">Expected Closing Cash</h3>
-                   <p className="text-4xl font-black text-white tracking-tighter">
-                    Rs {(openingBalance + stats.totalIncome - stats.totalExpense).toLocaleString()}
-                   </p>
+                <div className="p-6 bg-white rounded-3xl border border-zinc-100">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total Inflow</p>
+                  <p className="text-xl font-black text-emerald-600">+{stats.totalIncome.toLocaleString()}</p>
                 </div>
               </div>
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Actual Physical Cash</label>
-                  <div className="relative group">
-                    <Coins className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-within:text-indigo-600 transition-colors" />
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block px-1">Actual Cash in Hand</label>
+                  <div className="relative">
+                    <Calculator className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                     <input 
                       type="number"
                       value={actualCash}
                       onChange={(e) => setActualCash(e.target.value)}
                       placeholder="Enter amount..."
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-600 rounded-[28px] outline-none transition-all font-black text-2xl text-slate-900 placeholder:text-slate-300"
+                      className="w-full pl-12 pr-6 py-5 bg-white border border-zinc-100 rounded-[2rem] text-xl font-black text-zinc-900 focus:ring-4 focus:ring-indigo-50 outline-none transition-all placeholder:text-zinc-200"
                     />
                   </div>
                 </div>
 
                 <div>
-                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Closing Notes</label>
-                   <textarea 
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block px-1">Internal Note (Optional)</label>
+                  <textarea 
                     value={closingNote}
                     onChange={(e) => setClosingNote(e.target.value)}
-                    placeholder="Additional context for this settlement..."
+                    placeholder="Any discrepancies or notes..."
                     rows={3}
-                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:bg-white focus:border-indigo-600 transition-all text-sm font-bold text-slate-700 placeholder:text-slate-300"
-                   />
+                    className="w-full px-6 py-5 bg-white border border-zinc-100 rounded-[2rem] text-sm font-bold text-zinc-900 focus:ring-4 focus:ring-indigo-50 outline-none transition-all placeholder:text-zinc-200 resize-none"
+                  />
                 </div>
               </div>
 
               <button 
                 onClick={handleCloseDay}
-                disabled={submitting || !actualCash}
-                className="w-full py-6 bg-indigo-600 hover:bg-slate-900 text-white rounded-[28px] font-black text-lg transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale"
+                disabled={submitting}
+                className="w-full py-6 bg-indigo-600 hover:bg-zinc-900 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-indigo-600/10 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    Finalizing...
+                  </>
+                ) : (
                   <>
                     <Save className="w-6 h-6" />
-                    Archive & Finalize
+                    Submit Settlement
                   </>
                 )}
               </button>

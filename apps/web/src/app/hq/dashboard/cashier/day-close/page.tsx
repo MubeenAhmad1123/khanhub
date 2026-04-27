@@ -228,7 +228,7 @@ export default function DayClosePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-20 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[#FCFBF8] pb-20 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-4 py-4 md:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
            <div className="flex items-center gap-5">
@@ -255,7 +255,7 @@ export default function DayClosePage() {
 
       <main className="max-w-5xl mx-auto px-4 py-10 md:px-8">
         {isDayClosed ? (
-          <div className="bg-white p-12 rounded-[40px] border border-slate-200 shadow-2xl shadow-slate-200/50 text-center animate-in zoom-in-95 duration-500">
+          <div className="bg-white p-12 rounded-[3rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 text-center animate-in zoom-in-95 duration-500">
              <div className="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
                 <Lock className="w-10 h-10 text-emerald-600" />
              </div>
@@ -265,7 +265,7 @@ export default function DayClosePage() {
              </p>
              <button 
                onClick={() => router.push('/hq/dashboard/cashier/daily-report')}
-               className="px-8 py-4 bg-slate-950 text-white rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-xl shadow-slate-200"
+                className="px-8 py-4 bg-indigo-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-zinc-900 transition-all active:scale-95 shadow-xl shadow-indigo-600/20"
              >
                 View Final Report
              </button>
@@ -273,7 +273,7 @@ export default function DayClosePage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-12 space-y-8">
-               <div className="bg-white p-8 md:p-12 rounded-[48px] border border-slate-200/60 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+               <div className="bg-white p-8 md:p-12 rounded-[3rem] border border-zinc-100 shadow-xl shadow-zinc-200/40 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-5">
                     <ShieldCheck className="w-40 h-40 text-slate-950" />
                   </div>
@@ -285,7 +285,7 @@ export default function DayClosePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                       <div className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 flex flex-col justify-between group hover:bg-white hover:shadow-xl transition-all border-dashed">
+                       <div className="p-6 rounded-[3rem] bg-slate-50/80 border border-slate-100 flex flex-col justify-between group hover:bg-white hover:shadow-xl transition-all border-dashed">
                           <div>
                             <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1">Opening Cash</p>
                             <p className="text-xl font-black text-slate-900">PKR {openingBalance.toLocaleString()}</p>
@@ -293,7 +293,7 @@ export default function DayClosePage() {
                           <History className="w-5 h-5 text-slate-300 mt-4 group-hover:text-indigo-500 transition-colors" />
                        </div>
                        
-                       <div className="p-6 rounded-3xl bg-indigo-50/40 border border-indigo-100/50 flex flex-col justify-between hover:bg-indigo-50 transition-all">
+                       <div className="p-6 rounded-[3rem] bg-indigo-50/40 border border-indigo-100/50 flex flex-col justify-between hover:bg-indigo-50 transition-all">
                           <div>
                             <p className="text-[10px] font-black text-indigo-400 tracking-widest uppercase mb-1 italic">Total Cash Flow (Net)</p>
                             <p className="text-xl font-black text-indigo-900">PKR {stats.cashExpected.toLocaleString()}</p>
@@ -304,8 +304,8 @@ export default function DayClosePage() {
                           </div>
                        </div>
 
-                       <div className="p-8 rounded-[32px] bg-slate-950 text-white shadow-2xl shadow-indigo-200 flex flex-col items-center justify-center md:scale-105">
-                          <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2">Expected Cash</p>
+                       <div className="p-8 rounded-[3rem] bg-indigo-600 text-white shadow-2xl shadow-indigo-200 flex flex-col items-center justify-center md:scale-105">
+                          <p className="text-[10px] font-black text-indigo-200 tracking-widest uppercase mb-2">Expected Cash</p>
                           <p className="text-3xl font-black text-white tracking-tighter">PKR {expectedClosing.toLocaleString()}</p>
                        </div>
                     </div>
@@ -317,20 +317,20 @@ export default function DayClosePage() {
                              Actual Physical Balance
                           </label>
                           <div className="relative group">
-                             <div className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 group-focus-within:text-slate-950 transition-colors">PKR</div>
+                             <div className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 group-focus-within:text-indigo-600 transition-colors">PKR</div>
                              <input 
                                type="number"
                                value={actualCash}
                                onChange={(e) => setActualCash(e.target.value)}
                                placeholder="00"
-                               className="w-full pl-20 pr-8 py-8 bg-slate-50 border-2 border-slate-100 rounded-[32px] font-black text-4xl text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-200"
+                               className="w-full pl-20 pr-8 py-8 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-4xl text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-200"
                              />
                           </div>
                        </div>
 
                        {actualCash && (
                         <div className={cn(
-                          "p-8 rounded-[32px] flex items-center justify-between animate-in slide-in-from-top-4",
+                          "p-8 rounded-[2rem] flex items-center justify-between animate-in slide-in-from-top-4",
                           variance === 0 ? "bg-emerald-50 border border-emerald-100" : 
                           variance > 0 ? "bg-blue-50 border border-blue-100" : "bg-rose-50 border border-rose-100"
                         )}>
@@ -364,14 +364,14 @@ export default function DayClosePage() {
                             onChange={(e) => setNote(e.target.value)}
                             placeholder="Explain any shortages or transaction exceptions..."
                             rows={3}
-                            className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] font-bold text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-300"
+                            className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-300"
                           />
                        </div>
 
                        <button 
                          onClick={handleCloseDay}
                          disabled={!actualCash || isSubmitting}
-                         className="w-full py-8 bg-indigo-600 hover:bg-slate-950 text-white rounded-[32px] font-black text-xl flex items-center justify-center gap-4 transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 disabled:grayscale"
+                          className="w-full py-8 bg-indigo-600 hover:bg-zinc-900 text-white rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 disabled:opacity-50 disabled:grayscale"
                        >
                          {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (
                            <>

@@ -781,10 +781,10 @@ export default function StaffProfilePage() {
         departureTime: timePopup.departureTime,
         arrivedOnTime,
         departedOnTime,
-        status: 'present' as const,
+        status: 'present' as HqDailyAttendanceRecord['status'],
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
-      } as any;
+      };
 
       // Update Local State
       setAttendanceMap(prev => ({
@@ -1221,6 +1221,12 @@ export default function StaffProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !staff) return;
 
+    if (file.type !== 'image/webp') {
+      toast.error("Only .webp images are allowed for profile photos.");
+      e.target.value = '';
+      return;
+    }
+
     try {
       toast.loading("Uploading photo...", { id: 'upload' });
       const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
@@ -1347,7 +1353,7 @@ export default function StaffProfilePage() {
                 <label className={`absolute bottom-0 right-0 p-3 rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
                   }`}>
                   <Camera size={18} />
-                  <input type="file" className="hidden" onChange={handlePhotoUpload} accept="image/*" />
+                  <input type="file" className="hidden" onChange={handlePhotoUpload} accept="image/webp" />
                 </label>
               </div>
 

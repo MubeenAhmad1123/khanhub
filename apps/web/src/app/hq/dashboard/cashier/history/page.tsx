@@ -165,55 +165,56 @@ export default function CashierHistoryPage() {
 
   if (loading && transactions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
-          <p className="text-black font-bold animate-pulse text-xs uppercase tracking-[0.2em]">Accessing Archives...</p>
+          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+          <p className="text-zinc-400 font-bold animate-pulse text-xs uppercase tracking-[0.2em]">Accessing Archives...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-400 selection:text-black">
-      <header className="sticky top-0 z-40 bg-gray-950/80 backdrop-blur-xl border-b border-white/5 px-4 py-4 md:px-8">
+    <div className="min-h-screen bg-[#FCFBF8] text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <button 
               onClick={() => router.back()}
-              className="p-2.5 hover:bg-white/5 rounded-2xl transition-all active:scale-95 text-slate-500 hover:text-white"
+              className="p-2.5 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                 <History className="w-6 h-6 text-amber-500" />
+              <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                 <History className="w-6 h-6 text-indigo-600" />
                  Master Ledger
               </h1>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-0.5">Global Audit View</p>
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-0.5">Global Audit View</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
              <div className="relative group w-full md:w-64">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-indigo-600 transition-colors" />
                 <input 
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search archives..."
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-2.5 text-sm font-bold placeholder:text-slate-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-11 pr-4 py-2.5 text-sm font-bold placeholder:text-zinc-400 outline-none focus:border-indigo-500/50 focus:bg-white transition-all"
                 />
              </div>
              <button 
                onClick={() => fetchData()}
-               className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all active:rotate-180"
+               className="p-2.5 bg-zinc-50 hover:bg-zinc-100 rounded-2xl text-zinc-400 hover:text-zinc-900 transition-all active:rotate-180"
              >
                 <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
              </button>
              <button 
                onClick={() => window.print()}
-               className="px-6 py-2.5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-white/5"
+               className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-900 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-indigo-600/10"
              >
                 <Printer className="w-4 h-4" />
                 Print
@@ -223,32 +224,32 @@ export default function CashierHistoryPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 md:px-8 space-y-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-           {[
-             { label: 'Total Inflow', val: stats.income, color: 'text-emerald-400', border: 'border-emerald-500/20' },
-             { label: 'Total Outflow', val: stats.expense, color: 'text-rose-400', border: 'border-rose-500/20' },
-             { label: 'Pending Items', val: stats.pending, color: 'text-amber-400', border: 'border-amber-500/20', raw: true },
-             { label: 'Net Liquidity', val: stats.net, color: 'text-sky-400', border: 'border-sky-500/20' }
-           ].map((s, idx) => (
-             <div key={idx} className={cn("bg-white/5 border rounded-3xl p-6 transition-all hover:bg-white/8 hover:translate-y-[-2px]", s.border)}>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{s.label}</p>
-                <p className={cn("text-2xl font-black tracking-tight", s.color)}>
-                  {s.raw ? s.val : `Rs ${s.val.toLocaleString()}`}
-                </p>
-             </div>
-           ))}
-        </div>
+         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Inflow', val: stats.income, color: 'text-emerald-600', border: 'border-emerald-100', bg: 'bg-emerald-50' },
+              { label: 'Total Outflow', val: stats.expense, color: 'text-rose-600', border: 'border-rose-100', bg: 'bg-rose-50' },
+              { label: 'Pending Items', val: stats.pending, color: 'text-amber-600', border: 'border-amber-100', bg: 'bg-amber-50', raw: true },
+              { label: 'Net Liquidity', val: stats.net, color: 'text-indigo-600', border: 'border-indigo-100', bg: 'bg-indigo-50' }
+            ].map((s, idx) => (
+              <div key={idx} className={cn("bg-white border rounded-[2.5rem] p-6 transition-all hover:shadow-xl hover:shadow-zinc-200 hover:translate-y-[-2px]", s.border)}>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{s.label}</p>
+                 <p className={cn("text-2xl font-black tracking-tight", s.color)}>
+                   {s.raw ? s.val : `Rs ${s.val.toLocaleString()}`}
+                 </p>
+              </div>
+            ))}
+         </div>
 
-        <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-6">
+        <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-6 space-y-6">
            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/10 overflow-hidden shrink-0">
+              <div className="flex bg-zinc-50 p-1.5 rounded-2xl border border-zinc-100 overflow-hidden shrink-0">
                  {(['today', 'range', 'all'] as DateMode[]).map(m => (
                    <button 
                      key={m}
                      onClick={() => setDateMode(m)}
                      className={cn(
                        "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                       dateMode === m ? "bg-amber-500 text-black shadow-lg" : "text-slate-500 hover:text-slate-300"
+                       dateMode === m ? "bg-white text-zinc-900 shadow-xl border border-zinc-100" : "text-zinc-400 hover:text-zinc-900"
                      )}
                    >
                      {m}
@@ -265,7 +266,7 @@ export default function CashierHistoryPage() {
                      onClick={() => setDeptFilter(d.code as any)}
                      className={cn(
                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
-                       deptFilter === d.code ? "bg-white text-black border-white" : "bg-white/5 border-white/10 text-slate-500 hover:text-white"
+                       deptFilter === d.code ? "bg-indigo-600 text-white border-indigo-600" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-900"
                      )}
                    >
                      {d.code === 'all' ? 'All' : d.code}
@@ -303,12 +304,12 @@ export default function CashierHistoryPage() {
                           const parsed = parseDateDMY(e.target.value);
                           if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
                         }}
-                        className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]"
+                        className="bg-zinc-50 border border-zinc-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-zinc-900 outline-none focus:border-indigo-500/40"
                       />
                    </div>
-                   <span className="text-slate-700 font-black uppercase text-[10px]">to</span>
+                   <span className="text-zinc-300 font-black uppercase text-[10px]">to</span>
                    <div className="relative group">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-within:text-amber-500 transition-colors" />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 group-within:text-indigo-600 transition-colors" />
                       <input
                         type="text"
                         placeholder="DD MM YYYY"
@@ -318,7 +319,7 @@ export default function CashierHistoryPage() {
                           const parsed = parseDateDMY(e.target.value);
                           if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
                         }}
-                        className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]"
+                        className="bg-zinc-50 border border-zinc-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-zinc-900 outline-none focus:border-indigo-500/40"
                       />
                    </div>
                 </div>
@@ -326,25 +327,25 @@ export default function CashierHistoryPage() {
            </div>
         </div>
 
-        <div className="bg-white/5 border border-white/5 rounded-[40px] overflow-hidden shadow-2xl relative">
+        <div className="bg-white border border-zinc-100 rounded-[3rem] overflow-hidden shadow-2xl shadow-zinc-200/50 relative">
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-white/[0.02] border-b border-white/5">
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Transaction Date</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Source Dept</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Entity / Account</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Description</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Amount</th>
+                <tr className="bg-zinc-50 border-b border-zinc-100">
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Transaction Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Source Dept</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Entity / Account</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Description</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-center">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.03]">
+              <tbody className="divide-y divide-zinc-50">
                 {filtered.map((tx) => (
                   <tr key={tx.id} className="group hover:bg-white/[0.04] transition-colors duration-150">
                     <td className="px-8 py-6">
-                       <div className="text-sm font-black text-white">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</div>
-                       <div className="text-[10px] font-black text-slate-600 uppercase mt-1">
+                       <div className="text-sm font-black text-zinc-900">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</div>
+                       <div className="text-[10px] font-black text-zinc-400 uppercase mt-1">
                           {tx.createdAt?.seconds ? new Date(tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ref: Auto'}
                        </div>
                     </td>
@@ -360,8 +361,8 @@ export default function CashierHistoryPage() {
                        </span>
                     </td>
                     <td className="px-8 py-6">
-                       <div className="text-sm font-black text-white capitalize">{tx.patientName || tx.staffName || 'General Account'}</div>
-                       <div className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-tighter">
+                       <div className="text-sm font-black text-zinc-900 capitalize">{tx.patientName || tx.staffName || 'General Account'}</div>
+                       <div className="text-[10px] font-black text-zinc-400 uppercase mt-1 tracking-tighter">
                           ID: {tx.patientId || tx.staffId || 'MASTER'}
                        </div>
                     </td>
@@ -369,17 +370,17 @@ export default function CashierHistoryPage() {
                        <div className="text-xs font-bold text-slate-300 max-w-[240px] truncate leading-relaxed">
                           {tx.categoryName || tx.category}: {tx.description || tx.note || 'Internal Flow'}
                        </div>
-                       <div className="text-[9px] font-black text-slate-600 uppercase mt-1 italic">
+                       <div className="text-[9px] font-black text-zinc-400 uppercase mt-1 italic">
                           By: {tx.createdBy || tx.cashierId || 'System'}
                        </div>
                     </td>
                     <td className="px-8 py-6 text-center">
-                       <div className={cn(
-                         "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest",
-                         tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" :
-                         tx.status?.includes('pending') ? "bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-lg shadow-amber-500/10" :
-                         "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                       )}>
+                        <div className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest",
+                          tx.status === 'approved' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                          tx.status?.includes('pending') ? "bg-amber-50 text-amber-600 border border-amber-100 shadow-lg shadow-amber-600/5" :
+                          "bg-rose-50 text-rose-600 border border-rose-100"
+                        )}>
                           <Clock className={cn("w-2.5 h-2.5", tx.status?.includes('pending') && "animate-pulse")} />
                           {tx.status || 'pending'}
                        </div>
@@ -421,17 +422,16 @@ export default function CashierHistoryPage() {
       <style jsx global>{`
         @media print {
           body { background: white !important; color: black !important; }
-          .bg-slate-950, .bg-gray-950\/80 { background: white !important; }
-          header, .bg-white\/5, .bg-black\/40 { background: white !important; border-color: #eee !important; box-shadow: none !important; }
+          .bg-[#FCFBF8] { background: white !important; }
+          header, .bg-white, .bg-zinc-50 { background: white !important; border-color: #eee !important; box-shadow: none !important; }
           button, input, select { display: none !important; }
-          .text-white, .text-slate-100 { color: black !important; }
-          .text-slate-500, .text-slate-600 { color: #666 !important; }
-          .divide-white\/5 { divide-color: #eee !important; }
-          .border-white\/5, .border-white\/10 { border-color: #ddd !important; }
+          .text-zinc-900, .text-zinc-400 { color: black !important; }
+          .divide-zinc-50 { divide-color: #eee !important; }
+          .border-zinc-100 { border-color: #ddd !important; }
           table { width: 100% !important; border-collapse: collapse !important; }
           th { color: #333 !important; padding: 10px !important; border-bottom: 2px solid #333 !important; }
           td { border-bottom: 1px solid #eee !important; padding: 10px !important; }
-          .shadow-2xl, .shadow-lg { box-shadow: none !important; }
+          .shadow-2xl, .shadow-xl { box-shadow: none !important; }
         }
       `}</style>
     </div>

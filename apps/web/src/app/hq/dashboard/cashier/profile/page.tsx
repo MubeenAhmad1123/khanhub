@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, User, Phone, Save, LogOut } from 'lucide-react';
+import { Loader2, User, Phone, Save, LogOut, ArrowLeft } from 'lucide-react';
 
 export default function CashierProfilePage() {
   const router = useRouter();
@@ -53,82 +53,100 @@ export default function CashierProfilePage() {
   };
 
   if (sessionLoading || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-950"><Loader2 className="animate-spin text-amber-500" size={32} /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+        <Loader2 className="animate-spin text-indigo-600" size={32} />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-8 pb-24">
-      <div className="max-w-lg mx-auto space-y-6">
-        <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">My Profile</h1>
+    <div className="min-h-screen bg-[#FCFBF8] p-4 md:p-8 pb-24 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <div className="max-w-lg mx-auto space-y-8">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => router.back()}
+            className="p-2.5 hover:bg-zinc-100 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">Account Settings</h1>
+        </div>
 
-        <div className="flex flex-col items-center gap-4 py-6">
-          <div className="w-24 h-24 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center">
-            <span className="text-amber-500 font-black text-3xl">
+        <div className="flex flex-col items-center gap-4 py-8 bg-white rounded-[3rem] border border-zinc-100 shadow-sm">
+          <div className="w-28 h-28 rounded-full bg-indigo-50 border-4 border-white shadow-xl flex items-center justify-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover:opacity-10 transition-opacity" />
+            <span className="text-indigo-600 font-black text-4xl">
               {(name || session?.name || 'C')[0].toUpperCase()}
             </span>
           </div>
           <div className="text-center">
-            <p className="text-white font-black text-xl">{session?.name}</p>
-            <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mt-1">Cashier · {session?.customId}</p>
+            <p className="text-zinc-900 font-black text-2xl">{name || session?.name}</p>
+            <div className="flex items-center gap-2 justify-center mt-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+              <p className="text-indigo-600 text-[10px] font-black uppercase tracking-widest">{session?.role} · {session?.customId}</p>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/8 rounded-3xl p-6 space-y-4">
-          <div>
-            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Full Name</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={14} />
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all"
-              />
+        <div className="bg-white rounded-[3rem] p-8 border border-zinc-100 shadow-sm space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Display Name</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-12 pr-4 py-4 text-zinc-900 text-sm font-bold outline-none focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all"
+                />
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Phone Number</label>
-            <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-black" size={14} />
-              <input
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all"
-              />
+            
+            <div>
+              <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Phone Contact</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                <input
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="Enter phone number"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-12 pr-4 py-4 text-zinc-900 text-sm font-bold outline-none focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Employee ID</label>
-            <input
-              value={session?.customId || ''}
-              disabled
-              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-black text-sm font-bold outline-none cursor-not-allowed"
-            />
-          </div>
-
-          <div>
-            <label className="text-black text-[10px] font-black uppercase tracking-widest block mb-2">Email</label>
-            <input
-              value={userData?.email || ''}
-              disabled
-              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-black text-sm font-bold outline-none cursor-not-allowed"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Identifier</label>
+                <div className="px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 text-sm font-black uppercase">
+                  {session?.customId || 'N/A'}
+                </div>
+              </div>
+              <div>
+                <label className="text-zinc-400 text-[10px] font-black uppercase tracking-widest block mb-2 px-1">Email Address</label>
+                <div className="px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 text-sm font-bold truncate">
+                  {userData?.email || 'N/A'}
+                </div>
+              </div>
+            </div>
           </div>
 
           <button
             disabled={saving || !name.trim()}
             onClick={() => { void handleSave(); }}
-            className={`w-full font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 ${saved ? 'bg-emerald-500 text-white' : 'bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black shadow-lg shadow-amber-500/20'}`}
+            className={`w-full font-black text-xs uppercase tracking-widest py-4.5 rounded-2xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-3 shadow-xl ${saved ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-indigo-600 hover:bg-zinc-900 text-white shadow-indigo-100 disabled:opacity-50'}`}
           >
-            {saving ? <Loader2 className="animate-spin" size={16} /> : saved ? '✓ Saved!' : <><Save size={14} /> Save Changes</>}
+            {saving ? <Loader2 className="animate-spin" size={18} /> : saved ? '✓ Profile Updated' : <><Save size={18} /> Save Preferences</>}
           </button>
         </div>
 
         <button
           onClick={handleLogout}
-          className="w-full bg-white/5 hover:bg-rose-500/10 border border-white/8 hover:border-rose-500/20 text-black hover:text-rose-400 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2"
+          className="w-full bg-white hover:bg-rose-50 border border-zinc-100 hover:border-rose-100 text-zinc-400 hover:text-rose-600 font-black text-xs uppercase tracking-widest py-4.5 rounded-[2rem] transition-all duration-300 flex items-center justify-center gap-3 shadow-sm"
         >
-          <LogOut size={14} /> Sign Out
+          <LogOut size={18} /> End Session
         </button>
       </div>
     </div>

@@ -363,9 +363,13 @@ export default function AdmitPatientPage() {
                     </>
                   )}
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                <input ref={fileRef} type="file" accept="image/webp" className="hidden" onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
                   setPhotoFile(file);
                   setPhotoPreview(URL.createObjectURL(file));
                 }} />
