@@ -79,12 +79,19 @@ service cloud.firestore {
     // ── Notifications ─────────────────────────────────
     match /notifications/{notifId} {
       allow read: if isAuth()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (
+          resource.data.userId == request.auth.uid 
+          || resource.data.userId == hqCustomId()
+          || isAdmin() 
+          || isHqTier1()
+          || isRehabAdminOrAbove()
+          || isSpimsAdminOrAbove()
+        );
       allow create: if isAuth();
       allow update: if isAuth()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (resource.data.userId == request.auth.uid || isAdmin() || isHqSuperOrManager());
       allow delete: if isAuth()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (resource.data.userId == request.auth.uid || isAdmin() || isHqSuperOrManager());
     }
 
     // ── Payments ──────────────────────────────────────
@@ -214,18 +221,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isRehabAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid)) ||
+        isHqTier1()
+      );
     }
     function rehabRole() {
-      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isRehabRole(role) {
       return isRehabAuth() && rehabRole() == role;
     }
     function isRehabAdminOrAbove() {
-      return isRehabAuth()
-        && (rehabRole() == 'admin' || rehabRole() == 'superadmin');
+      let role = rehabRole();
+      return isRehabAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isRehabSuperAdmin() {
       return isRehabRole('superadmin');
@@ -506,18 +516,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isSpimsAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/spims_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/spims_users/$(request.auth.uid)) ||
+        isHqTier1()
+      );
     }
     function spimsRole() {
-      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/spims_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isSpimsRole(role) {
       return isSpimsAuth() && spimsRole() == role;
     }
     function isSpimsAdminOrAbove() {
-      return isSpimsAuth()
-        && (spimsRole() == 'admin' || spimsRole() == 'superadmin');
+      let role = spimsRole();
+      return isSpimsAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isSpimsSuperAdmin() {
       return isSpimsRole('superadmin');
