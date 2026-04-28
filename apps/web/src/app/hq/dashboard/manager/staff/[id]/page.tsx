@@ -1070,6 +1070,13 @@ export default function StaffProfilePage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
+      router.push('/hq/login');
+    }
+  }, [session, sessionLoading, router]);
+
+  useEffect(() => {
     if (sessionLoading || !staffId) return;
     
     // Prevent double-fetching if the ID hasn't changed and we aren't already fetching

@@ -194,10 +194,19 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         setIsChecking(false);
         setTimeout(() => setMounted(true), 50);
       } else {
-        // If we have a local session but no firebase user, we need to wait or redirect
-        // For HQ, we usually want to redirect if auth is truly lost
-        console.warn('[HQ Layout] No Firebase user detected. Redirecting to login...');
-        router.push('/hq/login');
+        // Only redirect if we ALSO don't have a local session.
+        // If we have a local session, wait for Firebase to potentially recover it.
+        const localSession = localStorage.getItem(SESSION_KEY);
+        if (!localSession) {
+          console.warn('[HQ Layout] No Firebase user and no local session. Redirecting...');
+          router.push('/hq/login');
+        } else {
+          // If we have a local session but Firebase says null, 
+          // we might be in a mid-initialization state. 
+          // We'll set isChecking to false anyway so the page can at least render based on local state.
+          setIsChecking(false);
+          setTimeout(() => setMounted(true), 50);
+        }
       }
     });
 

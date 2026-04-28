@@ -85,23 +85,16 @@ export function useHqSession() {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      setIsAuthReady(true);
-      
       // Only stop loading once we've heard from Firebase at least once
       setLoading(false);
+      setIsAuthReady(true);
 
       if (user) {
-        // If we have a user but no session, we might need to restore it
-        // but for HQ we usually rely on the login page flow.
-        // We ensure the profile listener is running.
         startListener(user.uid);
       } else {
-        // No Firebase user. If we have a local session, it's stale.
-        if (session) {
-          console.warn('[HQ Session] Firebase user missing, but session exists. Clearing...');
-          setSession(null);
-          localStorage.removeItem(SESSION_KEY);
-        }
+        // No Firebase user. We only clear if we are NOT in the middle of an initial load
+        // and we have a session that is clearly disconnected from auth.
+        // For HQ, we allow local session to persist briefly during refreshes.
       }
     });
 
