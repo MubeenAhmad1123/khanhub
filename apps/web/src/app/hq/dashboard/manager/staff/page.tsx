@@ -34,6 +34,8 @@ export default function ManagerStaffPage() {
   });
 
   const [unmarkedStaff, setUnmarkedStaff] = useState<any[]>([]);
+  const [enriched, setEnriched] = useState(false);
+  const [enriching, setEnriching] = useState(false);
 
   // UI standard - forced light theme
   const darkMode = false;
@@ -52,40 +54,20 @@ export default function ManagerStaffPage() {
     const fetchAllStaff = async () => {
       try {
         setLoading(true);
-        // Unified personnel registry fetch (7 departments)
+        // Unified personnel registry fetch (7 departments) - Basic data only
         const unified = await listStaffCards({
           dept: 'all',
           status: 'all',
-          role: 'personnel'
+          role: 'personnel',
+          fullEnrichment: false
         });
 
         // Final sort
         unified.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setStaff(unified);
 
-        // Stats Aggregation
-        const today = new Date().toISOString().split('T')[0];
-        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
-
-        // Fetch Today's Attendance for all departments
-        const attSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))).catch(err => {
-            console.warn(`Permission denied for ${d} attendance in staff list:`, err);
-            return { docs: [] } as any;
-          }))
-        );
-
-        const attendanceMap = new Map<string, string>();
-        attSnaps.forEach(snap => {
-          snap.docs.forEach((d: any) => {
-            const data = d.data();
-            const key = data.staffId || d.id;
-            attendanceMap.set(key, data.status);
-          });
-        });
-
         const activeStaff = unified.filter(s => s.status === 'active' && s.isActive !== false);
-        const presentToday = activeStaff.filter(s => attendanceMap.get(s.staffId) === 'present').length;
+        const presentToday = activeStaff.filter(s => s.isPresentToday).length;
 
         setStats({
           total: activeStaff.length,
@@ -94,7 +76,7 @@ export default function ManagerStaffPage() {
         });
 
         // Duty Mapping (Last Activity)
-        const unmarked = activeStaff.filter(s => !s.lastDutyLabel);
+        const unmarked = activeStaff.filter(s => !s.isPresentToday);
         setUnmarkedStaff(unmarked);
 
       } catch (err) {
@@ -107,6 +89,19 @@ export default function ManagerStaffPage() {
 
     fetchAllStaff();
   }, [session]);
+
+  // Lazy Enrichment for Manager
+  useEffect(() => {
+    if (!enriched && !enriching && (search.length > 0 || deptFilter !== 'all')) {
+      setEnriching(true);
+      listStaffCards({ dept: 'all', status: 'all', role: 'personnel', fullEnrichment: true })
+        .then(enrichedRows => {
+          setStaff(enrichedRows);
+          setEnriched(true);
+        })
+        .finally(() => setEnriching(false));
+    }
+  }, [search, deptFilter, enriched, enriching]);
 
   const filtered = useMemo(() => {
     return staff.filter(s => {
@@ -212,6 +207,12 @@ export default function ManagerStaffPage() {
         )}
 
         {/* Search & Filters */}
+        {enriching && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3 text-blue-600 text-xs font-bold animate-pulse">
+            <Activity className="animate-spin" size={14} />
+            Enriching dossiers with efficiency metrics & historical logs...
+          </div>
+        )}
         <div className={`p-4 md:p-6 rounded-[2rem] shadow-xl border flex flex-col sm:flex-row gap-4 mb-10 transition-all ${darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-gray-200/30'}`}>
           <div className="flex-1 relative group">
             <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-blue-500' : 'text-gray-400 group-focus-within:text-gray-900'}`} size={18} />

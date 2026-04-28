@@ -94,49 +94,14 @@ export default function ManagerOverviewPage() {
         // 1. Fetch Staff (All 7 Departments)
         const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
         
-        const staffQueries: any[] = [];
-        depts.forEach(d => {
-          staffQueries.push({ dept: d, q: query(collection(db, getDeptCollection(d)), where('isActive', '==', true)) });
+        // 1. Fetch Staff & Attendance via Optimized Batched Layer
+        const { listStaffCards } = await import('@/lib/hq/superadmin/staff');
+        const allStaffDocs = await listStaffCards({
+          dept: 'all',
+          status: 'active',
+          role: 'personnel',
+          fullEnrichment: false
         });
-
-        const staffSnaps = await Promise.all(
-          staffQueries.map(sq => getDocs(sq.q).catch(err => {
-            console.warn(`Permission denied for ${sq.dept} staff:`, err);
-            return { docs: [] } as any;
-          }))
-        );
-        const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor'];
-
-        let allStaffDocs: any[] = [];
-        const seenStaffIds = new Set<string>();
-        
-        staffSnaps.forEach((s, idx) => {
-          const dept = staffQueries[idx].dept;
-          s.docs.forEach((doc: any) => {
-            const data = doc.data() as any;
-            const role = String(data.role || '').toLowerCase();
-            
-            if (STAFF_ROLES.includes(role) && role !== 'superadmin') {
-              const id = doc.id;
-              if (!seenStaffIds.has(id)) {
-                seenStaffIds.add(id);
-                allStaffDocs.push({ 
-                  ...data,
-                  id, 
-                  department: dept
-                });
-              }
-            }
-          });
-        });
-
-        // 2. Fetch Attendance
-        const attSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))).catch(err => {
-            console.warn(`Permission denied for ${d} attendance:`, err);
-            return { docs: [] } as any;
-          }))
-        );
 
         const attendanceMap = new Map<string, string>();
         let presentCount = 0;
@@ -152,31 +117,21 @@ export default function ManagerOverviewPage() {
         allStaffDocs.forEach(s => {
           const dept = (s.dept as string) || 'hq';
           if (dStats[dept]) dStats[dept].total++;
+          
+          if (s.isPresentToday) {
+            presentCount++;
+            if (dStats[dept]) dStats[dept].present++;
+            attendanceMap.set(s.id, 'present');
+          } else if (s.status === 'inactive') {
+            absentCount++;
+            if (dStats[dept]) dStats[dept].absent++;
+            attendanceMap.set(s.id, 'absent');
+          }
         });
 
-        attSnaps.forEach((snap, i) => {
-          const dept = depts[i];
-          snap.docs.forEach((d: any) => {
-            const data = d.data();
-            const key = data.staffId || d.id;
-            attendanceMap.set(key, data.status);
-            
-            if (data.status === 'present') {
-              presentCount++;
-              if (dStats[dept]) dStats[dept].present++;
-            } else if (data.status === 'absent') {
-              absentCount++;
-              if (dStats[dept]) dStats[dept].absent++;
-            } else if (data.status && (data.status.includes('leave'))) {
-              leaveCount++;
-              if (dStats[dept]) dStats[dept].leave++;
-            }
-          });
-        });
-
-        // 3. Fetch Contributions
+        // 3. Fetch Contributions (Limited to save quota)
         const contribSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))).catch(err => {
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false), limit(5))).catch(err => {
             console.warn(`Permission denied for ${d} contributions:`, err);
             return { docs: [] } as any;
           }))
@@ -191,8 +146,8 @@ export default function ManagerOverviewPage() {
 
         const staffMap: Record<string, string> = {};
         allStaffDocs.forEach(s => {
-          staffMap[s.id] = s.name || s.displayName || 'Staff Member';
-          if (s.loginUserId) staffMap[s.loginUserId] = s.name || s.displayName || 'Staff Member';
+          staffMap[s.id] = s.name || 'Staff Member';
+          if (s.staffId) staffMap[s.staffId] = s.name || 'Staff Member';
         });
 
         const recentContribs = allContribs.sort((a, b) => {
