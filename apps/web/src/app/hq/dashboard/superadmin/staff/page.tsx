@@ -40,7 +40,11 @@ export default function SuperadminStaffPage() {
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<StaffCardRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'department' | 'seniority'>('department');
+  
+  // Drill-down States
+  const [drillLevel, setDrillLevel] = useState<'overview' | 'presence' | 'department' | 'list'>('overview');
+  const [drillPresence, setDrillPresence] = useState<'present' | 'absent' | null>(null);
+  const [drillDept, setDrillDept] = useState<StaffDept | null>(null);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -108,21 +112,47 @@ export default function SuperadminStaffPage() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-2 bg-white rounded-[2rem] border border-gray-100 shadow-2xl shadow-gray-200/50">
-            {(['department', 'seniority', 'grid'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setViewMode(m)}
-                className={cn(
-                  "px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all",
-                  viewMode === m 
-                    ? 'bg-gray-900 text-white shadow-2xl' 
-                    : 'text-gray-400 hover:text-black'
-                )}
-              >
-                {m}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-[2rem] border border-gray-100 shadow-sm">
+            <button
+              onClick={() => {
+                setDrillLevel('overview');
+                setDrillPresence(null);
+                setDrillDept(null);
+              }}
+              className={cn(
+                "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                drillLevel === 'overview' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-indigo-600"
+              )}
+            >
+              System Overview
+            </button>
+            {drillLevel !== 'overview' && (
+              <>
+                <ChevronRight size={14} className="text-gray-300" />
+                <button
+                  onClick={() => {
+                    setDrillLevel('presence');
+                    setDrillDept(null);
+                  }}
+                  className={cn(
+                    "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                    drillLevel === 'presence' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-indigo-600"
+                  )}
+                >
+                  {drillPresence === 'present' ? 'Present Personnel' : 'Absent Personnel'}
+                </button>
+              </>
+            )}
+            {drillDept && (
+              <>
+                <ChevronRight size={14} className="text-gray-300" />
+                <button
+                  className="px-6 py-2 rounded-xl text-[10px] font-bold bg-indigo-600 text-white shadow-lg uppercase tracking-widest"
+                >
+                  {DEPT_INFO[drillDept]?.label || drillDept.toUpperCase()}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -181,53 +211,97 @@ export default function SuperadminStaffPage() {
             <EmptyState title="Registry Empty" message="No staff records identified matching the current query." />
           </div>
         ) : (
-          <div className="space-y-20">
-            {viewMode === 'department' && Object.entries(groupedByDept).map(([d, members]) => {
-              const info = DEPT_INFO[d] || { label: d.toUpperCase(), color: 'border-gray-200', bg: 'bg-gray-50', text: 'text-black', gradient: '' };
-              return (
-                <section key={d} className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                  <div className="flex items-center gap-8 mb-12">
-                    <div className={cn("w-20 h-20 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-gray-200/50", info.bg, info.text)}>
-                      <Briefcase size={40} strokeWidth={2.5} />
+          <div className="space-y-12">
+            {drillLevel === 'overview' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div 
+                  onClick={() => { setDrillLevel('presence'); setDrillPresence('present'); }}
+                  className="group relative p-12 rounded-[3rem] bg-white border border-gray-100 shadow-xl hover:shadow-2xl hover:border-indigo-500/20 transition-all cursor-pointer overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative z-10 flex flex-col items-center text-center gap-6">
+                    <div className="w-20 h-20 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                      <ShieldCheck size={40} />
                     </div>
                     <div>
-                      <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">{info.label}</h2>
-                      <p className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.3em]">{members.length} Authorized Units Identified</p>
+                      <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tight mb-2">Active Staff</h2>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Global personnel status matrix</p>
                     </div>
-                    <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+                    <div className="text-6xl font-black text-indigo-600 leading-none">
+                      {filtered.length}
+                    </div>
+                    <button className="px-8 py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] group-hover:bg-indigo-600 transition-colors">
+                      Enter Drill-down Matrix
+                    </button>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {members.map(r => <StaffInteractiveCard key={r.id} row={r} />)}
-                  </div>
-                </section>
-              );
-            })}
+                </div>
 
-            {viewMode === 'seniority' && Object.entries(groupedBySeniority)
-              .sort((a, b) => (SENIORITY_RANKS[b[0]] || 0) - (SENIORITY_RANKS[a[0]] || 0))
-              .map(([rank, members]) => (
-              <section key={rank} className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="flex items-center gap-6 mb-10">
-                  <div className="w-16 h-16 rounded-[2rem] bg-gray-100 dark:bg-white/5 flex items-center justify-center shadow-xl">
-                    <Award size={32} className="text-black dark:text-white" strokeWidth={2.5} />
+                <div className="p-12 rounded-[3rem] bg-gray-50/50 border border-dashed border-gray-200 flex flex-col items-center justify-center text-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center">
+                    <TrendingUp size={32} />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-black text-black dark:text-white uppercase tracking-tight">{rank}</h2>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">Tier Level • {members.length} Qualified Members</p>
+                    <h3 className="text-xl font-bold text-gray-400 uppercase tracking-tight">Analytics Sync</h3>
+                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">Personnel growth matrix active</p>
                   </div>
-                  <div className="flex-1 h-px bg-gradient-to-r from-gray-100 dark:from-white/10 to-transparent" />
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {members.map(r => <StaffInteractiveCard key={r.id} row={r} />)}
-                </div>
-              </section>
-            ))}
+              </div>
+            )}
 
-            {viewMode === 'grid' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-in fade-in duration-1000">
-                {filtered.map(r => <StaffInteractiveCard key={r.id} row={r} />)}
+            {drillLevel === 'presence' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <PresenceCard 
+                  type="present"
+                  count={filtered.filter(r => r.isPresentToday).length}
+                  onClick={() => { setDrillLevel('department'); setDrillPresence('present'); }}
+                />
+                <PresenceCard 
+                  type="absent"
+                  count={filtered.filter(r => !r.isPresentToday).length}
+                  onClick={() => { setDrillLevel('department'); setDrillPresence('absent'); }}
+                />
+              </div>
+            )}
+
+            {drillLevel === 'department' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {Object.entries(groupedByDept).map(([d, members]) => {
+                  const filteredMembers = members.filter(r => drillPresence === 'present' ? r.isPresentToday : !r.isPresentToday);
+                  if (filteredMembers.length === 0) return null;
+                  
+                  const info = DEPT_INFO[d] || { label: d.toUpperCase(), bg: 'bg-gray-50', text: 'text-gray-600' };
+                  
+                  return (
+                    <div 
+                      key={d}
+                      onClick={() => { setDrillDept(d as StaffDept); setDrillLevel('list'); }}
+                      className="group relative p-8 rounded-[2.5rem] bg-white border border-gray-100 shadow-lg hover:shadow-xl hover:border-indigo-500/20 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center", info.bg, info.text)}>
+                          <Briefcase size={28} />
+                        </div>
+                        <div className="text-3xl font-black text-gray-900 leading-none">
+                          {filteredMembers.length}
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{info.label}</h3>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">
+                        {drillPresence === 'present' ? 'Present' : 'Absent'} Personnel
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {drillLevel === 'list' && drillDept && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {groupedByDept[drillDept]
+                    ?.filter(r => drillPresence === 'present' ? r.isPresentToday : !r.isPresentToday)
+                    ?.map(r => <StaffInteractiveCard key={r.id} row={r} />)}
+                </div>
               </div>
             )}
           </div>
@@ -409,5 +483,39 @@ function Search({ size, className }: { size?: number, className?: string }) {
     >
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
     </svg>
+  );
+}
+function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent', count: number, onClick: () => void }) {
+  const isPresent = type === 'present';
+  return (
+    <div 
+      onClick={onClick}
+      className={cn(
+        "group relative p-12 rounded-[3rem] border transition-all cursor-pointer overflow-hidden",
+        isPresent ? "bg-emerald-50 border-emerald-100 shadow-emerald-500/5 hover:border-emerald-500/20 shadow-xl hover:shadow-2xl" : "bg-rose-50 border-rose-100 shadow-rose-500/5 hover:border-rose-500/20 shadow-xl hover:shadow-2xl"
+      )}
+    >
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity", isPresent ? "from-emerald-500" : "from-rose-500")} />
+      <div className="relative z-10 flex flex-col items-center text-center gap-6">
+        <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center", isPresent ? "bg-white text-emerald-600 shadow-lg shadow-emerald-500/10" : "bg-white text-rose-600 shadow-lg shadow-rose-500/10")}>
+          {isPresent ? <ShieldCheck size={40} /> : <Zap size={40} />}
+        </div>
+        <div>
+          <h2 className={cn("text-4xl font-black uppercase tracking-tight mb-2", isPresent ? "text-emerald-900" : "text-rose-900")}>
+            {isPresent ? 'Present Now' : 'Absent Units'}
+          </h2>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily attendance synchronization</p>
+        </div>
+        <div className={cn("text-7xl font-black leading-none", isPresent ? "text-emerald-600" : "text-rose-600")}>
+          {count}
+        </div>
+        <button className={cn(
+          "px-8 py-4 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] transition-all",
+          isPresent ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+        )}>
+          View Department Breakdown
+        </button>
+      </div>
+    </div>
   );
 }

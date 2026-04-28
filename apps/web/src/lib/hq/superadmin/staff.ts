@@ -48,6 +48,7 @@ export type StaffCardRow = {
   todayUniformStatus?: 'yes' | 'no' | 'incomplete' | 'na';
   todayDutyStatus?: 'yes' | 'no' | 'incomplete' | 'na';
   todayDailyScore?: number;
+  isPresentToday?: boolean;
 };
 
 function normalizeRole(raw: any): StaffRole {
@@ -235,6 +236,7 @@ export async function listStaffCards({
         todayUniformStatus: today.uniform,
         todayDutyStatus: today.duty,
         todayDailyScore: today.score,
+        isPresentToday: today.score > 0,
       } as StaffCardRow;
     })
   );

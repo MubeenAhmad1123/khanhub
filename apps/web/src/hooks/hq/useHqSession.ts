@@ -83,6 +83,8 @@ export function useHqSession() {
     }
   }, []);
 
+  const listenerUidRef = useRef<string | null>(null);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       // Only stop loading once we've heard from Firebase at least once
@@ -90,11 +92,16 @@ export function useHqSession() {
       setIsAuthReady(true);
 
       if (user) {
-        startListener(user.uid);
+        if (listenerUidRef.current !== user.uid) {
+          listenerUidRef.current = user.uid;
+          startListener(user.uid);
+        }
       } else {
-        // No Firebase user. We only clear if we are NOT in the middle of an initial load
-        // and we have a session that is clearly disconnected from auth.
-        // For HQ, we allow local session to persist briefly during refreshes.
+        listenerUidRef.current = null;
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+          unsubscribeRef.current = null;
+        }
       }
     });
 
@@ -102,7 +109,7 @@ export function useHqSession() {
       unsubscribeAuth();
       if (unsubscribeRef.current) unsubscribeRef.current();
     };
-  }, [session]); // Re-run if session changes to detect mismatch
+  }, []); // Removed [session] to prevent infinite loop
 
   const memoizedSession = useMemo(() => session, [session]);
 

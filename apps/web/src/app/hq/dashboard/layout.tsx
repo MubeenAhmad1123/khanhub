@@ -56,9 +56,9 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ROLE_COLORS: Record<HqRole, string> = {
-  superadmin: 'bg-indigo-50 text-indigo-600 border border-indigo-100 font-black',
-  manager: 'bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold',
-  cashier: 'bg-blue-50 text-blue-600 border border-blue-100 font-bold',
+  superadmin: 'bg-indigo-50 text-indigo-600 border border-indigo-100 font-semibold',
+  manager: 'bg-emerald-50 text-emerald-600 border border-emerald-100 font-semibold',
+  cashier: 'bg-blue-50 text-blue-600 border border-blue-100 font-semibold',
 };
 
 const ROLE_LABELS: Record<HqRole, string> = {
@@ -233,8 +233,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   if (isChecking) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#FCFBF8]">
-        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-        <p className="mt-4 text-black text-xs font-black uppercase tracking-widest animate-pulse">Loading HQ...</p>
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-indigo-600 text-xs font-bold uppercase tracking-widest animate-pulse">Loading HQ Portal...</p>
       </div>
     );
   }
@@ -260,9 +260,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
     
     return (
-      <div className="flex flex-col h-full bg-[#FCFBF8] text-black border-r-2 border-black">
+      <div className="flex flex-col h-full bg-white text-gray-900 border-r border-gray-100">
         {/* Header / Branding */}
-        <div className="px-6 pt-7 pb-6 border-b-2 border-black bg-white">
+        <div className="px-6 pt-7 pb-6 border-b border-gray-50 bg-white">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 bg-indigo-600">
               <Shield size={24} strokeWidth={2.5} />
@@ -300,9 +300,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                         key={dept}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 border-2 border-transparent hover:border-black hover:bg-white text-xs font-black transition-all text-black uppercase tracking-tight"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50 text-xs font-bold transition-all text-gray-700 uppercase tracking-tight"
                       >
-                        <div className="p-1.5 border border-black bg-white">
+                        <div className="p-1.5 rounded-lg border border-gray-100 bg-white">
                           {React.cloneElement(info.icon as React.ReactElement, { size: 12, className: info.color })}
                         </div>
                         <span>{info.label} Dashboard</span>
@@ -318,13 +318,13 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         {/* Navigation Mode Switcher - Modernized Pill */}
         {role === 'superadmin' && activeDepts.length > 0 && (
           <div className="px-4 pt-5 pb-2">
-            <div className="p-1 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="p-1 rounded-2xl bg-gray-50 flex flex-col gap-1">
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-wider transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
                   viewMode === 'hq'
-                    ? 'bg-black text-white'
-                    : 'text-black/40 hover:text-black'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 HQ Navigator
@@ -333,10 +333,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 <button
                   key={dept}
                   onClick={() => setViewMode(dept)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-wider transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
                     viewMode === dept
-                      ? 'bg-black text-white'
-                      : 'text-black/40 hover:text-black'
+                      ? 'bg-white text-indigo-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
                   }`}
                 >
                   {DEPT_INFO[dept]?.label} View
@@ -380,7 +380,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         </nav>
 
         {/* Bottom Section: Profile & Logout */}
-        <div className="px-4 py-6 mt-auto border-t-2 border-black bg-white">
+        <div className="px-4 py-6 mt-auto border-t border-gray-50 bg-gray-50/30">
           <div className="mb-4 p-4 border border-gray-100 flex items-center gap-4 bg-white shadow-sm rounded-2xl">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm bg-indigo-50 text-indigo-600 border border-indigo-100">
               {user?.name?.[0]?.toUpperCase() || '?'}
@@ -391,7 +391,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </div>
             <button 
               onClick={handleSignOut}
-              className="p-2 border border-transparent hover:border-black transition-all text-black hover:text-red-600 hover:bg-red-50"
+              className="p-2 rounded-lg border border-transparent hover:border-rose-100 transition-all text-gray-400 hover:text-rose-600 hover:bg-rose-50"
               title="Sign Out"
             >
               <LogOut size={16} />
@@ -414,24 +414,24 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-[#FCFBF8]">
-      <aside className="hidden lg:flex flex-col w-64 border-r-2 border-black fixed left-0 top-0 h-screen z-30 bg-[#FCFBF8]">
+    <div className="min-h-screen flex overflow-x-hidden bg-white">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-gray-100 fixed left-0 top-0 h-screen z-30 bg-white">
         <SidebarContent />
       </aside>
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-40 lg:hidden transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } bg-[#FCFBF8] border-r-2 border-black`}>
+      } bg-white border-r border-gray-100`}>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 border-2 border-black text-black bg-white z-50"
+          className="absolute top-4 right-4 p-2 rounded-xl border border-gray-100 text-gray-400 bg-white z-50"
         >
           <X size={16} />
         </button>
@@ -439,17 +439,17 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="lg:hidden sticky top-0 z-20 bg-[#FCFBF8] border-b-2 border-black px-4 py-3 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 border border-black bg-white text-black"
+              className="p-2 rounded-lg border border-gray-100 bg-white text-gray-600"
             >
               <Menu size={20} />
             </button>
             <button
               onClick={() => router.back()}
-              className="p-2 border border-black bg-white text-black"
+              className="p-2 rounded-lg border border-gray-100 bg-white text-gray-600"
               title="Go back"
             >
               <ChevronLeft size={20} />
@@ -469,30 +469,30 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FCFBF8]/80 backdrop-blur-md border-b-2 border-black px-8 py-4 items-center justify-between">
+        <header className="hidden lg:flex sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-100 bg-white text-[10px] font-black transition-all text-gray-500 hover:text-gray-900 hover:bg-gray-50 shadow-sm rounded-xl active:scale-[0.98]"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-100 bg-white text-[10px] font-bold transition-all text-gray-500 hover:text-gray-900 hover:bg-gray-50 shadow-sm rounded-xl active:scale-[0.98]"
               title="Go back"
             >
               <ChevronLeft size={15} />
               BACK
             </button>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black/50">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
               Khan Hub HQ Portal
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-px h-6 bg-black/10 mx-1" />
+            <div className="w-px h-6 bg-gray-100 mx-1" />
             {user ? <HqNotificationBell session={user} /> : null}
-            <span className={`px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${ROLE_COLORS[role]} shadow-sm`}>
+            <span className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest ${ROLE_COLORS[role]} shadow-sm`}>
               {ROLE_LABELS[role]}
             </span>
-            <div className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-900 font-black text-sm shadow-sm bg-white">
+            <div className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-900 font-bold text-sm shadow-sm bg-white">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
-            <span className="text-black text-sm font-black hidden xl:inline uppercase tracking-tight">{user?.name}</span>
+            <span className="text-gray-700 text-sm font-bold hidden xl:inline uppercase tracking-tight">{user?.name}</span>
           </div>
         </header>
 

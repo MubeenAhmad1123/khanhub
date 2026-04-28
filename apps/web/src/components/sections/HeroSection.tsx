@@ -412,6 +412,20 @@ export default function HeroSection() {
                 {/* Logo Backdrop */}
                 <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20" />
 
+                {/* 3D-like Circle Background - Slightly larger than image */}
+                <motion.div
+                  className="absolute inset-0 -m-4 sm:-m-8 rounded-full border border-primary-500/20 bg-primary-500/5 shadow-[0_0_50px_rgba(0,94,184,0.1)]"
+                  animate={{
+                    scale: [1, 1.05, 1],
+                    opacity: [0.5, 0.8, 0.5],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+
                 {/* Image Carousel */}
                 <ImageCarousel />
 

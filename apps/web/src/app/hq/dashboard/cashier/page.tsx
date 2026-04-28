@@ -227,14 +227,14 @@ export default function CashierStationPage() {
               collection(db, dept.txCollection),
               where('date', '>=', todayTimestamp),
               where('date', '<', tomorrowTimestamp),
-              limit(200)
+              limit(50)
             );
           } else if (historyDateMode === 'created_today') {
             q = query(
               collection(db, dept.txCollection),
               where('createdAt', '>=', todayTimestamp),
               where('createdAt', '<', tomorrowTimestamp),
-              limit(200)
+              limit(50)
             );
           } else if (historyDateMode === 'range' && historyFrom) {
             const fromDate = new Date(`${historyFrom}T00:00:00`);
@@ -245,13 +245,13 @@ export default function CashierStationPage() {
               collection(db, dept.txCollection),
               where('date', '>=', Timestamp.fromDate(fromDate)),
               where('date', '<=', Timestamp.fromDate(toDateVal)),
-              limit(500)
+              limit(100)
             );
           } else {
-            // 'all' mode — just get recent 200
+            // 'all' mode — just get recent 50
             q = query(
               collection(db, dept.txCollection),
-              limit(200)
+              limit(50)
             );
           }
 
@@ -722,7 +722,7 @@ export default function CashierStationPage() {
 
       for (const source of sources) {
         try {
-          const snap = await getDocs(query(collection(db, source.coll), limit(500)));
+          const snap = await getDocs(query(collection(db, source.coll), limit(100)));
           const docs = snap.docs.map(d => ({ 
             ...d.data(), 
             id: d.id, 
