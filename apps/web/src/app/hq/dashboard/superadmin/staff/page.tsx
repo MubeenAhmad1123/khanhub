@@ -40,6 +40,8 @@ export default function SuperadminStaffPage() {
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<StaffCardRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [enrichedDepts, setEnrichedDepts] = useState<Set<StaffDept>>(new Set());
+  const [enriching, setEnriching] = useState(false);
   
   // Drill-down States
   const [drillLevel, setDrillLevel] = useState<'overview' | 'presence' | 'department' | 'list'>('overview');
@@ -55,12 +57,28 @@ export default function SuperadminStaffPage() {
     if (!session || session.role !== 'superadmin') return;
     let alive = true;
     setLoading(true);
-    // Explicitly fetch all personnel (admins, managers, staff, etc.)
-    listStaffCards({ dept, status, role: 'personnel' })
+    // Initially fetch basic data only (No expensive historical enrichment)
+    listStaffCards({ dept, status, role: 'personnel', fullEnrichment: false })
       .then((r) => alive && setRows(r))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [session, dept, status]);
+
+  // Lazy Enrichment Logic
+  useEffect(() => {
+    if (drillLevel === 'list' && drillDept && !enrichedDepts.has(drillDept) && !enriching) {
+      setEnriching(true);
+      listStaffCards({ dept: drillDept, status, role: 'personnel', fullEnrichment: true })
+        .then((newRows) => {
+          setRows(prev => {
+            const others = prev.filter(r => r.dept !== drillDept);
+            return [...others, ...newRows];
+          });
+          setEnrichedDepts(prev => new Set(prev).add(drillDept));
+        })
+        .finally(() => setEnriching(false));
+    }
+  }, [drillLevel, drillDept, status]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -297,6 +315,12 @@ export default function SuperadminStaffPage() {
 
             {drillLevel === 'list' && drillDept && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {enriching && (
+                  <div className="mb-8 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3 text-indigo-600 text-xs font-bold animate-pulse">
+                    <Zap className="animate-spin" size={14} />
+                    Syncing historical dossiers for {DEPT_INFO[drillDept]?.label}...
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {groupedByDept[drillDept]
                     ?.filter(r => drillPresence === 'present' ? r.isPresentToday : !r.isPresentToday)

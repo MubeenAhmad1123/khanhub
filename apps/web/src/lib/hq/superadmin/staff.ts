@@ -114,70 +114,95 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
   return `${formatDateDMY(when)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
 
-async function loadTodayStats(dept: StaffDept, staffId: string, date: string, s: any) {
-  if (dept === 'hq') return { uniform: 'na' as const, duty: 'na' as const, score: 0 };
+async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: Record<string, any>) {
+  if (dept === 'hq') return {};
   const prefix = getDeptPrefix(dept);
   
   const [attSnap, dressSnap, dutySnap, contribSnap] = await Promise.all([
-    getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
-    getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
-    getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
-    getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', staffId), where('date', '==', date), where('isApproved', '==', true))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_attendance`), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_dress_logs`), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_duty_logs`), where('date', '==', date))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, `${prefix}_contributions`), where('date', '==', date), where('isApproved', '==', true))).catch(() => ({ docs: [] } as any)),
   ]);
 
-  const att = attSnap?.docs[0]?.data();
-  const dress = dressSnap?.docs[0]?.data();
-  const duty = dutySnap?.docs[0]?.data();
-  const contribCount = contribSnap?.docs.length || 0;
-
-  const attPoint = (att?.status === 'present' || att?.isLate) ? 1 : 0;
+  const attMap: Record<string, any> = {};
+  attSnap.docs.forEach((d: any) => attMap[d.data().staffId] = d.data());
   
-  const uniformConfig = s.dressCodeConfig || [];
-  const uniformItems = dress?.items || [];
-  const uniformMissing = uniformConfig.filter((c: any) => {
-    const item = uniformItems.find((i: any) => i.key === c.key);
-    return !item || item.status === 'no';
+  const dressMap: Record<string, any> = {};
+  dressSnap.docs.forEach((d: any) => dressMap[d.data().staffId] = d.data());
+  
+  const dutyMap: Record<string, any> = {};
+  dutySnap.docs.forEach((d: any) => dutyMap[d.data().staffId] = d.data());
+  
+  const contribCounts: Record<string, number> = {};
+  contribSnap.docs.forEach((d: any) => {
+    const sid = d.data().staffId;
+    contribCounts[sid] = (contribCounts[sid] || 0) + 1;
   });
-  const uniformStatus = uniformConfig.length === 0 ? 'na' : (uniformMissing.length === 0 ? 'yes' : (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
-  const uniformPoint = uniformStatus === 'yes' ? 1 : 0;
 
-  const dutyConfig = s.dutyConfig || [];
-  const dutyItems = duty?.duties || [];
-  const dutiesPending = dutyConfig.filter((c: any) => {
-    const item = dutyItems.find((d: any) => d.key === c.key);
-    return !item || item.status === 'not_done';
+  const results: Record<string, any> = {};
+  Object.keys(staffConfigs).forEach(staffId => {
+    const s = staffConfigs[staffId];
+    const att = attMap[staffId];
+    const dress = dressMap[staffId];
+    const duty = dutyMap[staffId];
+    const contribCount = contribCounts[staffId] || 0;
+
+    const attPoint = (att?.status === 'present' || att?.isLate) ? 1 : 0;
+    
+    const uniformConfig = s.dressCodeConfig || [];
+    const uniformItems = dress?.items || [];
+    const uniformMissing = uniformConfig.filter((c: any) => {
+      const item = uniformItems.find((i: any) => i.key === c.key);
+      return !item || item.status === 'no';
+    });
+    const uniformStatus = uniformConfig.length === 0 ? 'na' : (uniformMissing.length === 0 ? 'yes' : (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete'));
+    const uniformPoint = uniformStatus === 'yes' ? 1 : 0;
+
+    const dutyConfig = s.dutyConfig || [];
+    const dutyItems = duty?.duties || [];
+    const dutiesPending = dutyConfig.filter((c: any) => {
+      const item = dutyItems.find((d: any) => d.key === c.key);
+      return !item || item.status === 'not_done';
+    });
+    const dutyStatus = dutyConfig.length === 0 ? 'na' : (dutiesPending.length === 0 ? 'yes' : (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
+    const dutyPoint = dutyStatus === 'yes' ? 1 : 0;
+
+    const contribPoint = contribCount > 0 ? 1 : 0;
+
+    results[staffId] = {
+      uniform: uniformStatus,
+      duty: dutyStatus,
+      score: attPoint + uniformPoint + dutyPoint + contribPoint
+    };
   });
-  const dutyStatus = dutyConfig.length === 0 ? 'na' : (dutiesPending.length === 0 ? 'yes' : (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete'));
-  const dutyPoint = dutyStatus === 'yes' ? 1 : 0;
 
-  const contribPoint = contribCount > 0 ? 1 : 0;
-
-  return {
-    uniform: uniformStatus as any,
-    duty: dutyStatus as any,
-    score: attPoint + uniformPoint + dutyPoint + contribPoint
-  };
+  return results;
 }
 
 export async function listStaffCards({
   dept,
   status,
   role,
+  fullEnrichment = false,
 }: {
   dept: 'all' | StaffDept;
   status: 'all' | 'active' | 'inactive';
   role: 'all' | 'admin' | 'staff' | 'cashier' | 'personnel';
+  fullEnrichment?: boolean;
 }): Promise<StaffCardRow[]> {
   const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const targetDepts: StaffDept[] = dept === 'all' 
     ? ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'] 
     : [dept];
 
+  // 1. Fetch Basic Personnel Docs (Capped at 200 per dept for safety)
   const base = await Promise.all(
     targetDepts.map(async (d) => {
       const col = getDeptCollection(d);
-      const snap = await getDocs(query(collection(db, col), limit(500))).catch(() => ({ docs: [] } as any));
+      const snap = await getDocs(query(collection(db, col), limit(200))).catch(() => ({ docs: [] } as any));
       return snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
     })
   );
@@ -193,7 +218,6 @@ export async function listStaffCards({
     if (normalizedRole === 'superadmin') return false;
 
     if (role === 'personnel') {
-      // Personnel should exclude students, api tests, and clients
       if (normalizedRole === 'other' || normalizedRole === 'student') return false;
     } else if (role !== 'all' && normalizedRole !== role) {
       return false;
@@ -202,17 +226,28 @@ export async function listStaffCards({
     return true;
   });
 
+  // 2. Batch Fetch Today's Stats per Department
+  const deptTodayStats: Record<string, Record<string, any>> = {};
+  await Promise.all(targetDepts.map(async (d) => {
+    const staffConfigs: Record<string, any> = {};
+    rows.filter(r => r._dept === d).forEach(r => staffConfigs[r.id] = r);
+    deptTodayStats[d] = await loadDeptTodayStats(d, todayStr, staffConfigs);
+  }));
+
+  // 3. Enrich Rows
   const enriched = await Promise.all(
     rows.map(async (s: any) => {
       const d = s._dept as StaffDept;
       const staffId = String(s.id);
-      const [att, gp, fines, lastDuty, today] = await Promise.all([
+      const today = deptTodayStats[d]?.[staffId] || { uniform: 'na', duty: 'na', score: 0 };
+
+      // Only fetch expensive monthly/total data if fullEnrichment is enabled
+      const [att, gp, fines, lastDuty] = fullEnrichment ? await Promise.all([
         loadAttendanceMonth(d, staffId, monthKey),
         loadGrowthPoints(d, staffId),
         loadFinesTotal(d, staffId),
         loadLastDuty(d, staffId),
-        loadTodayStats(d, staffId, now.toISOString().split('T')[0], s),
-      ]);
+      ]) : [{ present: 0, absent: 0, late: 0 }, 0, 0, undefined];
 
       return {
         id: `${d}_${s.id}`,

@@ -81,6 +81,7 @@ export default function CashierStationPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [allEntities, setAllEntities] = useState<any[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>('');
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -722,7 +723,7 @@ export default function CashierStationPage() {
 
       for (const source of sources) {
         try {
-          const snap = await getDocs(query(collection(db, source.coll), limit(100)));
+          const snap = await getDocs(query(collection(db, source.coll), limit(50)));
           const docs = snap.docs.map(d => ({ 
             ...d.data(), 
             id: d.id, 
@@ -747,10 +748,10 @@ export default function CashierStationPage() {
 
   useEffect(() => {
     const isReady = !sessionLoading && session && (session.role === 'cashier' || session.role === 'superadmin') && auth.currentUser;
-    if (isReady) {
+    if (isReady && (searchFocused || searchQuery.length > 0)) {
       loadAllEntities();
     }
-  }, [sessionLoading, session, auth.currentUser]);
+  }, [sessionLoading, session, auth.currentUser, searchFocused, searchQuery]);
 
 
   useEffect(() => {
@@ -1132,6 +1133,7 @@ export default function CashierStationPage() {
                 </div>
                 <input
                   value={searchQuery}
+                  onFocus={() => setSearchFocused(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
                   className="w-full h-16 md:h-24 lg:h-32 bg-zinc-50 border-4 border-transparent rounded-[1.5rem] md:rounded-[2.5rem] lg:rounded-[3.5rem] pl-20 md:pl-32 pr-12 text-lg md:text-2xl lg:text-3xl font-black text-zinc-900 outline-none focus:ring-[20px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-200"
