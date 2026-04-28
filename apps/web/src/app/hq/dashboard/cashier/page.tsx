@@ -2059,6 +2059,73 @@ function EntityProfileModal({
   const [editForm, setEditForm] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved'>('all');
 
+  // Quick Add State
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newTx, setNewTx] = useState({
+    amount: '',
+    category: 'fee',
+    categoryName: 'Admission / Fees',
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+  });
+
+  const handleAddTransaction = async () => {
+    if (!newTx.amount || Number(newTx.amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    setAdding(true);
+    try {
+      const deptCode = entity._deptCode || 'rehab';
+      const dept = DEPARTMENTS.find(d => d.code === deptCode);
+      if (!dept) throw new Error('Invalid Department');
+
+      const txDate = new Date(`${newTx.date}T12:00:00`);
+      
+      const payload: any = {
+        amount: Number(newTx.amount),
+        category: newTx.category,
+        categoryName: newTx.categoryName,
+        date: Timestamp.fromDate(txDate),
+        createdAt: Timestamp.now(),
+        description: newTx.description,
+        status: 'pending_cashier',
+        type: 'income',
+        departmentCode: deptCode,
+        cashierId: 'CASHIER', // Placeholder or real ID
+      };
+
+      // Map correct ID field
+      if (deptCode === 'spims') {
+        payload.studentId = entity.id;
+        payload.studentName = entity.name || entity.fullName;
+      } else {
+        const idFieldMap: Record<string, string> = {
+          'rehab': 'patientId', 'hospital': 'patientId', 'sukoon-center': 'clientId', 'welfare': 'donorId', 'job-center': 'seekerId',
+        };
+        const idField = idFieldMap[deptCode] || 'patientId';
+        payload[idField] = entity.id;
+        payload.patientName = entity.name || entity.fullName;
+      }
+
+      const docRef = await addDoc(collection(db, dept.txCollection), payload);
+      
+      // Update local view
+      const freshDoc = { id: docRef.id, ...payload, _collection: dept.txCollection };
+      setLocalTxns(prev => [freshDoc, ...prev]);
+      
+      setShowAddForm(false);
+      setNewTx({ amount: '', category: 'fee', categoryName: 'Admission / Fees', date: new Date().toISOString().split('T')[0], description: '' });
+      toast.success('Transaction added to queue');
+      if (onRefetch) onRefetch();
+    } catch (err: any) {
+      toast.error('Failed to add: ' + (err.message || 'Error'));
+    } finally {
+      setAdding(false);
+    }
+  };
+
   const handleUpdate = async (tx: any) => {
     if (!editForm) return;
     setLoading(true);
@@ -2187,9 +2254,22 @@ function EntityProfileModal({
   const handleDelete = async (tx: any) => {
     if (!window.confirm(`Delete this ${tx.status} transaction of Rs ${Number(tx.amount).toLocaleString()}? This cannot be undone.`)) return;
     
+    // Derive collection name safely
+    let targetCollection = tx._collection;
+    if (!targetCollection) {
+      const deptCode = tx.departmentCode || entity?._deptCode;
+      const dept = DEPARTMENTS.find(d => d.code === deptCode);
+      if (dept) targetCollection = dept.txCollection;
+    }
+
+    if (!targetCollection) {
+      toast.error('Critical Error: Source collection undefined. Deletion aborted for safety.');
+      return;
+    }
+
     setDeletingId(tx.id);
     try {
-      await deleteDoc(doc(db, tx._collection || 'spims_transactions', tx.id));
+      await deleteDoc(doc(db, targetCollection, tx.id));
       setLocalTxns(prev => prev.filter(t => t.id !== tx.id));
       toast.success('Transaction deleted');
       if (onRefetch) onRefetch();
@@ -2269,27 +2349,93 @@ function EntityProfileModal({
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-100 flex-shrink-0 bg-zinc-50">
-          <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Filter:</span>
-          {(['all', 'pending', 'approved'] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={cn(
-                'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all',
-                filterStatus === s
-                  ? 'bg-zinc-900 text-white'
-                  : 'bg-white text-zinc-400 border border-zinc-200 hover:border-zinc-400'
-              )}
-            >
-              {s} ({s === 'all' ? localTxns.length : s === 'pending' ? localTxns.filter(t => ['pending','pending_cashier'].includes(t.status)).length : localTxns.filter(t => t.status === s).length})
-            </button>
-          ))}
-          <span className="ml-auto text-xs font-black text-zinc-400">
-            {loading ? 'Loading...' : `${filtered.length} records`}
-          </span>
+        {/* Filter Bar & Quick Add Toggle */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 flex-shrink-0 bg-zinc-50">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Filter:</span>
+            {(['all', 'pending', 'approved'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => setFilterStatus(s)}
+                className={cn(
+                  'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all',
+                  filterStatus === s
+                    ? 'bg-zinc-900 text-white'
+                    : 'bg-white text-zinc-400 border border-zinc-200 hover:border-zinc-400'
+                )}
+              >
+                {s} ({s === 'all' ? localTxns.length : s === 'pending' ? localTxns.filter(t => ['pending','pending_cashier'].includes(t.status)).length : localTxns.filter(t => t.status === s).length})
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className={cn(
+              "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
+              showAddForm ? "bg-rose-50 text-rose-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+            )}
+          >
+            {showAddForm ? <X size={14} /> : <Plus size={14} />}
+            {showAddForm ? "Close Panel" : "Quick Add"}
+          </button>
         </div>
+
+        {/* Quick Add Form */}
+        {showAddForm && (
+          <div className="p-6 bg-indigo-50 border-b border-indigo-100 animate-in slide-in-from-top-4 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-indigo-400">Date</label>
+                <input 
+                  type="date" 
+                  value={newTx.date}
+                  onChange={(e) => setNewTx({...newTx, date: e.target.value})}
+                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-indigo-400">Category</label>
+                <select 
+                  value={newTx.category}
+                  onChange={(e) => {
+                    const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
+                    setNewTx({...newTx, category: e.target.value, categoryName: cat?.name || e.target.value});
+                  }}
+                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
+                >
+                  {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-indigo-400">Amount (Rs)</label>
+                <input 
+                  type="number" 
+                  placeholder="0.00"
+                  value={newTx.amount}
+                  onChange={(e) => setNewTx({...newTx, amount: e.target.value})}
+                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-black outline-none focus:border-indigo-400 tabular-nums"
+                />
+              </div>
+              <button 
+                onClick={handleAddTransaction}
+                disabled={adding}
+                className="h-12 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+              >
+                {adding ? <Loader2 size={14} className="animate-spin" /> : <Terminal size={14} />}
+                Execute
+              </button>
+            </div>
+            <div className="mt-4">
+              <input 
+                placeholder="Optional narration / context..."
+                value={newTx.description}
+                onChange={(e) => setNewTx({...newTx, description: e.target.value})}
+                className="w-full h-10 bg-white/50 border border-indigo-100 rounded-xl px-4 text-[10px] font-bold outline-none focus:bg-white"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Transaction List */}
         <div className="flex-1 overflow-y-auto">
