@@ -2055,7 +2055,41 @@ function EntityProfileModal({
   const [localTxns, setLocalTxns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved'>('all');
+
+  const handleUpdate = async (tx: any) => {
+    if (!editForm) return;
+    setLoading(true);
+    try {
+      const coll = tx._collection || 'spims_transactions';
+      const docRef = doc(db, coll, tx.id);
+      
+      const updatePayload: any = {
+        amount: Number(editForm.amount),
+        category: editForm.category,
+        categoryName: editForm.categoryName,
+        date: Timestamp.fromDate(new Date(`${editForm.date}T12:00:00`)),
+      };
+
+      if (coll === 'spims_fees') {
+        updatePayload.type = editForm.categoryName.includes('Admission') ? 'admission' : 'monthly';
+      }
+
+      await updateDoc(docRef, updatePayload);
+      
+      setLocalTxns(prev => prev.map(t => t.id === tx.id ? { ...t, ...updatePayload, amount: Number(editForm.amount) } : t));
+      setEditingId(null);
+      setEditForm(null);
+      toast.success('Record updated successfully');
+      if (onRefetch) onRefetch();
+    } catch (err: any) {
+      toast.error('Update failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch BOTH transactions and fees fresh from Firestore
   useEffect(() => {
@@ -2280,61 +2314,134 @@ function EntityProfileModal({
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {filtered.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-zinc-50 transition-colors group">
-                    <td className="px-6 py-4 text-sm font-bold text-zinc-700">
-                      {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          'w-8 h-8 rounded-lg flex items-center justify-center',
-                          tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
-                        )}>
-                          {tx.type === 'income' ? <Plus size={16} /> : <Minus size={16} />}
+                 {filtered.map((tx) => {
+                  const isEditing = editingId === tx.id;
+                  return (
+                    <tr key={tx.id} className={cn("hover:bg-zinc-50 transition-colors group", isEditing && "bg-indigo-50/50")}>
+                      <td className="px-6 py-4">
+                        {isEditing ? (
+                          <input 
+                            type="date" 
+                            className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                            value={editForm.date}
+                            onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-zinc-700">
+                            {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                            tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                          )}>
+                            {tx.type === 'income' ? <Plus size={16} /> : <Minus size={16} />}
+                          </div>
+                          <div className="flex-1">
+                            {isEditing ? (
+                              <select 
+                                className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                                value={editForm.category}
+                                onChange={(e) => {
+                                  const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
+                                  setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
+                                }}
+                              >
+                                {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
+                            ) : (
+                              <>
+                                <p className="text-sm font-black text-zinc-900">{tx.categoryName || tx.category}</p>
+                                {tx.description && (
+                                  <p className="text-xs text-zinc-400 truncate max-w-[200px]">{tx.description}</p>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-black text-zinc-900">{tx.categoryName || tx.category}</p>
-                          {tx.description && (
-                            <p className="text-xs text-zinc-400 truncate max-w-[200px]">{tx.description}</p>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {isEditing ? (
+                          <input 
+                            type="number" 
+                            className="w-32 bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
+                            value={editForm.amount}
+                            onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                          />
+                        ) : (
+                          <span className={cn(
+                            'text-lg font-black tabular-nums',
+                            tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                          )}>
+                            {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={cn(
+                          'px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest',
+                          tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                          tx.status === 'rejected' || tx.status === 'rejected_cashier' ? 'bg-rose-100 text-rose-700' :
+                          'bg-amber-100 text-amber-700'
+                        )}>
+                          {tx.status === 'pending_cashier' ? 'Pending' : tx.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={() => handleUpdate(tx)}
+                                className="w-9 h-9 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+                              >
+                                <Check size={18} />
+                              </button>
+                              <button
+                                onClick={() => { setEditingId(null); setEditForm(null); }}
+                                className="w-9 h-9 rounded-lg bg-zinc-100 text-zinc-400 flex items-center justify-center hover:bg-zinc-200 transition-all"
+                              >
+                                <X size={18} />
+                              </button>
+                            </>
+                          ) : (
+                            ['pending', 'pending_cashier'].includes(tx.status) && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingId(tx.id);
+                                    setEditForm({
+                                      amount: tx.amount,
+                                      category: tx.category || 'fee',
+                                      categoryName: tx.categoryName || 'Admission / Fees',
+                                      date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
+                                    });
+                                  }}
+                                  className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                                >
+                                  <Terminal size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(tx)}
+                                  disabled={deletingId === tx.id}
+                                  className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                                >
+                                  {deletingId === tx.id 
+                                    ? <Loader2 size={16} className="animate-spin" />
+                                    : <Trash2 size={16} />
+                                  }
+                                </button>
+                              </>
+                            )
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={cn(
-                        'text-lg font-black tabular-nums',
-                        tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
-                      )}>
-                        {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={cn(
-                        'px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest',
-                        tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                        tx.status === 'rejected' || tx.status === 'rejected_cashier' ? 'bg-rose-100 text-rose-700' :
-                        'bg-amber-100 text-amber-700'
-                      )}>
-                        {tx.status === 'pending_cashier' ? 'Pending' : tx.status || 'Pending'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {['pending', 'pending_cashier'].includes(tx.status) && (
-                        <button
-                          onClick={() => handleDelete(tx)}
-                          disabled={deletingId === tx.id}
-                          className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center mx-auto opacity-0 group-hover:opacity-100"
-                        >
-                          {deletingId === tx.id 
-                            ? <Loader2 size={16} className="animate-spin" />
-                            : <Trash2 size={16} />
-                          }
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
