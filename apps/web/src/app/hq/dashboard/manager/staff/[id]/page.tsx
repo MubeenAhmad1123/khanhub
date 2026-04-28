@@ -1,7 +1,7 @@
 // src/app/hq/dashboard/manager/staff/[id]/page.tsx
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import {
   doc, getDoc, collection, getDocs, query, where, orderBy,
@@ -103,6 +103,8 @@ export default function StaffProfilePage() {
   const params = useParams();
   const staffId = params.id as string; // Expected: dept_UID
   const { session, loading: sessionLoading } = useHqSession();
+  const fetchLock = useRef(false);
+  const lastFetchedId = useRef<string | null>(null);
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action'>('profile');
@@ -474,6 +476,7 @@ export default function StaffProfilePage() {
     } finally {
       console.log(`[StaffProfile] fetchData FINALLY (setting loading false)`);
       setLoading(false);
+      fetchLock.current = false;
     }
   }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable
 
@@ -1066,13 +1069,16 @@ export default function StaffProfilePage() {
   };
 
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
-      router.push('/hq/login');
-      return;
-    }
+    if (sessionLoading || !staffId) return;
+    
+    // Prevent double-fetching if the ID hasn't changed and we aren't already fetching
+    if (lastFetchedId.current === staffId && staff) return;
+    if (fetchLock.current) return;
+
+    fetchLock.current = true;
+    lastFetchedId.current = staffId;
     fetchData();
-  }, [session, sessionLoading, fetchData, router]);
+  }, [staffId, sessionLoading, fetchData]); // Removed session and router as dependencies to stop loops
 
   const handleScheduleMeeting = async () => {
     if (!meetingForm.title || !meetingForm.date || !staff) return;
