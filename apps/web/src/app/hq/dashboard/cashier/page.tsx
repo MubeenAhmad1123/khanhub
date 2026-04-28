@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, deleteDoc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
 import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
@@ -80,6 +80,7 @@ export default function CashierStationPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [allEntities, setAllEntities] = useState<any[]>([]);
+  const [entitiesLoading, setEntitiesLoading] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>('');
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -260,7 +261,7 @@ export default function CashierStationPage() {
         // Removed expensive aggregation queries to prevent "Quota exceeded" (429) errors on Spark plan.
         // We will calculate stats from the fetched documents instead.
 
-        constraints.push(limit(100)); // Limit per department to keep it responsive
+        constraints.push(limit(500)); // Limit per department to keep it responsive
 
         try {
           const snap = await getDocs(query(collection(db, dept.txCollection), ...constraints));
@@ -660,12 +661,17 @@ export default function CashierStationPage() {
     void loadSuperadminRecipient();
   }, [session]);
 
-  const loadAllEntities = useCallback(async () => {
-    if (!session) return;
+  const loadAllEntities = async () => {
+    if (!auth.currentUser) {
+      console.warn('[CashierStation] Skipping fetch: Auth not ready');
+      return;
+    }
+    setEntitiesLoading(true);
     const cacheKey = 'cashier_all_entities';
     const cached = getCached<any[]>(cacheKey);
     if (cached) {
       setAllEntities(cached);
+      setEntitiesLoading(false);
       return;
     }
 
@@ -684,7 +690,7 @@ export default function CashierStationPage() {
 
       for (const source of sources) {
         try {
-          const snap = await getDocs(query(collection(db, source.coll), limit(50)));
+          const snap = await getDocs(query(collection(db, source.coll), limit(500)));
           const docs = snap.docs.map(d => ({ 
             ...d.data(), 
             id: d.id, 
@@ -702,12 +708,17 @@ export default function CashierStationPage() {
       setCached(cacheKey, all, 300); // 5 mins
     } catch (err) {
       console.error('[HQ Cashier] Universal Search Load Error:', err);
+    } finally {
+      setEntitiesLoading(false);
     }
-  }, [session]);
+  };
 
   useEffect(() => {
-    void loadAllEntities();
-  }, [loadAllEntities]);
+    const isReady = !sessionLoading && session && (session.role === 'cashier' || session.role === 'superadmin') && auth.currentUser;
+    if (isReady) {
+      loadAllEntities();
+    }
+  }, [sessionLoading, session, auth.currentUser]);
 
 
   useEffect(() => {
@@ -1007,100 +1018,136 @@ export default function CashierStationPage() {
     <div className="min-h-screen bg-[#FCFBF8] py-6 md:py-16 transition-colors duration-500">
       <div className="max-w-[1600px] mx-auto px-4 md:px-12">
         
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10 md:mb-16 animate-in fade-in slide-in-from-top-8 duration-1000">
-          <div className="flex items-center gap-4 md:gap-6">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-600/20">
-              <Terminal size={32} />
+        {/* MASTER CONTROL HUB - HEADER & UNIVERSAL SEARCH */}
+        <div className="space-y-12 mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+            <div className="flex items-center gap-8">
+              <div className="relative group">
+                <div className="absolute -inset-4 bg-indigo-600/20 rounded-[2.5rem] blur-2xl group-hover:bg-indigo-600/40 transition-all duration-700" />
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-indigo-600 rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl relative">
+                  <Terminal size={40} strokeWidth={2.5} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
+                  <p className="text-[10px] md:text-xs font-black text-indigo-600 uppercase tracking-[0.5em]">System Node: 001-HQ</p>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-[1000] text-zinc-900 tracking-tighter uppercase leading-none">
+                  Cashier <span className="text-indigo-600">Station</span>
+                </h1>
+                <p className="text-zinc-400 font-bold flex items-center gap-2">
+                  <User size={14} className="text-zinc-300" />
+                  Logged in as <span className="text-zinc-900">{session?.name || 'Authorized Personnel'}</span>
+                </p>
+              </div>
             </div>
-        </div>
-      </div>
 
-      {/* NEW: UNIVERSAL SEARCH - PRIMARY ENTRY POINT */}
-      <div className="max-w-[1600px] mx-auto px-4 md:px-12 mt-8 md:mt-12">
-        <div className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-14 border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 rounded-full -mr-48 -mt-48 blur-3xl group-hover:scale-125 transition-transform duration-1000" />
-          
-          <div className="relative z-10 space-y-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 md:w-16 md:h-16 bg-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl shadow-indigo-600/30">
-                  <Search size={28} />
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="px-8 py-5 bg-white border border-zinc-100 rounded-[2rem] shadow-xl flex items-center gap-6 group hover:border-indigo-200 transition-all">
+                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <Activity size={24} />
                 </div>
                 <div>
-                  <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Locate records across all dimensions</p>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Network Latency</p>
+                  <p className="text-lg font-black text-zinc-900 tracking-tight">Active / Secure</p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 p-2 bg-zinc-100 rounded-[1.5rem]">
-                {(['patient', 'student', 'staff', 'other'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setSearchType(t)}
-                    className={cn(
-                      "px-6 md:px-8 py-3 md:py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all",
-                      searchType === t ? "bg-white text-indigo-600 shadow-xl" : "text-zinc-400 hover:text-zinc-600"
-                    )}
-                  >
-                    {t}s
-                  </button>
-                ))}
-              </div>
+              <button 
+                onClick={() => fetchHistory()}
+                className="w-16 h-16 bg-zinc-900 text-white rounded-[1.5rem] flex items-center justify-center hover:bg-indigo-600 transition-all active:scale-90 shadow-xl"
+              >
+                <RefreshCw size={24} className={cn(historyLoading && "animate-spin")} />
+              </button>
             </div>
+          </div>
 
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-8 md:pl-10 flex items-center pointer-events-none">
-                <User size={24} className="text-indigo-400" />
+          <div className="bg-white rounded-[3rem] md:rounded-[4rem] p-8 md:p-14 border border-zinc-100 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] group-hover/search:bg-indigo-600/10 transition-all duration-1000" />
+            
+            <div className="relative z-10 space-y-12">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
+                <div className="flex items-center gap-8">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-zinc-900 rounded-[2rem] flex items-center justify-center text-white shadow-2xl group-hover/search:scale-110 transition-transform duration-700">
+                    <Search size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl md:text-4xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
+                    <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.4em] mt-2">Access cross-departmental records instantaneously</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 p-2 bg-zinc-100 rounded-[2rem]">
+                  {(['patient', 'student', 'staff', 'other'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setSearchType(t)}
+                      className={cn(
+                        "px-8 md:px-10 py-4 md:py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+                        searchType === t 
+                          ? "bg-white text-indigo-600 shadow-2xl shadow-indigo-600/10" 
+                          : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/50"
+                      )}
+                    >
+                      {t}s
+                    </button>
+                  ))}
+                </div>
               </div>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
-                className="w-full h-20 md:h-24 bg-zinc-50 border-2 border-transparent rounded-[2rem] md:rounded-[2.5rem] pl-20 md:pl-24 pr-10 text-lg md:text-xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-300"
-              />
-            </div>
 
-            {searchOpen && searchResults.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500">
-                {searchResults.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                       setSelectedEntity(p);
-                       setSelectedEntityType(p._entityType || 'unknown');
-                       setDepartmentCode(p._deptCode || 'rehab');
-                       setSearchQuery('');
-                       setSearchOpen(false);
-                       setShowProfileModal(true);
-                    }}
-                    className="group p-6 bg-zinc-50 border border-transparent rounded-[2rem] hover:border-indigo-500 hover:bg-white hover:shadow-2xl transition-all flex items-center justify-between text-left"
-                  >
-                    <div className="flex items-center gap-5">
-                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-zinc-300 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
-                        <User size={20} />
-                      </div>
-                      <div>
-                        <h4 className="text-base font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[150px]">{p.name || p.fullName || 'Unknown'}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[8px] font-black uppercase tracking-widest">{p._deptLabel || 'HQ'}</span>
-                          <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">ID: {p.patientId || p.studentId || p.customId || p.id.slice(0, 8)}</span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-10 md:pl-12 flex items-center pointer-events-none">
+                  <User size={32} className="text-indigo-600/30" />
+                </div>
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
+                  className="w-full h-24 md:h-32 bg-zinc-50 border-4 border-transparent rounded-[2.5rem] md:rounded-[3.5rem] pl-24 md:pl-32 pr-12 text-xl md:text-3xl font-black text-zinc-900 outline-none focus:ring-[20px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-200"
+                />
+                {entitiesLoading && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                    <Loader2 size={32} className="animate-spin text-indigo-600" />
+                  </div>
+                )}
+              </div>
+
+              {searchOpen && searchResults.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in slide-in-from-top-8 duration-700">
+                  {searchResults.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                         setSelectedEntity(p);
+                         setSelectedEntityType(p._entityType || 'unknown');
+                         setDepartmentCode(p._deptCode || 'rehab');
+                         setSearchQuery('');
+                         setSearchOpen(false);
+                         setShowProfileModal(true);
+                      }}
+                      className="group p-8 bg-zinc-50 border-2 border-transparent rounded-[2.5rem] hover:border-indigo-500 hover:bg-white hover:shadow-[0_32px_64px_-16px_rgba(79,70,229,0.15)] transition-all flex items-center justify-between text-left relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-600/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+                      <div className="flex items-center gap-6 relative z-10">
+                        <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-zinc-300 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl group-hover:rotate-6">
+                          <User size={28} />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[180px]">{p.name || p.fullName || 'Unknown'}</h4>
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest">{p._deptLabel}</span>
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">ID: {p.patientId || p.studentId || p.customId || p.id.slice(0, 8)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white border border-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-200 transition-all">
-                        <FileText size={18} />
-                      </div>
-                      <ChevronRight size={18} className="text-zinc-200 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                      <ChevronRight size={24} className="text-zinc-200 group-hover:text-indigo-600 group-hover:translate-x-2 transition-all relative z-10" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-12">
 
@@ -1204,327 +1251,304 @@ export default function CashierStationPage() {
           {/* The old search section was here, it's now at the top */}
         </div>
 
-        <div className="lg:col-span-8 min-w-0 space-y-8 md:space-y-12 order-1 lg:order-2">
-          <div className="bg-white rounded-[2rem] md:rounded-[4rem] border border-zinc-100 p-8 md:p-14 shadow-2xl shadow-zinc-200/50">
-            {selectedEntity ? (
-              <div className="space-y-10">
-                <div className="p-8 md:p-14 rounded-[3rem] md:rounded-[4.5rem] bg-indigo-600 text-white min-w-0 shadow-[0_32px_64px_-16px_rgba(79,70,229,0.4)] group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full -mr-64 -mt-64 blur-3xl group-hover:bg-white/20 transition-all duration-1000" />
-                  <div className="relative z-10">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-10">
-                      <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
-                        <div className="w-24 h-24 md:w-40 md:h-40 bg-white/10 backdrop-blur-md rounded-[2.5rem] md:rounded-[4rem] flex items-center justify-center border border-white/20 shadow-2xl relative group/avatar">
-                          <User size={64} className="text-white md:w-24 md:h-24 group-hover/avatar:scale-110 transition-transform" />
-                          <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-400 rounded-2xl flex items-center justify-center border-4 border-indigo-600 shadow-xl">
-                            <ShieldCheck size={20} className="text-white" />
+        <div className="lg:col-span-8 min-w-0 space-y-12 order-1 lg:order-2">
+          {/* ACTION CONSOLE */}
+          <div className="bg-white rounded-[3rem] md:rounded-[4rem] border border-zinc-100 p-8 md:p-14 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
+            
+            <div className="relative z-10 space-y-14">
+              {selectedEntity ? (
+                <div className="space-y-12 animate-in fade-in zoom-in-95 duration-700">
+                  <div className="p-10 md:p-16 rounded-[3.5rem] md:rounded-[5rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
+                    
+                    <div className="relative z-10">
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-12">
+                        <div className="flex flex-col md:flex-row items-center md:items-start gap-12">
+                          <div className="w-32 h-32 md:w-48 md:h-48 bg-white/10 backdrop-blur-2xl rounded-[3rem] md:rounded-[4rem] flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden">
+                            <User size={80} className="text-white/40 md:w-32 md:h-32 group-hover/avatar:scale-110 transition-transform duration-700" />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-transparent opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
+                            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center border-4 border-zinc-900 shadow-xl">
+                              <ShieldCheck size={24} className="text-white" />
+                            </div>
+                          </div>
+                          <div className="text-center md:text-left space-y-6">
+                            <div className="flex items-center justify-center md:justify-start gap-4">
+                              <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">Active Protocol Target</p>
+                              </div>
+                            </div>
+                            <h2 className="text-5xl md:text-7xl lg:text-8xl font-[1000] tracking-tighter leading-none uppercase">{selectedEntity.name || selectedEntity.fullName}</h2>
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-5">
+                              <div className="px-8 py-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest">
+                                ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.id.slice(0, 8)}</span>
+                              </div>
+                              <div className="px-8 py-3 bg-indigo-600 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest shadow-xl">
+                                {departmentCode}
+                              </div>
+                              <button 
+                                onClick={() => setShowProfileModal(true)}
+                                className="px-8 py-3 bg-white text-zinc-900 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-3"
+                              >
+                                <Eye size={16} />
+                                Full Ledger
+                              </button>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-center md:text-left">
-                          <div className="flex items-center justify-center md:justify-start gap-4 mb-4">
-                            <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
-                            <p className="text-[10px] md:text-xs font-black text-white/60 uppercase tracking-[0.5em]">Active Protocol Target</p>
+                        <button 
+                          onClick={() => { setSelectedEntity(null); setAmount(''); }} 
+                          className="w-20 h-20 bg-white/10 hover:bg-rose-600 text-white rounded-[2rem] flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90"
+                        >
+                          <X size={32} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20">
+                        <div className="p-10 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[3rem] group/card hover:bg-white/10 transition-all">
+                          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Total Protocol Value</p>
+                          <h4 className="text-3xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
+                        </div>
+                        <div className="p-10 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-[3rem] group/card hover:bg-emerald-500/20 transition-all">
+                          <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-[0.3em] mb-4">Total Settled</p>
+                          <h4 className="text-3xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
+                        </div>
+                        <div className="p-10 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-[3rem] group/card hover:bg-rose-500/20 transition-all">
+                          <p className="text-[10px] font-black text-rose-400/60 uppercase tracking-[0.3em] mb-4">Current Exposure</p>
+                          <h4 className="text-3xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* History Quick View - Compact Register Style */}
+                  {entityHistory.length > 0 && (
+                    <div className="space-y-8 px-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tighter flex items-center gap-4">
+                          <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-500">
+                            <History size={20} />
                           </div>
-                          <h2 className="text-4xl md:text-6xl lg:text-7xl font-[1000] tracking-tighter leading-none uppercase">{selectedEntity.name || selectedEntity.fullName}</h2>
-                          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-8">
-                            <span className="px-6 py-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-[10px] font-black uppercase tracking-widest">ID: {selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.id.slice(0, 8)}</span>
-                            <span className="px-6 py-2.5 bg-indigo-500 border border-indigo-400 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg">{departmentCode}</span>
-                            <button 
-                              onClick={() => setShowProfileModal(true)}
-                              className="px-6 py-2.5 bg-white text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-900 hover:text-white transition-all active:scale-95 shadow-xl flex items-center gap-2"
+                          Journal Snippet
+                        </h4>
+                        <div className="h-[1px] flex-1 bg-zinc-100 mx-8" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {entityHistory.slice(0, 4).map((tx) => (
+                          <div key={tx.id} className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 flex items-center justify-between group/tx hover:bg-white hover:border-indigo-200 hover:shadow-xl transition-all">
+                            <div className="flex items-center gap-5">
+                              <div className={cn(
+                                "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover/tx:rotate-6",
+                                tx.type === 'income' ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rose-500 text-white shadow-rose-500/20"
+                              )}>
+                                {tx.type === 'income' ? <Plus size={24} /> : <Minus size={24} />}
+                              </div>
+                              <div>
+                                <p className="text-base font-black text-zinc-900 uppercase tracking-tight">{tx.categoryName || tx.category}</p>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">{formatDateDMY(tx.date)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={cn("text-xl font-[1000] tracking-tighter tabular-nums", tx.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
+                                Rs {tx.amount.toLocaleString()}
+                              </p>
+                              <div className="flex items-center justify-end gap-2 mt-1">
+                                <span className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  tx.status === 'approved' ? "bg-emerald-500" : "bg-amber-500"
+                                )} />
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{tx.status}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-20 md:p-32 rounded-[4rem] bg-zinc-50 border-4 border-dashed border-zinc-200 flex flex-col items-center justify-center text-center group/empty hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-1000">
+                  <div className="relative">
+                    <div className="absolute -inset-8 bg-white rounded-full blur-2xl opacity-0 group-hover/empty:opacity-100 transition-opacity" />
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-[3rem] flex items-center justify-center text-zinc-300 mb-10 shadow-2xl relative group-hover/empty:scale-110 group-hover/empty:text-indigo-500 group-hover/empty:rotate-12 transition-all duration-700">
+                      <Terminal size={48} className="md:w-16 md:h-16" />
+                    </div>
+                  </div>
+                  <h3 className="text-3xl md:text-5xl font-[1000] text-zinc-900 uppercase tracking-tighter">Terminal Awaiting Target</h3>
+                  <p className="text-xs md:text-base font-black text-zinc-400 uppercase tracking-[0.3em] mt-6 max-w-xl mx-auto leading-relaxed opacity-60">Select an entity from the universal search to initialize transaction protocol and open financial gateway.</p>
+                </div>
+              )}
+
+              <form onSubmit={submitTx} className="space-y-16 pt-10 border-t border-zinc-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20">
+                  <div className="space-y-12">
+                    {/* Department Selection - POS Style */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between px-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department Vector</label>
+                        <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {DEPARTMENTS.map((dept) => (
+                          <button
+                            key={dept.code}
+                            type="button"
+                            onClick={() => {
+                              setDepartmentCode(dept.code);
+                              setSelectedEntity(null);
+                              setAmount('');
+                            }}
+                            className={cn(
+                              "h-20 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 transition-all border-2 group/dept",
+                              departmentCode === dept.code 
+                                ? "bg-indigo-600 border-indigo-600 text-white shadow-2xl shadow-indigo-600/30 -translate-y-1" 
+                                : "bg-white border-zinc-100 text-zinc-400 hover:border-indigo-200 hover:text-zinc-600"
+                            )}
+                          >
+                            <span className="text-[10px] font-black uppercase tracking-widest group-hover/dept:scale-110 transition-transform">{dept.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Financial Flow - HIGH CONTRAST */}
+                    <div className="space-y-6">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Directional Flow</label>
+                      <div className="grid grid-cols-2 gap-6">
+                        <button
+                          type="button"
+                          onClick={() => setTxnType('income')}
+                          className={cn(
+                            "h-28 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all border-4 relative overflow-hidden group/flow",
+                            txnType === 'income' 
+                              ? "bg-emerald-600 border-emerald-500 text-white shadow-2xl shadow-emerald-500/30 -translate-y-1" 
+                              : "bg-white border-zinc-100 text-zinc-400 hover:border-emerald-200 hover:bg-emerald-50"
+                          )}
+                        >
+                          <TrendingUp size={32} className={cn("transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
+                          <span className="text-[11px] font-black uppercase tracking-[0.3em]">Credit Entry</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTxnType('expense')}
+                          className={cn(
+                            "h-28 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all border-4 relative overflow-hidden group/flow",
+                            txnType === 'expense' 
+                              ? "bg-rose-600 border-rose-500 text-white shadow-2xl shadow-rose-500/30 -translate-y-1" 
+                              : "bg-white border-zinc-100 text-zinc-400 hover:border-rose-200 hover:bg-rose-50"
+                          )}
+                        >
+                          <TrendingDown size={32} className={cn("transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
+                          <span className="text-[11px] font-black uppercase tracking-[0.3em]">Debit Entry</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Hospital Specific Logistics */}
+                    {departmentCode === 'hospital' && (
+                      <div className="p-10 bg-zinc-50 rounded-[3rem] border-2 border-zinc-100 space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                            <Activity size={24} />
+                          </div>
+                          <h4 className="text-2xl font-[1000] text-zinc-900 uppercase tracking-tighter">Clinical Vector</h4>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          {([
+                            { id: 'opd_reception', label: 'OPD' },
+                            { id: 'lab_test', label: 'Lab' },
+                            { id: 'operation_theater', label: 'Surgery' },
+                            { id: 'indoor_patient', label: 'Indoor' }
+                          ] as const).map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setHospCategory(cat.id)}
+                              className={cn(
+                                "py-5 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                hospCategory === cat.id ? "bg-zinc-900 border-zinc-900 text-white shadow-xl" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                              )}
                             >
-                              <Eye size={14} />
-                              See Profile & Statement
+                              {cat.label}
                             </button>
-                          </div>
+                          ))}
                         </div>
-                      </div>
-                      <button 
-                        onClick={() => { setSelectedEntity(null); setAmount(''); }} 
-                        className="w-16 h-16 bg-white/10 hover:bg-white text-white hover:text-indigo-600 rounded-[1.5rem] flex items-center justify-center transition-all backdrop-blur-md border border-white/10 shadow-xl group/btn active:scale-90"
-                      >
-                        <X size={24} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
-                      </button>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
-                      <div className="p-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2.5rem]">
-                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-2">Total Package</p>
-                        <h4 className="text-2xl font-black">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
-                      </div>
-                      <div className="p-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2.5rem]">
-                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-2">Total Paid</p>
-                        <h4 className="text-2xl font-black text-emerald-300">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
-                      </div>
-                      <div className="p-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2.5rem]">
-                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-2">Remaining</p>
-                        <h4 className="text-2xl font-black text-rose-300">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* History Quick View */}
-                {entityHistory.length > 0 && (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between px-6">
-                      <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tight flex items-center gap-3">
-                        <History size={20} className="text-indigo-500" />
-                        Recent Transactions
-                      </h4>
-                      <button onClick={() => setShowProfileModal(true)} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View Full Ledger</button>
-                    </div>
-                    <div className="space-y-4">
-                      {entityHistory.slice(0, 3).map((tx) => (
-                        <div key={tx.id} className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                              "w-12 h-12 rounded-xl flex items-center justify-center",
-                              tx.type === 'income' ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
-                            )}>
-                              {tx.type === 'income' ? <Plus size={20} /> : <Minus size={20} />}
+                        <div className="space-y-6 pt-6 border-t border-zinc-200">
+                          <div className="grid grid-cols-1 gap-6">
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-4">Subject Identity</label>
+                              <input value={hospPatientName} onChange={(e) => setHospPatientName(e.target.value)} placeholder="Enter patient name..." className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner" />
                             </div>
-                            <div>
-                              <p className="text-sm font-black text-zinc-900">{tx.categoryName || tx.category}</p>
-                              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">{formatDateDMY(tx.date)}</p>
+                            <div className="grid grid-cols-2 gap-6">
+                              <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-4">Phone / Contact</label>
+                                <input value={hospContact} onChange={(e) => setHospContact(e.target.value)} placeholder="03xx-xxxxxxx" className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner" />
+                              </div>
+                              <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-4">Subject Age</label>
+                                <input value={hospAge} onChange={(e) => setHospAge(e.target.value)} placeholder="Years" className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner" />
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className={cn("text-base font-black", tx.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
-                              {tx.type === 'income' ? '+' : '-'} Rs {tx.amount.toLocaleString()}
-                            </p>
-                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">{tx.status}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-10 md:p-20 rounded-[2rem] md:rounded-[3rem] bg-zinc-50 border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center text-center group hover:border-indigo-400 hover:bg-indigo-50 transition-all">
-                <div className="w-16 h-16 md:w-24 md:h-24 bg-white rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center text-zinc-300 mb-6 md:mb-10 shadow-xl group-hover:scale-110 group-hover:text-indigo-500 transition-all">
-                  <User size={32} className="md:w-12 md:h-12" />
-                </div>
-                <h3 className="text-xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tight">Identity Required</h3>
-                <p className="text-xs md:text-sm font-black text-zinc-400 uppercase tracking-widest mt-4 max-w-xs md:max-w-md mx-auto leading-relaxed">Please select a subject from the universal directory or active queue to initialize transaction protocol.</p>
-              </div>
-            )}
-
-            <form onSubmit={submitTx} className="mt-8 md:mt-12 space-y-10 md:space-y-16">
-              <div className="space-y-8 md:space-y-12">
-                {/* Department Selection */}
-                <div className="space-y-4 md:space-y-6">
-                  <label className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.4em] text-zinc-400 ml-4">Department Matrix</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-                    {DEPARTMENTS.map((dept) => (
-                      <button
-                        key={dept.code}
-                        type="button"
-                        onClick={() => {
-                          setDepartmentCode(dept.code);
-                          setSelectedEntity(null);
-                          setAmount('');
-                        }}
-                        className={cn(
-                          "h-16 md:h-20 rounded-2xl md:rounded-3xl flex flex-col items-center justify-center gap-1 md:gap-2 transition-all border-2 text-center px-2",
-                          departmentCode === dept.code 
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20" 
-                            : "bg-white border-zinc-100 text-zinc-400 hover:border-indigo-200"
-                        )}
-                      >
-                        <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest">{dept.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4 md:space-y-6">
-                  <label className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.4em] text-zinc-400 ml-4">Financial Flow Vector</label>
-                  <div className="grid grid-cols-2 gap-4 md:gap-8">
-                    <button
-                      type="button"
-                      onClick={() => setTxnType('income')}
-                      className={cn(
-                        "h-20 md:h-24 rounded-[1.5rem] md:rounded-[2.5rem] flex flex-col items-center justify-center gap-2 md:gap-3 transition-all active:scale-[0.98] border-2 shadow-2xl relative overflow-hidden",
-                        txnType === 'income' 
-                          ? "bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/20" 
-                          : "bg-white border-zinc-100 text-zinc-400 hover:border-emerald-200 hover:bg-emerald-50"
-                      )}
-                    >
-                      <TrendingUp size={24} className={cn("transition-transform md:w-8 md:h-8", txnType === 'income' && "scale-110")} />
-                      <span className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.3em]">Credit Entry</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTxnType('expense')}
-                      className={cn(
-                        "h-20 md:h-24 rounded-[1.5rem] md:rounded-[2.5rem] flex flex-col items-center justify-center gap-2 md:gap-3 transition-all active:scale-[0.98] border-2 shadow-2xl relative overflow-hidden",
-                        txnType === 'expense' 
-                          ? "bg-rose-500 border-rose-400 text-white shadow-rose-500/20" 
-                          : "bg-white border-zinc-100 text-zinc-400 hover:border-rose-200 hover:bg-rose-50"
-                      )}
-                    >
-                      <TrendingDown size={24} className={cn("transition-transform md:w-8 md:h-8", txnType === 'expense' && "scale-110")} />
-                      <span className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.3em]">Debit Entry</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Conditional Sub-Forms */}
-                {departmentCode === 'hospital' && (
-                  <div className="p-8 md:p-12 bg-zinc-50 rounded-[2.5rem] md:rounded-[3.5rem] border border-zinc-100 space-y-8 animate-in fade-in zoom-in-95 duration-500">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-                        <Activity size={20} />
-                      </div>
-                      <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight">Hospital Logistics</h4>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {([
-                        { id: 'opd_reception', label: 'OPD' },
-                        { id: 'lab_test', label: 'Lab' },
-                        { id: 'operation_theater', label: 'Surgery' },
-                        { id: 'indoor_patient', label: 'Indoor' }
-                      ] as const).map((cat) => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => setHospCategory(cat.id)}
-                          className={cn(
-                            "py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all",
-                            hospCategory === cat.id ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-zinc-100 text-zinc-400"
-                          )}
-                        >
-                          {cat.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Patient Full Name</label>
-                        <input value={hospPatientName} onChange={(e) => setHospPatientName(e.target.value)} placeholder="Enter patient name..." className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Guardian / S/O</label>
-                        <input value={hospGuardian} onChange={(e) => setHospGuardian(e.target.value)} placeholder="Guardian name..." className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Contact Number</label>
-                        <input value={hospContact} onChange={(e) => setHospContact(e.target.value)} placeholder="03xx-xxxxxxx" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Patient Age</label>
-                        <input value={hospAge} onChange={(e) => setHospAge(e.target.value)} placeholder="Years" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                      </div>
-                    </div>
-
-                    {hospCategory === 'opd_reception' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
-                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Visit Purpose</label>
-                          <input value={hospVisitPurpose} onChange={(e) => setHospVisitPurpose(e.target.value)} placeholder="e.g. Checkup, Emergency" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Shift</label>
-                          <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 cursor-pointer">
-                            <option value="morning">Morning Shift</option>
-                            <option value="evening">Evening Shift</option>
-                          </select>
-                        </div>
-                      </div>
-                    )}
-
-                    {hospCategory === 'lab_test' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
-                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Test Name</label>
-                          <input value={hospTestName} onChange={(e) => setHospTestName(e.target.value)} placeholder="e.g. CBC, X-Ray" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Lab Expense (If Any)</label>
-                          <input type="number" value={hospTestExpense} onChange={(e) => setHospTestExpense(e.target.value)} placeholder="Rs 0.00" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                        </div>
-                      </div>
-                    )}
-
-                    {hospCategory === 'operation_theater' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
-                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Operation Type</label>
-                          <input value={hospOpType} onChange={(e) => setHospOpType(e.target.value)} placeholder="e.g. Appendectomy" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Surgeon / Referred By</label>
-                          <input value={hospReferredBy} onChange={(e) => setHospReferredBy(e.target.value)} placeholder="Doctor Name" className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                        </div>
-                      </div>
-                    )}
-
-                    {hospCategory === 'indoor_patient' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
-                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Admit Date</label>
-                          <input type="date" value={hospAdmitDate} onChange={(e) => setHospAdmitDate(e.target.value)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-2">Discharge Date (Expected)</label>
-                          <input type="date" value={hospDischargeDate} onChange={(e) => setHospDischargeDate(e.target.value)} className="w-full h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" />
                         </div>
                       </div>
                     )}
                   </div>
-                )}
 
-                {departmentCode === 'spims' && selectedCategoryId === 'fee' && (
-                   <div className="p-8 bg-amber-50 rounded-[2.5rem] border border-amber-100 space-y-6 animate-in slide-in-from-left-4 duration-500">
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="text-amber-600" size={20} />
-                      <h4 className="text-lg font-[1000] text-amber-900 uppercase tracking-tight">Academic Fee Protocol</h4>
+                  <div className="space-y-12">
+                    {/* Amount Input - MASTER CONTROL */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between px-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol Value (PKR)</label>
+                        <div className="flex items-center gap-3">
+                          <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
+                          <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Real-time Calculation</span>
+                        </div>
+                      </div>
+                      <div className="relative group/amount">
+                        <div className="absolute inset-y-0 left-0 pl-10 flex items-center pointer-events-none">
+                          <DollarSign size={40} className="text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
+                        </div>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full h-32 md:h-40 bg-zinc-50 border-4 border-transparent rounded-[2.5rem] md:rounded-[3.5rem] pl-24 pr-12 text-5xl md:text-7xl font-[1000] text-zinc-900 outline-none focus:ring-[24px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                        />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {(['admission', 'registration', 'examination', 'monthly'] as const).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => setSpimsFeeSubtype(type)}
-                          className={cn(
-                            "py-3 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all",
-                            spimsFeeSubtype === type ? "bg-amber-600 border-amber-600 text-white shadow-lg" : "bg-white border-amber-200 text-amber-600 hover:bg-amber-100"
-                          )}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <label className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.4em] text-zinc-400 ml-4">Classification</label>
-                      <div className="relative group">
+                    {/* Classification Selection */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between px-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Target Category</label>
+                        <button type="button" onClick={() => createCategory()} className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Custom</button>
+                      </div>
+                      <div className="relative">
                         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={20} />
                         <input 
                           value={categorySearch} 
                           onChange={(e) => setCategorySearch(e.target.value)} 
                           placeholder="Search classification..." 
-                          className="w-full h-16 md:h-20 bg-zinc-50 border border-transparent rounded-[1.5rem] md:rounded-[2rem] pl-16 pr-6 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all shadow-inner" 
+                          className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto scrollbar-premium">
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 no-scrollbar">
                         {visibleCategories.map((c) => (
                           <button 
                             key={c.id} 
                             type="button" 
                             onClick={() => setSelectedCategoryId(c.id)} 
                             className={cn(
-                              'px-4 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all text-center border-2', 
+                              'px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
                               selectedCategoryId === c.id 
-                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' 
-                                : 'border-zinc-100 text-zinc-500 hover:border-zinc-200 hover:bg-zinc-50'
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 -translate-y-0.5' 
+                                : 'bg-white border-zinc-100 text-zinc-500 hover:border-indigo-200'
                             )}
                           >
                             {c.name}
@@ -1532,187 +1556,132 @@ export default function CashierStationPage() {
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-8">
-                    <div className="space-y-4">
-                      <label className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.4em] text-zinc-400 ml-4">Currency Amount (PKR)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full h-20 md:h-24 bg-zinc-50 border border-transparent rounded-[1.5rem] md:rounded-[2rem] px-8 text-4xl md:text-6xl font-[1000] text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-500/5 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200"
-                      />
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <label className="text-[10px] md:text-xs font-[1000] uppercase tracking-[0.4em] text-zinc-400 ml-4">Notes / Description</label>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Add operational context..."
-                        className="w-full bg-zinc-50 border border-transparent rounded-[1.5rem] md:rounded-[2rem] px-8 py-6 text-sm font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner min-h-[100px] resize-none"
-                      />
+                    {/* Submission Metadata */}
+                    <div className="space-y-8 pt-6 border-t border-zinc-100">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Protocol Narration</label>
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Enter mandatory context for this ledger entry..."
+                          className="w-full bg-zinc-50 border-2 border-transparent rounded-[2rem] px-8 py-8 text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner min-h-[140px] resize-none"
+                        />
+                      </div>
+                      <button 
+                        type="submit" 
+                        disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
+                        className="w-full h-24 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-lg md:text-xl uppercase tracking-[0.4em] rounded-[2.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-8 group/submit active:scale-[0.98]"
+                      >
+                        {processing ? <Loader2 size={32} className="animate-spin" /> : (
+                          <>
+                            Commit Entry
+                            <ArrowRight size={32} className="group-hover:translate-x-4 transition-transform" />
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                className="w-full h-20 md:h-24 bg-indigo-600 hover:bg-indigo-700 text-white font-[1000] text-sm uppercase tracking-[0.3em] rounded-[1.5rem] md:rounded-[2.5rem] transition-all shadow-2xl shadow-indigo-600/30 disabled:opacity-30 flex items-center justify-center gap-6 active:scale-[0.98]"
-              >
-                {processing ? <Loader2 size={24} className="animate-spin" /> : 'Finalize Ledger Entry'}
-              </button>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
         {/* Journal Log Section */}
-        <div className="mt-16 md:mt-24 space-y-10 md:space-y-16 lg:col-span-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-600/20">
-                <FileText size={32} />
+        <div className="mt-16 md:mt-24 space-y-12 lg:col-span-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
+            <div className="flex items-center gap-8">
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-zinc-900 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-600/10">
+                <FileText size={32} className="md:w-10 md:h-10" />
               </div>
               <div>
-                <h2 className="text-3xl md:text-5xl font-[1000] text-zinc-900 uppercase tracking-tighter leading-none">
-                  Journal <span className="text-indigo-600">Log</span>
+                <h2 className="text-4xl md:text-6xl font-[1000] text-zinc-900 uppercase tracking-tighter leading-none">
+                  Live <span className="text-indigo-600">Journal</span>
                 </h2>
-                <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.3em] mt-2 md:mt-3">Operational Transaction Stream</p>
+                <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">Quantum Financial Stream • Real-time Sync</p>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative group min-w-[200px]">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="relative group min-w-[280px]">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter log history..."
-                  className="w-full h-14 bg-white border border-zinc-100 rounded-2xl pl-12 pr-6 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-xl shadow-zinc-200/50"
+                  placeholder="Scan history..."
+                  className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] pl-16 pr-8 text-xs font-black uppercase tracking-widest outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-xl shadow-zinc-200/50"
                 />
               </div>
               <select 
                 value={historyType}
                 onChange={(e) => setHistoryType(e.target.value as any)}
-                className="h-14 bg-white border border-zinc-100 rounded-2xl px-6 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-xl shadow-zinc-200/50 cursor-pointer"
+                className="h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-xl shadow-zinc-200/50 cursor-pointer appearance-none"
               >
-                <option value="all">All Vectors</option>
-                <option value="income">Credits</option>
-                <option value="expense">Debits</option>
+                <option value="all">Full Spectrum</option>
+                <option value="income">Credits Only</option>
+                <option value="expense">Debits Only</option>
               </select>
             </div>
           </div>
 
-          {/* Mobile Log View */}
-          <div className="md:hidden space-y-6">
-            {historyLoading ? (
-              <div className="py-20 flex flex-col items-center gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Streaming Ledger...</p>
-              </div>
-            ) : historyFiltered.length === 0 ? (
-              <div className="py-20 bg-zinc-50 rounded-[2rem] border-2 border-dashed border-zinc-200 text-center">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">No entries in this dimension</p>
-              </div>
-            ) : historyFiltered.map((tx: any) => (
-              <div 
-                key={tx.id} 
-                onClick={() => setDetailModalTx(tx)}
-                className="bg-white border border-zinc-100 rounded-[2rem] p-6 shadow-xl shadow-zinc-200/50 active:scale-[0.98] transition-all"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="text-base font-black text-zinc-900 uppercase tracking-tight">{tx.patientName || tx.staffName || 'General Account'}</h4>
-                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-1">{tx.categoryName || tx.category}</p>
-                  </div>
-                  <div className={cn(
-                    "px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border",
-                    tx.type === 'income' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
-                  )}>
-                    {tx.type === 'income' ? 'Credit' : 'Debit'}
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xl font-[1000] text-zinc-900 tracking-tighter">Rs {Number(tx.amount || 0).toLocaleString()}</p>
-                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-1">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</p>
-                  </div>
-                  <span className={cn(
-                    "px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border",
-                    tx.status === 'approved' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-zinc-50 text-zinc-400 border-zinc-100'
-                  )}>
-                    {tx.status || 'pending'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* Desktop Log Table */}
-          <div className="hidden md:block bg-white rounded-[3rem] md:rounded-[4rem] border border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden mb-24">
+          <div className="hidden md:block bg-white rounded-[3.5rem] border-2 border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-zinc-50 border-b border-zinc-100 h-24">
-                    <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Time-Stamp</th>
-                    <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Identity Nodes</th>
-                    <th className="px-10 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Classification</th>
-                    <th className="px-10 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow Magnitude</th>
-                    <th className="px-10 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Audit Status</th>
+                  <tr className="bg-zinc-50/50 border-b-2 border-zinc-100 h-28">
+                    <th className="px-12 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Timestamp</th>
+                    <th className="px-12 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Entity Node</th>
+                    <th className="px-12 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol</th>
+                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow</th>
+                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-50">
+                <tbody className="divide-y-2 divide-zinc-50">
                   {historyLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-10 py-32 text-center">
-                        <div className="flex flex-col items-center gap-6">
-                          <Loader2 className="w-16 h-16 animate-spin text-indigo-600" />
-                          <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.4em]">Synchronizing Financial Ledger...</p>
+                      <td colSpan={5} className="px-12 py-40 text-center">
+                        <div className="flex flex-col items-center gap-8">
+                          <div className="w-20 h-20 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin" />
+                          <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.5em]">Synchronizing Nexus...</p>
                         </div>
                       </td>
                     </tr>
                   ) : historyFiltered.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-10 py-32 text-center text-sm font-black text-zinc-400 uppercase tracking-[0.3em]">No matrix entries found in this dimension.</td>
+                      <td colSpan={5} className="px-12 py-40 text-center">
+                        <p className="text-zinc-300 text-sm font-black uppercase tracking-[0.5em]">Zero records found in this dimension</p>
+                      </td>
                     </tr>
                   ) : historyFiltered.map((tx: any) => (
-                    <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-zinc-50 transition-all cursor-pointer group h-24">
-                      <td className="px-10 py-6 text-xs font-black text-zinc-900 tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
-                      <td className="px-10 py-6">
-                        <div className="text-base font-[1000] text-zinc-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{tx.patientName || tx.staffName || 'General Account'}</div>
-                        <div className="text-[9px] font-black text-zinc-400 tracking-widest uppercase mt-1.5">{tx.id?.slice(0, 16)}</div>
+                    <tr key={tx.id} onClick={() => setDetailModalTx(tx)} className="hover:bg-zinc-50 transition-all cursor-pointer group h-28">
+                      <td className="px-12 py-8">
+                        <div className="text-xs font-black text-zinc-900 tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</div>
+                        <div className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-2">UTC {new Date(tx.createdAt?.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                       </td>
-                      <td className="px-10 py-6">
-                        <span className="px-4 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-[9px] font-black uppercase tracking-widest">
+                      <td className="px-12 py-8">
+                        <div className="text-lg font-[1000] text-zinc-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{tx.patientName || tx.staffName || 'General Nexus'}</div>
+                        <div className="text-[9px] font-black text-zinc-400 tracking-[0.3em] uppercase mt-2">{tx.id?.slice(0, 12)}</div>
+                      </td>
+                      <td className="px-12 py-8">
+                        <span className="inline-flex items-center h-10 px-6 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-black uppercase tracking-widest">
                           {tx.categoryName || tx.category}
                         </span>
                       </td>
-                      <td className="px-10 py-6 text-right">
-                        <div className={cn('text-2xl font-[1000] tracking-tighter tabular-nums', tx.type === 'income' ? 'text-indigo-600' : 'text-rose-500')}>
-                          {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                      <td className="px-12 py-8 text-right">
+                        <div className={cn('text-3xl font-[1000] tracking-tighter tabular-nums', tx.type === 'income' ? 'text-indigo-600' : 'text-rose-500')}>
+                          {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
                         </div>
                       </td>
-                      <td className="px-10 py-6 text-right">
+                      <td className="px-12 py-8 text-right">
                         <div className="flex items-center justify-end gap-6">
-                          <span className={cn('px-5 py-2 rounded-xl text-[10px] font-[1000] uppercase tracking-[0.2em] border transition-all', 
+                          <span className={cn('h-12 px-8 flex items-center rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] border-2 transition-all', 
                             tx.status === 'approved' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 
                             tx.status === 'rejected' ? 'bg-rose-50 text-rose-500 border-rose-100' : 
-                            'bg-zinc-50 text-zinc-500 border-zinc-100'
+                            'bg-zinc-50 text-zinc-400 border-zinc-100'
                           )}>
                             {tx.status || 'pending'}
                           </span>
-                          {['pending', 'pending_cashier'].includes(tx.status) && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx); }}
-                              className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center shadow-xl shadow-rose-500/10"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -2025,107 +1994,113 @@ function EntityProfileModal({
   const remaining = runningBalance;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-10 bg-zinc-900/40 backdrop-blur-3xl animate-in fade-in duration-700">
-      <div className="relative w-full max-w-6xl h-[90vh] bg-white rounded-[3rem] md:rounded-[5rem] overflow-hidden shadow-[0_64px_128px_-32px_rgba(0,0,0,0.5)] flex flex-col border border-zinc-100">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
+      <div className="relative w-full max-w-7xl h-[92vh] bg-[#FCFBF8] rounded-[4rem] md:rounded-[6rem] overflow-hidden shadow-[0_64px_128px_-32px_rgba(0,0,0,0.5)] flex flex-col border border-zinc-100">
         
-        {/* Header - High Gloss */}
-        <div className="bg-indigo-600 px-8 md:px-16 py-10 md:py-16 text-white relative overflow-hidden flex-shrink-0">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl" />
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-            <div className="flex items-center gap-6 md:gap-10">
-              <div className="w-20 h-20 md:w-32 md:h-32 bg-white/10 backdrop-blur-xl rounded-[2.5rem] md:rounded-[4rem] flex items-center justify-center border border-white/20 shadow-2xl">
-                <User size={48} className="text-white md:w-20 md:h-20" />
+        {/* Header - Industrial Luxe */}
+        <div className="bg-zinc-900 px-10 md:px-20 py-12 md:py-20 text-white relative overflow-hidden flex-shrink-0">
+          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/20 rounded-full -mr-[400px] -mt-[400px] blur-[120px]" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-12">
+            <div className="flex items-center gap-8 md:gap-16">
+              <div className="w-24 h-24 md:w-40 md:h-40 bg-white/5 backdrop-blur-3xl rounded-[3rem] md:rounded-[4.5rem] flex items-center justify-center border border-white/10 shadow-2xl">
+                <User size={64} className="text-white md:w-24 md:h-24 opacity-80" />
               </div>
               <div>
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="px-4 py-1.5 bg-emerald-400 text-emerald-900 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg">Verified Account</span>
-                  <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.4em]">Protocol: {entity.id?.slice(0, 8)}</p>
+                <div className="flex items-center gap-6 mb-6">
+                  <span className="h-8 px-5 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center shadow-xl shadow-indigo-600/20">Active Entity</span>
+                  <p className="text-xs font-black text-white/30 uppercase tracking-[0.5em]">Nexus UID: {entity.id}</p>
                 </div>
-                <h2 className="text-4xl md:text-7xl font-[1000] tracking-tighter uppercase leading-none">{entity.name || entity.fullName}</h2>
+                <h2 className="text-5xl md:text-8xl font-[1000] tracking-tighter uppercase leading-none">{entity.name || entity.fullName}</h2>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <button 
                 onClick={() => window.print()}
-                className="w-16 h-16 bg-white/10 hover:bg-white text-white hover:text-indigo-600 rounded-2xl flex items-center justify-center transition-all backdrop-blur-md border border-white/10 shadow-xl group"
+                className="w-20 h-20 bg-white/5 hover:bg-white/10 text-white rounded-3xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10"
               >
-                <Printer size={24} className="group-hover:scale-110 transition-transform" />
+                <Printer size={32} />
               </button>
               <button 
                 onClick={onClose}
-                className="w-16 h-16 bg-white/10 hover:bg-white text-white hover:text-indigo-600 rounded-2xl flex items-center justify-center transition-all backdrop-blur-md border border-white/10 shadow-xl group"
+                className="w-20 h-20 bg-white/5 hover:bg-rose-500/20 text-white rounded-3xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 group"
               >
-                <X size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
+                <X size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 md:p-16 scrollbar-premium">
+        <div className="flex-1 overflow-y-auto p-10 md:p-20 scrollbar-none">
           {/* Summary Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <div className="p-10 bg-zinc-50 border border-zinc-100 rounded-[3rem] shadow-sm">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Total Package</p>
-              <h3 className="text-4xl font-[1000] text-zinc-900 tracking-tighter tabular-nums">Rs {totalPackage.toLocaleString()}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-20">
+            <div className="p-12 bg-white border-2 border-zinc-100 rounded-[4rem] shadow-xl shadow-zinc-200/50 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-zinc-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+              <p className="relative z-10 text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4">Baseline Allocation</p>
+              <h3 className="relative z-10 text-5xl font-[1000] text-zinc-900 tracking-tighter tabular-nums">Rs {totalPackage.toLocaleString()}</h3>
             </div>
-            <div className="p-10 bg-emerald-50 border border-emerald-100 rounded-[3rem] shadow-sm">
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3">Total Credits</p>
-              <h3 className="text-4xl font-[1000] text-emerald-700 tracking-tighter tabular-nums">Rs {totalPaid.toLocaleString()}</h3>
+            <div className="p-12 bg-indigo-600 border-2 border-indigo-500 rounded-[4rem] shadow-2xl shadow-indigo-600/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+              <p className="relative z-10 text-[10px] font-black text-white/50 uppercase tracking-[0.4em] mb-4 text-white">Aggregated Credits</p>
+              <h3 className="relative z-10 text-5xl font-[1000] text-white tracking-tighter tabular-nums">Rs {totalPaid.toLocaleString()}</h3>
             </div>
-            <div className="p-10 bg-rose-50 border border-rose-100 rounded-[3rem] shadow-sm">
-              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-3">Net Balance</p>
-              <h3 className="text-4xl font-[1000] text-rose-700 tracking-tighter tabular-nums">Rs {remaining.toLocaleString()}</h3>
+            <div className="p-12 bg-white border-2 border-zinc-100 rounded-[4rem] shadow-xl shadow-zinc-200/50 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-zinc-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+              <p className="relative z-10 text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4">Outstanding Balance</p>
+              <h3 className="relative z-10 text-5xl font-[1000] text-rose-600 tracking-tighter tabular-nums">Rs {remaining.toLocaleString()}</h3>
             </div>
           </div>
 
           {/* Statement Table */}
-          <div className="space-y-8">
-            <div className="flex items-center gap-4 px-4">
-              <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center">
-                <FileText size={20} />
+          <div className="space-y-12">
+            <div className="flex items-center justify-between px-6">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center shadow-xl">
+                  <FileText size={24} />
+                </div>
+                <h4 className="text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Verified Ledger Statement</h4>
               </div>
-              <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight">Ledger Statement</h4>
+              <div className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em]">Audit Locked • Encrypted</div>
             </div>
 
-            <div className="bg-white rounded-[3rem] border border-zinc-100 shadow-xl overflow-hidden">
+            <div className="bg-white rounded-[4.5rem] border-2 border-zinc-100 shadow-2xl shadow-zinc-200/50 overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-zinc-50 border-b border-zinc-100 h-20">
-                    <th className="px-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">Date</th>
-                    <th className="px-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">Description</th>
-                    <th className="px-8 text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">Credit</th>
-                    <th className="px-8 text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">Debit</th>
-                    <th className="px-8 text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">Balance</th>
+                  <tr className="bg-zinc-50 border-b-2 border-zinc-100 h-24">
+                    <th className="px-12 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Time Reference</th>
+                    <th className="px-12 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Transaction Profile</th>
+                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow Credits</th>
+                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow Debits</th>
+                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Running Magnitude</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-50">
-                  <tr className="h-16 bg-indigo-50/30">
-                    <td className="px-8 text-xs font-bold text-zinc-400">OPENING</td>
-                    <td className="px-8 text-xs font-black text-zinc-600 uppercase">Package Initialized</td>
-                    <td className="px-8 text-right"></td>
-                    <td className="px-8 text-right"></td>
-                    <td className="px-8 text-right text-sm font-black text-zinc-900">Rs {totalPackage.toLocaleString()}</td>
+                <tbody className="divide-y-2 divide-zinc-50">
+                  <tr className="h-20 bg-indigo-50/20">
+                    <td className="px-12 text-xs font-black text-zinc-400 uppercase tracking-widest italic">Protocol_Init</td>
+                    <td className="px-12 text-sm font-black text-zinc-900 uppercase tracking-tight">System Initialization • Opening Balance</td>
+                    <td className="px-12 text-right"></td>
+                    <td className="px-12 text-right"></td>
+                    <td className="px-12 text-right text-lg font-[1000] text-zinc-900 tabular-nums">Rs {totalPackage.toLocaleString()}</td>
                   </tr>
                   {historyWithBalance.map((tx, idx) => (
-                    <tr key={idx} className="h-20 hover:bg-zinc-50/50 transition-colors">
-                      <td className="px-8 text-xs font-bold text-zinc-600 tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
-                      <td className="px-8">
-                        <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">{tx.categoryName || tx.category}</p>
-                        <p className="text-[10px] font-bold text-zinc-400 truncate max-w-xs">{tx.description}</p>
+                    <tr key={idx} className="h-28 hover:bg-zinc-50/50 transition-colors">
+                      <td className="px-12 text-xs font-black text-zinc-600 tabular-nums">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
+                      <td className="px-12">
+                        <p className="text-lg font-[1000] text-zinc-900 uppercase tracking-tight">{tx.categoryName || tx.category}</p>
+                        <p className="text-[10px] font-black text-zinc-400 truncate max-w-md uppercase mt-1 tracking-widest">{tx.description}</p>
                       </td>
-                      <td className="px-8 text-right">
+                      <td className="px-12 text-right">
                         {tx.type === 'income' && (
-                          <span className="text-base font-black text-emerald-600 tabular-nums">Rs {Number(tx.amount).toLocaleString()}</span>
+                          <span className="text-xl font-[1000] text-indigo-600 tabular-nums">+{Number(tx.amount).toLocaleString()}</span>
                         )}
                       </td>
-                      <td className="px-8 text-right">
+                      <td className="px-12 text-right">
                         {tx.type === 'expense' && (
-                          <span className="text-base font-black text-rose-600 tabular-nums">Rs {Number(tx.amount).toLocaleString()}</span>
+                          <span className="text-xl font-[1000] text-rose-500 tabular-nums">-{Number(tx.amount).toLocaleString()}</span>
                         )}
                       </td>
-                      <td className="px-8 text-right text-base font-[1000] text-zinc-900 tabular-nums">
+                      <td className="px-12 text-right text-xl font-[1000] text-zinc-900 tabular-nums">
                         Rs {tx.runningBalance.toLocaleString()}
                       </td>
                     </tr>
@@ -2137,8 +2112,12 @@ function EntityProfileModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-8 md:p-12 bg-zinc-50 border-t border-zinc-100 text-center shrink-0 print:hidden">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em]">End of Verified Statement</p>
+        <div className="p-12 md:p-16 bg-zinc-50 border-t-2 border-zinc-100 flex items-center justify-between shrink-0 print:hidden">
+          <div className="flex items-center gap-4">
+            <div className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse" />
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em]">Operational Integrity Verified</p>
+          </div>
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em]">Statement End • Generated by HQ-CASHIER-STATION</p>
         </div>
       </div>
     </div>

@@ -91,12 +91,9 @@ export default function HqLoginPage() {
 
         // 3. Set Local Session for client-side persistence
         const session: HqSession = {
+          ...result.user,
           uid: result.uid,
-          customId: result.user.customId,
-          name: result.user.name,
-          role: result.user.role,
           loginTime: Date.now(),
-          ...result.user
         };
         localStorage.setItem(SESSION_KEY, JSON.stringify(session));
         localStorage.setItem('hq_login_time', Date.now().toString());

@@ -138,7 +138,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   // FCM push notifications
   const { permission, isRequesting, requestPermission } = useFcmNotifications(user);
-  const [bannerDismissed, setBannerDismissed] = useState(true); // Default true for SSR, check in useEffect
+  const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -161,6 +162,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   };
 
   useEffect(() => {
+    // 1. Session check
     const session = localStorage.getItem(SESSION_KEY);
     if (!session) { router.push('/hq/login'); return; }
 
@@ -173,9 +175,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         return;
       }
       setUser(parsed);
-      setIsChecking(false);
-      setTimeout(() => setMounted(true), 50);
-
+      
       // Detect any active dept sessions (from impersonation)
       const depts = Object.keys(DEPT_INFO).filter(d => {
         try { return !!localStorage.getItem(`${d}_session`); } catch { return false; }
@@ -184,7 +184,24 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     } catch {
       localStorage.removeItem(SESSION_KEY);
       router.push('/hq/login');
+      return;
     }
+
+    // 2. Auth initialization check
+    const unsubAuth = auth.onAuthStateChanged((firebaseUser) => {
+      setAuthInitialized(true);
+      if (firebaseUser) {
+        setIsChecking(false);
+        setTimeout(() => setMounted(true), 50);
+      } else {
+        // If we have a local session but no firebase user, we need to wait or redirect
+        // For HQ, we usually want to redirect if auth is truly lost
+        console.warn('[HQ Layout] No Firebase user detected. Redirecting to login...');
+        router.push('/hq/login');
+      }
+    });
+
+    return () => unsubAuth();
   }, [router]);
 
   useEffect(() => {

@@ -2,33 +2,12 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { HqRole } from '@/types/hq';
 
 const COOKIE_NAME = 'hq_session';
 
-function getAdminApp(): App {
-  const existing = getApps().find((a) => a.name === 'hq-admin');
-  if (existing) return existing;
-
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-
-  const sa = JSON.parse(json);
-  return initializeApp(
-    {
-      credential: cert({
-        projectId: sa.project_id,
-        clientEmail: sa.client_email,
-        privateKey: sa.private_key,
-      }),
-    },
-    'hq-admin'
-  );
-}
+// Using unified adminAuth/adminDb from @/lib/firebaseAdmin
 
 type HqSessionCookie = {
   uid: string;
@@ -48,10 +27,8 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
   session?: HqSessionCookie;
 }> {
   try {
-    const app = getAdminApp();
-    const decoded = await getAuth(app).verifyIdToken(idToken);
-    const db = getFirestore(app);
-    const userRef = db.collection('hq_users').doc(decoded.uid);
+    const decoded = await adminAuth.verifyIdToken(idToken);
+    const userRef = adminDb.collection('hq_users').doc(decoded.uid);
     const userSnap = await userRef.get();
 
     let finalData: Record<string, any>;
@@ -89,7 +66,7 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
     };
 
     // Set Custom Claims for zero-cost routing
-    await getAuth(app).setCustomUserClaims(decoded.uid, {
+    await adminAuth.setCustomUserClaims(decoded.uid, {
       dashboardPath: '/hq/dashboard/superadmin'
     });
 
@@ -110,16 +87,14 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
 
 export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const app = getAdminApp();
-    const decoded = await getAuth(app).verifyIdToken(idToken);
+    const decoded = await adminAuth.verifyIdToken(idToken);
 
-    const db = getFirestore(app);
-    let userSnap = await db.collection('hq_users').doc(decoded.uid).get();
+    let userSnap = await adminDb.collection('hq_users').doc(decoded.uid).get();
     let data: any;
 
     if (!userSnap.exists) {
       // Fallback: Search by email if UID doesn't match document ID
-      const emailMatch = await db.collection('hq_users').where('email', '==', decoded.email).limit(1).get();
+      const emailMatch = await adminDb.collection('hq_users').where('email', '==', decoded.email).limit(1).get();
       if (emailMatch.empty) {
         return { success: false, error: `HQ user profile missing for ${decoded.email}` };
       }
@@ -145,7 +120,7 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
     };
 
     // Set Custom Claims for zero-cost routing (Persists in Auth Token)
-    await getAuth(app).setCustomUserClaims(decoded.uid, {
+    await adminAuth.setCustomUserClaims(decoded.uid, {
       dashboardPath: role === 'superadmin' ? '/hq/dashboard/superadmin' : 
                      role === 'manager' ? '/hq/dashboard/manager' : 
                      role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/dashboard'
@@ -170,8 +145,7 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
  */
 export async function setUserDashboardClaims(uid: string, path: string) {
   try {
-    const app = getAdminApp();
-    await getAuth(app).setCustomUserClaims(uid, { dashboardPath: path });
+    await adminAuth.setCustomUserClaims(uid, { dashboardPath: path });
     return { success: true };
   } catch (err) {
     console.error('[SetClaims] Error:', err);
@@ -200,33 +174,29 @@ export async function requireHqSuperadmin(): Promise<HqSessionCookie> {
   return session;
 }
 
-export async function loginHqUser(credentials: { customId: string; password: string }): Promise<{
-  success: boolean;
-  error?: string;
-  user?: any;
-  uid?: string;
-  customToken?: string;
-}> {
+export async function loginHqUser({ customId, password }: { customId: string; password: string }) {
   try {
-    const { customId, password } = credentials;
-    const q = adminDb.collection('hq_users').where('customId', '==', customId).limit(1);
-    const snap = await q.get();
+    // Use Admin SDK to query — bypasses Firestore rules on server
+    const usersRef = adminDb.collection('hq_users');
+    const snap = await usersRef
+      .where('customId', '==', customId.trim())
+      .where('password', '==', password)
+      .limit(1)
+      .get();
 
     if (snap.empty) {
-      return { success: false, error: 'Invalid User ID or password.' };
+      return { success: false, error: 'Invalid credentials. Check your User ID and password.' };
     }
 
     const userDoc = snap.docs[0];
     const userData = userDoc.data();
-
-    if (userData.password !== password) {
-      return { success: false, error: 'Invalid User ID or password.' };
-    }
-
+    
     if (userData.isActive === false) {
-      return { success: false, error: 'Account is disabled.' };
+      return { success: false, error: 'Account is deactivated. Contact administrator.' };
     }
 
+    // Generate Firebase custom token for this user's Firebase Auth UID
+    // The Firestore doc ID IS the Firebase Auth UID for HQ users
     const uid = userDoc.id;
     const customToken = await adminAuth.createCustomToken(uid, {
       role: userData.role,
@@ -235,12 +205,55 @@ export async function loginHqUser(credentials: { customId: string; password: str
 
     return {
       success: true,
-      user: userData,
       uid,
       customToken,
+      user: {
+        uid,
+        customId: userData.customId,
+        name: userData.name || userData.displayName || '',
+        role: userData.role,
+        photoUrl: userData.photoUrl || null,
+        phone: userData.phone || null,
+        isActive: userData.isActive !== false,
+      },
     };
   } catch (err: any) {
     console.error('[loginHqUser] Error:', err);
-    return { success: false, error: err.message || 'Internal server error during login.' };
+    return { 
+      success: false, 
+      error: 'Login failed. Please try again.' 
+    };
+  }
+}
+
+export async function createHqFirebaseAuthAccount({
+  uid,        // The Firestore doc ID (hq_users document ID)
+  email,      // A generated email: customId@khanhub.internal
+  displayName,
+}: {
+  uid: string;
+  email: string;
+  displayName: string;
+}) {
+  try {
+    // Check if user already exists
+    try {
+      await adminAuth.getUser(uid);
+      return { success: true, message: 'User already exists' };
+    } catch {
+      // User doesn't exist, create them
+    }
+    
+    await adminAuth.createUser({
+      uid,
+      email,
+      displayName,
+      emailVerified: true,
+      password: Math.random().toString(36), // Random password — login via customToken only
+    });
+    
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }
