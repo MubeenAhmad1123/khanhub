@@ -203,16 +203,9 @@ export async function loginHqUser({
     console.error('[loginHqUser] Server error:', err?.message || err);
     
     // Return safe error — never expose internal details to client
-    if (err?.message?.includes('Missing environment variables')) {
-      return { 
-        success: false, 
-        error: 'Server configuration error. Contact system administrator.' 
-      };
-    }
-    
     return { 
       success: false, 
-      error: 'Login failed. Please try again.' 
+      error: `Login failed: ${err?.message || 'Unknown server error'}`
     };
   }
 }

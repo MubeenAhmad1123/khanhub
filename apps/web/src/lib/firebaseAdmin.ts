@@ -32,22 +32,27 @@ function initAdmin(): App {
   // FALLBACK: Use individual env vars
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
-  
-  if (privateKey.startsWith('"')) privateKey = privateKey.slice(1, -1);
-  privateKey = privateKey.replace(/\\n/g, '\n');
-
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(
-      `[Firebase Admin] No valid credentials found. Set FIREBASE_SERVICE_ACCOUNT_JSON or all three FIREBASE_ADMIN_* variables.\n` +
-      `FIREBASE_ADMIN_PROJECT_ID: ${projectId ? '✓' : '✗ MISSING'}\n` +
-      `FIREBASE_ADMIN_CLIENT_EMAIL: ${clientEmail ? '✓' : '✗ MISSING'}\n` +
-      `FIREBASE_ADMIN_PRIVATE_KEY: ${privateKey ? '✓' : '✗ MISSING'}`
+      `[Firebase Admin] Missing Credentials. \n` +
+      `PROJECT_ID: ${projectId ? '✓' : '✗'}\n` +
+      `CLIENT_EMAIL: ${clientEmail ? '✓' : '✗'}\n` +
+      `PRIVATE_KEY: ${privateKey ? '✓' : '✗'}`
     );
   }
 
+  // Clean the private key thoroughly
+  const cleanKey = privateKey
+    .replace(/^["']|["']$/g, '') // Remove wrapping quotes
+    .replace(/\\n/g, '\n')       // Replace literal \n with real newlines
+    .trim();                     // Remove any accidental whitespace
+
   _adminApp = initializeApp({
-    credential: cert({ projectId, clientEmail, privateKey }),
+    credential: cert({ 
+      projectId, 
+      clientEmail, 
+      privateKey: cleanKey 
+    }),
   });
   
   return _adminApp;
