@@ -14,22 +14,32 @@ function initAdmin(): App {
     return _adminApp;
   }
 
+  // PRIMARY: Use full service account JSON (most reliable)
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  
+  if (serviceAccountJson) {
+    try {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      _adminApp = initializeApp({
+        credential: cert(serviceAccount),
+      });
+      return _adminApp;
+    } catch (err) {
+      console.error('[Firebase Admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err);
+    }
+  }
+
+  // FALLBACK: Use individual env vars
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-
-  if (privateKey) {
-    // 1. Remove surrounding quotes if they exist
-    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-      privateKey = privateKey.substring(1, privateKey.length - 1);
-    }
-    // 2. Replace escaped newlines (\\n) with actual newlines (\n)
-    privateKey = privateKey.replace(/\\n/g, '\n');
-  }
+  let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
+  
+  if (privateKey.startsWith('"')) privateKey = privateKey.slice(1, -1);
+  privateKey = privateKey.replace(/\\n/g, '\n');
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(
-      `[Firebase Admin] Missing environment variables.\n` +
+      `[Firebase Admin] No valid credentials found. Set FIREBASE_SERVICE_ACCOUNT_JSON or all three FIREBASE_ADMIN_* variables.\n` +
       `FIREBASE_ADMIN_PROJECT_ID: ${projectId ? '✓' : '✗ MISSING'}\n` +
       `FIREBASE_ADMIN_CLIENT_EMAIL: ${clientEmail ? '✓' : '✗ MISSING'}\n` +
       `FIREBASE_ADMIN_PRIVATE_KEY: ${privateKey ? '✓' : '✗ MISSING'}`
@@ -55,7 +65,6 @@ export function getAdminDb(): Firestore {
   return _adminDb;
 }
 
-// Named exports for direct import compatibility
 export const adminAuth = {
   createCustomToken: (...args: Parameters<Auth['createCustomToken']>) => 
     getAdminAuth().createCustomToken(...args),
