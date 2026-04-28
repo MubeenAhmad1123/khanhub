@@ -2,7 +2,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { getAdminAuth, getAdminDb, adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { HqRole } from '@/types/hq';
 
 const COOKIE_NAME = 'hq_session';
@@ -85,57 +85,25 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
   }
 }
 
-export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ success: boolean; error?: string }> {
+export async function setHqSessionCookieFromIdToken(idToken: string) {
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
-
-    let userSnap = await adminDb.collection('hq_users').doc(decoded.uid).get();
-    let data: any;
-
-    if (!userSnap.exists) {
-      // Fallback: Search by email if UID doesn't match document ID
-      const emailMatch = await adminDb.collection('hq_users').where('email', '==', decoded.email).limit(1).get();
-      if (emailMatch.empty) {
-        return { success: false, error: `HQ user profile missing for ${decoded.email}` };
-      }
-      userSnap = emailMatch.docs[0];
-      data = userSnap.data();
-    } else {
-      data = userSnap.data();
-    }
-
-    if (data.isActive === false) return { success: false, error: 'Account disabled.' };
-
-    const role = String(data.role || '').toLowerCase();
-    if (role !== 'superadmin' && role !== 'manager' && role !== 'cashier') {
-      return { success: false, error: 'Invalid HQ role.' };
-    }
-
-    const payload: HqSessionCookie = {
-      uid: decoded.uid,
-      customId: String(data.customId || '').toUpperCase(),
-      name: String(data.name || ''),
-      role: role as HqRole,
-      loginTime: Date.now(),
-    };
-
-    // Set Custom Claims for zero-cost routing (Persists in Auth Token)
-    await adminAuth.setCustomUserClaims(decoded.uid, {
-      dashboardPath: role === 'superadmin' ? '/hq/dashboard/superadmin' : 
-                     role === 'manager' ? '/hq/dashboard/manager' : 
-                     role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/dashboard'
-    });
-
-    cookies().set(COOKIE_NAME, JSON.stringify(payload), {
+    const auth = getAdminAuth();
+    const decoded = await auth.verifyIdToken(idToken);
+    
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    
+    cookieStore.set('hq_firebase_uid', decoded.uid, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax',
     });
-
+    
     return { success: true };
   } catch (err: any) {
+    console.error('[setHqSessionCookieFromIdToken]', err?.message);
     return { success: false, error: err?.message || 'Failed to set session.' };
   }
 }
@@ -174,31 +142,45 @@ export async function requireHqSuperadmin(): Promise<HqSessionCookie> {
   return session;
 }
 
-export async function loginHqUser({ customId, password }: { customId: string; password: string }) {
+export async function loginHqUser({ 
+  customId, 
+  password 
+}: { 
+  customId: string; 
+  password: string; 
+}) {
   try {
-    // Use Admin SDK to query — bypasses Firestore rules on server
-    const usersRef = adminDb.collection('hq_users');
-    const snap = await usersRef
+    // Validate inputs first — before touching Firebase
+    if (!customId?.trim() || !password?.trim()) {
+      return { success: false, error: 'User ID and password are required.' };
+    }
+
+    // Get adminDb lazily — will throw descriptive error if env vars missing
+    const db = getAdminDb();
+    
+    const snap = await db
+      .collection('hq_users')
       .where('customId', '==', customId.trim())
-      .where('password', '==', password)
+      .where('password', '==', password.trim())
       .limit(1)
       .get();
 
     if (snap.empty) {
-      return { success: false, error: 'Invalid credentials. Check your User ID and password.' };
+      return { success: false, error: 'Invalid User ID or password.' };
     }
 
     const userDoc = snap.docs[0];
     const userData = userDoc.data();
-    
+
     if (userData.isActive === false) {
-      return { success: false, error: 'Account is deactivated. Contact administrator.' };
+      return { success: false, error: 'Account deactivated. Contact admin.' };
     }
 
-    // Generate Firebase custom token for this user's Firebase Auth UID
-    // The Firestore doc ID IS the Firebase Auth UID for HQ users
     const uid = userDoc.id;
-    const customToken = await adminAuth.createCustomToken(uid, {
+    
+    // Create custom token for Firebase Auth client sign-in
+    const auth = getAdminAuth();
+    const customToken = await auth.createCustomToken(uid, {
       role: userData.role,
       customId: userData.customId,
     });
@@ -218,7 +200,16 @@ export async function loginHqUser({ customId, password }: { customId: string; pa
       },
     };
   } catch (err: any) {
-    console.error('[loginHqUser] Error:', err);
+    console.error('[loginHqUser] Server error:', err?.message || err);
+    
+    // Return safe error — never expose internal details to client
+    if (err?.message?.includes('Missing environment variables')) {
+      return { 
+        success: false, 
+        error: 'Server configuration error. Contact system administrator.' 
+      };
+    }
+    
     return { 
       success: false, 
       error: 'Login failed. Please try again.' 
