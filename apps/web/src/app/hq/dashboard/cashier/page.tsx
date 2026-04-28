@@ -1181,9 +1181,7 @@ export default function CashierStationPage() {
           </div>
         </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 md:px-12">
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 overflow-hidden">
         <div className="lg:col-span-4 space-y-8 md:space-y-12 min-w-0 order-2 lg:order-1">
           <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 border border-zinc-100 shadow-2xl shadow-zinc-200/50 h-full">
             <div className="flex items-center justify-between mb-8 md:mb-10">
@@ -1283,7 +1281,7 @@ export default function CashierStationPage() {
           {/* The old search section was here, it's now at the top */}
         </div>
 
-        <div className="lg:col-span-8 min-w-0 space-y-12 order-1 lg:order-2">
+        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-1 lg:order-2">
           {/* ACTION CONSOLE */}
           <div className="bg-white rounded-[3rem] md:rounded-[4rem] border border-zinc-100 p-8 md:p-14 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
@@ -1291,7 +1289,7 @@ export default function CashierStationPage() {
             <div className="relative z-10 space-y-14">
               {selectedEntity ? (
                 <div className="space-y-12 animate-in fade-in zoom-in-95 duration-700">
-                  <div className="p-10 md:p-16 rounded-[3.5rem] md:rounded-[5rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
+                  <div className="w-full p-10 md:p-16 rounded-[3.5rem] md:rounded-[5rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
                     
                     <div className="relative z-10">
@@ -1776,7 +1774,6 @@ export default function CashierStationPage() {
                 </tbody>
               </table>
             </div>
-          </div>
         </div>
       </div>
 
