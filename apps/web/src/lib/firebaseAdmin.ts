@@ -32,17 +32,19 @@ function initAdmin(): App {
   // FALLBACK: Use individual env vars
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  if (!projectId || !clientEmail || !privateKey) {
+  const rawPrivateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
+
+  if (!projectId || !clientEmail || !rawPrivateKey) {
     throw new Error(
       `[Firebase Admin] Missing Credentials. \n` +
       `PROJECT_ID: ${projectId ? '✓' : '✗'}\n` +
       `CLIENT_EMAIL: ${clientEmail ? '✓' : '✗'}\n` +
-      `PRIVATE_KEY: ${privateKey ? '✓' : '✗'}`
+      `PRIVATE_KEY: ${rawPrivateKey ? '✓' : '✗'}`
     );
   }
 
   // Clean the private key thoroughly
-  const cleanKey = privateKey
+  const cleanKey = rawPrivateKey
     .replace(/^["']|["']$/g, '') // Remove wrapping quotes
     .replace(/\\n/g, '\n')       // Replace literal \n with real newlines
     .trim();                     // Remove any accidental whitespace
