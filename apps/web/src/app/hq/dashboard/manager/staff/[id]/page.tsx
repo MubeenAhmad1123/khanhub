@@ -354,7 +354,7 @@ export default function StaffProfilePage() {
       
       // Safety timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Fetch timeout after 10s")), 10000)
+        setTimeout(() => reject(new Error("Fetch timeout after 20s")), 20000)
       );
 
       const profilePromise = fetchStaffProfile(staffId);
@@ -405,16 +405,17 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix}`);
+      console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix} | Range: ${start} to ${end}`);
+      const t1 = Date.now();
       const [attSnap, dressSnap, dutySnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
-        getDoc(doc(db, `hq_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).then(s => { console.log(`[StaffProfile] Att loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).then(s => { console.log(`[StaffProfile] Dress loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).then(s => { console.log(`[StaffProfile] Duty loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).then(s => { console.log(`[StaffProfile] Salary loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).then(s => { console.log(`[StaffProfile] Tasks loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
+        getDoc(doc(db, `hq_meta`, 'config')).then(s => { console.log(`[StaffProfile] Meta loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
       ]);
-      console.log(`[StaffProfile] Parallel snaps LOADED`);
+      console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
 
       const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
       setAvailableDuties([

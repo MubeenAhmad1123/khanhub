@@ -2172,34 +2172,40 @@ function EntityProfileModal({
         const results: any[] = [];
 
         if (deptCode === 'spims') {
-          const [txSnap, feesSnap] = await Promise.all([
-            getDocs(query(
-              collection(db, 'spims_transactions'),
-              where('studentId', '==', entityId),
-              limit(200)
-            )),
-            getDocs(query(
-              collection(db, 'spims_fees'),
-              where('studentId', '==', entityId),
-              limit(200)
-            ))
+          // SPIMS often uses Roll Number as the ID in some collections and UID in others
+          const visualId = entity.studentId || entity.rollNumber || entity.customId;
+          
+          const [txSnap, txSnapAlt, feesSnap, feesSnapAlt] = await Promise.all([
+            getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', entityId), limit(200))),
+            visualId ? getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] }),
+            getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', entityId), limit(200))),
+            visualId ? getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] })
+          ]);
+
+          const [txSnapPat, txSnapPatAlt] = await Promise.all([
+            getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', entityId), limit(200))),
+            visualId ? getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] })
           ]);
           
           const txMap = new Map<string, any>();
-          txSnap.docs.forEach(d => {
+          [...txSnap.docs, ...txSnapAlt.docs, ...txSnapPat.docs, ...txSnapPatAlt.docs].forEach(d => {
             txMap.set(d.id, { id: d.id, ...d.data(), _collection: 'spims_transactions' });
           });
           
           // Add transactions to results
           results.push(...Array.from(txMap.values()));
           
-          // Add fee records not linked to any transaction
-          feesSnap.docs.forEach(d => {
-            const feeData = d.data();
+          // Add fee records
+          const feeMap = new Map<string, any>();
+          [...feesSnap.docs, ...feesSnapAlt.docs].forEach(d => {
+            feeMap.set(d.id, { id: d.id, ...d.data() });
+          });
+
+          feeMap.forEach((feeData, feeId) => {
             const linkedId = feeData.linkedTransactionId;
             if (!linkedId || !txMap.has(linkedId)) {
               results.push({
-                id: d.id,
+                id: feeId,
                 ...feeData,
                 _collection: 'spims_fees',
                 type: 'income',
