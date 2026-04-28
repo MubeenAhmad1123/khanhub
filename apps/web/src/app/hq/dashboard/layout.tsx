@@ -431,41 +431,42 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       } bg-white border-r border-gray-100`}>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-xl border border-gray-100 text-gray-400 bg-white z-50"
+          className="absolute top-4 right-4 p-2.5 rounded-xl border border-gray-100 text-gray-400 bg-white shadow-sm hover:text-rose-600 hover:border-rose-100 transition-all z-50 active:scale-95"
         >
-          <X size={16} />
+          <X size={18} />
         </button>
         <SidebarContent />
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg border border-gray-100 bg-white text-gray-600"
+              className="p-2.5 rounded-xl border border-gray-100 bg-white text-gray-900 shadow-sm active:scale-95 transition-all"
             >
-              <Menu size={20} />
+              <Menu size={20} strokeWidth={2.5} />
             </button>
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-lg border border-gray-100 bg-white text-gray-600"
+              className="p-2.5 rounded-xl border border-gray-100 bg-white text-gray-600 shadow-sm active:scale-95 transition-all"
               title="Go back"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
           </div>
+          
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 flex items-center justify-center text-white rounded-lg shadow-lg shadow-indigo-500/20">
-              <Shield size={16} strokeWidth={2.5} />
+            <div className="w-9 h-9 bg-indigo-600 flex items-center justify-center text-white rounded-xl shadow-lg shadow-indigo-600/20">
+              <Shield size={18} strokeWidth={2.5} />
             </div>
-            <span className="font-black text-xs text-gray-900 uppercase tracking-tight">HQ Console</span>
           </div>
+
           <div className="flex items-center gap-2">
             {user ? <HqNotificationBell session={user} /> : null}
-            <span className={`px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase ${ROLE_COLORS[role]} shadow-sm`}>
-              {ROLE_LABELS[role]}
-            </span>
+            <div className="w-9 h-9 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-xs font-black text-indigo-600 shadow-sm">
+              {user?.name?.[0]?.toUpperCase()}
+            </div>
           </div>
         </header>
 
