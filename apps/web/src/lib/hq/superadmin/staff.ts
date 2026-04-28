@@ -1,6 +1,6 @@
 // apps/web/src/lib/hq/superadmin/staff.ts
 
-import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, where, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toDate, formatDateDMY } from '@/lib/utils';
 
@@ -278,8 +278,10 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
   if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) return null;
 
   const col = getDeptCollection(dept);
-  const { getDoc, doc } = await import('firebase/firestore');
-  const snap = await getDoc(doc(db, col, uid)).catch(() => null);
+  const snap = await getDoc(doc(db, col, uid)).catch((err) => {
+    console.error(`[fetchStaffProfile] Error fetching base doc from ${col}/${uid}:`, err);
+    return null;
+  });
   if (!snap || !snap.exists()) return null;
 
   const data = snap.data() as any;
@@ -287,10 +289,10 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const [att, gp, fines, lastDuty] = await Promise.all([
-    loadAttendanceMonth(dept, uid, monthKey),
-    loadGrowthPoints(dept, uid),
-    loadFinesTotal(dept, uid),
-    loadLastDuty(dept, uid),
+    loadAttendanceMonth(dept, uid, monthKey).catch(() => ({ present: 0, absent: 0, late: 0 })),
+    loadGrowthPoints(dept, uid).catch(() => 0),
+    loadFinesTotal(dept, uid).catch(() => 0),
+    loadLastDuty(dept, uid).catch(() => undefined),
   ]);
 
   return {

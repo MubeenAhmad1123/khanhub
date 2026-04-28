@@ -346,9 +346,19 @@ export default function StaffProfilePage() {
 
   const fetchData = useCallback(async () => {
     if (!staffId) return;
+    console.log(`[StaffProfile] fetchData START for: ${staffId}`);
     try {
       setLoading(true);
-      const profile = await fetchStaffProfile(staffId);
+      
+      // Safety timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Fetch timeout after 10s")), 10000)
+      );
+
+      const profilePromise = fetchStaffProfile(staffId);
+      const profile = await Promise.race([profilePromise, timeoutPromise]) as StaffProfile | null;
+      
+      console.log(`[StaffProfile] Profile lookup result:`, profile ? "FOUND" : "NOT_FOUND");
 
       if (!profile) {
         toast.error("Staff member not found");
@@ -393,7 +403,7 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      // Robust fetching: Query by staffId and filter dates in-memory to avoid missing index errors
+      console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix}`);
       const [attSnap, dressSnap, dutySnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
@@ -402,6 +412,7 @@ export default function StaffProfilePage() {
         getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
         getDoc(doc(db, `hq_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
       ]);
+      console.log(`[StaffProfile] Parallel snaps LOADED`);
 
       const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
       setAvailableDuties([
@@ -458,12 +469,13 @@ export default function StaffProfilePage() {
       setGrowthHistory(historySnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
 
     } catch (err) {
-      console.error(err);
+      console.error("[StaffProfile] fetchData ERROR:", err);
       toast.error("Error loading profile");
     } finally {
+      console.log(`[StaffProfile] fetchData FINALLY (setting loading false)`);
       setLoading(false);
     }
-  }, [staffId, router, daysInMonth]);
+  }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable
 
   const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated') => {
     if (!staff) return;
