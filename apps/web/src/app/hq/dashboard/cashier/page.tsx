@@ -2330,25 +2330,24 @@ function EntityProfileModal({
   const remaining = totalPackage - totalApproved;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
-      <div className="relative w-full max-w-5xl h-[95vh] md:h-[92vh] bg-white rounded-t-[2rem] md:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
+    <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
+      <div className="relative w-full max-w-5xl h-[98vh] md:h-[92vh] bg-white rounded-t-[2.5rem] md:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
         
         {/* Header */}
         <div className="bg-zinc-900 px-6 md:px-8 py-6 md:py-8 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                <User size={32} className="text-white" />
+            <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center flex-shrink-0">
+                <User size={24} className="md:hidden text-white" />
+                <User size={32} className="hidden md:block text-white" />
               </div>
-              <div>
-                <h2 className="text-xl md:text-3xl font-black text-white uppercase tracking-tight">
+              <div className="min-w-0">
+                <h2 className="text-lg md:text-3xl font-black text-white uppercase tracking-tight truncate leading-tight">
                   {entity.name || entity.fullName}
                 </h2>
-                <p className="text-sm text-white/50 font-bold mt-1">
+                <p className="text-[10px] md:text-sm text-white/50 font-bold mt-0.5 md:mt-1 truncate">
                   {entity._deptLabel} • ID: {entity.patientId || entity.studentId || entity.id?.slice(0,8)}
                   {entity.rollNumber && ` • Roll: ${entity.rollNumber}`}
-                  {entity.course && ` • ${entity.course}`}
-                  {entity.session && ` (${entity.session})`}
                 </p>
               </div>
             </div>
@@ -2364,37 +2363,37 @@ function EntityProfileModal({
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0">
-          <div className="p-6 border-r border-zinc-100">
-            <p className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-1">Total Package</p>
-            <p className="text-lg md:text-2xl font-black text-zinc-900">Rs {totalPackage.toLocaleString()}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0 overflow-hidden">
+          <div className="p-4 md:p-6 border-r border-b md:border-b-0 border-zinc-100">
+            <p className="text-[9px] md:text-xs font-black text-zinc-400 uppercase tracking-widest mb-1">Total Package</p>
+            <p className="text-base md:text-2xl font-[1000] text-zinc-900 tracking-tighter">Rs {totalPackage.toLocaleString()}</p>
           </div>
-          <div className="p-6 border-r border-zinc-100 bg-emerald-50">
-            <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">Approved Paid</p>
-            <p className="text-lg md:text-2xl font-black text-emerald-700">Rs {totalApproved.toLocaleString()}</p>
+          <div className="p-4 md:p-6 border-r border-b md:border-b-0 border-zinc-100 bg-emerald-50/30">
+            <p className="text-[9px] md:text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">Approved Paid</p>
+            <p className="text-base md:text-2xl font-[1000] text-emerald-700 tracking-tighter">Rs {totalApproved.toLocaleString()}</p>
           </div>
-          <div className="p-6 border-r border-zinc-100 bg-amber-50">
-            <p className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Pending Review</p>
-            <p className="text-lg md:text-2xl font-black text-amber-700">Rs {totalPending.toLocaleString()}</p>
+          <div className="p-4 md:p-6 border-r border-zinc-100 bg-amber-50/30">
+            <p className="text-[9px] md:text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Pending Review</p>
+            <p className="text-base md:text-2xl font-[1000] text-amber-700 tracking-tighter">Rs {totalPending.toLocaleString()}</p>
           </div>
-          <div className="p-6 bg-rose-50">
-            <p className="text-xs font-black text-rose-600 uppercase tracking-widest mb-1">Still Remaining</p>
-            <p className="text-lg md:text-2xl font-black text-rose-700">Rs {remaining.toLocaleString()}</p>
+          <div className="p-4 md:p-6 bg-rose-50/30">
+            <p className="text-[9px] md:text-xs font-black text-rose-600 uppercase tracking-widest mb-1">Still Remaining</p>
+            <p className="text-base md:text-2xl font-[1000] text-rose-700 tracking-tighter">Rs {remaining.toLocaleString()}</p>
           </div>
         </div>
 
         {/* Filter Bar & Quick Add Toggle */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 flex-shrink-0 bg-zinc-50">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Filter:</span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 border-b border-zinc-100 flex-shrink-0 bg-zinc-50 gap-4">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest whitespace-nowrap">Filter:</span>
             {(['all', 'pending', 'approved'] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setFilterStatus(s)}
                 className={cn(
-                  'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all',
+                  'px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap',
                   filterStatus === s
-                    ? 'bg-zinc-900 text-white'
+                    ? 'bg-zinc-900 text-white shadow-lg'
                     : 'bg-white text-zinc-400 border border-zinc-200 hover:border-zinc-400'
                 )}
               >
@@ -2406,12 +2405,12 @@ function EntityProfileModal({
           <button
             onClick={() => setShowAddForm(!showAddForm)}
             className={cn(
-              "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
-              showAddForm ? "bg-rose-50 text-rose-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+              "w-full md:w-auto px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+              showAddForm ? "bg-rose-100 text-rose-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
             )}
           >
             {showAddForm ? <X size={14} /> : <Plus size={14} />}
-            {showAddForm ? "Close Panel" : "Quick Add"}
+            {showAddForm ? "Dismiss Panel" : "Quick Entry"}
           </button>
         </div>
 
@@ -2472,7 +2471,7 @@ function EntityProfileModal({
         )}
 
         {/* Transaction List */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-0">
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 size={32} className="animate-spin text-indigo-600" />
@@ -2480,150 +2479,266 @@ function EntityProfileModal({
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-4">
               <FileText size={40} className="text-zinc-200" />
-              <p className="text-sm font-black text-zinc-400 uppercase tracking-widest">No transactions found</p>
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">End of History</p>
             </div>
           ) : (
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-zinc-50 border-b border-zinc-100">
-                  <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Date</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Type</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">Amount</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">Status</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                 {filtered.map((tx) => {
+            <>
+              {/* Desktop View */}
+              <div className="hidden md:block">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-50 border-b border-zinc-100">
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Date</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Description</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">Amount</th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">Status</th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-50">
+                    {filtered.map((tx) => {
+                      const isEditing = editingId === tx.id;
+                      return (
+                        <tr key={tx.id} className={cn("hover:bg-zinc-50 transition-colors group", isEditing && "bg-indigo-50/50")}>
+                          <td className="px-6 py-4">
+                            {isEditing ? (
+                              <input 
+                                type="date" 
+                                className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                                value={editForm.date}
+                                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                              />
+                            ) : (
+                              <span className="text-sm font-bold text-zinc-700 whitespace-nowrap">
+                                {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                                tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                              )}>
+                                {tx.type === 'income' ? <Plus size={16} /> : <Minus size={16} />}
+                              </div>
+                              <div className="min-w-0">
+                                {isEditing ? (
+                                  <select 
+                                    className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                                    value={editForm.category}
+                                    onChange={(e) => {
+                                      const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
+                                      setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
+                                    }}
+                                  >
+                                    {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                  </select>
+                                ) : (
+                                  <>
+                                    <p className="text-sm font-black text-zinc-900 truncate uppercase tracking-tight">{tx.categoryName || tx.category}</p>
+                                    {tx.description && (
+                                      <p className="text-[10px] text-zinc-400 truncate max-w-[200px] font-bold italic">{tx.description}</p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {isEditing ? (
+                              <input 
+                                type="number" 
+                                className="w-32 bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
+                                value={editForm.amount}
+                                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                              />
+                            ) : (
+                              <span className={cn(
+                                'text-lg font-[1000] tabular-nums tracking-tighter',
+                                tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                              )}>
+                                {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={cn(
+                              'px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest',
+                              tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                              tx.status === 'rejected' || tx.status === 'rejected_cashier' ? 'bg-rose-100 text-rose-700' :
+                              'bg-amber-100 text-amber-700'
+                            )}>
+                              {tx.status === 'pending_cashier' ? 'Pending' : tx.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdate(tx)}
+                                    className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg"
+                                  >
+                                    <Check size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => { setEditingId(null); setEditForm(null); }}
+                                    className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-400 flex items-center justify-center"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </>
+                              ) : (
+                                ['pending', 'pending_cashier'].includes(tx.status) && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setEditingId(tx.id);
+                                        setEditForm({
+                                          amount: tx.amount,
+                                          category: tx.category || 'fee',
+                                          categoryName: tx.categoryName || 'Admission / Fees',
+                                          date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
+                                        });
+                                      }}
+                                      className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
+                                    >
+                                      <Terminal size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(tx)}
+                                      disabled={deletingId === tx.id}
+                                      className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
+                                    >
+                                      {deletingId === tx.id 
+                                        ? <Loader2 size={14} className="animate-spin" />
+                                        : <Trash2 size={14} />
+                                      }
+                                    </button>
+                                  </>
+                                )
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {filtered.map((tx) => {
                   const isEditing = editingId === tx.id;
+                  const dateLabel = formatDateDMY(tx.transactionDate || tx.date || tx.createdAt);
                   return (
-                    <tr key={tx.id} className={cn("hover:bg-zinc-50 transition-colors group", isEditing && "bg-indigo-50/50")}>
-                      <td className="px-6 py-4">
-                        {isEditing ? (
+                    <div key={tx.id} className={cn(
+                      "bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm transition-all",
+                      isEditing && "ring-2 ring-indigo-500 border-transparent shadow-xl"
+                    )}>
+                      {isEditing ? (
+                        <div className="space-y-3">
                           <input 
                             type="date" 
-                            className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
                             value={editForm.date}
                             onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
                           />
-                        ) : (
-                          <span className="text-sm font-bold text-zinc-700">
-                            {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                            tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
-                          )}>
-                            {tx.type === 'income' ? <Plus size={16} /> : <Minus size={16} />}
-                          </div>
-                          <div className="flex-1">
-                            {isEditing ? (
-                              <select 
-                                className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
-                                value={editForm.category}
-                                onChange={(e) => {
-                                  const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
-                                  setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
-                                }}
-                              >
-                                {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                            ) : (
-                              <>
-                                <p className="text-sm font-black text-zinc-900">{tx.categoryName || tx.category}</p>
-                                {tx.description && (
-                                  <p className="text-xs text-zinc-400 truncate max-w-[200px]">{tx.description}</p>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {isEditing ? (
+                          <select 
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
+                            value={editForm.category}
+                            onChange={(e) => {
+                              const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
+                              setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
+                            }}
+                          >
+                            {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                           <input 
                             type="number" 
-                            className="w-32 bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-sm font-black"
                             value={editForm.amount}
                             onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
                           />
-                        ) : (
-                          <span className={cn(
-                            'text-lg font-black tabular-nums',
-                            tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
-                          )}>
-                            {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={cn(
-                          'px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest',
-                          tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                          tx.status === 'rejected' || tx.status === 'rejected_cashier' ? 'bg-rose-100 text-rose-700' :
-                          'bg-amber-100 text-amber-700'
-                        )}>
-                          {tx.status === 'pending_cashier' ? 'Pending' : tx.status || 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          {isEditing ? (
-                            <>
-                              <button
-                                onClick={() => handleUpdate(tx)}
-                                className="w-9 h-9 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
-                              >
-                                <Check size={18} />
-                              </button>
-                              <button
-                                onClick={() => { setEditingId(null); setEditForm(null); }}
-                                className="w-9 h-9 rounded-lg bg-zinc-100 text-zinc-400 flex items-center justify-center hover:bg-zinc-200 transition-all"
-                              >
-                                <X size={18} />
-                              </button>
-                            </>
-                          ) : (
-                            ['pending', 'pending_cashier'].includes(tx.status) && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setEditingId(tx.id);
-                                    setEditForm({
-                                      amount: tx.amount,
-                                      category: tx.category || 'fee',
-                                      categoryName: tx.categoryName || 'Admission / Fees',
-                                      date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
-                                    });
-                                  }}
-                                  className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
-                                >
-                                  <Terminal size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(tx)}
-                                  disabled={deletingId === tx.id}
-                                  className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
-                                >
-                                  {deletingId === tx.id 
-                                    ? <Loader2 size={16} className="animate-spin" />
-                                    : <Trash2 size={16} />
-                                  }
-                                </button>
-                              </>
-                            )
-                          )}
+                          <div className="flex gap-2">
+                            <button onClick={() => handleUpdate(tx)} className="flex-1 bg-emerald-500 text-white h-12 rounded-xl font-black text-[10px] uppercase tracking-widest">Update</button>
+                            <button onClick={() => { setEditingId(null); setEditForm(null); }} className="flex-1 bg-zinc-100 text-zinc-400 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest text-center">Cancel</button>
+                          </div>
                         </div>
-                      </td>
-                    </tr>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+                                tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                              )}>
+                                {tx.type === 'income' ? <Plus size={18} /> : <Minus size={18} />}
+                              </div>
+                              <div>
+                                <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">{tx.categoryName || tx.category}</p>
+                                <p className="text-[10px] font-bold text-zinc-400">{dateLabel}</p>
+                              </div>
+                            </div>
+                            <span className={cn(
+                              'px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest',
+                              tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                              tx.status === 'rejected' || tx.status === 'rejected_cashier' ? 'bg-rose-100 text-rose-700' :
+                              'bg-amber-100 text-amber-700'
+                            )}>
+                              {tx.status === 'pending_cashier' ? 'Pending' : tx.status || 'Pending'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-end justify-between">
+                            <div className="min-w-0 flex-1 pr-4">
+                              {tx.description && (
+                                <p className="text-[9px] text-zinc-400 font-bold italic line-clamp-2">{tx.description}</p>
+                              )}
+                            </div>
+                            <p className={cn(
+                              'text-lg font-[1000] tracking-tighter tabular-nums whitespace-nowrap',
+                              tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                            )}>
+                              Rs {Number(tx.amount || 0).toLocaleString()}
+                            </p>
+                          </div>
+
+                          {['pending', 'pending_cashier'].includes(tx.status) && (
+                            <div className="flex gap-2 mt-4 pt-3 border-t border-zinc-50">
+                              <button
+                                onClick={() => {
+                                  setEditingId(tx.id);
+                                  setEditForm({
+                                    amount: tx.amount,
+                                    category: tx.category || 'fee',
+                                    categoryName: tx.categoryName || 'Admission / Fees',
+                                    date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
+                                  });
+                                }}
+                                className="flex-1 bg-indigo-50 text-indigo-600 h-9 rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2"
+                              >
+                                <Terminal size={12} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(tx)}
+                                disabled={deletingId === tx.id}
+                                className="flex-1 bg-rose-50 text-rose-500 h-9 rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2"
+                              >
+                                {deletingId === tx.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
 
