@@ -11,16 +11,6 @@ service cloud.firestore {
     function isAuth() {
       return request.auth != null;
     }
-    function isDiscoveryQuery() {
-      return request.query != null && request.query.limit <= 50;
-    }
-    function isSystemAdmin() {
-      return request.auth != null && (
-        request.auth.token.email == 'khanhubnetwork@gmail.com' 
-        || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2'
-        || request.auth.uid == 'zOZHk8xzM8aCeoV4dhLg31cRD943'
-      );
-    }
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
     }
@@ -730,6 +720,23 @@ service cloud.firestore {
     //  Uses hq_users collection (doc ID = Firebase Auth uid) 
     // ═══════════════════════════════════════════════════════════ 
 
+    function isDiscoveryQuery() {
+      return request.query != null && 'limit' in request.query && request.query.limit <= 50;
+    }
+
+    function isSystemAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'khanhubnetwork@gmail.com' 
+        || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2'
+        || request.auth.uid == 'zOZHk8xzM8aCeoV4dhLg31cRD943'
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════ 
+    //  HQ HELPERS (Core Identity)
+    //  Uses hq_users collection (doc ID = Firebase Auth uid) 
+    // ═══════════════════════════════════════════════════════════ 
+
     function isHqAuth() { 
       return request.auth != null && (
         isSystemAdmin()
@@ -743,21 +750,23 @@ service cloud.firestore {
     }
 
     function hqRole() { 
-      return isSystemAdmin() ? 'superadmin' : 
-             (request.auth.token.role != null ? request.auth.token.role : getHqUser().get('role', ''));
+      return request.auth == null ? '' :
+             isSystemAdmin() ? 'superadmin' : 
+             ('role' in request.auth.token ? request.auth.token.role : getHqUser().get('role', ''));
     } 
 
     function hqCustomId() {
-      return isSystemAdmin() ? 'SYSTEM_ADMIN' : 
-             (request.auth.token.customId != null ? request.auth.token.customId : getHqUser().get('customId', ''));
+      return request.auth == null ? '' :
+             isSystemAdmin() ? 'SYSTEM_ADMIN' : 
+             ('customId' in request.auth.token ? request.auth.token.customId : getHqUser().get('customId', ''));
     }
 
     function isHqRole(role) { 
-      return isHqAuth() && hqRole() == role; 
+      return hqRole() == role; 
     } 
 
     function isHqSuperAdmin() { 
-      return hqRole() == 'superadmin' || (isHqAuth() && hqRole() == 'superadmin'); 
+      return hqRole() == 'superadmin'; 
     } 
 
     function isHqCashier() { 
