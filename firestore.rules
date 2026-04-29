@@ -733,6 +733,7 @@ service cloud.firestore {
     function isHqAuth() { 
       return request.auth != null && (
         isSystemAdmin()
+        || request.auth.token.role != null
         || exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
       ); 
     } 
@@ -742,11 +743,13 @@ service cloud.firestore {
     }
 
     function hqRole() { 
-      return isSystemAdmin() ? 'superadmin' : getHqUser().get('role', '');
+      return isSystemAdmin() ? 'superadmin' : 
+             (request.auth.token.role != null ? request.auth.token.role : getHqUser().get('role', ''));
     } 
 
     function hqCustomId() {
-      return isSystemAdmin() ? 'SYSTEM_ADMIN' : getHqUser().get('customId', '');
+      return isSystemAdmin() ? 'SYSTEM_ADMIN' : 
+             (request.auth.token.customId != null ? request.auth.token.customId : getHqUser().get('customId', ''));
     }
 
     function isHqRole(role) { 
@@ -754,19 +757,19 @@ service cloud.firestore {
     } 
 
     function isHqSuperAdmin() { 
-      return isHqRole('superadmin'); 
+      return hqRole() == 'superadmin' || (isHqAuth() && hqRole() == 'superadmin'); 
     } 
 
     function isHqCashier() { 
-      return isHqRole('cashier'); 
+      return hqRole() == 'cashier'; 
     } 
 
     function isHqSuperOrManager() { 
-      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager'); 
+      return hqRole() == 'superadmin' || hqRole() == 'manager'; 
     } 
 
     function isHqTier1() { 
-      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager' || hqRole() == 'cashier'); 
+      return hqRole() == 'superadmin' || hqRole() == 'manager' || hqRole() == 'cashier'; 
     } 
 
     // ═══════════════════════════════════════════════════════════ 

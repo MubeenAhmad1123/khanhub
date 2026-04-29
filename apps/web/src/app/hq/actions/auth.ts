@@ -65,8 +65,10 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
       loginTime: Date.now(),
     };
 
-    // Set Custom Claims for zero-cost routing
+    // Set Custom Claims for zero-cost routing and security rules
     await adminAuth.setCustomUserClaims(decoded.uid, {
+      role: 'superadmin',
+      customId: 'SUPER-ADMIN',
       dashboardPath: '/hq/dashboard/superadmin'
     });
 
@@ -179,7 +181,15 @@ export async function loginHqUser({
     const uid = userDoc.id;
     
     // Create custom token for Firebase Auth client sign-in
-    const auth = getAdminAuth();
+    // Set Custom User Claims for zero-cost security rules and routing
+    await auth.setCustomUserClaims(uid, {
+      role: userData.role,
+      customId: userData.customId,
+      dashboardPath: userData.role === 'superadmin' ? '/hq/dashboard/superadmin' : 
+                     userData.role === 'manager' ? '/hq/dashboard/manager' :
+                     userData.role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/login'
+    });
+
     const customToken = await auth.createCustomToken(uid, {
       role: userData.role,
       customId: userData.customId,
