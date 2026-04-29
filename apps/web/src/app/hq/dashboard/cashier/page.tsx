@@ -717,13 +717,25 @@ export default function CashierStationPage() {
         { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon' },
         { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
         { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center' },
-        { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Staff' },
-        { coll: 'spims_staff', code: 'spims', label: 'SPIMS Staff' },
+        { coll: 'hq_users', code: 'hq', label: 'HQ Users' },
+        { coll: 'rehab_users', code: 'rehab', label: 'Rehab Staff' },
+        { coll: 'spims_users', code: 'spims', label: 'SPIMS Staff' },
+        { coll: 'hospital_users', code: 'hospital', label: 'Hospital Staff' },
+        { coll: 'sukoon_users', code: 'sukoon-center', label: 'Sukoon Staff' },
+        { coll: 'welfare_users', code: 'welfare', label: 'Welfare Staff' },
+        { coll: 'jobcenter_users', code: 'job-center', label: 'Job Center Staff' },
+        { coll: 'hq_staff', code: 'hq', label: 'HQ Personnel' },
+        { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Personnel' },
+        { coll: 'spims_staff', code: 'spims', label: 'SPIMS Personnel' },
+        { coll: 'hospital_staff', code: 'hospital', label: 'Hospital Personnel' },
+        { coll: 'sukoon_staff', code: 'sukoon-center', label: 'Sukoon Personnel' },
+        { coll: 'welfare_staff', code: 'welfare', label: 'Welfare Personnel' },
+        { coll: 'jobcenter_staff', code: 'job-center', label: 'Job Center Personnel' },
       ];
 
       for (const source of sources) {
         try {
-          const snap = await getDocs(query(collection(db, source.coll), limit(50)));
+          const snap = await getDocs(query(collection(db, source.coll), limit(1000)));
           const docs = snap.docs.map(d => ({ 
             ...d.data(), 
             id: d.id, 
@@ -761,13 +773,27 @@ export default function CashierStationPage() {
       setSearchOpen(false);
       return;
     }
-    const matches = allEntities.filter((p) =>
-      (p.name || p.fullName || '').toLowerCase().includes(q) ||
-      (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id || '').toLowerCase().includes(q)
-    );
+    const matches = allEntities.filter((p) => {
+      const queryMatch = (p.name || p.fullName || '').toLowerCase().includes(q) ||
+        (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id || '').toLowerCase().includes(q);
+      
+      if (!queryMatch) return false;
+
+      // Filter by searchType
+      if (searchType === 'patient') {
+        return p._entityType === 'patient' || p._entityType === 'client' || p._entityType === 'seeker' || p._entityType === 'donor';
+      }
+      if (searchType === 'student') {
+        return (p._entityType === 'student' || p._deptCode === 'spims') && (p._entityType !== 'staff');
+      }
+      if (searchType === 'staff') {
+        return p._entityType === 'staff' || p._collection?.includes('users') || p._collection?.includes('staff');
+      }
+      return true; // 'all'
+    });
     setSearchResults(matches.slice(0, 15));
     setSearchOpen(true);
-  }, [searchQuery, allEntities]);
+  }, [searchQuery, allEntities, searchType]);
 
 
 
@@ -1095,7 +1121,7 @@ export default function CashierStationPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[3rem] md:rounded-[4rem] p-8 md:p-14 border border-zinc-100 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
+          <div className="bg-white rounded-[2rem] md:rounded-[4rem] p-4 md:p-14 border border-zinc-100 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
             <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] group-hover/search:bg-indigo-600/10 transition-all duration-1000" />
             
             <div className="relative z-10 space-y-12">
@@ -2305,17 +2331,17 @@ function EntityProfileModal({
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
-      <div className="relative w-full max-w-5xl h-[92vh] bg-white rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
+      <div className="relative w-full max-w-5xl h-[95vh] md:h-[92vh] bg-white rounded-t-[2rem] md:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
         
         {/* Header */}
-        <div className="bg-zinc-900 px-8 py-8 text-white flex-shrink-0">
+        <div className="bg-zinc-900 px-6 md:px-8 py-6 md:py-8 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
                 <User size={32} className="text-white" />
               </div>
               <div>
-                <h2 className="text-3xl font-black text-white uppercase tracking-tight">
+                <h2 className="text-xl md:text-3xl font-black text-white uppercase tracking-tight">
                   {entity.name || entity.fullName}
                 </h2>
                 <p className="text-sm text-white/50 font-bold mt-1">
@@ -2338,22 +2364,22 @@ function EntityProfileModal({
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0">
           <div className="p-6 border-r border-zinc-100">
             <p className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-1">Total Package</p>
-            <p className="text-2xl font-black text-zinc-900">Rs {totalPackage.toLocaleString()}</p>
+            <p className="text-lg md:text-2xl font-black text-zinc-900">Rs {totalPackage.toLocaleString()}</p>
           </div>
           <div className="p-6 border-r border-zinc-100 bg-emerald-50">
             <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">Approved Paid</p>
-            <p className="text-2xl font-black text-emerald-700">Rs {totalApproved.toLocaleString()}</p>
+            <p className="text-lg md:text-2xl font-black text-emerald-700">Rs {totalApproved.toLocaleString()}</p>
           </div>
           <div className="p-6 border-r border-zinc-100 bg-amber-50">
             <p className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Pending Review</p>
-            <p className="text-2xl font-black text-amber-700">Rs {totalPending.toLocaleString()}</p>
+            <p className="text-lg md:text-2xl font-black text-amber-700">Rs {totalPending.toLocaleString()}</p>
           </div>
           <div className="p-6 bg-rose-50">
             <p className="text-xs font-black text-rose-600 uppercase tracking-widest mb-1">Still Remaining</p>
-            <p className="text-2xl font-black text-rose-700">Rs {remaining.toLocaleString()}</p>
+            <p className="text-lg md:text-2xl font-black text-rose-700">Rs {remaining.toLocaleString()}</p>
           </div>
         </div>
 
@@ -2446,7 +2472,7 @@ function EntityProfileModal({
         )}
 
         {/* Transaction List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-x-auto overflow-y-auto no-scrollbar">
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 size={32} className="animate-spin text-indigo-600" />
@@ -2574,14 +2600,14 @@ function EntityProfileModal({
                                       date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
                                     });
                                   }}
-                                  className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                                  className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
                                 >
                                   <Terminal size={16} />
                                 </button>
                                 <button
                                   onClick={() => handleDelete(tx)}
                                   disabled={deletingId === tx.id}
-                                  className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                                  className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
                                 >
                                   {deletingId === tx.id 
                                     ? <Loader2 size={16} className="animate-spin" />
