@@ -116,7 +116,14 @@ export default function DailyReportPage() {
 
       attSnaps.forEach(snap => snap.docs.forEach((d: any) => attMap.set(d.data().staffId || d.id, d.data())));
       dressSnaps.forEach(snap => snap.docs.forEach((d: any) => dressMap.set(d.data().staffId || d.id, d.data())));
-      dutySnaps.forEach(snap => snap.docs.forEach((d: any) => dutyMap.set(d.data().staffId || d.id, d.data())));
+      dutySnaps.forEach(snap => snap.docs.forEach((d: any) => {
+        const data = d.data();
+        const sid = data.staffId || d.id;
+        const existing = dutyMap.get(sid);
+        if (!existing || (!existing.duties && data.duties)) {
+          dutyMap.set(sid, data);
+        }
+      }));
       fineSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const sid = d.data().staffId || d.id;
         const existing = fineMap.get(sid) || [];
@@ -156,7 +163,7 @@ export default function DailyReportPage() {
         const dutyItems = duty?.duties || [];
         const dutiesPending = dutyConfig.filter((c: any) => {
           const item = dutyItems.find((d: any) => d.key === c.key);
-          return !item || item.status === 'not_done';
+          return !item || item.status !== 'done';
         }).map((c: any) => c.label);
 
         const dutyScore = (dutyConfig.length > 0 && dutiesPending.length === 0) ? 1 : 0;

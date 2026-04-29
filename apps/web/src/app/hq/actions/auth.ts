@@ -185,6 +185,24 @@ export async function loginHqUser({
       customId: userData.customId,
     });
 
+    const sessionCookie: HqSessionCookie = {
+      uid,
+      customId: userData.customId,
+      name: userData.name || userData.displayName || '',
+      role: userData.role,
+      loginTime: Date.now(),
+    };
+
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    cookieStore.set(COOKIE_NAME, JSON.stringify(sessionCookie), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
     return {
       success: true,
       uid,
