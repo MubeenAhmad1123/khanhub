@@ -180,7 +180,8 @@ export async function loginHqUser({
 
     const uid = userDoc.id;
     
-    // Create custom token for Firebase Auth client sign-in
+    const auth = getAdminAuth();
+    
     // Set Custom User Claims for zero-cost security rules and routing
     await auth.setCustomUserClaims(uid, {
       role: userData.role,
