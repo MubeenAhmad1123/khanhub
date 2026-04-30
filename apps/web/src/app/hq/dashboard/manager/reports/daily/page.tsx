@@ -184,7 +184,17 @@ export default function DailyReportPage() {
         }
 
         // Use arrivedOnTime from new schema, fallback to isLate if it exists
-        const isLate = att?.arrivedOnTime === false || (att?.isLate && attendanceStatus === 'present');
+        const arrivalTime = att?.arrivalTime;
+        let isLate = att?.arrivedOnTime === false || (att?.isLate && (attendanceStatus === 'present' || rawStatus === 'present'));
+
+        // Hard threshold: 08:15
+        if (arrivalTime && (attendanceStatus === 'present' || rawStatus === 'present')) {
+          const [h, m] = arrivalTime.split(':').map(Number);
+          if (h > 8 || (h === 8 && m > 15)) {
+            isLate = true;
+          }
+        }
+
         if (isLate && attendanceStatus === 'present') attendanceStatus = 'late';
 
         const onLeave = attendanceStatus === 'leave';
@@ -198,7 +208,7 @@ export default function DailyReportPage() {
             (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete')));
 
         // Point Calculation (1 point each, total 4)
-        const attPoint = (attendanceStatus === 'present' || attendanceStatus === 'late') ? 1 : 0;
+        const attPoint = (attendanceStatus === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
         const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
         const contribPoint = (!onLeave && contribScore > 0) ? 1 : 0;
@@ -297,7 +307,7 @@ export default function DailyReportPage() {
       case 'absent':
         return { uniform: 'no', duties: 'no', gp: 'no', score: 0, fine: 500 };
       case 'late':
-        return { uniform: 'incomplete', duties: 'incomplete', gp: 'invalid', score: 50, fine: 0 };
+        return { uniform: 'incomplete', duties: 'incomplete', gp: 'invalid', score: 0, fine: 0 };
       case 'leave':
         return { uniform: 'na', duties: 'na', gp: 'na', score: 0, fine: 0 };
       default:

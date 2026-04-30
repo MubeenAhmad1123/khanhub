@@ -1827,6 +1827,8 @@ export default function CashierStationPage() {
           entity={selectedEntity} 
           onClose={() => setShowProfileModal(false)}
           allTransactions={historyTxns}
+          allCategories={allCategories}
+          onAddCustomCategory={(cat) => setCustomCategories(p => [...p, cat])}
           onRefetch={() => {
             fetchHistory();
             fetchEntityHistory(selectedEntity);
@@ -2090,12 +2092,16 @@ function EntityProfileModal({
   allTransactions,
   onDeleteTransaction,
   onRefetch,
+  allCategories = BASE_CATEGORIES,
+  onAddCustomCategory,
 }: { 
   entity: any; 
   onClose: () => void;
   allTransactions: any[];
   onDeleteTransaction?: (tx: any) => Promise<void>;
   onRefetch?: () => void;
+  allCategories?: readonly any[];
+  onAddCustomCategory?: (cat: any) => void;
 }) {
   const [localTxns, setLocalTxns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2114,6 +2120,63 @@ function EntityProfileModal({
     date: new Date().toISOString().split('T')[0],
     description: '',
   });
+
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
+  const { session } = useHqSession();
+
+  const handleCreateCategory = async (isForEdit: boolean = false) => {
+    const name = customCategoryName.trim();
+    if (!name) return;
+    const slug = slugify(name);
+    
+    // Check if exists
+    const existing = allCategories.find(c => c.id === slug);
+    if (existing) {
+      if (isForEdit) {
+        setEditForm({ ...editForm, category: existing.id, categoryName: existing.name });
+      } else {
+        setNewTx({ ...newTx, category: existing.id, categoryName: existing.name });
+      }
+      setShowCustomCategoryInput(false);
+      setCustomCategoryName('');
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    try {
+      const type = isForEdit ? (localTxns.find(t => t.id === editingId)?.type || 'income') : 'income';
+      const newCat = { 
+        name, 
+        slug, 
+        appliesTo: type, 
+        isCustom: true, 
+        createdBy: session?.uid, 
+        createdAt: Timestamp.now() 
+      };
+      
+      await addDoc(collection(db, 'hq_cashier_categories'), newCat);
+      
+      const catObj = { id: slug, name, appliesTo: type };
+      if (onAddCustomCategory) onAddCustomCategory(catObj);
+      
+      if (isForEdit) {
+        setEditForm({ ...editForm, category: slug, categoryName: name });
+      } else {
+        setNewTx({ ...newTx, category: slug, categoryName: name });
+      }
+      
+      setShowCustomCategoryInput(false);
+      setCustomCategoryName('');
+      toast.success('Category created ✓');
+    } catch (err: any) {
+      toast.error('Failed to create category');
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
 
   const handleAddTransaction = async () => {
     if (!newTx.amount || Number(newTx.amount) <= 0) {
@@ -2447,17 +2510,43 @@ function EntityProfileModal({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-indigo-400">Category</label>
-                <select 
-                  value={newTx.category}
-                  onChange={(e) => {
-                    const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
-                    setNewTx({...newTx, category: e.target.value, categoryName: cat?.name || e.target.value});
-                  }}
-                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
-                >
-                  {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-black uppercase text-indigo-400">Category</label>
+                  <button 
+                    onClick={() => setShowCustomCategoryInput(!showCustomCategoryInput)}
+                    className="text-[8px] font-black uppercase text-indigo-600 hover:underline"
+                  >
+                    {showCustomCategoryInput ? 'Cancel' : '+ Custom'}
+                  </button>
+                </div>
+                {showCustomCategoryInput ? (
+                  <div className="flex gap-2">
+                    <input 
+                      value={customCategoryName}
+                      onChange={(e) => setCustomCategoryName(e.target.value)}
+                      placeholder="New name..."
+                      className="flex-1 h-12 bg-white border border-indigo-200 rounded-xl px-4 text-xs font-bold outline-none"
+                    />
+                    <button 
+                      onClick={() => handleCreateCategory(false)}
+                      disabled={isCreatingCategory}
+                      className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center"
+                    >
+                      {isCreatingCategory ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    </button>
+                  </div>
+                ) : (
+                  <select 
+                    value={newTx.category}
+                    onChange={(e) => {
+                      const cat = allCategories.find(c => c.id === e.target.value);
+                      setNewTx({...newTx, category: e.target.value, categoryName: cat?.name || e.target.value});
+                    }}
+                    className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
+                  >
+                    {allCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase text-indigo-400">Amount (Rs)</label>
@@ -2563,16 +2652,44 @@ function EntityProfileModal({
                               </div>
                               <div className="min-w-0">
                                 {isEditing ? (
-                                  <select 
-                                    className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
-                                    value={editForm.category}
-                                    onChange={(e) => {
-                                      const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
-                                      setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
-                                    }}
-                                  >
-                                    {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                  </select>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <button 
+                                        onClick={() => setShowCustomCategoryInput(!showCustomCategoryInput)}
+                                        className="text-[8px] font-black uppercase text-indigo-600 hover:underline"
+                                      >
+                                        {showCustomCategoryInput ? 'Cancel' : '+ Custom'}
+                                      </button>
+                                    </div>
+                                    {showCustomCategoryInput ? (
+                                      <div className="flex gap-2">
+                                        <input 
+                                          value={customCategoryName}
+                                          onChange={(e) => setCustomCategoryName(e.target.value)}
+                                          placeholder="New..."
+                                          className="flex-1 h-9 bg-white border border-zinc-200 rounded-lg px-2 text-[10px] font-bold outline-none"
+                                        />
+                                        <button 
+                                          onClick={() => handleCreateCategory(true)}
+                                          disabled={isCreatingCategory}
+                                          className="w-9 h-9 bg-indigo-600 text-white rounded-lg flex items-center justify-center"
+                                        >
+                                          {isCreatingCategory ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <select 
+                                        className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                                        value={editForm.category}
+                                        onChange={(e) => {
+                                          const cat = allCategories.find(c => c.id === e.target.value);
+                                          setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
+                                        }}
+                                      >
+                                        {allCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                      </select>
+                                    )}
+                                  </div>
                                 ) : (
                                   <>
                                     <p className="text-sm font-black text-zinc-900 truncate uppercase tracking-tight">{tx.categoryName || tx.category}</p>
@@ -2684,16 +2801,45 @@ function EntityProfileModal({
                             onChange={(iso) => setEditForm({ ...editForm, date: iso })}
                             className="bg-zinc-50 border border-zinc-100 rounded-xl"
                           />
-                          <select 
-                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
-                            value={editForm.category}
-                            onChange={(e) => {
-                              const cat = BASE_CATEGORIES.find(c => c.id === e.target.value);
-                              setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
-                            }}
-                          >
-                            {BASE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                          </select>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[8px] font-black text-zinc-400 uppercase">Category</label>
+                              <button 
+                                onClick={() => setShowCustomCategoryInput(!showCustomCategoryInput)}
+                                className="text-[8px] font-black text-indigo-600 uppercase"
+                              >
+                                {showCustomCategoryInput ? 'Cancel' : '+ Custom'}
+                              </button>
+                            </div>
+                            {showCustomCategoryInput ? (
+                              <div className="flex gap-2">
+                                <input 
+                                  value={customCategoryName}
+                                  onChange={(e) => setCustomCategoryName(e.target.value)}
+                                  placeholder="New category..."
+                                  className="flex-1 bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
+                                />
+                                <button 
+                                  onClick={() => handleCreateCategory(true)}
+                                  disabled={isCreatingCategory}
+                                  className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center"
+                                >
+                                  {isCreatingCategory ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                </button>
+                              </div>
+                            ) : (
+                              <select 
+                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
+                                value={editForm.category}
+                                onChange={(e) => {
+                                  const cat = allCategories.find(c => c.id === e.target.value);
+                                  setEditForm({ ...editForm, category: e.target.value, categoryName: cat?.name || e.target.value });
+                                }}
+                              >
+                                {allCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
+                            )}
+                          </div>
                           <input 
                             type="number" 
                             className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-sm font-black"
