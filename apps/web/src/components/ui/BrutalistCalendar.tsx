@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BrutalistCalendarProps {
@@ -20,10 +20,12 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
 
   const handleDateClick = (day: number) => {
     const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const offset = selectedDate.getTimezoneOffset();
-    const adjustedDate = new Date(selectedDate.getTime() - (offset * 60 * 1000));
-    const isoString = adjustedDate.toISOString().split('T')[0];
-    onChange(isoString);
+    // Use local time for ISO string to avoid timezone shifts
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const d = String(selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+    onChange(dateStr);
     setIsOpen(false);
   };
 
@@ -41,9 +43,10 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
 
   const goToToday = () => {
     const now = new Date();
-    setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1));
-    const isoString = now.toISOString().split('T')[0];
-    onChange(isoString);
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    onChange(`${y}-${m}-${d}`);
     setIsOpen(false);
   };
 
@@ -52,17 +55,17 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
   const startDay = firstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
 
   for (let i = 0; i < startDay; i++) {
-    days.push(<div key={`empty-${i}`} className="h-10 md:h-12" />);
+    days.push(<div key={`empty-${i}`} className="h-10 w-full" />);
   }
 
   for (let d = 1; d <= totalDays; d++) {
     const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
     const isToday = new Date().toDateString() === dateObj.toDateString();
     
-    // Correct way to compare ISO dates for selection check
-    const offset = dateObj.getTimezoneOffset();
-    const adjustedDate = new Date(dateObj.getTime() - (offset * 60 * 1000));
-    const dayIso = adjustedDate.toISOString().split('T')[0];
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dayVal = String(dateObj.getDate()).padStart(2, '0');
+    const dayIso = `${y}-${m}-${dayVal}`;
     const isSelected = value === dayIso;
     
     days.push(
@@ -71,12 +74,12 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
         type="button"
         onClick={() => handleDateClick(d)}
         className={cn(
-          "h-10 md:h-12 w-full flex items-center justify-center text-[10px] md:text-xs font-black uppercase transition-all rounded-xl border-2",
+          "h-10 w-full flex items-center justify-center text-xs font-bold rounded-xl transition-all",
           isSelected 
-            ? "bg-indigo-600 border-indigo-600 text-white shadow-[4px_4px_0px_0px_rgba(79,70,229,0.2)] scale-95" 
+            ? "bg-black text-white shadow-lg scale-90" 
             : isToday
-              ? "bg-indigo-50 border-indigo-200 text-indigo-600"
-              : "bg-white border-transparent text-zinc-600 hover:border-zinc-200 hover:bg-zinc-50"
+              ? "bg-indigo-50 text-indigo-600 font-black"
+              : "text-zinc-600 hover:bg-zinc-100"
         )}
       >
         {d}
@@ -90,56 +93,52 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
   ];
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 120 }, (_, i) => currentYear - i); // Last 120 years
+  const years = Array.from({ length: 130 }, (_, i) => (currentYear + 10) - i);
 
   return (
     <div className={cn("relative", className)}>
-      {label && <label className="text-[10px] font-black uppercase text-zinc-400 mb-2 block px-1 tracking-widest">{label}</label>}
+      {label && <label className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 block px-1 tracking-widest">{label}</label>}
       
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-12 bg-white border-2 border-zinc-200 rounded-2xl px-4 flex items-center justify-between group hover:border-indigo-600 transition-all active:scale-[0.98]"
+        className="w-full h-11 bg-white border border-zinc-200 rounded-xl px-4 flex items-center justify-between group hover:border-black transition-all active:scale-[0.98]"
       >
         <div className="flex items-center gap-3">
-          <CalendarIcon size={18} className="text-zinc-400 group-hover:text-indigo-600 transition-colors" />
-          <span className="text-xs font-black uppercase tracking-widest text-zinc-900">
+          <CalendarIcon size={16} className="text-zinc-400 group-hover:text-black transition-colors" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-900">
             {value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Select Date'}
           </span>
         </div>
-        <div className="w-6 h-6 rounded-lg bg-zinc-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
-          <ChevronRight size={14} className={cn("text-zinc-400 group-hover:text-indigo-600 transition-transform", isOpen && "rotate-90")} />
-        </div>
+        <ChevronRight size={14} className={cn("text-zinc-300 group-hover:text-black transition-transform", isOpen && "rotate-90")} />
       </button>
 
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[200]" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 right-0 mt-3 bg-white border-4 border-zinc-900 rounded-[2rem] p-6 shadow-[8px_8px_0px_0px_rgba(24,24,27,1)] z-[201] animate-in slide-in-from-top-4 duration-300 w-[320px] md:w-[360px]">
-            <div className="flex items-center justify-between mb-6">
-              <button type="button" onClick={prevMonth} className="w-10 h-10 border-2 border-zinc-900 rounded-xl flex items-center justify-center hover:bg-zinc-50 active:scale-90 transition-all">
-                <ChevronLeft size={18} />
+          <div className="absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-2xl p-5 shadow-2xl z-[201] animate-in zoom-in-95 duration-200 w-[300px]">
+            <div className="flex items-center justify-between mb-4">
+              <button type="button" onClick={prevMonth} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+                <ChevronLeft size={16} />
               </button>
-              <div className="text-center flex flex-col items-center">
+              <div className="text-center">
                 <select 
                   value={currentDate.getFullYear()} 
                   onChange={(e) => setYear(parseInt(e.target.value))}
-                  className="bg-transparent text-[10px] font-black uppercase text-zinc-400 tracking-[0.2em] outline-none cursor-pointer hover:text-indigo-600"
+                  className="bg-transparent text-[10px] font-black uppercase text-zinc-400 tracking-widest outline-none cursor-pointer hover:text-black mb-0.5"
                 >
-                  {years.map(y => <option key={y} value={y} className="text-black font-sans">{y}</option>)}
-                  {/* Also allow future years for joining dates etc */}
-                  {Array.from({ length: 10 }, (_, i) => currentYear + 1 + i).map(y => <option key={y} value={y} className="text-black font-sans">{y}</option>)}
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
-                <p className="text-sm font-black uppercase tracking-widest">{monthNames[currentDate.getMonth()]}</p>
+                <p className="text-[11px] font-black uppercase tracking-widest text-zinc-900">{monthNames[currentDate.getMonth()]}</p>
               </div>
-              <button type="button" onClick={nextMonth} className="w-10 h-10 border-2 border-zinc-900 rounded-xl flex items-center justify-center hover:bg-zinc-50 active:scale-90 transition-all">
-                <ChevronRight size={18} />
+              <button type="button" onClick={nextMonth} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+                <ChevronRight size={16} />
               </button>
             </div>
 
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-                <div key={d} className="text-center text-[9px] font-black uppercase text-zinc-400 py-2">
+                <div key={d} className="text-center text-[9px] font-bold uppercase text-zinc-400">
                   {d}
                 </div>
               ))}
@@ -149,20 +148,13 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
               {days}
             </div>
 
-            <div className="mt-6 pt-4 border-t-2 border-zinc-100 flex items-center justify-between">
+            <div className="mt-4 pt-4 border-t border-zinc-100">
               <button 
                 type="button" 
                 onClick={goToToday}
-                className="text-[9px] font-black uppercase tracking-widest bg-zinc-900 text-white px-3 py-1.5 rounded-lg hover:scale-105 transition-all"
+                className="w-full text-[10px] font-black uppercase tracking-widest bg-zinc-50 text-zinc-900 py-2.5 rounded-xl hover:bg-black hover:text-white transition-all"
               >
                 Today
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setIsOpen(false)}
-                className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-900 transition-colors"
-              >
-                Close Portal
               </button>
             </div>
           </div>

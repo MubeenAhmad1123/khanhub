@@ -6,7 +6,7 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { 
   Users, ArrowLeft, UserPlus, 
   User, Mail, Phone, Shield, 
-  Briefcase, Lock, Loader2, Plus, X, Save
+  Briefcase, Lock, Loader2, Plus, X, Save, Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -21,7 +21,9 @@ export default function NewITStaffPage() {
     designation: '',
     role: 'staff',
     password: '',
-    employeeId: `ENG-${Math.floor(1000 + Math.random() * 9000)}`
+    employeeId: `ENG-${Math.floor(1000 + Math.random() * 9000)}`,
+    dutyStartTime: '09:00',
+    dutyEndTime: '18:00'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,6 +149,40 @@ export default function NewITStaffPage() {
                 className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
                 placeholder="••••••••"
               />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 pt-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+              <Clock size={24} />
+            </div>
+            <h2 className="text-xl font-black text-black uppercase tracking-tight">Shift Configuration</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Duty Start Time</label>
+              <div className="relative group">
+                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                <input 
+                  type="time" required
+                  value={formData.dutyStartTime}
+                  onChange={e => setFormData({...formData, dutyStartTime: e.target.value})}
+                  className="w-full bg-gray-50 border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Duty End Time</label>
+              <div className="relative group">
+                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                <input 
+                  type="time" required
+                  value={formData.dutyEndTime}
+                  onChange={e => setFormData({...formData, dutyEndTime: e.target.value})}
+                  className="w-full bg-gray-50 border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                />
+              </div>
             </div>
           </div>
 
