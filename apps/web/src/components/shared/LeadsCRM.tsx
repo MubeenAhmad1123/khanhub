@@ -47,11 +47,18 @@ interface Lead {
   contact: string;
   address: string;
   addiction: string;
-  status: LeadStatus;
+  status: string; // Changed from LeadStatus to string to support custom responses
   notes: string;
+  callNotes?: string; // New field
   department: string;
   createdAt: any;
   updatedAt: any;
+}
+
+interface CustomResponse {
+  id: string;
+  name: string;
+  color: string;
 }
 
 interface LeadsCRMProps {
@@ -72,10 +79,14 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [customResponses, setCustomResponses] = useState<CustomResponse[]>([]);
+  const [showCustomResponseInput, setShowCustomResponseInput] = useState(false);
+  const [newCustomResponse, setNewCustomResponse] = useState('');
+  
   const [sortConfig, setSortConfig] = useState<{ key: 'createdAt' | 'name'; direction: 'asc' | 'desc' }>({ 
     key: 'createdAt', 
     direction: 'desc' 
@@ -87,24 +98,36 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     contact: '',
     address: '',
     addiction: 'Ice',
-    status: 'NEW' as LeadStatus,
-    notes: ''
+    status: 'NEW',
+    notes: '',
+    callNotes: ''
   });
 
   useEffect(() => {
+    // Sync Leads
     const q = query(
       collection(db, 'leads'), 
       where('department', '==', department),
       orderBy(sortConfig.key, sortConfig.direction)
     );
 
-    const unsubscribe = onSnapshot(q, (snap) => {
+    const unsubscribeLeads = onSnapshot(q, (snap) => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead));
       setLeads(docs);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Sync Custom Responses
+    const qr = query(collection(db, 'hq_lead_responses'), orderBy('name', 'asc'));
+    const unsubscribeResponses = onSnapshot(qr, (snap) => {
+      const resps = snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomResponse));
+      setCustomResponses(resps);
+    });
+
+    return () => {
+      unsubscribeLeads();
+      unsubscribeResponses();
+    };
   }, [department, sortConfig]);
 
   const filteredLeads = useMemo(() => {
@@ -120,22 +143,24 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     });
   }, [leads, searchQuery, statusFilter]);
 
+  const allResponses = useMemo(() => {
+    const base = Object.keys(STATUS_CONFIG).map(id => ({
+      id,
+      name: id,
+      color: STATUS_CONFIG[id as LeadStatus].color
+    }));
+    return [...base, ...customResponses];
+  }, [customResponses]);
+
   const stats = useMemo(() => {
-    const s = {
-      total: leads.length,
-      'NEW': 0,
-      'No Response': 0,
-      'Scheduled Callback': 0,
-      'Busy': 0,
-      'DC': 0
-    };
+    const s: Record<string, number> = { total: leads.length };
+    allResponses.forEach(r => { s[r.id] = 0; });
     leads.forEach(l => {
-      if (l.status in s) {
-        s[l.status as keyof typeof s]++;
-      }
+      if (l.status in s) s[l.status]++;
+      else s['NEW']++; // Fallback
     });
     return s;
-  }, [leads]);
+  }, [leads, allResponses]);
 
   const handleAddLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +179,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       });
       toast.success('Lead added successfully');
       setIsAddModalOpen(false);
-      setFormData({ name: '', contact: '', address: '', addiction: 'Ice', status: 'NEW', notes: '' });
+      setFormData({ name: '', contact: '', address: '', addiction: 'Ice', status: 'NEW', notes: '', callNotes: '' });
     } catch (err) {
       toast.error('Failed to add lead');
     } finally {
@@ -162,7 +187,33 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     }
   };
 
-  const handleStatusUpdate = async (id: string, newStatus: LeadStatus) => {
+  const handleCreateResponse = async () => {
+    if (!newCustomResponse.trim()) return;
+    const id = newCustomResponse.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    
+    // Check if already exists in base or custom
+    if (STATUS_CONFIG[id as LeadStatus] || customResponses.find(r => r.id === id)) {
+      toast.error('Response type already exists');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'hq_lead_responses'), {
+        id,
+        name: newCustomResponse.trim(),
+        color: 'gray', // Default
+        createdAt: Timestamp.now()
+      });
+      toast.success('Custom response added');
+      setNewCustomResponse('');
+      setShowCustomResponseInput(false);
+      return id;
+    } catch (err) {
+      toast.error('Failed to create response');
+    }
+  };
+
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
     try {
       await updateDoc(doc(db, 'leads', id), {
         status: newStatus,
@@ -172,6 +223,18 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       if (activeCallId === id) setActiveCallId(null);
     } catch (err) {
       toast.error('Update failed');
+    }
+  };
+
+  const handleCallNotesUpdate = async (id: string, notes: string) => {
+    try {
+      await updateDoc(doc(db, 'leads', id), {
+        callNotes: notes,
+        updatedAt: Timestamp.now()
+      });
+      toast.success('Call notes saved');
+    } catch (err) {
+      toast.error('Failed to save notes');
     }
   };
 
@@ -226,15 +289,19 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-8 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Leads</p>
           <p className={cn("text-2xl font-black mt-1", themeClasses.text)}>{stats.total}</p>
         </div>
-        {Object.entries(STATUS_CONFIG).map(([status, config]) => (
-          <div key={status} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{status}</p>
-            <p className={cn("text-2xl font-black mt-1", config.text)}>{stats[status as keyof typeof stats]}</p>
+        {allResponses.map((config) => (
+          <div key={config.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">{config.name}</p>
+            <p className={cn("text-2xl font-black mt-1", 
+              config.id === 'NEW' ? 'text-blue-700' : 
+              config.id === 'DC' ? 'text-red-700' : 
+              'text-gray-700'
+            )}>{stats[config.id] || 0}</p>
           </div>
         ))}
       </div>
@@ -256,10 +323,10 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
           <select 
             className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none cursor-pointer"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
+            onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="all">All Status</option>
-            {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+            {allResponses.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
           
           <button 
@@ -293,6 +360,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Addiction</th>
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Address</th>
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+              <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest min-w-[200px]">Call Notes</th>
               <th 
                 className="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => setSortConfig({ 
@@ -350,33 +418,72 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                   <select 
                     className={cn(
                       "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer border-none font-sans",
-                      STATUS_CONFIG[lead.status].bg,
-                      STATUS_CONFIG[lead.status].text
+                      STATUS_CONFIG[lead.status as LeadStatus]?.bg || 'bg-gray-100',
+                      STATUS_CONFIG[lead.status as LeadStatus]?.text || 'text-gray-700'
                     )}
                     value={lead.status}
-                    onChange={(e) => handleStatusUpdate(lead.id, e.target.value as LeadStatus)}
+                    onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
                   >
-                    {Object.keys(STATUS_CONFIG).map(s => (
-                      <option key={s} value={s}>{s}</option>
+                    {allResponses.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
                 </td>
                 <td className="px-6 py-4">
+                  <textarea 
+                    defaultValue={lead.callNotes}
+                    onBlur={(e) => handleCallNotesUpdate(lead.id, e.target.value)}
+                    placeholder="Enter call notes..."
+                    className="w-full bg-gray-50 border-none rounded-lg p-2 text-[10px] font-bold outline-none focus:ring-1 focus:ring-indigo-300 transition-all resize-none h-10 no-scrollbar"
+                  />
+                </td>
+                <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-2">
                     {activeCallId === lead.id ? (
-                      <div className="flex items-center gap-1 bg-amber-50 p-1 rounded-xl border border-amber-200 animate-in slide-in-from-right-2">
+                      <div className="flex flex-col gap-2 bg-amber-50 p-2 rounded-xl border border-amber-200 animate-in slide-in-from-right-2 min-w-[150px]">
                         <select 
                           autoFocus
                           className="text-[9px] font-black uppercase bg-white border border-amber-200 rounded-lg px-2 py-1.5 outline-none"
-                          onChange={(e) => handleStatusUpdate(lead.id, e.target.value as LeadStatus)}
+                          onChange={(e) => {
+                            if (e.target.value === 'ADD_NEW') {
+                              setShowCustomResponseInput(true);
+                            } else {
+                              handleStatusUpdate(lead.id, e.target.value);
+                            }
+                          }}
                         >
-                          <option value="">Log Outcome...</option>
-                          {Object.keys(STATUS_CONFIG).map(s => (
-                            <option key={s} value={s}>{s}</option>
+                          <option value="">Outcome...</option>
+                          {allResponses.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
                           ))}
+                          <option value="ADD_NEW" className="text-indigo-600 font-black">+ CUSTOM</option>
                         </select>
-                        <button onClick={() => setActiveCallId(null)} className="p-1.5 hover:bg-amber-100 rounded-lg text-amber-600">
-                          <X size={14} />
+
+                        {showCustomResponseInput && (
+                          <div className="flex gap-1 animate-in zoom-in-95">
+                            <input 
+                              value={newCustomResponse}
+                              onChange={(e) => setNewCustomResponse(e.target.value)}
+                              placeholder="New type..."
+                              className="flex-1 text-[9px] font-bold bg-white border border-indigo-200 rounded-lg px-2 py-1 outline-none"
+                            />
+                            <button 
+                              onClick={async () => {
+                                const newId = await handleCreateResponse();
+                                if (newId) handleStatusUpdate(lead.id, newId);
+                              }}
+                              className="p-1 bg-indigo-600 text-white rounded-lg"
+                            >
+                              <Check size={12} />
+                            </button>
+                            <button onClick={() => setShowCustomResponseInput(false)} className="p-1 bg-gray-200 text-gray-600 rounded-lg">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+
+                        <button onClick={() => setActiveCallId(null)} className="text-[9px] font-black uppercase text-amber-600 hover:underline">
+                          Cancel
                         </button>
                       </div>
                     ) : (
@@ -484,9 +591,9 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
                     value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value as LeadStatus})}
+                    onChange={(e) => setFormData({...formData, status: e.target.value})}
                   >
-                    {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+                    {allResponses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -499,6 +606,17 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                   className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none resize-none"
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Call Notes</label>
+                <textarea 
+                  rows={2}
+                  placeholder="Important call notes..."
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none resize-none"
+                  value={formData.callNotes}
+                  onChange={(e) => setFormData({...formData, callNotes: e.target.value})}
                 />
               </div>
 

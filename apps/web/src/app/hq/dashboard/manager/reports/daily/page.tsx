@@ -137,6 +137,23 @@ export default function DailyReportPage() {
 
       // 3. Process Report Rows
       const rows: DailyReportRow[] = allStaff.map(s => {
+        // Helper to convert any time string (HH:mm, HH:mm AM/PM) to minutes from midnight
+        const timeToMinutes = (timeStr?: string) => {
+          if (!timeStr) return null;
+          const clean = timeStr.trim().toUpperCase();
+          const isPM = clean.includes('PM');
+          const isAM = clean.includes('AM');
+          const numeric = clean.replace(/[^0-9:]/g, '');
+          const parts = numeric.split(':');
+          if (parts.length < 2) return null;
+          let h = parseInt(parts[0], 10);
+          let m = parseInt(parts[1], 10);
+          if (isNaN(h) || isNaN(m)) return null;
+          if (isPM && h < 12) h += 12;
+          if (isAM && h === 12) h = 0;
+          return h * 60 + m;
+        };
+
         const sid = s.id;
         const att = attMap.get(sid);
         const dress = dressMap.get(sid);
@@ -144,9 +161,6 @@ export default function DailyReportPage() {
         const finesList = fineMap.get(sid) || [];
         const contribCount = contribMap.get(sid) || 0;
         const totalGP = gpMap.get(sid) || 0;
-
-        // Attendance Score (1 if present)
-        const attScore = (att?.status === 'present') ? 1 : 0;
 
         // Uniform Score (1 if all ticked, 0 if any missing)
         const uniformConfig = s.dressCodeConfig || [];
@@ -185,17 +199,38 @@ export default function DailyReportPage() {
 
         // Use arrivedOnTime from new schema, fallback to isLate if it exists
         const arrivalTime = att?.arrivalTime;
+        const departureTime = att?.departureTime;
+        const shiftStart = s.dutyStartTime; // Strictly from profile
+        const shiftEnd = s.dutyEndTime;     // Strictly from profile
+
         let isLate = att?.arrivedOnTime === false || (att?.isLate && (attendanceStatus === 'present' || rawStatus === 'present'));
 
-        // Hard threshold: 08:15
-        if (arrivalTime && (attendanceStatus === 'present' || rawStatus === 'present')) {
-          const [h, m] = arrivalTime.split(':').map(Number);
-          if (h > 8 || (h === 8 && m > 15)) {
-            isLate = true;
+        // Dynamic Shift Check: Strictly use profile dutyStartTime and dutyEndTime
+        if ((attendanceStatus === 'present' || rawStatus === 'present')) {
+          const arrMin = timeToMinutes(arrivalTime);
+          const startMin = timeToMinutes(shiftStart);
+          const depMin = timeToMinutes(departureTime);
+          const endMin = timeToMinutes(shiftEnd);
+
+          // Arrival Lateness (Strict: even 1 min late = penalty)
+          if (arrMin !== null && startMin !== null) {
+            if (arrMin > startMin) {
+              isLate = true;
+            } else {
+              // If arriving exactly at or before start time, they are on time
+              if (att?.arrivedOnTime !== false) isLate = false;
+            }
+          }
+
+          // Early Departure (Strict: even 1 min early = penalty)
+          if (depMin !== null && endMin !== null) {
+            if (depMin < endMin) {
+              isLate = true;
+            }
           }
         }
 
-        if (isLate && attendanceStatus === 'present') attendanceStatus = 'late';
+        if (isLate && (attendanceStatus === 'present' || rawStatus === 'present')) attendanceStatus = 'late';
 
         const onLeave = attendanceStatus === 'leave';
 
