@@ -4,10 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  LayoutDashboard, Users, CheckCircle, Heart, UserCog,
-  Banknote, FileBarChart, CreditCard, CalendarDays, ClipboardCheck,
-  User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
-  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
+  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, PhoneCall,
+  LayoutDashboard, Heart, CalendarDays, User, UserCog, Shield, ArrowLeft, LogOut, Menu, X, CheckCircle, Users, ClipboardCheck
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -26,6 +24,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin', 'superadmin'] },
+  { label: 'Leads & CRM', href: '/departments/spims/dashboard/admin/leads', icon: <PhoneCall size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin', 'superadmin'] },

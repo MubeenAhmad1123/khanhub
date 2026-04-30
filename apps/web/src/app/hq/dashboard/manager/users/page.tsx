@@ -65,6 +65,7 @@ import {
   BookOpen,
   Heart
 } from 'lucide-react';
+import { BrutalistCalendar } from '@/components/ui';
 import { createRehabUserServer, createStaffMemberServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import toast from 'react-hot-toast';
@@ -888,17 +889,48 @@ export default function ManagerUsersPage() {
                       </div>
                     )}
 
-                    <div className="md:col-span-2 pt-6 flex justify-end">
-                      <button
-                        disabled={submitting}
-                        onClick={activeTab === 'admin' ? handleAdminSubmit : handleClientSubmit}
-                        className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${activeTab === 'admin' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 text-white' :
-                            'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-white'
-                          }`}
-                      >
-                        {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                        {submitting ? 'Confirming...' : `Initialize ${activeTab}`}
-                      </button>
+                    <div className="md:col-span-2 pt-6 flex gap-4">
+                      {activeTab === 'admin' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleAdminSubmit}
+                            disabled={submitting}
+                            className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all ${submitting ? 'bg-zinc-100 text-zinc-400' : 'bg-blue-600 text-white shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95'}`}
+                          >
+                            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
+                            <span>{submitting ? 'Creating...' : 'Initialize Admin'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, customId: '', displayName: '', password: '' })}
+                            disabled={submitting}
+                            className={`flex-1 py-5 rounded-[1.5rem] border-2 font-black text-xs uppercase tracking-widest transition-all ${submitting ? 'opacity-20 cursor-not-allowed' : 'border-zinc-200 text-black hover:bg-gray-50'}`}
+                          >
+                            Reset
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleClientSubmit}
+                            disabled={submitting}
+                            className={`flex-1 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${submitting ? 'bg-zinc-100 text-zinc-400' : 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 active:scale-95'}`}
+                          >
+                            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Home className="w-5 h-5" />}
+                            <span>{submitting ? 'Linking...' : 'Link Family Node'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, customId: '', displayName: '', password: '', patientId: '' })}
+                            disabled={submitting}
+                            className={`flex-1 py-5 rounded-[1.5rem] border-2 font-black text-xs uppercase tracking-widest transition-all ${submitting ? 'opacity-20 cursor-not-allowed' : 'border-zinc-200 text-black hover:bg-gray-50'}`}
+                          >
+                            Clear
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -991,12 +1023,10 @@ export default function ManagerUsersPage() {
                             </div>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Date of Birth*</label>
-                            <input
-                              type="date"
+                            <BrutalistCalendar
+                              label="Date of Birth*"
                               value={formData.dateOfBirth}
-                              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                              onChange={(iso: string) => setFormData({ ...formData, dateOfBirth: iso })}
                             />
                           </div>
                           <div className="space-y-1.5">
@@ -1097,12 +1127,10 @@ export default function ManagerUsersPage() {
                             </p>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-black ml-1">Joining Date*</label>
-                            <input
-                              type="date"
+                            <BrutalistCalendar
+                              label="Joining Date*"
                               value={formData.joiningDate}
-                              onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
-                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                              onChange={(iso: string) => setFormData({ ...formData, joiningDate: iso })}
                             />
                           </div>
                         </div>
@@ -1577,7 +1605,7 @@ export default function ManagerUsersPage() {
                     </div>
 
                     {/* SECTION 6: DOCUMENTS */}
-                    <div className={`p-8 rounded-[2.5rem] border transition-all relative overflow-hidden group ${darkMode ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-white'}`}>
+                    <div className={`p-8 rounded-[2.5rem] border transition-all relative overflow-hidden group ${darkMode ? 'border-white/5 bg-white/5' : 'bg-white border-gray-200'}`}>
                       <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
                         <ShieldAlert size={120} />
                       </div>
@@ -1610,10 +1638,6 @@ export default function ManagerUsersPage() {
                               const files = e.target.files;
                               if (files) {
                                 Array.from(files).forEach(file => {
-                                  if (file.type.startsWith('image/') && file.type !== 'image/webp') {
-                                    toast.error(`File ${file.name} is not a WebP image`);
-                                    return;
-                                  }
                                   handleFileUpload(file, 'document');
                                 });
                               }
@@ -1655,6 +1679,7 @@ export default function ManagerUsersPage() {
                     {/* Final Action */}
                     <div className="pt-10">
                       <button
+                        type="button"
                         onClick={handleStaffSubmit}
                         disabled={submitting}
                         className="w-full group relative overflow-hidden h-24 rounded-[3rem] bg-indigo-600 text-white isolation-auto transition-all duration-700 hover:shadow-[0_0_50px_-12px_rgba(79,70,229,0.5)] active:scale-[0.98] disabled:opacity-50"

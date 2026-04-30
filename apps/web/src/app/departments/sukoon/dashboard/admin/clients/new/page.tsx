@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui';
 
 export default function AdmitPatientPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function AdmitPatientPage() {
   // Auth & UI State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
 
@@ -92,6 +93,7 @@ export default function AdmitPatientPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName || 
@@ -108,19 +110,19 @@ export default function AdmitPatientPage() {
     }
 
     setSubmitting(true);
+    setSubmitStatus('processing');
     setError('');
 
+    let patientDocId: string | null = null;
     try {
       // 1. Upload photo if selected
       let photoUrl = null;
       if (photoFile) {
-        setSubmitStatus('Uploading photo...');
         photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/rehab/patients');
       }
 
       // 2. Create patient document in Firestore
-      setSubmitStatus('Creating patient record...');
-      const patientRef = await addDoc(collection(db, 'rehab_patients'), {
+      const patientData = {
         name,
         fatherName,
         age: Number(age),
@@ -135,7 +137,7 @@ export default function AdmitPatientPage() {
         guardianFatherName: guardianFatherName || null,
         guardianRelation,
         guardianPhone,
-        contactNumber: guardianPhone, // used by AdmissionTab profile editor
+        contactNumber: guardianPhone,
         guardianCnic: guardianCnic || null,
         admissionDate: Timestamp.fromDate(new Date(admissionDate)),
         treatmentDuration: treatmentDuration === 'Custom' 
@@ -149,10 +151,12 @@ export default function AdmitPatientPage() {
         isActive: true,
         loginId: loginId.toUpperCase(),
         createdAt: Timestamp.now(),
-      });
+      };
+
+      const patientRef = await addDoc(collection(db, 'rehab_patients'), patientData);
+      patientDocId = patientRef.id;
 
       // 3. Create family login account linked to this patient
-      setSubmitStatus('Creating family login...');
       const result = await createRehabUserServer(
         loginId.toUpperCase(),
         loginPassword,
@@ -162,25 +166,34 @@ export default function AdmitPatientPage() {
       );
 
       if (!result.success) {
-        // Roll back the patient doc if the login account could not be created.
-        // This prevents "half-created" records from confusing future logins.
-        try {
-          await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
-        } catch {}
+        if (patientRef.id) {
+          try {
+            await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
+          } catch {}
+        }
 
+        setSubmitStatus('error');
         setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
         toast.error('Login account creation failed');
-        setSubmitting(false);
         return;
       }
 
-      setSubmitStatus('Done!');
+      setSubmitStatus('success');
       toast.success('Patient admitted successfully ✓');
-      router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      setTimeout(() => {
+        router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      }, 1500);
     } catch (err: any) {
       console.error(err);
+      if (patientDocId) {
+        try {
+          await deleteDoc(doc(db, 'rehab_patients', patientDocId));
+        } catch {}
+      }
+      setSubmitStatus('error');
       setError(err?.message || 'Something went wrong');
       toast.error('Submission failed');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -303,18 +316,10 @@ export default function AdmitPatientPage() {
               </div>
 
               <div className="space-y-1.5 mt-2">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  className={inputStyle}
-                  value={formatDateDMY(dateOfBirth)}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  onBlur={(e) => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setDateOfBirth(parsed.toISOString().split('T')[0]);
-                  }}
+                <BrutalistCalendar
+                  label="Date of Birth *"
+                  value={dateOfBirth}
+                  onChange={(iso) => setDateOfBirth(iso)}
                 />
               </div>
 
@@ -413,18 +418,10 @@ export default function AdmitPatientPage() {
               <SectionHeader icon={Calendar} title="Admission Details" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    className={inputStyle}
-                    value={formatDateDMY(admissionDate)}
-                    onChange={(e) => setAdmissionDate(e.target.value)}
-                    onBlur={(e) => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setAdmissionDate(parsed.toISOString().split('T')[0]);
-                    }}
+                  <BrutalistCalendar
+                    label="Admission Date *"
+                    value={admissionDate}
+                    onChange={(iso) => setAdmissionDate(iso)}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -493,21 +490,35 @@ export default function AdmitPatientPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
+                  submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                  submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                  'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-900/20'
+                }`}
               >
                 {submitting ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span className="animate-pulse">{submitStatus}</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>ADMITTING...</span>
+                  </>
+                ) : submitStatus === 'success' ? (
+                  <>
+                    <Shield size={20} className="text-emerald-200" />
+                    <span>ADMITTED</span>
+                  </>
+                ) : submitStatus === 'error' ? (
+                  <>
+                    <X size={20} className="text-rose-200" />
+                    <span>RETRY SYNC</span>
                   </>
                 ) : (
                   <>
-                    <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Admit Patient
+                    <Save size={20} />
+                    <span>ADMIT PATIENT</span>
                   </>
                 )}
               </button>
-              <Link href="/departments/rehab/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
+              <Link href="/departments/rehab/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors tracking-widest">
                 Cancel Registration
               </Link>
             </div>

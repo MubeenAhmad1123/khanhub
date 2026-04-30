@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase';
 import { createStudent, firestoreDate } from '@/lib/spims/students';
 import { createSpimsStudentUserServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { SPIMS_COURSES, type SpimsStudentStatus } from '@/types/spims';
+import { BrutalistCalendar } from '@/components/ui';
 
 const formatCnic = (val: string) => {
   const digits = val.replace(/\D/g, '').substring(0, 13);
@@ -33,6 +34,7 @@ export default function NewSpimsStudentPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [showPw, setShowPw] = useState(false);
 
   const [loginId, setLoginId] = useState('');
@@ -84,6 +86,7 @@ export default function NewSpimsStudentPage() {
   }, [router]);
 
   const submit = async () => {
+    if (submitting) return;
     if (!loginId.trim() || !loginPassword || loginPassword.length < 6) {
       toast.error('Login ID and password (6+ chars) required');
       return;
@@ -93,12 +96,12 @@ export default function NewSpimsStudentPage() {
       return;
     }
     const pkg = Number(totalPackage) || 0;
-    const initReceived = 0;
 
-    setSubmitting(true);
-    let studentDocId: string | null = null;
     try {
-      studentDocId = await createStudent({
+      setSubmitting(true);
+      setSubmitStatus('processing');
+      
+      const studentDocId = await createStudent({
         rollNo: rollNo.trim(),
         name: name.trim(),
         fatherName: fatherName.trim(),
@@ -149,20 +152,19 @@ export default function NewSpimsStudentPage() {
         try {
           await deleteDoc(doc(db, 'spims_students', studentDocId));
         } catch {}
+        setSubmitStatus('error');
         toast.error(authRes.error || 'Could not create login');
-        setSubmitting(false);
         return;
       }
 
-      toast.success('Student admitted');
-      router.push(`/departments/spims/dashboard/admin/students/${studentDocId}`);
+      setSubmitStatus('success');
+      toast.success('Student admitted ✓');
+      setTimeout(() => {
+        router.push(`/departments/spims/dashboard/admin/students/${studentDocId}`);
+      }, 1500);
     } catch (e: any) {
       console.error(e);
-      if (studentDocId) {
-        try {
-          await deleteDoc(doc(db, 'spims_students', studentDocId));
-        } catch {}
-      }
+      setSubmitStatus('error');
       toast.error(e?.message || 'Failed');
     } finally {
       setSubmitting(false);
@@ -344,7 +346,7 @@ export default function NewSpimsStudentPage() {
           {step < 3 ? (
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-black"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-black active:scale-95 transition-all"
               onClick={() => setStep((s) => Math.min(3, s + 1))}
             >
               Next <ChevronRight size={16} />
@@ -353,11 +355,34 @@ export default function NewSpimsStudentPage() {
             <button
               type="button"
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D9E75] text-white text-sm font-black disabled:opacity-50"
+              className={`inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-2xl disabled:opacity-50 ${
+                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                'bg-[#1D9E75] text-white shadow-emerald-900/10'
+              }`}
               onClick={submit}
             >
-              {submitting ? <Loader2 className="animate-spin w-4 h-4" /> : <Save size={16} />}
-              Submit admission
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin w-4 h-4" />
+                  <span>ADMITTING...</span>
+                </>
+              ) : submitStatus === 'success' ? (
+                <>
+                  <Save size={16} className="text-emerald-200" />
+                  <span>STUDENT ADMITTED</span>
+                </>
+              ) : submitStatus === 'error' ? (
+                <>
+                  <ChevronRight size={16} className="text-rose-200" />
+                  <span>RETRY SYNC</span>
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  <span>SUBMIT ADMISSION</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -381,17 +406,11 @@ function Field({
 }) {
   if (type === 'date') {
     return (
-      <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{label}</label>
-        <div className="relative group">
-          <input
-            type="date"
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold cursor-pointer transition-all hover:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none bg-white"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-          />
-        </div>
-      </div>
+      <BrutalistCalendar
+        label={label}
+        value={value}
+        onChange={onChange}
+      />
     );
   }
 

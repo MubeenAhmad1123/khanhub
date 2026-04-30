@@ -16,6 +16,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -110,6 +111,7 @@ export default function PatientDetailPage() {
   const [payAmt, setPayAmt] = useState('');
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
   const [payNote, setPayNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Canteen Tab State
   const [canteenMonth, setCanteenMonth] = useState(() => {
@@ -407,6 +409,8 @@ export default function PatientDetailPage() {
         createdAt: Timestamp.now()
       });
       setShowAddFeeModal(false);
+      setInitialPayment('');
+      setPaymentNote('');
       toast.success('Fee request sent to cashier for approval ✓');
     } catch (error) {
       console.error("Initialize Fee error", error);
@@ -1156,27 +1160,23 @@ export default function PatientDetailPage() {
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
-                   <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
-                      <input 
-                        type="date" 
-                        value={editForm.admissionDate} 
-                        onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
-                        className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
-                      />
-                   </div>
-
-                   {!patient.isActive && (
-                     <div className="md:col-span-2">
-                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discharge Date</label>
-                       <input 
-                         type="date" 
-                         value={editForm.dischargeDate} 
-                         onChange={e => setEditForm({...editForm, dischargeDate: e.target.value})} 
-                         className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                    <div className="md:col-span-2">
+                       <BrutalistCalendar
+                         label="Admission Date"
+                         value={editForm.admissionDate}
+                         onChange={iso => setEditForm({...editForm, admissionDate: iso})}
                        />
-                     </div>
-                   )}
+                    </div>
+
+                    {!patient.isActive && (
+                      <div className="md:col-span-2">
+                        <BrutalistCalendar
+                          label="Discharge Date"
+                          value={editForm.dischargeDate}
+                          onChange={iso => setEditForm({...editForm, dischargeDate: iso})}
+                        />
+                      </div>
+                    )}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
                     <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" />
@@ -1756,18 +1756,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
                   <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(paymentDate)}
-                    onChange={e => setPaymentDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date"
+                    value={paymentDate}
+                    onChange={setPaymentDate}
                   />
                 </div>
               </div>
@@ -1799,19 +1792,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
                   <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(payDate)}
-                    onChange={e => setPayDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date *"
+                    value={payDate}
+                    onChange={setPayDate}
                   />
                 </div>
               </div>
@@ -1853,19 +1838,11 @@ export default function PatientDetailPage() {
                   placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'} 
                 />
               </div>
-              <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(canteenDate)}
-                  onChange={e => setCanteenDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Transaction Date *"
+                  value={canteenDate}
+                  onChange={setCanteenDate}
                 />
               </div>
               <button 
@@ -1914,17 +1891,12 @@ export default function PatientDetailPage() {
                   <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(vDate)}
-                  onChange={e => setVDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
-                  }}
- className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+              <div className="space-y-1.5">
+                 <BrutalistCalendar
+                   label="Visit Date *"
+                   value={vDate}
+                   onChange={setVDate}
+                 />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>

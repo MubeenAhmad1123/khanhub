@@ -242,6 +242,11 @@ export function Spinner({
 }
 
 // ═══════════════════════════════════════════════════════
+// BRUTALIST CALENDAR
+// ═══════════════════════════════════════════════════════
+export { BrutalistCalendar } from './BrutalistCalendar';
+
+// ═══════════════════════════════════════════════════════
 // EXPORTS
 // Named exports for clean imports
 // ═══════════════════════════════════════════════════════

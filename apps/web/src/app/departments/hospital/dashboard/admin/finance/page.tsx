@@ -4,11 +4,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { 
-  TrendingUp, TrendingDown, DollarSign, Filter, 
+import { ChevronUp, ChevronDown, TrendingUp, TrendingDown, DollarSign, Filter, 
   Search, Calendar, Loader2, BarChart3, AlertCircle, CheckCircle
 } from 'lucide-react';
-import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { formatDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
+import { CsvExportButton } from '@/components/shared/CsvExportButton';
+import { cn } from '@/lib/utils';
 
 export default function FinanceLogPage() {
   const router = useRouter();
@@ -28,6 +30,10 @@ export default function FinanceLogPage() {
 
   const [transactions, setTransactions] = useState<any[]>([]);
   const [stats, setStats] = useState({ income: 0, expense: 0, net: 0 });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'date',
+    direction: 'desc'
+  });
 
   useEffect(() => {
     const sessionData = localStorage.getItem('hospital_session');
@@ -101,13 +107,31 @@ export default function FinanceLogPage() {
     fetchData();
   }, [session, fetchData]);
 
-  const clearFilters = () => {
-    setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
-    setDateTo(new Date().toISOString().split('T')[0]);
-    setTypeFilter('all');
-    setStatusFilter('all');
-    setCategoryFilter('all');
-    // The user will click Apply Filters to re-fetch
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    let aVal = a[sortConfig.key];
+    let bVal = b[sortConfig.key];
+
+    // Handle Firestore Timestamps
+    if (aVal?.toDate) aVal = aVal.toDate().getTime();
+    if (bVal?.toDate) bVal = bVal.toDate().getTime();
+    if (aVal instanceof Date) aVal = aVal.getTime();
+    if (bVal instanceof Date) bVal = bVal.getTime();
+
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortConfig.key !== column) return <Filter size={12} className="opacity-20 group-hover:opacity-100" />;
+    return sortConfig.direction === 'asc' ? <ChevronUp size={14} className="text-rose-900" /> : <ChevronDown size={14} className="text-rose-900" />;
   };
 
   const formatCategory = (cat: string) => {
@@ -140,7 +164,7 @@ export default function FinanceLogPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-rose-900" />
       </div>
     );
   }
@@ -160,46 +184,47 @@ export default function FinanceLogPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-emerald-600" />
+              <BarChart3 className="w-6 h-6 text-rose-900" />
               Finance Log
             </h1>
             <p className="text-sm text-gray-500 mt-1">Read-only financial overview & history</p>
           </div>
+
+          <CsvExportButton 
+            filename={`Hospital_Finance_${dateFrom}_to_${dateTo}.csv`}
+            rows={sortedTransactions.map(tx => ({
+              Date: formatDateDMY(tx.date?.toDate?.() ? tx.date.toDate() : tx.date),
+              Type: tx.type.toUpperCase(),
+              Category: formatCategory(tx.category),
+              Description: tx.description || '',
+              Amount: tx.amount,
+              Status: tx.status.toUpperCase(),
+              Cashier: tx.cashierId || ''
+            }))}
+          />
         </div>
 
         {/* Filter Bar */}
         <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
           <div className="flex items-center gap-2 text-sm font-bold text-gray-800 mb-4 pb-2 border-b border-gray-50">
-            <Filter className="w-4 h-4 text-emerald-600" /> Filters
+            <Filter className="w-4 h-4 text-rose-900" /> Filters
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">From</label>
-              <input
-                type="text"
-                placeholder="DD MM YYYY"
-                value={formatDateDMY(dateFrom)}
-                onChange={e => setDateFrom(e.target.value)}
-                onBlur={e => {
-                  const parsed = parseDateDMY(e.target.value);
-                  if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
-                }}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">From Date</label>
+              <BrutalistCalendar 
+                value={dateFrom}
+                onChange={setDateFrom}
+                className="bg-gray-50 border-gray-200"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">To</label>
-              <input
-                type="text"
-                placeholder="DD MM YYYY"
-                value={formatDateDMY(dateTo)}
-                onChange={e => setDateTo(e.target.value)}
-                onBlur={e => {
-                  const parsed = parseDateDMY(e.target.value);
-                  if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
-                }}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">To Date</label>
+              <BrutalistCalendar 
+                value={dateTo}
+                onChange={setDateTo}
+                className="bg-gray-50 border-gray-200"
               />
             </div>
             <div>
@@ -232,11 +257,22 @@ export default function FinanceLogPage() {
           </div>
           
           <div className="flex items-center justify-end gap-3 pt-6 mt-2 border-t border-gray-50">
-            <button onClick={clearFilters} className="text-sm font-medium text-gray-500 hover:text-gray-800 px-4 py-2 rounded-lg transition-colors hover:bg-gray-100">Clear</button>
+            <button 
+              onClick={() => {
+                setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
+                setDateTo(new Date().toISOString().split('T')[0]);
+                setTypeFilter('all');
+                setStatusFilter('all');
+                setCategoryFilter('all');
+              }} 
+              className="text-sm font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 px-4 py-2 rounded-xl transition-colors hover:bg-gray-100"
+            >
+              Reset
+            </button>
             <button 
               onClick={fetchData}
               disabled={queryLoading}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
+              className="bg-rose-900 hover:bg-rose-950 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
             >
               {queryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Apply Filters
@@ -270,13 +306,13 @@ export default function FinanceLogPage() {
 
           <div className="bg-white border border-emerald-100 rounded-2xl shadow-sm p-5 relative overflow-hidden group hover:shadow-md transition-all sm:col-span-1 md:col-span-1">
              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <DollarSign className="w-16 h-16 text-emerald-600" />
+              <DollarSign className="w-16 h-16 text-rose-900" />
             </div>
-            <div className="flex items-center gap-2 text-emerald-600 mb-3">
+            <div className="flex items-center gap-2 text-rose-900 mb-3">
               <DollarSign className="w-5 h-5" />
               <span className="font-black text-[10px] uppercase tracking-widest">Net Balance</span>
             </div>
-            <div className={`text-3xl font-black leading-none ${stats.net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            <div className={`text-3xl font-black leading-none ${stats.net >= 0 ? 'text-rose-900' : 'text-red-500'}`}>
               ₨{stats.net.toLocaleString('en-PK')}
             </div>
           </div>
@@ -290,14 +326,28 @@ export default function FinanceLogPage() {
                 <tr>
                   <th className="px-6 py-4">Type / Category</th>
                   <th className="px-6 py-4">Description</th>
-                  <th className="px-6 py-4">Date</th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors group"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Date <SortIcon column="date" />
+                    </div>
+                  </th>
                   <th className="px-6 py-4">Cashier</th>
-                  <th className="px-6 py-4 text-right">Amount (PKR)</th>
+                  <th 
+                    className="px-6 py-4 text-right cursor-pointer hover:bg-gray-100 transition-colors group"
+                    onClick={() => handleSort('amount')}
+                  >
+                    <div className="flex items-center justify-end gap-2">
+                      Amount (PKR) <SortIcon column="amount" />
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-gray-700">
-                {transactions.length === 0 ? (
+                {sortedTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-16 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -308,7 +358,7 @@ export default function FinanceLogPage() {
                     </td>
                   </tr>
                 ) : (
-                  transactions.map(tx => (
+                  sortedTransactions.map(tx => (
                     <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">

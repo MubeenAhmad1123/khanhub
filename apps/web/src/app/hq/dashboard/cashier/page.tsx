@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, deleteDoc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 import { db, auth } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -14,6 +14,7 @@ import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifica
 import { toast } from 'react-hot-toast';
 import { getCached, setCached } from '@/lib/queryCache';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
+import { BrutalistCalendar } from '@/components/ui';
 
 
 type TxnType = 'income' | 'expense';
@@ -105,10 +106,12 @@ export default function CashierStationPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyDateMode, setHistoryDateMode] = useState<DateMode>('today');
   const [historyFrom, setHistoryFrom] = useState('');
+  const [historyTo, setHistoryTo] = useState('');
   const [historyStatus, setHistoryStatus] = useState<StatusFilter>('all');
   const [historyType, setHistoryType] = useState<'all' | 'income' | 'expense'>('all');
   const [historyDepartment, setHistoryDepartment] = useState('all');
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   // Intelligence Stats
   const [intelStats, setIntelStats] = useState({
@@ -128,7 +131,6 @@ export default function CashierStationPage() {
     return null;
   };
 
-  const [historyTo, setHistoryTo] = useState('');
   const [historyStats, setHistoryStats] = useState({ income: 0, expense: 0, count: 0, students: 0, patients: 0, clients: 0 });
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
 
@@ -159,45 +161,58 @@ export default function CashierStationPage() {
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
   
-  // 1. Consolidated History Filtering (Base Filters + Duplicate Analysis)
+  // 1. Consolidated History Filtering & Sorting
   const historyFiltered = useMemo(() => {
-    // Stage 1: Base Application of Filters (Dept, Status, Type, Search)
-    const base = historyTxns.filter((tx) => {
-      // Department Filter
+    let result = historyTxns.filter((tx) => {
       if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
-
-      // Status Filter
       if (historyStatus !== 'all') {
         if (historyStatus === 'pending') {
           if (!['pending', 'pending_cashier'].includes(tx.status)) return false;
         } else if (tx.status !== historyStatus) return false;
       }
-
-      // Type Filter
       if (historyType !== 'all' && tx.type !== historyType) return false;
-
-      // Search Query Filter
       const q = searchQuery.trim().toLowerCase();
       if (!q) return true;
-      
       const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.donorName || ''} ${tx.donorId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
       return searchStr.includes(q);
     });
 
-    // Stage 2: Optional Duplicate Analysis
-    if (!showDuplicatesOnly) return base;
-
-    return base.filter((tx1, idx1) => {
-      return base.some((tx2, idx2) => {
-        if (idx1 === idx2) return false;
-        const date1 = getLocalDateString(tx1.transactionDate || tx1.date || tx1.createdAt);
-        const date2 = getLocalDateString(tx2.transactionDate || tx2.date || tx2.createdAt);
-        const entity1 = tx1.patientId || tx1.staffId || tx1.entityId || tx1.donorId;
-        const entity2 = tx2.patientId || tx2.staffId || tx2.entityId || tx2.donorId;
-        return tx1.amount === tx2.amount && date1 === date2 && entity1 === entity2 && !!entity1;
+    if (showDuplicatesOnly) {
+      result = result.filter((tx1, idx1) => {
+        return result.some((tx2, idx2) => {
+          if (idx1 === idx2) return false;
+          const date1 = getLocalDateString(tx1.transactionDate || tx1.date || tx1.createdAt);
+          const date2 = getLocalDateString(tx2.transactionDate || tx2.date || tx2.createdAt);
+          const entity1 = tx1.patientId || tx1.staffId || tx1.entityId || tx1.donorId;
+          const entity2 = tx2.patientId || tx2.staffId || tx2.entityId || tx2.donorId;
+          return tx1.amount === tx2.amount && date1 === date2 && entity1 === entity2 && !!entity1;
+        });
       });
+    }
+
+    // Client-side Sorting
+    result = [...result].sort((a, b) => {
+      const { key, direction } = sortConfig;
+      let valA: any, valB: any;
+
+      if (key === 'date') {
+        valA = toDate(a.transactionDate || a.date || a.createdAt)?.getTime() || 0;
+        valB = toDate(b.transactionDate || b.date || b.createdAt)?.getTime() || 0;
+      } else if (key === 'amount') {
+        valA = Number(a.amount || 0);
+        valB = Number(b.amount || 0);
+      } else {
+        valA = String(a[key as keyof typeof a] || '').toLowerCase();
+        valB = String(b[key as keyof typeof b] || '').toLowerCase();
+      }
+
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+      return 0;
     });
-  }, [historyTxns, searchQuery, historyDepartment, historyStatus, historyType, showDuplicatesOnly]);
+
+    return result;
+  }, [historyTxns, searchQuery, historyDepartment, historyStatus, historyType, showDuplicatesOnly, sortConfig]);
 
   // Optimized fetchHistory that uses filters and aggregation
   const fetchHistory = useCallback(async () => {
@@ -219,11 +234,9 @@ export default function CashierStationPage() {
 
       for (const dept of targetDepts) {
         try {
-          // ONLY use single-field queries — no composite indexes needed
           let q;
           
           if (historyDateMode === 'today') {
-            // Single where on 'date' field — no orderBy
             q = query(
               collection(db, dept.txCollection),
               where('date', '>=', todayTimestamp),
@@ -235,6 +248,17 @@ export default function CashierStationPage() {
               collection(db, dept.txCollection),
               where('createdAt', '>=', todayTimestamp),
               where('createdAt', '<', tomorrowTimestamp),
+              limit(50)
+            );
+          } else if (historyDateMode === 'yesterday') {
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStart = Timestamp.fromDate(yesterday);
+            const yesterdayEnd = todayTimestamp;
+            q = query(
+              collection(db, dept.txCollection),
+              where('date', '>=', yesterdayStart),
+              where('date', '<', yesterdayEnd),
               limit(50)
             );
           } else if (historyDateMode === 'range' && historyFrom) {
@@ -249,7 +273,6 @@ export default function CashierStationPage() {
               limit(100)
             );
           } else {
-            // 'all' mode — just get recent 50
             q = query(
               collection(db, dept.txCollection),
               limit(50)
@@ -269,7 +292,6 @@ export default function CashierStationPage() {
         }
       }
 
-      // ALL filtering is client-side — no Firestore composite indexes needed
       all.sort((a, b) => {
         const dateA = toDate(a.transactionDate || a.date || a.createdAt);
         const dateB = toDate(b.transactionDate || b.date || b.createdAt);
@@ -278,7 +300,6 @@ export default function CashierStationPage() {
       
       setHistoryTxns(all);
       
-      // Calculate stats from fetched data
       const income = all.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
       const expense = all.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
       setHistoryStats({ 
@@ -309,9 +330,6 @@ export default function CashierStationPage() {
       const staffMode = entity._entityType === 'staff' || (targetDeptCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary');
 
       if (targetDeptCode === 'spims' && !staffMode) {
-        // spims_transactions uses studentId field
-        // spims_fees also uses studentId field
-        // Fetch BOTH in parallel
         const [txSnap, feesSnap] = await Promise.all([
           getDocs(query(
             collection(db, 'spims_transactions'), 
@@ -327,7 +345,6 @@ export default function CashierStationPage() {
         
         const map = new Map<string, any>();
         
-        // Add transactions first
         txSnap.docs.forEach(d => {
           map.set(d.id, { 
             id: d.id, 
@@ -336,16 +353,12 @@ export default function CashierStationPage() {
           });
         });
         
-        // Add fee records that don't have a matching transaction
         feesSnap.docs.forEach(d => {
           const feeData = d.data();
-          // Check if this fee is already linked to a transaction
           const linkedTxId = feeData.linkedTransactionId;
           if (linkedTxId && map.has(linkedTxId)) {
-            // Already covered by transaction — skip to avoid duplicate
             return;
           }
-          // Add as standalone fee entry
           map.set('fee_' + d.id, { 
             id: d.id, 
             ...feeData,
@@ -361,7 +374,6 @@ export default function CashierStationPage() {
         
         list = Array.from(map.values());
       } else {
-        // Map department code to correct ID field
         const idFieldMap: Record<string, string> = {
           'rehab': 'patientId',
           'hospital': 'patientId', 
@@ -416,7 +428,6 @@ export default function CashierStationPage() {
       const { deleteDoc, doc } = await import('firebase/firestore');
       await deleteDoc(doc(db, dept.txCollection, tx.id));
       
-      // If it was a fee payment in SPIMS, we might want to update the fee doc too
       if (tx.departmentCode === 'spims' && tx.feePaymentId) {
         await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
       }
@@ -431,8 +442,6 @@ export default function CashierStationPage() {
       setProcessing(false);
     }
   };
-
-  // ─── 4. Hooks & Effects (Ordered by Dependency) ───────────────────────────
 
   async function loadCustomCategories() {
     const cacheKey = 'hq_cashier_categories_list';
@@ -570,7 +579,6 @@ export default function CashierStationPage() {
         cashierRejectReason: reason,
       });
       if (rejectModalTx.feePaymentId) {
-        // Automatically handle fee status for all departments
         const feeCol = col.replace('_transactions', '_fees');
         try {
           await updateDoc(doc(db, feeCol, rejectModalTx.feePaymentId), { status: 'rejected_cashier' });
@@ -578,13 +586,13 @@ export default function CashierStationPage() {
           console.warn(`[HQ Cashier] could not update linked fee in ${feeCol}:`, err);
         }
       }
-      setMessage({ type: 'success', text: 'Request rejected and sent back to admin.' });
+      toast.success('Request rejected successfully');
       setRejectModalTx(null);
       setRejectReason('');
       await fetchHistory();
     } catch (err: any) {
       console.error('[HQ Cashier] reject error:', err);
-      setMessage({ type: 'error', text: `${err?.code || 'error'}: ${err?.message || 'Failed to reject request.'}` });
+      toast.error('Failed to reject: ' + (err?.message || 'Error'));
     } finally {
       setRejecting(false);
     }
@@ -642,14 +650,14 @@ export default function CashierStationPage() {
         actionUrl: '/hq/dashboard/superadmin/approvals',
       });
 
-      setMessage({ type: 'success', text: 'Request sent to superadmin approvals.' });
+      toast.success('Request forwarded to superadmin');
       setForwardModalTx(null);
       setForwardProofFile(null);
       setForwardProofReason('');
       await fetchHistory();
     } catch (err: any) {
       console.error('[HQ Cashier] forward error:', err);
-      setMessage({ type: 'error', text: `${err?.code || 'error'}: ${err?.message || 'Failed to forward request.'}` });
+      toast.error('Failed to forward: ' + (err?.message || 'Error'));
     } finally {
       setIncomingActionId(null);
       setForwardProofUploading(false);
@@ -685,7 +693,7 @@ export default function CashierStationPage() {
           const data = firstDoc.data();
           const result = { id: firstDoc.id, customId: data.customId || 'SUPERADMIN' };
           setSuperadminRecipient(result);
-          setCached(cacheKey, result, 600); // 10 mins
+          setCached(cacheKey, result, 600); 
         }
       } catch {
         setSuperadminRecipient({ id: '', customId: 'SUPERADMIN' });
@@ -750,7 +758,7 @@ export default function CashierStationPage() {
       }
 
       setAllEntities(all);
-      setCached(cacheKey, all, 300); // 5 mins
+      setCached(cacheKey, all, 300); 
     } catch (err) {
       console.error('[HQ Cashier] Universal Search Load Error:', err);
     } finally {
@@ -779,7 +787,6 @@ export default function CashierStationPage() {
       
       if (!queryMatch) return false;
 
-      // Filter by searchType
       if (searchType === 'patient') {
         return p._entityType === 'patient' || p._entityType === 'client' || p._entityType === 'seeker' || p._entityType === 'donor';
       }
@@ -789,7 +796,7 @@ export default function CashierStationPage() {
       if (searchType === 'staff') {
         return p._entityType === 'staff' || p._collection?.includes('users') || p._collection?.includes('staff');
       }
-      return true; // 'all'
+      return true;
     });
     setSearchResults(matches.slice(0, 15));
     setSearchOpen(true);
@@ -907,7 +914,6 @@ export default function CashierStationPage() {
           createPayload.category = hospCategory;
           createPayload.categoryName = hospCategory.replace('_', ' ').toUpperCase();
         } else {
-          // fallback custom category for hospital expenses like staff_salary etc
           createPayload.category = selectedCategory.id;
           createPayload.categoryName = selectedCategory.name;
         }
@@ -915,7 +921,6 @@ export default function CashierStationPage() {
 
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
 
-      // CREATE SPIMS FEE DOC IF NEEDED
       if (departmentCode === 'spims' && selectedCategory.id === 'fee' && selectedEntity) {
         try {
           const feeRef = await addDoc(collection(db, 'spims_fees'), {
@@ -928,35 +933,30 @@ export default function CashierStationPage() {
             receivedBy: session?.displayName || session?.name || 'HQ Cashier',
             type: spimsFeeSubtype || 'monthly',
             note: description || `Payment via HQ Cashier`,
-            status: 'pending', // Match transaction status
+            status: 'pending', 
             createdBy: session?.uid,
             createdAt: Timestamp.now(),
             linkedTransactionId: txRef.id
           });
 
-          // Link back to transaction
           await updateDoc(txRef, { feePaymentId: feeRef.id });
         } catch (err) {
           console.error('[HQ Cashier] SPIMS Fee Sync Error:', err);
-          // Rollback main transaction if fee sync fails to prevent orphaned records
           await deleteDoc(txRef).catch(() => {});
           throw new Error('Transaction failed: Could not sync with SPIMS fees system. Please try again.');
         }
       }
 
-      // Handle Fine Reset for Staff Salary
       if (isStaffMode && selectedCategoryId === 'staff_salary' && selectedEntity) {
         const prefix = departmentCode.replace('-', '_');
         const entityCollection = prefix === 'hq' ? 'hq_users' : `${prefix}_staff`;
         
-        // Reset staff cycle
         await updateDoc(doc(db, entityCollection, selectedEntity.id), {
           totalFines: 0,
-          presentDays: 0, // Reset days as per user request
+          presentDays: 0,
           lastSalaryPaidAt: Timestamp.now()
         }).catch(err => console.error("Failed to reset staff cycle:", err));
 
-        // Mark individual fines as paid
         try {
           const finesSnap = await getDocs(query(
             collection(db, `${prefix}_fines`),
@@ -976,7 +976,6 @@ export default function CashierStationPage() {
         }
       }
 
-      // Notify superadmin of new transaction pending approval
       void sendHqPushNotification({
         recipientId: superadminRecipient.customId,
         recipientUid: superadminRecipient.id,
@@ -988,10 +987,8 @@ export default function CashierStationPage() {
         actionUrl: '/hq/dashboard/superadmin/approvals',
       });
 
-      setMessage({ type: 'success', text: 'Amount Submitted Successfully!' });
-      toast.success('Amount Submitted Successfully!');
+      toast.success('Transaction submitted successfully ✓');
       
-      // Clear all fields
       setSelectedEntity(null);
       setAmount('');
       setDescription('');
@@ -1002,7 +999,6 @@ export default function CashierStationPage() {
       setSearchQuery('');
       setEntityResults([]);
       
-      // Clear Hospital fields if any
       setHospPatientName('');
       setHospGuardian('');
       setHospAge('');
@@ -1021,6 +1017,7 @@ export default function CashierStationPage() {
       await fetchHistory();
     } catch (err: any) {
       console.error('[HQ Cashier] submitTx error:', err);
+      toast.error(err?.message || 'Transaction failed');
       setMessage({ type: 'error', text: `${err?.code || 'error'}: ${err?.message || 'Failed to submit transaction.'}` });
     } finally {
       setProcessing(false);
@@ -1030,7 +1027,6 @@ export default function CashierStationPage() {
 
   const todayStr = getLocalDateString(new Date());
   
-  // Client-side filtering as fallback/refinement
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     const todayTxns = historyTxns.filter(t => t.date === today && t.status !== 'pending_cashier');
@@ -1053,10 +1049,7 @@ export default function CashierStationPage() {
     });
   }, [historyTxns, incomingFeeReqs]);
 
-  // historyFiltered now handles both base filtering and duplicate analysis
-
   const totals = useMemo(() => {
-    // We use historyStats if we just fetched, otherwise calculate from historyFiltered
     if (historyStats.count > 0 && historyFiltered.length === historyTxns.length) {
       return { income: historyStats.income, expense: historyStats.expense, net: historyStats.income - historyStats.expense };
     }
@@ -1077,7 +1070,6 @@ export default function CashierStationPage() {
     <div className="min-h-screen bg-[#FCFBF8] py-6 md:py-16 transition-colors duration-500">
       <div className="max-w-[1600px] mx-auto px-4 md:px-12">
         
-        {/* MASTER CONTROL HUB - HEADER & UNIVERSAL SEARCH */}
         <div className="space-y-12 mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
             <div className="flex items-center gap-8">
@@ -1292,7 +1284,6 @@ export default function CashierStationPage() {
             )}
           </div>
 
-          {/* Quick Statistics */}
           <div className="grid grid-cols-2 gap-4 md:gap-6">
             <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
               <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
@@ -1305,12 +1296,9 @@ export default function CashierStationPage() {
               <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.expense.toLocaleString()}</h4>
             </div>
           </div>
-
-          {/* The old search section was here, it's now at the top */}
         </div>
 
         <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-1 lg:order-2">
-          {/* ACTION CONSOLE */}
           <div className="bg-white rounded-[3rem] md:rounded-[4rem] border border-zinc-100 p-8 md:p-14 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
@@ -1380,7 +1368,6 @@ export default function CashierStationPage() {
                     </div>
                   </div>
 
-                  {/* History Quick View - Compact Register Style */}
                   {entityHistory.length > 0 && (
                     <div className="space-y-8 px-4">
                       <div className="flex items-center justify-between">
@@ -1441,7 +1428,6 @@ export default function CashierStationPage() {
               <form onSubmit={submitTx} className="space-y-16 pt-10 border-t border-zinc-100">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20">
                   <div className="space-y-12">
-                    {/* Department Selection - POS Style */}
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department Vector</label>
@@ -1470,7 +1456,6 @@ export default function CashierStationPage() {
                       </div>
                     </div>
 
-                    {/* Financial Flow - HIGH CONTRAST */}
                     <div className="space-y-6">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Directional Flow</label>
                       <div className="grid grid-cols-2 gap-6">
@@ -1503,7 +1488,6 @@ export default function CashierStationPage() {
                       </div>
                     </div>
 
-                    {/* Hospital Specific Logistics */}
                     {departmentCode === 'hospital' && (
                       <div className="p-10 bg-zinc-50 rounded-[3rem] border-2 border-zinc-100 space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                         <div className="flex items-center gap-5">
@@ -1557,7 +1541,17 @@ export default function CashierStationPage() {
                   </div>
 
                   <div className="space-y-12">
-                    {/* Amount Input - MASTER CONTROL */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between px-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Transaction Date</label>
+                      </div>
+                      <BrutalistCalendar
+                        value={txDate}
+                        onChange={(iso) => setTxDate(iso)}
+                        className="bg-white"
+                      />
+                    </div>
+
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol Value (PKR)</label>
@@ -1581,7 +1575,6 @@ export default function CashierStationPage() {
                       </div>
                     </div>
 
-                    {/* Classification Selection */}
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Target Category</label>
@@ -1615,7 +1608,6 @@ export default function CashierStationPage() {
                       </div>
                     </div>
 
-                    {/* Submission Metadata */}
                     <div className="space-y-8 pt-6 border-t border-zinc-100">
                       <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Protocol Narration</label>
@@ -1645,7 +1637,7 @@ export default function CashierStationPage() {
             </div>
           </div>
         </div>
-        {/* Journal Log Section */}
+        
         <div className="mt-16 md:mt-24 space-y-12 lg:col-span-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
             <div className="flex items-center gap-8">
@@ -1688,19 +1680,21 @@ export default function CashierStationPage() {
 
               {historyDateMode === 'range' && (
                 <div className="flex items-center gap-3 animate-in slide-in-from-right-4">
-                  <input 
-                    type="date" 
-                    value={historyFrom} 
-                    onChange={(e) => setHistoryFrom(e.target.value)}
-                    className="h-14 bg-white border border-zinc-100 rounded-2xl px-5 text-[10px] font-black uppercase tracking-widest"
-                  />
+                  <div className="w-[180px]">
+                    <BrutalistCalendar
+                      value={historyFrom}
+                      onChange={(iso) => setHistoryFrom(iso)}
+                      className="bg-white border border-zinc-100 rounded-2xl"
+                    />
+                  </div>
                   <span className="text-zinc-300 font-black">→</span>
-                  <input 
-                    type="date" 
-                    value={historyTo} 
-                    onChange={(e) => setHistoryTo(e.target.value)}
-                    className="h-14 bg-white border border-zinc-100 rounded-2xl px-5 text-[10px] font-black uppercase tracking-widest"
-                  />
+                  <div className="w-[180px]">
+                    <BrutalistCalendar
+                      value={historyTo}
+                      onChange={(iso) => setHistoryTo(iso)}
+                      className="bg-white border border-zinc-100 rounded-2xl"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1737,17 +1731,40 @@ export default function CashierStationPage() {
             </div>
           </div>
 
-          {/* Desktop Log Table */}
           <div className="hidden md:block bg-white rounded-[3.5rem] border-2 border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-zinc-50/50 border-b-2 border-zinc-100 h-28">
-                    <th className="px-12 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Timestamp</th>
-                    <th className="px-12 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Entity Node</th>
-                    <th className="px-12 text-left text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol</th>
-                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow</th>
-                    <th className="px-12 text-right text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Status</th>
+                    <th className="px-12 text-left cursor-pointer hover:bg-zinc-100 transition-colors group/h" onClick={() => setSortConfig({key: 'date', direction: sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'asc' : 'desc'})}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Timestamp</span>
+                        {sortConfig.key === 'date' && (
+                          <div className="text-indigo-600 animate-in fade-in zoom-in duration-300">
+                            {sortConfig.direction === 'asc' ? <ArrowUp size={12} strokeWidth={3} /> : <ArrowDown size={12} strokeWidth={3} />}
+                          </div>
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-12 text-left">
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Entity Node</span>
+                    </th>
+                    <th className="px-12 text-left">
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol</span>
+                    </th>
+                    <th className="px-12 text-right cursor-pointer hover:bg-zinc-100 transition-colors group/h" onClick={() => setSortConfig({key: 'amount', direction: sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'asc' : 'desc'})}>
+                      <div className="flex items-center justify-end gap-2">
+                        {sortConfig.key === 'amount' && (
+                          <div className="text-indigo-600 animate-in fade-in zoom-in duration-300">
+                            {sortConfig.direction === 'asc' ? <ArrowUp size={12} strokeWidth={3} /> : <ArrowDown size={12} strokeWidth={3} />}
+                          </div>
+                        )}
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow</span>
+                      </div>
+                    </th>
+                    <th className="px-12 text-right">
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Status</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y-2 divide-zinc-50">
@@ -1840,7 +1857,7 @@ export default function CashierStationPage() {
 
             <div className="p-10 space-y-8">
               <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-[2rem] flex justify-between items-center group">
-                <span className="text-[10px] font-black uppercase text-indigo-500 tracking-[0.3em]">Quantum Magnitude</span>
+                <span className="text-[10px] font-black uppercase text-indigo-500 tracking-[0.3em] ml-2">Quantum Magnitude</span>
                 <span className="text-2xl font-[1000] text-indigo-600">Rs {Number(forwardModalTx.amount || 0).toLocaleString()}</span>
               </div>
 
@@ -2086,8 +2103,8 @@ function EntityProfileModal({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved'>('all');
+  const [profileSortConfig, setProfileSortConfig] = useState<{ key: 'date' | 'amount'; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
-  // Quick Add State
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newTx, setNewTx] = useState({
@@ -2121,10 +2138,9 @@ function EntityProfileModal({
         status: 'pending_cashier',
         type: 'income',
         departmentCode: deptCode,
-        cashierId: 'CASHIER', // Placeholder or real ID
+        cashierId: 'CASHIER',
       };
 
-      // Map correct ID field
       if (deptCode === 'spims') {
         payload.studentId = entity.id;
         payload.studentName = entity.name || entity.fullName;
@@ -2139,13 +2155,12 @@ function EntityProfileModal({
 
       const docRef = await addDoc(collection(db, dept.txCollection), payload);
       
-      // Update local view
       const freshDoc = { id: docRef.id, ...payload, _collection: dept.txCollection };
       setLocalTxns(prev => [freshDoc, ...prev]);
       
       setShowAddForm(false);
       setNewTx({ amount: '', category: 'fee', categoryName: 'Admission / Fees', date: new Date().toISOString().split('T')[0], description: '' });
-      toast.success('Transaction added to queue');
+      toast.success('Transaction added successfully ✓');
       if (onRefetch) onRefetch();
     } catch (err: any) {
       toast.error('Failed to add: ' + (err.message || 'Error'));
@@ -2177,7 +2192,7 @@ function EntityProfileModal({
       setLocalTxns(prev => prev.map(t => t.id === tx.id ? { ...t, ...updatePayload, amount: Number(editForm.amount) } : t));
       setEditingId(null);
       setEditForm(null);
-      toast.success('Record updated successfully');
+      toast.success('Record updated successfully ✓');
       if (onRefetch) onRefetch();
     } catch (err: any) {
       toast.error('Update failed: ' + (err.message || 'Unknown error'));
@@ -2186,7 +2201,6 @@ function EntityProfileModal({
     }
   };
 
-  // Fetch BOTH transactions and fees fresh from Firestore
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -2200,7 +2214,6 @@ function EntityProfileModal({
         const results: any[] = [];
 
         if (deptCode === 'spims') {
-          // SPIMS often uses Roll Number as the ID in some collections and UID in others
           const visualId = entity.studentId || entity.rollNumber || entity.customId;
           
           const [txSnap, txSnapAlt, feesSnap, feesSnapAlt] = await Promise.all([
@@ -2220,10 +2233,8 @@ function EntityProfileModal({
             txMap.set(d.id, { id: d.id, ...d.data(), _collection: 'spims_transactions' });
           });
           
-          // Add transactions to results
           results.push(...Array.from(txMap.values()));
           
-          // Add fee records
           const feeMap = new Map<string, any>();
           [...feesSnap.docs, ...feesSnapAlt.docs].forEach(d => {
             feeMap.set(d.id, { id: d.id, ...d.data() });
@@ -2267,7 +2278,6 @@ function EntityProfileModal({
           });
         }
 
-        // Sort by date descending
         results.sort((a, b) => {
           const tA = toDate(a.transactionDate || a.date || a.createdAt).getTime();
           const tB = toDate(b.transactionDate || b.date || b.createdAt).getTime();
@@ -2288,7 +2298,6 @@ function EntityProfileModal({
   const handleDelete = async (tx: any) => {
     if (!window.confirm(`Delete this ${tx.status} transaction of Rs ${Number(tx.amount).toLocaleString()}? This cannot be undone.`)) return;
     
-    // Derive collection name safely
     let targetCollection = tx._collection;
     if (!targetCollection) {
       const deptCode = tx.departmentCode || entity?._deptCode;
@@ -2305,7 +2314,7 @@ function EntityProfileModal({
     try {
       await deleteDoc(doc(db, targetCollection, tx.id));
       setLocalTxns(prev => prev.filter(t => t.id !== tx.id));
-      toast.success('Transaction deleted');
+      toast.success('Transaction deleted ✓');
       if (onRefetch) onRefetch();
     } catch (err: any) {
       toast.error('Delete failed: ' + (err.message || 'Unknown error'));
@@ -2314,11 +2323,27 @@ function EntityProfileModal({
     }
   };
 
-  const filtered = localTxns.filter(t => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'pending') return ['pending', 'pending_cashier'].includes(t.status);
-    return t.status === filterStatus;
-  });
+  const filtered = useMemo(() => {
+    let result = localTxns.filter(t => {
+      if (filterStatus === 'all') return true;
+      if (filterStatus === 'pending') return ['pending', 'pending_cashier'].includes(t.status);
+      return t.status === filterStatus;
+    });
+
+    result.sort((a, b) => {
+      if (profileSortConfig.key === 'date') {
+        const tA = toDate(a.transactionDate || a.date || a.createdAt).getTime();
+        const tB = toDate(b.transactionDate || b.date || b.createdAt).getTime();
+        return profileSortConfig.direction === 'asc' ? tA - tB : tB - tA;
+      } else {
+        const valA = Number(a.amount || 0);
+        const valB = Number(b.amount || 0);
+        return profileSortConfig.direction === 'asc' ? valA - valB : valB - valA;
+      }
+    });
+
+    return result;
+  }, [localTxns, filterStatus, profileSortConfig]);
 
   const totalPackage = entity.totalPackage || entity.packageAmount || 0;
   const totalApproved = localTxns
@@ -2333,7 +2358,6 @@ function EntityProfileModal({
     <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
       <div className="relative w-full max-w-5xl h-[98vh] md:h-[92vh] bg-white rounded-t-[2.5rem] md:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
         
-        {/* Header */}
         <div className="bg-zinc-900 px-6 md:px-8 py-6 md:py-8 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
@@ -2362,7 +2386,6 @@ function EntityProfileModal({
           </div>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0 overflow-hidden">
           <div className="p-4 md:p-6 border-r border-b md:border-b-0 border-zinc-100">
             <p className="text-[9px] md:text-xs font-black text-zinc-400 uppercase tracking-widest mb-1">Total Package</p>
@@ -2382,7 +2405,6 @@ function EntityProfileModal({
           </div>
         </div>
 
-        {/* Filter Bar & Quick Add Toggle */}
         <div className="flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 border-b border-zinc-100 flex-shrink-0 bg-zinc-50 gap-4">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest whitespace-nowrap">Filter:</span>
@@ -2414,17 +2436,14 @@ function EntityProfileModal({
           </button>
         </div>
 
-        {/* Quick Add Form */}
         {showAddForm && (
           <div className="p-6 bg-indigo-50 border-b border-indigo-100 animate-in slide-in-from-top-4 duration-500">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-indigo-400">Date</label>
-                <input 
-                  type="date" 
+                <BrutalistCalendar
+                  label="Date"
                   value={newTx.date}
-                  onChange={(e) => setNewTx({...newTx, date: e.target.value})}
-                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
+                  onChange={(iso: string) => setNewTx({...newTx, date: iso})}
                 />
               </div>
               <div className="space-y-2">
@@ -2470,8 +2489,7 @@ function EntityProfileModal({
           </div>
         )}
 
-        {/* Transaction List */}
-            <div className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-0">
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-0">
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 size={32} className="animate-spin text-indigo-600" />
@@ -2483,14 +2501,37 @@ function EntityProfileModal({
             </div>
           ) : (
             <>
-              {/* Desktop View */}
               <div className="hidden md:block">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-zinc-50 border-b border-zinc-100">
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Date</th>
+                      <th 
+                        className="px-6 py-4 text-left cursor-pointer hover:bg-zinc-100 transition-colors"
+                        onClick={() => setProfileSortConfig({ key: 'date', direction: profileSortConfig.key === 'date' && profileSortConfig.direction === 'desc' ? 'asc' : 'desc' })}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Date</span>
+                          {profileSortConfig.key === 'date' && (
+                            <div className="text-indigo-600">
+                              {profileSortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                            </div>
+                          )}
+                        </div>
+                      </th>
                       <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Description</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">Amount</th>
+                      <th 
+                        className="px-6 py-4 text-right cursor-pointer hover:bg-zinc-100 transition-colors"
+                        onClick={() => setProfileSortConfig({ key: 'amount', direction: profileSortConfig.key === 'amount' && profileSortConfig.direction === 'desc' ? 'asc' : 'desc' })}
+                      >
+                        <div className="flex items-center justify-end gap-2">
+                          {profileSortConfig.key === 'amount' && (
+                            <div className="text-indigo-600">
+                              {profileSortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                            </div>
+                          )}
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Amount</span>
+                        </div>
+                      </th>
                       <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">Status</th>
                       <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">Action</th>
                     </tr>
@@ -2502,11 +2543,9 @@ function EntityProfileModal({
                         <tr key={tx.id} className={cn("hover:bg-zinc-50 transition-colors group", isEditing && "bg-indigo-50/50")}>
                           <td className="px-6 py-4">
                             {isEditing ? (
-                              <input 
-                                type="date" 
-                                className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                              <BrutalistCalendar
                                 value={editForm.date}
-                                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                onChange={(iso: string) => setEditForm({ ...editForm, date: iso })}
                               />
                             ) : (
                               <span className="text-sm font-bold text-zinc-700 whitespace-nowrap">
@@ -2578,9 +2617,10 @@ function EntityProfileModal({
                                 <>
                                   <button
                                     onClick={() => handleUpdate(tx)}
-                                    className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg"
+                                    disabled={loading}
+                                    className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg disabled:opacity-50"
                                   >
-                                    <Check size={16} />
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                   </button>
                                   <button
                                     onClick={() => { setEditingId(null); setEditForm(null); }}
@@ -2628,7 +2668,6 @@ function EntityProfileModal({
                 </table>
               </div>
 
-              {/* Mobile Card View */}
               <div className="md:hidden space-y-3">
                 {filtered.map((tx) => {
                   const isEditing = editingId === tx.id;
@@ -2640,11 +2679,10 @@ function EntityProfileModal({
                     )}>
                       {isEditing ? (
                         <div className="space-y-3">
-                          <input 
-                            type="date" 
-                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
+                          <BrutalistCalendar
                             value={editForm.date}
-                            onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                            onChange={(iso) => setEditForm({ ...editForm, date: iso })}
+                            className="bg-zinc-50 border border-zinc-100 rounded-xl"
                           />
                           <select 
                             className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold"
@@ -2663,8 +2701,21 @@ function EntityProfileModal({
                             onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
                           />
                           <div className="flex gap-2">
-                            <button onClick={() => handleUpdate(tx)} className="flex-1 bg-emerald-500 text-white h-12 rounded-xl font-black text-[10px] uppercase tracking-widest">Update</button>
-                            <button onClick={() => { setEditingId(null); setEditForm(null); }} className="flex-1 bg-zinc-100 text-zinc-400 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest text-center">Cancel</button>
+                            <button 
+                              onClick={() => handleUpdate(tx)} 
+                              disabled={loading}
+                              className="flex-1 bg-emerald-500 text-white h-12 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                              {loading && <Loader2 size={14} className="animate-spin" />}
+                              Update
+                            </button>
+                            <button 
+                              onClick={() => { setEditingId(null); setEditForm(null); }} 
+                              disabled={loading}
+                              className="flex-1 bg-zinc-100 text-zinc-400 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest text-center"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         </div>
                       ) : (

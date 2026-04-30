@@ -4,24 +4,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  LayoutDashboard, 
-  Users, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X, 
-  ChevronRight,
-  Bell,
-  Search,
-  Activity,
-  UserCircle,
-  ShieldCheck,
-  ClipboardList,
-  FileText,
-  CreditCard,
-  ShoppingBag,
   Sun,
-  Moon
+  Moon,
+  PhoneCall,Search,
+  LayoutDashboard, ShieldCheck, FileText, Activity, ClipboardList, UserCircle, Menu, X, LogOut, ChevronRight, GraduationCap, Heart, Building2, Shield, ArrowLeft, ExternalLink, Calculator, TrendingUp
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
@@ -37,6 +23,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { title: 'Overview', href: '/departments/hospital/dashboard/admin', icon: LayoutDashboard, roles: ['admin'] },
+  { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['admin'] },
   { title: 'SuperAdmin', href: '/departments/hospital/dashboard/superadmin', icon: ShieldCheck, roles: ['superadmin'] },
   { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },

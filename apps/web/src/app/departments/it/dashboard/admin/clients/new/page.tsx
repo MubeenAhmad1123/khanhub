@@ -5,13 +5,14 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   Plus, Building2, ArrowLeft, Save, 
-  User, Mail, Phone, Globe, Briefcase
+  User, Mail, Phone, Globe, Briefcase,
+  Loader2, Shield, X
 } from 'lucide-react';
-import { Spinner } from '@/components/ui';
 
 export default function NewITClientPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [session, setSession] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -36,22 +37,28 @@ export default function NewITClientPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (submitting) return;
 
     try {
-      setLoading(true);
+      setSubmitting(true);
+      setSubmitStatus('processing');
+      
       await addDoc(collection(db, 'it_clients'), {
         ...formData,
         status: 'active',
         activeProjects: 0,
         createdAt: serverTimestamp(),
       });
-      router.push('/departments/it/dashboard/admin/clients');
+
+      setSubmitStatus('success');
+      setTimeout(() => {
+        router.push('/departments/it/dashboard/admin/clients');
+      }, 1500);
     } catch (err: any) {
       console.error('Add client error:', err?.message);
-      alert('Failed to add client. Please try again.');
+      setSubmitStatus('error');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -171,11 +178,35 @@ export default function NewITClientPage() {
 
           <div className="flex justify-end pt-6">
             <button
-              disabled={loading}
+              disabled={submitting}
               type="submit"
-              className="flex items-center gap-3 px-12 py-5 bg-black text-white rounded-[2.5rem] font-black text-lg hover:bg-indigo-600 transition-all active:scale-95 shadow-2xl shadow-black/20 disabled:opacity-50"
+              className={`flex items-center gap-3 px-12 py-5 rounded-[2.5rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 ${
+                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                'bg-black text-white hover:bg-indigo-600 shadow-black/20'
+              }`}
             >
-              {loading ? <Spinner size="sm" showText={false} /> : <><Save size={20} /> Onboard Client</>}
+              {submitting ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Onboarding...</span>
+                </>
+              ) : submitStatus === 'success' ? (
+                <>
+                  <Shield size={20} className="text-emerald-200" />
+                  <span>Onboarded</span>
+                </>
+              ) : submitStatus === 'error' ? (
+                <>
+                  <X size={20} className="text-rose-200" />
+                  <span>Retry Sync</span>
+                </>
+              ) : (
+                <>
+                  <Save size={20} />
+                  <span>Onboard Client</span>
+                </>
+              )}
             </button>
           </div>
         </form>

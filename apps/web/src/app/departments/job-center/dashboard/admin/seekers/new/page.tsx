@@ -16,6 +16,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { JobSeeker } from '@/types/job-center';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 export default function RegisterSeekerPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function RegisterSeekerPage() {
   // Auth & UI State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
   // SECTION 1: Login Credentials
@@ -140,6 +141,7 @@ export default function RegisterSeekerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
 
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName ||
@@ -155,18 +157,18 @@ export default function RegisterSeekerPage() {
     }
 
     setSubmitting(true);
+    setSubmitStatus('processing');
     setError('');
 
+    let seekerDocId: string | null = null;
     try {
       // 1. Upload photo if selected
       let photoUrl = '';
       if (photoFile) {
-        setSubmitStatus('Uploading photo...');
         photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/jobcenter/seekers');
       }
 
       // 2. Generate Seeker Number
-      setSubmitStatus('Generating Seeker ID...');
       const seekersQuery = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(1));
       const seekersSnap = await getDocs(seekersQuery);
       const lastSeeker = seekersSnap.docs[0]?.data();
@@ -174,7 +176,6 @@ export default function RegisterSeekerPage() {
       const seekerNumber = `JC-S-${String(nextSerial).padStart(3, '0')}`;
 
       // 3. Create seeker document in Firestore
-      setSubmitStatus('Creating Job Seeker record...');
       const seekerData: Omit<JobSeeker, 'id'> = {
         name,
         fatherName,
@@ -200,39 +201,48 @@ export default function RegisterSeekerPage() {
         createdAt: Timestamp.now(),
       } as unknown as JobSeeker;
 
-    const seekerRef = await addDoc(collection(db, 'jobcenter_seekers'), seekerData);
+      const seekerRef = await addDoc(collection(db, 'jobcenter_seekers'), seekerData);
+      seekerDocId = seekerRef.id;
 
-    // 3. Create seeker login account
-    setSubmitStatus('Creating seeker login...');
-    const result = await createJobCenterUserServer(
-      loginId.toUpperCase(),
-      loginPassword,
-      'seeker',
-      name,
-      seekerRef.id
-    );
+      // 3. Create seeker login account
+      const result = await createJobCenterUserServer(
+        loginId.toUpperCase(),
+        loginPassword,
+        'seeker',
+        name,
+        seekerRef.id
+      );
 
-    if (!result.success) {
-      try {
-        await deleteDoc(doc(db, 'jobcenter_seekers', seekerRef.id));
-      } catch { }
+      if (!result.success) {
+        try {
+          await deleteDoc(doc(db, 'jobcenter_seekers', seekerRef.id));
+        } catch { }
 
-      setError(`Registration failed: ${result.error}. Please choose a different Seeker Login ID.`);
-      toast.error('Login account creation failed');
+        setSubmitStatus('error');
+        setError(`Registration failed: ${result.error}. Please choose a different Seeker Login ID.`);
+        toast.error('Login account creation failed');
+        return;
+      }
+
+      setSubmitStatus('success');
+      toast.success('Job Seeker registered successfully ✓');
+      setTimeout(() => {
+        router.push(`/departments/job-center/dashboard/admin/seekers/${seekerRef.id}`);
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      if (seekerDocId) {
+        try {
+          await deleteDoc(doc(db, 'jobcenter_seekers', seekerDocId));
+        } catch { }
+      }
+      setSubmitStatus('error');
+      setError(err?.message || 'Something went wrong');
+      toast.error('Submission failed');
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    setSubmitStatus('Done!');
-    toast.success('Job Seeker registered successfully ✓');
-    router.push(`/departments/job-center/dashboard/admin/seekers/${seekerRef.id}`);
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || 'Something went wrong');
-    toast.error('Submission failed');
-    setSubmitting(false);
-  }
-};
+  };
 
 if (loading) {
   return (
@@ -356,13 +366,10 @@ return (
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 col-span-full">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input 
-                  type="date"
-                  required 
-                  className={inputStyle}
+                <BrutalistCalendar
+                  label="Date of Birth *"
                   value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  onChange={setDateOfBirth}
                 />
               </div>
               <div className="space-y-1.5">
@@ -573,17 +580,31 @@ return (
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
+                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-900/10'
+              }`}
             >
               {submitting ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span className="animate-pulse">{submitStatus}</span>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Registering...</span>
+                </>
+              ) : submitStatus === 'success' ? (
+                <>
+                  <Shield size={20} className="text-emerald-200" />
+                  <span>Seeker Registered</span>
+                </>
+              ) : submitStatus === 'error' ? (
+                <>
+                  <X size={20} className="text-rose-200" />
+                  <span>Retry Sync</span>
                 </>
               ) : (
                 <>
-                  <Save size={18} className="group-hover:scale-110 transition-transform" />
-                  Complete Registration
+                  <Save size={20} />
+                  <span>Complete Registration</span>
                 </>
               )}
             </button>

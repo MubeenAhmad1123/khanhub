@@ -6,13 +6,14 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { 
   Users, ArrowLeft, UserPlus, 
   User, Mail, Phone, Shield, 
-  Briefcase, Lock, Loader2, Plus
+  Briefcase, Lock, Loader2, Plus, X, Save
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function NewITStaffPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,18 +27,27 @@ export default function NewITStaffPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setLoading(true);
+      setSubmitting(true);
+      setSubmitStatus('processing');
+      
       await addDoc(collection(db, 'it_staff'), {
         ...formData,
         status: 'active',
         createdAt: Timestamp.now()
       });
+      
+      setSubmitStatus('success');
       toast.success('Engineer onboarded successfully');
-      router.push('/departments/it/dashboard/admin/staff');
+      
+      setTimeout(() => {
+        router.push('/departments/it/dashboard/admin/staff');
+      }, 1500);
     } catch (err: any) {
+      console.error('Onboarding error:', err);
+      setSubmitStatus('error');
       toast.error('Onboarding failed: ' + err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -150,11 +160,34 @@ export default function NewITStaffPage() {
             </button>
             <button 
               type="submit"
-              disabled={loading}
-              className="px-12 py-5 bg-black text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-3 shadow-2xl shadow-black/10 active:scale-95 disabled:opacity-50"
+              disabled={submitting}
+              className={`px-12 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl active:scale-95 disabled:opacity-50 ${
+                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                'bg-black text-white hover:bg-indigo-600 shadow-black/10'
+              }`}
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              Initialize Engineer
+              {submitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Initializing...
+                </>
+              ) : submitStatus === 'success' ? (
+                <>
+                  <Shield size={16} className="text-emerald-200" />
+                  Onboarded
+                </>
+              ) : submitStatus === 'error' ? (
+                <>
+                  <X size={16} className="text-rose-200" />
+                  Retry Sync
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  Initialize Engineer
+                </>
+              )}
             </button>
           </div>
         </form>

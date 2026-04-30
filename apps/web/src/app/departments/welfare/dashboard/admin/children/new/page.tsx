@@ -9,14 +9,15 @@ import {
   Heart, User, Users, Home, GraduationCap, 
   Baby, ShieldCheck, FileText, Save, Loader2,
   ChevronLeft, AlertCircle, Calendar, Plus, Trash2,
-  Phone, MapPin, Briefcase, CreditCard
+  Phone, MapPin, Briefcase, CreditCard, Shield, X
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 export default function NewChildAdmissionPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [session, setSession] = useState<any>(null);
 
   // Form State
@@ -126,10 +127,8 @@ export default function NewChildAdmissionPage() {
     if (!formData.fullName) { toast.error('Full Name is required'); return; }
 
     try {
-      setLoading(true);
-      
-      // Generate Custom ID (Optional, can be automated)
-      // For now, let firestore autogenerate ID, we can add a counter later
+      setSubmitting(true);
+      setSubmitStatus('processing');
       
       const docRef = await addDoc(collection(db, 'welfare_children'), {
         ...formData,
@@ -138,13 +137,17 @@ export default function NewChildAdmissionPage() {
         createdByName: session.displayName
       });
 
+      setSubmitStatus('success');
       toast.success('Child admission recorded successfully!');
-      router.push(`/departments/welfare/dashboard/admin/children`);
+      setTimeout(() => {
+        router.push(`/departments/welfare/dashboard/admin/children`);
+      }, 1500);
     } catch (error) {
       console.error('Submit error:', error);
+      setSubmitStatus('error');
       toast.error('Failed to save admission');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -552,11 +555,34 @@ export default function NewChildAdmissionPage() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 md:flex-none px-12 py-4 bg-teal-500 text-white rounded-2xl text-sm font-black hover:bg-teal-400 transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 uppercase tracking-widest"
+                disabled={submitting}
+                className={`flex-1 md:flex-none px-12 py-4 rounded-2xl text-sm font-black transition-all shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  submitStatus === 'success' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+                  submitStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
+                  'bg-teal-500 text-white hover:bg-teal-400 shadow-teal-500/20'
+                }`}
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={20} />}
-                Submit Case
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : submitStatus === 'success' ? (
+                  <>
+                    <Shield size={20} className="text-emerald-200" />
+                    <span>Admission Saved</span>
+                  </>
+                ) : submitStatus === 'error' ? (
+                  <>
+                    <X size={20} className="text-rose-200" />
+                    <span>Retry Sync</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={20} />
+                    <span>Submit Case</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

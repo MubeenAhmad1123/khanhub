@@ -16,6 +16,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 import DailySheetTab from '@/components/hospital/patient-profile/DailySheetTab';
 import ProgressTab from '@/components/hospital/patient-profile/ProgressTab';
@@ -1494,18 +1495,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
                   <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(paymentDate)}
-                    onChange={e => setPaymentDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date"
+                    value={paymentDate}
+                    onChange={setPaymentDate}
                   />
                 </div>
               </div>
@@ -1537,19 +1531,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
                   <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(payDate)}
-                    onChange={e => setPayDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date *"
+                    value={payDate}
+                    onChange={setPayDate}
                   />
                 </div>
               </div>
@@ -1591,19 +1577,11 @@ export default function PatientDetailPage() {
                   placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'} 
                 />
               </div>
-              <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(canteenDate)}
-                  onChange={e => setCanteenDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Transaction Date *"
+                  value={canteenDate}
+                  onChange={setCanteenDate}
                 />
               </div>
               <button 
@@ -1652,19 +1630,11 @@ export default function PatientDetailPage() {
                   <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(vDate)}
-                  onChange={e => setVDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Visit Date *"
+                  value={vDate}
+                  onChange={setVDate}
                 />
               </div>
               <div className="space-y-1">
