@@ -800,12 +800,17 @@ service cloud.firestore {
     //  - superadmin/manager can update users (e.g. isActive)
     //  - owner can update limited profile fields only
     match /hq_users/{docId} {
-      allow read: if (request.auth != null && (request.auth.uid == docId || isHqTier1()))
-        || isDiscoveryQuery();
+      allow read: if (
+        request.auth != null && (
+          request.auth.uid == docId 
+          || request.auth.token.get('role', '') in ['superadmin', 'manager', 'cashier']
+          || isSystemAdmin()
+        )
+      ) || isDiscoveryQuery();
       allow create, delete: if false;
       allow update: if isHqSuperOrManager()
         || (
-          isHqAuth()
+          request.auth != null
           && request.auth.uid == docId
           && request.resource.data.diff(resource.data)
               .affectedKeys()

@@ -53,7 +53,7 @@ export default function DailyReportPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'manager') {
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
       router.push('/hq/login');
       return;
     }
@@ -69,7 +69,7 @@ export default function DailyReportPage() {
           .catch(() => ({ docs: [] } as any))
       ));
       const allStaff: any[] = [];
-      const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel'];
+      const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker'];
 
       staffSnaps.forEach((snap, i) => {
         snap.docs.forEach((doc: any) => {
