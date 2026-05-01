@@ -1,6 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React, { useState } from 'react';
+import { 
+  Calendar, Clock, CheckCircle2, TrendingUp, DollarSign, 
+  Users, ChevronDown, Receipt, ArrowUpRight, ArrowDownLeft
+} from 'lucide-react';
 
 type Payment = {
   date: string; // e.g. "28 12 2025"
@@ -24,210 +28,196 @@ interface FinanceHistoryProps {
 }
 
 export default function FinanceHistory({ payments, monthlyDetails }: FinanceHistoryProps) {
-  // Combine and sort events by date if necessary, but for this specific "Road/Timeline"
-  // we follow the prompt's layout: alternating items.
-  
+  const [expandedMonths, setExpandedMonths] = useState<Record<number, boolean>>({ 0: true });
+
+  const toggleMonth = (idx: number) => {
+    setExpandedMonths(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+  };
+
+  const overallPaid = monthlyDetails.reduce((acc, curr) => acc + curr.totalPaid, 0);
+  const overallRemaining = monthlyDetails.reduce((acc, curr) => acc + curr.remaining, 0);
+
   return (
-    <div className="w-full py-12 px-4 sm:px-6 lg:px-8 bg-gray-50/50 rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-12">
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">Financial Journey</h2>
-          <p className="text-gray-500 font-medium mt-2">A complete timeline of your payments and monthly balances</p>
-        </div>
+    <div className="w-full bg-slate-50/50 dark:bg-gray-950/20 py-8 sm:py-12 px-0 overflow-visible relative">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        
+        {/* Aesthetic Page Header */}
+        <div className="mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 sm:p-8 rounded-3xl shadow-sm">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 border border-indigo-100/50">
+                <Calendar size={12} /> Family Portal Statement
+              </div>
+              <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
+                Your Account <span className="text-indigo-600 dark:text-indigo-400">Statement</span>
+              </h1>
+              <p className="text-slate-500 font-bold flex items-center gap-2 text-sm">
+                <Users size={16} className="text-indigo-400" /> Complete financial summary and billing receipts
+              </p>
+            </div>
 
-        {/* DESKTOP LAYOUT (Horizontal Road) */}
-        <div className="hidden md:block relative min-h-[600px] py-20 px-10 overflow-x-auto no-scrollbar">
-          {/* Legend */}
-          <div className="absolute top-0 right-10 flex gap-6 text-[10px] font-black uppercase tracking-wider">
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-teal-500 shadow-sm shadow-teal-200" />
-                <span className="text-teal-600">Monthly Status</span>
-             </div>
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-600 shadow-sm shadow-blue-200" />
-                <span className="text-blue-600">Payment Entry</span>
-             </div>
-          </div>
-
-          {/* The Road/Path */}
-          <div className="absolute top-1/2 left-0 w-full h-4 bg-gray-200 rounded-full -translate-y-1/2 shadow-inner" />
-          <div className="absolute top-1/2 left-0 w-full h-1 bg-white/40 border-t-2 border-dashed border-gray-300 -translate-y-1/2" />
-
-          {/* Timeline Items */}
-          <div className="relative flex justify-between items-center gap-40 min-w-max h-full">
-            {monthlyDetails.map((detail, idx) => {
-              const relatedPayments = payments.filter(p => {
-                const [d, m, y] = p.date.split(' ');
-                // Simple month matching for demo - in real app would be more robust
-                return detail.month.includes(m === '12' ? 'December' : ''); 
-              });
-
-              return (
-                <div key={idx} className="relative flex flex-col items-center">
-                  {/* Monthly Card (ABOVE) */}
-                  <div className="absolute bottom-[60px] animate-fade-in-up" style={{ animationDelay: `${idx * 200}ms` }}>
-                    <div className="w-64 bg-white p-6 rounded-[2rem] shadow-xl shadow-teal-500/5 border border-teal-100 hover:-translate-y-2 transition-transform duration-500 group">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-2xl bg-teal-500 flex items-center justify-center text-white shadow-lg shadow-teal-200 group-hover:scale-110 transition-transform">
-                          <span className="font-black text-xs">{idx + 1}</span>
-                        </div>
-                        <h3 className="font-black text-gray-900">{detail.month}</h3>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-xs font-bold">
-                          <span className="text-gray-400 uppercase tracking-widest">Total Due</span>
-                          <span className="text-gray-900">Rs. {detail.totalDue.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between text-xs font-bold">
-                          <span className="text-gray-400 uppercase tracking-widest">Paid</span>
-                          <span className="text-emerald-600">Rs. {detail.totalPaid.toLocaleString()}</span>
-                        </div>
-                        <div className="pt-3 border-t border-gray-100 flex justify-between text-sm font-black">
-                          <span className="text-gray-900">Remaining</span>
-                          <span className={detail.remaining > 0 ? 'text-red-500' : 'text-teal-600'}>
-                            Rs. {detail.remaining.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Connector Line */}
-                      <div className="absolute -bottom-10 left-1/2 w-0.5 h-10 bg-gradient-to-t from-teal-500 to-transparent" />
-                    </div>
-                  </div>
-
-                  {/* Road Point */}
-                  <div className="w-10 h-10 rounded-full bg-white border-[6px] border-teal-500 shadow-lg shadow-teal-200 z-10 hover:scale-125 transition-transform cursor-pointer" />
-
-                  {/* Payment Cards (BELOW) */}
-                  <div className="absolute top-[60px] left-1/2 -translate-x-1/2 flex gap-6">
-                    {relatedPayments.map((p, pIdx) => (
-                      <div key={pIdx} className="w-72 bg-white p-6 rounded-[2rem] shadow-xl shadow-blue-500/5 border border-blue-100 hover:translate-y-2 transition-transform duration-500 group animate-fade-in-down" style={{ animationDelay: `${(idx * 200) + (pIdx * 100)}ms` }}>
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest">
-                            {p.type}
-                          </span>
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                            p.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' : 
-                            p.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {p.status}
-                          </span>
-                        </div>
-                        <div className="mb-4">
-                          <p className="text-2xl font-black text-gray-900">Rs. {p.amount.toLocaleString()}</p>
-                          <p className="text-xs font-bold text-gray-400 mt-1">{p.date}</p>
-                        </div>
-                        {p.note && (
-                          <div className="p-3 bg-gray-50 rounded-2xl mb-3">
-                            <p className="text-[11px] text-gray-600 font-medium leading-relaxed italic italic">"{p.note}"</p>
-                          </div>
-                        )}
-                        <div className="pt-3 border-t border-gray-100 flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-black">
-                            {p.receivedBy?.[0] || 'K'}
-                          </div>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
-                            Received by <span className="text-gray-900">{p.receivedBy || 'Sir Khan'}</span>
-                          </p>
-                        </div>
-                        {/* Connector Line */}
-                        <div className="absolute -top-10 left-1/2 w-0.5 h-10 bg-gradient-to-b from-blue-500 to-transparent" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <SummaryStats icon={<ArrowUpRight size={16} />} label="Total Deposited" value={`₨${overallPaid.toLocaleString('en-PK')}`} color="bg-emerald-50/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/60 dark:border-emerald-800/40" />
+              <SummaryStats icon={<ArrowDownLeft size={16} />} label="Remaining Balance" value={`₨${overallRemaining.toLocaleString('en-PK')}`} color="bg-rose-50/50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-100/60 dark:border-rose-800/40" />
+            </div>
           </div>
         </div>
 
-        {/* MOBILE LAYOUT (Vertical Timeline) */}
-        <div className="md:hidden relative pb-20">
-          {/* Vertical Road */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-2 bg-gray-200 -translate-x-1/2 rounded-full overflow-hidden shadow-inner">
-            <div className="absolute inset-0 w-0.5 left-1/2 h-full border-l-2 border-dashed border-gray-300 -translate-x-1/2" />
-          </div>
-
-          <div className="space-y-24 relative">
-            {monthlyDetails.map((detail, idx) => {
-              const relatedPayments = payments.filter(p => {
-                const [, m] = p.date.split(' ');
-                return detail.month.includes(m === '12' ? 'December' : '');
+        {/* Ledger Balance Sheets */}
+        <div className="space-y-6">
+          {monthlyDetails.map((detail, idx) => {
+            const relatedPayments = payments.filter(p => {
+              const parts = p.date.split(' ');
+              const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+              return monthNames.some((mName, mIdx) => {
+                const mNum = String(mIdx + 1).padStart(2, '0');
+                return detail.month.includes(mName) && (parts.includes(mName) || parts.includes(mNum) || parts.includes(String(mIdx + 1)));
               });
+            });
 
-              return (
-                <div key={idx} className="relative">
-                  {/* Road Point */}
-                  <div className="absolute left-1/2 -translate-x-1/2 top-0 w-8 h-8 rounded-full bg-white border-[4px] border-teal-500 shadow-lg shadow-teal-200 z-10" />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Left: Monthly Info */}
-                    <div className="pr-6 pt-10">
-                      <div className="bg-white p-4 rounded-3xl shadow-lg border border-teal-50 shadow-teal-500/10 animate-fade-in-left">
-                        <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mb-1">Status</p>
-                        <h3 className="font-black text-gray-900 text-sm mb-3">{detail.month}</h3>
-                        <div className="space-y-1.5 pt-2 border-t border-gray-50">
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-gray-400 font-bold uppercase">Paid</span>
-                            <span className="text-emerald-600 font-black">Rs. {detail.totalPaid/1000}k</span>
-                          </div>
-                          <div className="flex justify-between text-[11px] pt-1 border-t border-gray-50">
-                            <span className="text-gray-900 font-black">Rem.</span>
-                            <span className="text-red-500 font-black">Rs. {detail.remaining/1000}k</span>
-                          </div>
-                        </div>
-                      </div>
+            return (
+              <div key={idx} className="bg-white dark:bg-slate-900/60 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800/60 overflow-hidden group">
+                
+                {/* Expandable Period Panel */}
+                <div 
+                  onClick={() => toggleMonth(idx)}
+                  className="p-6 sm:p-8 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/40 px-3 py-1 rounded-full border border-indigo-100/50 dark:border-indigo-800/30 mb-2 inline-block">
+                        Billing Period
+                      </span>
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Statement: {detail.month}
+                      </h2>
                     </div>
-
-                    {/* Right: Payments */}
-                    <div className="pl-6 pt-20 space-y-6">
-                      {relatedPayments.map((p, pIdx) => (
-                        <div key={pIdx} className="bg-white p-4 rounded-3xl shadow-lg border border-blue-50 shadow-blue-500/10 animate-fade-in-right">
-                          <div className="flex justify-between items-start mb-2">
-                             <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                {p.type}
-                             </span>
-                             <span className="text-[8px] font-bold text-gray-400">{p.date.split(' ').slice(0,2).join(' ')}</span>
-                          </div>
-                          <p className="text-base font-black text-gray-900">Rs. {p.amount.toLocaleString()}</p>
-                          {p.note && <p className="text-[9px] text-gray-500 font-medium mt-1 mt-1 leading-tight line-clamp-2">"{p.note}"</p>}
-                          <div className="mt-2 text-[8px] font-bold text-gray-400 uppercase tracking-wide">
-                            by <span className="text-gray-900">{p.receivedBy || 'Sir Khan'}</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className={`w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 ${expandedMonths[idx] ? 'rotate-180 bg-indigo-600 text-white' : ''}`}>
+                      <ChevronDown size={20} />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-100/60 dark:border-slate-800/40">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Bill / Package</p>
+                      <p className="text-lg font-black text-slate-800 dark:text-slate-200">₨{detail.totalDue.toLocaleString('en-PK')}</p>
+                    </div>
+                    <div className="bg-emerald-50/40 dark:bg-emerald-900/10 rounded-2xl p-4 border border-emerald-100/40 dark:border-emerald-800/20">
+                      <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Paid Amount</p>
+                      <p className="text-lg font-black text-emerald-700 dark:text-emerald-400">₨{detail.totalPaid.toLocaleString('en-PK')}</p>
+                    </div>
+                    <div className="bg-rose-50/40 dark:bg-rose-900/10 rounded-2xl p-4 border border-rose-100/40 dark:border-rose-800/20">
+                      <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1">Amount Due</p>
+                      <p className="text-lg font-black text-rose-700 dark:text-rose-400">₨{detail.remaining.toLocaleString('en-PK')}</p>
+                    </div>
+                  </div>
+
+                  {/* Elegant Progress Line */}
+                  <div className="mt-6 h-2 w-full bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${detail.remaining === 0 ? 'bg-emerald-500' : 'bg-indigo-600'}`}
+                      style={{ width: `${Math.min(100, (detail.totalPaid / detail.totalDue) * 100)}%` }}
+                    />
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Individual Receipts Table */}
+                <div className={`border-t border-slate-50 dark:border-slate-800/40 bg-slate-50/20 dark:bg-slate-800/10 overflow-hidden transition-all duration-500 ease-in-out ${
+                  expandedMonths[idx] ? 'max-h-[1000px] opacity-100 p-6 sm:p-8' : 'max-h-0 opacity-0'
+                }`}>
+                  <div className="space-y-4">
+                    {relatedPayments.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 dark:text-slate-600 text-sm italic">
+                        No individual payment transactions recorded for this month.
+                      </div>
+                    ) : (
+                      relatedPayments.map((p, pIdx) => (
+                        <div key={pIdx} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-indigo-50/80 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                                <Receipt size={20} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Credit Receipt</p>
+                                <h4 className="text-xl font-black text-emerald-600 dark:text-emerald-400 leading-none mt-0.5">
+                                  + ₨{p.amount.toLocaleString('en-PK')}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <Clock size={12} className="text-slate-400" />
+                                  <span className="text-xs text-slate-500 font-bold">{p.date}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-center">
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                p.status === 'Approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
+                                p.status === 'Pending' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 
+                                'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
+                              }`}>
+                                {p.status}
+                              </span>
+                              <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full border border-slate-200/50 dark:border-slate-700/50">
+                                {p.type || 'Standard Payment'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {(p.note || p.receivedBy) && (
+                            <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800/50 flex flex-col sm:flex-row gap-4 text-xs font-bold leading-relaxed">
+                              {p.receivedBy && (
+                                <div className="flex-1">
+                                  <span className="text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[9px] block mb-1">Verified By</span>
+                                  <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40 w-fit">
+                                    <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-[10px] text-indigo-700 dark:text-indigo-400">
+                                      {p.receivedBy.charAt(0)}
+                                    </div>
+                                    {p.receivedBy}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {p.note && (
+                                <div className="flex-1">
+                                  <span className="text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[9px] block mb-1">Receipt Note</span>
+                                  <div className="text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40 italic">
+                                    "{p.note}"
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer info */}
+        <div className="mt-12 text-center">
+          <p className="text-slate-400 dark:text-slate-600 text-[10px] font-black uppercase tracking-wider">
+            Official Family Portal Statement
+          </p>
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeInDown {
-          from { opacity: 0; transform: translateY(-30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeInLeft {
-          from { opacity: 0; transform: translateX(-30px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes fadeInRight {
-          from { opacity: 0; transform: translateX(30px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-fade-in-down { animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-fade-in-left { animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-fade-in-right { animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 }
+
+const SummaryStats = ({ icon, label, value, color }: { icon: any, label: string, value: string, color: string }) => (
+  <div className={`flex flex-col p-4 sm:px-6 sm:py-4 rounded-2xl border shadow-sm flex-1 min-w-[150px] ${color}`}>
+    <div className="flex items-center gap-2 mb-1 opacity-70">
+      {icon}
+      <span className="text-[10px] uppercase font-black tracking-widest">{label}</span>
+    </div>
+    <span className="text-base sm:text-xl font-black tracking-tight">{value}</span>
+  </div>
+);
