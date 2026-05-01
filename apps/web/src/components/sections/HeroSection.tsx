@@ -136,7 +136,7 @@ const ImageCarousel = memo(function ImageCarousel() {
     <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12 rounded-full flex items-center justify-center">
       {/* 3D Static Circle Background */}
       <div 
-        className="w-full h-full rounded-full overflow-hidden relative flex items-center justify-center bg-[#F0F7FB] border border-neutral-100/60 shadow-lg"
+        className="w-full h-full rounded-full overflow-hidden relative flex items-center justify-center bg-white sm:bg-[#F0F7FB] border border-neutral-100/60 shadow-lg"
         style={{
           transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
           transformStyle: 'preserve-3d',
