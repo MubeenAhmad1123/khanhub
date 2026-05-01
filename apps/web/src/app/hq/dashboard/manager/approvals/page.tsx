@@ -14,6 +14,19 @@ import { awardStaffPoint } from '@/app/hq/actions/points';
 
 type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it' | 'urgent';
 
+function getValidDate(t: any): Date | null {
+  if (!t) return null;
+  if (t.createdAt) {
+    if (t.createdAt.seconds) return new Date(t.createdAt.seconds * 1000);
+    if (t.createdAt._seconds) return new Date(t.createdAt._seconds * 1000);
+    if (t.createdAt instanceof Date) return t.createdAt;
+    if (typeof t.createdAt.toDate === 'function') return t.createdAt.toDate();
+    if (typeof t.createdAt === 'string') return new Date(t.createdAt);
+  }
+  if (t.date) return new Date(t.date);
+  return null;
+}
+
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -86,8 +99,8 @@ export default function ManagerApprovalsPage() {
         }));
 
         enriched.sort((a, b) => {
-          const dateA = a.createdAt?.seconds || 0;
-          const dateB = b.createdAt?.seconds || 0;
+          const dateA = getValidDate(a)?.getTime() || 0;
+          const dateB = getValidDate(b)?.getTime() || 0;
           return dateB - dateA;
         });
 
@@ -257,7 +270,9 @@ export default function ManagerApprovalsPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-lg md:text-xl text-gray-900 tracking-tight leading-none mb-1">{t.title}</p>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t.createdAt?.seconds ? timeAgo(new Date(t.createdAt.seconds * 1000).toISOString()) : 'Just now'}</p>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                        {getValidDate(t) ? timeAgo(getValidDate(t)!.toISOString()) : 'Just now'}
+                      </p>
                     </div>
                   </div>
 
@@ -268,7 +283,9 @@ export default function ManagerApprovalsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date Submitted</p>
-                      <p className="font-bold text-gray-800 text-sm">{t.createdAt?.seconds ? formatDateDMY(new Date(t.createdAt.seconds * 1000).toISOString()) : '—'}</p>
+                      <p className="font-bold text-gray-800 text-sm">
+                        {getValidDate(t) ? formatDateDMY(getValidDate(t)!.toISOString()) : '—'}
+                      </p>
                     </div>
                   </div>
 
