@@ -253,7 +253,7 @@ export default function PatientsListPage() {
   const totalOutstanding = 0; // Disabled global sum to save reads. Total outstanding is now viewed per-patient.
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#FDFDFD] p-4 md:p-8 w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

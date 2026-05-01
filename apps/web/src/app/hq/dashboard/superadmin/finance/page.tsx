@@ -327,15 +327,23 @@ export default function SuperadminFinancePage() {
 
   // ── Fetch breakdown for selected date ─────────────────────────────────────
   const fetchDayData = useCallback(async (dateStr: string) => {
-    if (!dateStr) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       setDailyResult(null);
       return;
     }
     setFilterLoading(true);
     try {
-      // Parse YYYY-MM-DD
+      // Parse YYYY-MM-DD safely
       const [y, m, d] = dateStr.split("-").map(Number);
+      if (isNaN(y) || isNaN(m) || isNaN(d)) {
+        setDailyResult(null);
+        return;
+      }
       const targetDate = new Date(y, m - 1, d, 12, 0, 0); // noon to avoid TZ edge cases
+      if (isNaN(targetDate.getTime())) {
+        setDailyResult(null);
+        return;
+      }
       const result = await fetchDailyBreakdown(targetDate);
       setDailyResult(result);
       // expand all depts that have data
@@ -358,8 +366,11 @@ export default function SuperadminFinancePage() {
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setSelectedDate(val);
-    if (val) fetchDayData(val);
-    else setDailyResult(null);
+    if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      fetchDayData(val);
+    } else {
+      setDailyResult(null);
+    }
   };
 
   const clearDateFilter = () => {
@@ -552,18 +563,9 @@ export default function SuperadminFinancePage() {
             <div className="flex items-center gap-4 flex-1">
               <div className="relative flex-1 max-w-md">
                 <input
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(selectedDate)}
+                  type="date"
+                  value={selectedDate}
                   onChange={handleDateChange}
-                  onBlur={(e) => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) {
-                      const val = parsed.toISOString().split("T")[0];
-                      setSelectedDate(val);
-                      fetchDayData(val);
-                    }
-                  }}
                   className={cn(
                     "w-full px-8 py-5 rounded-[2rem] bg-gray-50 border border-gray-100 text-sm font-black text-gray-900 uppercase tracking-widest",
                     "focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all",
