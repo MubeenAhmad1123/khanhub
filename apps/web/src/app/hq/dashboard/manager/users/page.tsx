@@ -481,11 +481,17 @@ export default function ManagerUsersPage() {
       return;
     }
 
+    const targetUserId = formData.userId || formData.customId;
+    if (!targetUserId || !formData.password) {
+      setMessage({ type: 'error', text: 'User ID and Password are strictly compulsory to create any profile.' });
+      toast.error('User ID and Password are compulsory.');
+      return;
+    }
+
     setSubmitting(true);
     setMessage(null);
     setLastCreated(null);
 
-    const targetUserId = formData.userId || formData.customId;
     if (targetUserId) {
       const uniqueness = await checkIdUniqueness(targetUserId);
       if (!uniqueness.isUnique) {
@@ -498,31 +504,31 @@ export default function ManagerUsersPage() {
     try {
       const empId = formData.employeeId || generateEmployeeId();
       let loginUserId = null;
-      const pass = formData.password || 'admin123';
+      const pass = formData.password;
 
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
 
-      if (formData.createAccount) {
-        const res = await createRehabUserServer(
-          formData.userId || formData.customId || empId.toLowerCase(),
-          pass,
-          'staff',
-          `${formData.firstName} ${formData.lastName}`,
-          undefined,
-          deptDetails.emailDomain,
-          getDeptCollection(deptDetails.id)
-        );
+      const res = await createRehabUserServer(
+        targetUserId,
+        pass,
+        'staff',
+        `${formData.firstName} ${formData.lastName}`,
+        undefined,
+        deptDetails.emailDomain,
+        getDeptCollection(deptDetails.id)
+      );
 
-        if (!res.success) throw new Error(res.error || 'Failed to create login account');
-        loginUserId = res.uid;
-      }
+      if (!res.success || !res.uid) throw new Error(res.error || 'Failed to create login account');
+      loginUserId = res.uid;
 
       const collectionName = getDeptCollection(deptDetails.id);
-      const staffRef = collection(db, collectionName);
+      
+      const { doc: firestoreDoc, setDoc } = await import('firebase/firestore');
+      const staffRef = firestoreDoc(db, collectionName, loginUserId);
 
-      await addDoc(staffRef, {
+      await setDoc(staffRef, {
         employeeId: empId,
-        userId: formData.userId || formData.customId || empId.toLowerCase(),
+        userId: targetUserId,
         loginEmail: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -553,13 +559,11 @@ export default function ManagerUsersPage() {
         createdBy: session?.customId || 'manager',
       });
 
-      if (formData.createAccount) {
-        setLastCreated({
-          customId: formData.userId || formData.customId || empId.toLowerCase(),
-          password: pass,
-          name: `${formData.firstName} ${formData.lastName}`
-        });
-      }
+      setLastCreated({
+        customId: targetUserId,
+        password: pass,
+        name: `${formData.firstName} ${formData.lastName}`
+      });
 
       setMessage({ type: 'success', text: `Staff profile ${empId} created successfully.` });
       toast.success(`Staff profile initialized: ${empId}`);

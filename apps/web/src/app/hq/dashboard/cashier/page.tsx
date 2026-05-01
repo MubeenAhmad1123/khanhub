@@ -1296,46 +1296,44 @@ export default function CashierStationPage() {
               <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.expense.toLocaleString()}</h4>
             </div>
           </div>
-        </div>
-
-        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-1 lg:order-2">
-          <div className="bg-white rounded-[3rem] md:rounded-[4rem] border border-zinc-100 p-8 md:p-14 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
+        </div>        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-1 lg:order-2">
+          <div className="bg-white rounded-[2rem] md:rounded-[4rem] border border-zinc-100 p-6 md:p-14 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
             <div className="relative z-10 space-y-14">
               {selectedEntity ? (
                 <div className="space-y-12 animate-in fade-in zoom-in-95 duration-700">
-                  <div className="w-full p-10 md:p-16 rounded-[3.5rem] md:rounded-[5rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
+                  <div className="w-full p-6 md:p-16 rounded-[2.5rem] md:rounded-[5rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
                     
                     <div className="relative z-10">
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-12">
                         <div className="flex flex-col md:flex-row items-center md:items-start gap-12">
-                          <div className="w-32 h-32 md:w-48 md:h-48 bg-white/10 backdrop-blur-2xl rounded-[3rem] md:rounded-[4rem] flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden">
-                            <User size={80} className="text-white/40 md:w-32 md:h-32 group-hover/avatar:scale-110 transition-transform duration-700" />
+                          <div className="w-24 h-24 md:w-48 md:h-48 bg-white/10 backdrop-blur-2xl rounded-[2rem] md:rounded-[4rem] flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden">
+                            <User className="w-12 h-12 md:w-32 md:h-32 text-white/40 group-hover/avatar:scale-110 transition-transform duration-700" />
                             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-transparent opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
-                            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center border-4 border-zinc-900 shadow-xl">
-                              <ShieldCheck size={24} className="text-white" />
+                            <div className="absolute -bottom-2 -right-2 w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-2xl flex items-center justify-center border-4 border-zinc-900 shadow-xl">
+                              <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-white" />
                             </div>
                           </div>
-                          <div className="text-center md:text-left space-y-6">
+                          <div className="text-center md:text-left space-y-6 min-w-0">
                             <div className="flex items-center justify-center md:justify-start gap-4">
                               <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">Active Protocol Target</p>
                               </div>
                             </div>
-                            <h2 className="text-3xl md:text-5xl lg:text-7xl font-[1000] tracking-tighter leading-none uppercase">{selectedEntity.name || selectedEntity.fullName}</h2>
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-5">
-                              <div className="px-8 py-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest">
+                            <h2 className="text-2xl md:text-5xl lg:text-7xl font-[1000] tracking-tighter leading-none uppercase break-words">{selectedEntity.name || selectedEntity.fullName}</h2>
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-5">
+                              <div className="px-5 py-2.5 md:px-8 md:py-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-[1.2rem] md:rounded-[1.5rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest truncate max-w-full">
                                 ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.id.slice(0, 8)}</span>
                               </div>
-                              <div className="px-8 py-3 bg-indigo-600 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest shadow-xl">
+                              <div className="px-5 py-2.5 md:px-8 md:py-3 bg-indigo-600 rounded-[1.2rem] md:rounded-[1.5rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-xl truncate">
                                 {departmentCode}
                               </div>
                               <button 
                                 onClick={() => setShowProfileModal(true)}
-                                className="px-8 py-3 bg-white text-zinc-900 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-3"
+                                className="px-5 py-2.5 md:px-8 md:py-3 bg-white text-zinc-900 rounded-[1.2rem] md:rounded-[1.5rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-3 truncate"
                               >
                                 <Eye size={16} />
                                 Full Ledger
@@ -1345,24 +1343,24 @@ export default function CashierStationPage() {
                         </div>
                         <button 
                           onClick={() => { setSelectedEntity(null); setAmount(''); }} 
-                          className="w-20 h-20 bg-white/10 hover:bg-rose-600 text-white rounded-[2rem] flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90"
+                          className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-rose-600 text-white rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90 self-center md:self-start"
                         >
-                          <X size={32} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+                          <X size={24} className="md:w-8 md:h-8 group-hover/btn:rotate-90 transition-transform" />
                         </button>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20">
-                        <div className="p-10 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[3rem] group/card hover:bg-white/10 transition-all">
-                          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Total Protocol Value</p>
-                          <h4 className="text-3xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
+ 
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mt-12 md:mt-20">
+                        <div className="p-6 md:p-10 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2rem] md:rounded-[3rem] group/card hover:bg-white/10 transition-all">
+                          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-3 md:mb-4">Total Protocol Value</p>
+                          <h4 className="text-2xl md:text-3xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
                         </div>
-                        <div className="p-10 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-[3rem] group/card hover:bg-emerald-500/20 transition-all">
-                          <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-[0.3em] mb-4">Total Settled</p>
-                          <h4 className="text-3xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
+                        <div className="p-6 md:p-10 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-[2rem] md:rounded-[3rem] group/card hover:bg-emerald-500/20 transition-all">
+                          <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-[0.3em] mb-3 md:mb-4">Total Settled</p>
+                          <h4 className="text-2xl md:text-3xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
                         </div>
-                        <div className="p-10 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-[3rem] group/card hover:bg-rose-500/20 transition-all">
-                          <p className="text-[10px] font-black text-rose-400/60 uppercase tracking-[0.3em] mb-4">Current Exposure</p>
-                          <h4 className="text-3xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
+                        <div className="p-6 md:p-10 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-[2rem] md:rounded-[3rem] group/card hover:bg-rose-500/20 transition-all">
+                          <p className="text-[10px] font-black text-rose-400/60 uppercase tracking-[0.3em] mb-3 md:mb-4">Current Exposure</p>
+                          <h4 className="text-2xl md:text-3xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
                         </div>
                       </div>
                     </div>
@@ -1458,32 +1456,32 @@ export default function CashierStationPage() {
 
                     <div className="space-y-6">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Directional Flow</label>
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 gap-4 md:gap-6">
                         <button
                           type="button"
                           onClick={() => setTxnType('income')}
                           className={cn(
-                            "h-28 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all border-4 relative overflow-hidden group/flow",
+                            "h-20 md:h-28 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center gap-2 md:gap-4 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
                             txnType === 'income' 
                               ? "bg-emerald-600 border-emerald-500 text-white shadow-2xl shadow-emerald-500/30 -translate-y-1" 
                               : "bg-white border-zinc-100 text-zinc-400 hover:border-emerald-200 hover:bg-emerald-50"
                           )}
                         >
-                          <TrendingUp size={32} className={cn("transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
-                          <span className="text-[11px] font-black uppercase tracking-[0.3em]">Credit Entry</span>
+                          <TrendingUp className={cn("w-6 h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
+                          <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em]">Credit Entry</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setTxnType('expense')}
                           className={cn(
-                            "h-28 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all border-4 relative overflow-hidden group/flow",
+                            "h-20 md:h-28 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center gap-2 md:gap-4 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
                             txnType === 'expense' 
                               ? "bg-rose-600 border-rose-500 text-white shadow-2xl shadow-rose-500/30 -translate-y-1" 
                               : "bg-white border-zinc-100 text-zinc-400 hover:border-rose-200 hover:bg-rose-50"
                           )}
                         >
-                          <TrendingDown size={32} className={cn("transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
-                          <span className="text-[11px] font-black uppercase tracking-[0.3em]">Debit Entry</span>
+                          <TrendingDown className={cn("w-6 h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
+                          <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em]">Debit Entry</span>
                         </button>
                       </div>
                     </div>
@@ -1561,8 +1559,8 @@ export default function CashierStationPage() {
                         </div>
                       </div>
                       <div className="relative group/amount">
-                        <div className="absolute inset-y-0 left-0 pl-10 flex items-center pointer-events-none">
-                          <DollarSign size={40} className="text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 pl-6 md:pl-10 flex items-center pointer-events-none">
+                          <DollarSign size={28} className="md:w-10 md:h-10 text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
                         </div>
                         <input
                           type="number"
@@ -1570,7 +1568,7 @@ export default function CashierStationPage() {
                           value={amount}
                           onChange={(e) => setAmount(e.target.value)}
                           placeholder="0.00"
-                          className="w-full h-20 md:h-32 lg:h-40 bg-zinc-50 border-4 border-transparent rounded-[1.5rem] md:rounded-[2.5rem] lg:rounded-[3.5rem] pl-20 md:pl-24 pr-12 text-3xl md:text-5xl lg:text-7xl font-[1000] text-zinc-900 outline-none focus:ring-[24px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                          className="w-full h-16 md:h-32 lg:h-40 bg-zinc-50 border-2 md:border-4 border-transparent rounded-[1.2rem] md:rounded-[2.5rem] lg:rounded-[3.5rem] pl-14 md:pl-24 pr-6 md:pr-12 text-xl md:text-5xl lg:text-7xl font-[1000] text-zinc-900 outline-none focus:ring-8 md:focus:ring-[24px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
                         />
                       </div>
                     </div>
@@ -1586,17 +1584,17 @@ export default function CashierStationPage() {
                           value={categorySearch} 
                           onChange={(e) => setCategorySearch(e.target.value)} 
                           placeholder="Search classification..." 
-                          className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
+                          className="w-full h-14 md:h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] md:rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
                         />
                       </div>
-                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 no-scrollbar">
+                      <div className="flex flex-wrap gap-2 max-h-36 md:max-h-48 overflow-y-auto pr-2 no-scrollbar">
                         {visibleCategories.map((c) => (
                           <button 
                             key={c.id} 
                             type="button" 
                             onClick={() => setSelectedCategoryId(c.id)} 
                             className={cn(
-                              'px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
+                              'px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
                               selectedCategoryId === c.id 
                                 ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 -translate-y-0.5' 
                                 : 'bg-white border-zinc-100 text-zinc-500 hover:border-indigo-200'
@@ -1615,18 +1613,18 @@ export default function CashierStationPage() {
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
                           placeholder="Enter mandatory context for this ledger entry..."
-                          className="w-full bg-zinc-50 border-2 border-transparent rounded-[2rem] px-8 py-8 text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner min-h-[140px] resize-none"
+                          className="w-full bg-zinc-50 border-2 border-transparent rounded-[1.5rem] md:rounded-[2rem] px-6 md:px-8 py-6 md:py-8 text-sm md:text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner min-h-[120px] md:min-h-[140px] resize-none"
                         />
                       </div>
                       <button 
                         type="submit" 
                         disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
-                        className="w-full h-24 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-lg md:text-xl uppercase tracking-[0.4em] rounded-[2.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-8 group/submit active:scale-[0.98]"
+                        className="w-full h-16 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-sm md:text-xl uppercase tracking-[0.4em] rounded-[1.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 md:gap-8 group/submit active:scale-[0.98]"
                       >
-                        {processing ? <Loader2 size={32} className="animate-spin" /> : (
+                        {processing ? <Loader2 size={24} className="animate-spin md:w-8 md:h-8" /> : (
                           <>
                             Commit Entry
-                            <ArrowRight size={32} className="group-hover:translate-x-4 transition-transform" />
+                            <ArrowRight size={24} className="md:w-8 md:h-8 group-hover:translate-x-4 transition-transform" />
                           </>
                         )}
                       </button>

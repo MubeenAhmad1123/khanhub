@@ -394,6 +394,16 @@ export async function updateStaffProfile(
     const oldCol = getDeptCollection(currentDept);
     const oldDocRef = firestoreDoc(db, oldCol, uid);
 
+    const pass = updates.defaultPassword || updates.password;
+    if (pass) {
+      try {
+        const { resetPortalUserPassword } = await import('@/app/hq/actions/resetPortalUserPassword');
+        await resetPortalUserPassword(uid, currentDept, pass);
+      } catch (e) {
+        console.warn('Auth password reset via server action skipped or failed:', e);
+      }
+    }
+
     // Handle department change (Migration)
     if (updates.dept && updates.dept !== currentDept) {
       const newDept = updates.dept as StaffDept;

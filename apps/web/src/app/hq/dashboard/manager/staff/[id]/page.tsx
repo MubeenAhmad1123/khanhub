@@ -44,6 +44,7 @@ import {
   SalarySlip
 } from '@/types/hq';
 import { awardStaffPoint } from '@/app/hq/actions/points';
+import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
 
 // Define unified icons for tasks
 import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS } from '@/data/hqConfig';
@@ -226,6 +227,7 @@ export default function StaffProfilePage() {
   });
 
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [showReset, setShowReset] = useState(false);
 
   const monthDays = useMemo(() => {
     const days = [];
@@ -1465,6 +1467,13 @@ export default function StaffProfilePage() {
                     <p className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Password</p>
                     <p className={`font-mono text-xs font-bold text-indigo-600`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
                   </div>
+                  <button
+                    onClick={() => setShowReset(true)}
+                    className="w-full mt-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-[10px] font-black uppercase tracking-widest text-white shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 border border-amber-600/30"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    Reset Password
+                  </button>
                 </div>
               </div>
             </div>
@@ -3395,6 +3404,13 @@ export default function StaffProfilePage() {
             </div>
           </div>
         </div>
+      )}
+      {showReset && staff && (
+        <ResetPasswordModal
+          uid={staff.staffId || staff.id || ''}
+          portal={(staff.dept || 'hq') as any}
+          onClose={() => setShowReset(false)}
+        />
       )}
     </div>
   );

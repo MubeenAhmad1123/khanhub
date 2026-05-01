@@ -104,36 +104,36 @@ export function StatCard({
     : String(value ?? '');
 
   const CardContent = (
-    <div className="relative z-10 flex flex-col h-full justify-between gap-8">
+    <div className="relative z-10 flex flex-col h-full justify-between gap-4 sm:gap-8">
       <div className="flex items-start justify-between">
-        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", style.iconBg)}>
-          {Icon && <Icon className="w-7 h-7" strokeWidth={2.5} />}
+        <div className={cn("w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", style.iconBg)}>
+          {Icon && <Icon className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={2.5} />}
         </div>
         {badge ? (
-          <div className={cn("inline-flex px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", badgeStyles(badge.tone))}>
+          <div className={cn("inline-flex px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[7px] sm:text-[9px] font-black uppercase tracking-widest transition-all", badgeStyles(badge.tone))}>
             {badge.label}
           </div>
         ) : null}
       </div>
 
-      <div className="min-w-0">
-        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-2 group-hover:text-current transition-colors">{title}</div>
-        <div className="text-4xl font-black text-gray-900 tracking-tighter leading-tight">{displayValue}</div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.3em] text-gray-400 mb-1 sm:mb-2 group-hover:text-current transition-colors truncate" title={title}>{title}</div>
+        <div className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter leading-none sm:leading-tight truncate" title={displayValue}>{displayValue}</div>
         
         {trend && (
-          <div className={cn("mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest", trend.isUp ? 'text-emerald-600' : 'text-rose-600')}>
-            <div className="flex items-center gap-1 bg-current/10 px-3 py-1.5 rounded-xl">
-              {trend.isUp ? <TrendingUp size={12} strokeWidth={3} /> : <TrendingDown size={12} strokeWidth={3} />}
+          <div className={cn("mt-2 sm:mt-4 flex items-center gap-1 sm:gap-2 text-[8px] sm:text-[10px] font-black uppercase tracking-widest", trend.isUp ? 'text-emerald-600' : 'text-rose-600')}>
+            <div className="flex items-center gap-1 bg-current/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl whitespace-nowrap">
+              {trend.isUp ? <TrendingUp size={10} strokeWidth={3} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} strokeWidth={3} className="sm:w-3 sm:h-3" />}
               {Math.abs(trend.value).toFixed(1)}%
             </div>
-            <span className="opacity-40 tracking-normal font-bold">Growth</span>
+            <span className="opacity-40 tracking-normal font-bold hidden sm:inline">Growth</span>
           </div>
         )}
         
         {subtitle && (
-          <div className="mt-5 text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-current opacity-20" />
-            {subtitle}
+          <div className="mt-2 sm:mt-5 text-[8px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 truncate" title={subtitle}>
+            <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current opacity-20 shrink-0" />
+            <span className="truncate">{subtitle}</span>
           </div>
         )}
       </div>
@@ -141,8 +141,8 @@ export function StatCard({
   );
 
   const containerClasses = cn(
-    "block relative overflow-hidden rounded-[2.5rem] p-8 transition-all duration-700 w-full text-left",
-    "border bg-white shadow-2xl shadow-gray-200/50 hover:shadow-gray-300/60 hover:-translate-y-2 group",
+    "block relative overflow-hidden rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 transition-all duration-700 w-full text-left",
+    "border bg-white shadow-xl sm:shadow-2xl shadow-gray-200/50 hover:shadow-gray-300/60 hover:-translate-y-2 group flex flex-col",
     style.border
   );
 

@@ -205,7 +205,7 @@ export default function HqSuperadminPage() {
         </div>
 
         {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-16">
+        <div className="grid grid-cols-2 gap-3 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-16">
           {cards.map((c, idx) => (
             <StatCard
               key={c.title}
