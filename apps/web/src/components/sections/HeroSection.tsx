@@ -133,7 +133,7 @@ const ImageCarousel = memo(function ImageCarousel() {
   };
 
   return (
-    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12 rounded-full">
+    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12 rounded-full flex items-center justify-center">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -144,20 +144,31 @@ const ImageCarousel = memo(function ImageCarousel() {
           className="absolute inset-0 rounded-full"
         >
           {!imageErrors.has(currentIndex) ? (
-            <div className="w-full h-full rounded-full overflow-hidden relative filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.15)]">
-              <Image
-                src={DEPARTMENT_IMAGES[currentIndex].src}
-                alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
-                fill
-                className="object-cover"
-                priority={currentIndex === 0}
-                loading={currentIndex === 0 ? "eager" : "lazy"}
-                // @ts-ignore - fetchPriority is supported in Next.js 14+
-                fetchPriority={currentIndex === 0 ? "high" : "auto"}
-                sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
-                onError={() => handleImageError(currentIndex)}
-                quality={95}
-              />
+            <div 
+              className="w-full h-full rounded-full overflow-hidden relative flex items-center justify-center bg-[#F0F7FB] border border-neutral-100/60 shadow-lg"
+              style={{
+                transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
+                transformStyle: 'preserve-3d',
+                boxShadow: 'inset 0 4px 12px rgba(255,255,255,0.7), inset 0 -4px 12px rgba(0,0,0,0.06), 0 15px 35px -5px rgba(0,0,0,0.08)'
+              }}
+            >
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+              
+              <div className="relative w-[92%] h-[92%] rounded-full overflow-hidden flex items-center justify-center bg-white shadow-inner">
+                <Image
+                  src={DEPARTMENT_IMAGES[currentIndex].src}
+                  alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
+                  fill
+                  className="object-cover rounded-full"
+                  priority={currentIndex === 0}
+                  loading={currentIndex === 0 ? "eager" : "lazy"}
+                  // @ts-ignore - fetchPriority is supported in Next.js 14+
+                  fetchPriority={currentIndex === 0 ? "high" : "auto"}
+                  sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
+                  onError={() => handleImageError(currentIndex)}
+                  quality={95}
+                />
+              </div>
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-full">
@@ -167,16 +178,19 @@ const ImageCarousel = memo(function ImageCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Progress Indicators - FIXED STATIC SIZE ON A SINGLE LINE */}
-      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-nowrap justify-center items-center gap-1.5 w-full max-w-[280px] sm:max-w-none">
+      {/* Progress Indicators - 100% Guaranteed Round Small Dots */}
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-nowrap justify-center items-center gap-2 w-full max-w-[280px] sm:max-w-none">
         {DEPARTMENT_IMAGES.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
-            className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 flex-shrink-0 ${idx === currentIndex
-              ? 'bg-primary-500'
-              : 'bg-neutral-300 hover:bg-primary-300'
-              }`}
+            className={`rounded-full transition-all duration-300 flex-shrink-0 ${
+              idx === currentIndex ? 'bg-primary-600' : 'bg-neutral-300 hover:bg-primary-300'
+            }`}
+            style={{
+              width: idx === currentIndex ? '16px' : '6px',
+              height: '6px',
+            }}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}
@@ -388,12 +402,12 @@ export default function HeroSection() {
                 }}
                 className="relative z-10"
               >
-                {/* Logo Backdrop */}
-                <div className="absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20" />
+                {/* Logo Backdrop - Shown only on desktop */}
+                <div className="hidden lg:block absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20" />
 
-                {/* 3D-like Circle Background - Slightly larger than image */}
+                {/* 3D-like Circle Background - Slightly larger than image - Shown only on desktop */}
                 <motion.div
-                  className="absolute inset-0 -m-4 sm:-m-8 rounded-full border border-primary-500/20 bg-primary-500/5 shadow-[0_0_50px_rgba(0,94,184,0.1)]"
+                  className="hidden lg:block absolute inset-0 -m-4 sm:-m-8 rounded-full border border-primary-500/20 bg-primary-500/5 shadow-[0_0_50px_rgba(0,94,184,0.1)]"
                   animate={{
                     scale: [1, 1.05, 1],
                     opacity: [0.5, 0.8, 0.5],
