@@ -134,27 +134,29 @@ const ImageCarousel = memo(function ImageCarousel() {
 
   return (
     <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12 rounded-full flex items-center justify-center">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.5 }}
-          className="absolute inset-0 rounded-full"
-        >
-          {!imageErrors.has(currentIndex) ? (
-            <div 
-              className="w-full h-full rounded-full overflow-hidden relative flex items-center justify-center bg-[#F0F7FB] border border-neutral-100/60 shadow-lg"
-              style={{
-                transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
-                transformStyle: 'preserve-3d',
-                boxShadow: 'inset 0 4px 12px rgba(255,255,255,0.7), inset 0 -4px 12px rgba(0,0,0,0.06), 0 15px 35px -5px rgba(0,0,0,0.08)'
-              }}
+      {/* 3D Static Circle Background */}
+      <div 
+        className="w-full h-full rounded-full overflow-hidden relative flex items-center justify-center bg-[#F0F7FB] border border-neutral-100/60 shadow-lg"
+        style={{
+          transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
+          transformStyle: 'preserve-3d',
+          boxShadow: 'inset 0 4px 12px rgba(255,255,255,0.7), inset 0 -4px 12px rgba(0,0,0,0.06), 0 15px 35px -5px rgba(0,0,0,0.08)'
+        }}
+      >
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+
+        {/* This wrapper ensures the animated image blinks perfectly inside the static 3D circle background without breaking its structure */}
+        <div className="relative w-[92%] h-[92%] rounded-full overflow-hidden flex items-center justify-center bg-white shadow-inner">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full overflow-hidden"
             >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
-              
-              <div className="relative w-[92%] h-[92%] rounded-full overflow-hidden flex items-center justify-center bg-white shadow-inner">
+              {!imageErrors.has(currentIndex) ? (
                 <Image
                   src={DEPARTMENT_IMAGES[currentIndex].src}
                   alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
@@ -168,28 +170,31 @@ const ImageCarousel = memo(function ImageCarousel() {
                   onError={() => handleImageError(currentIndex)}
                   quality={95}
                 />
-              </div>
-            </div>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-full">
-              <span className="text-slate-400 text-sm">Image unavailable</span>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-full">
+                  <span className="text-slate-400 text-sm">Image unavailable</span>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
 
       {/* Progress Indicators - 100% Guaranteed Round Small Dots */}
-      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-nowrap justify-center items-center gap-2 w-full max-w-[280px] sm:max-w-none">
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 max-w-[280px] sm:max-w-none">
         {DEPARTMENT_IMAGES.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
             className={`rounded-full transition-all duration-300 flex-shrink-0 ${
-              idx === currentIndex ? 'bg-primary-600' : 'bg-neutral-300 hover:bg-primary-300'
+              idx === currentIndex ? 'bg-primary-600 scale-110' : 'bg-neutral-300 hover:bg-primary-300'
             }`}
             style={{
-              width: idx === currentIndex ? '16px' : '6px',
-              height: '6px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              minWidth: '8px',
+              minHeight: '8px'
             }}
             aria-label={`Go to slide ${idx + 1}`}
           />
