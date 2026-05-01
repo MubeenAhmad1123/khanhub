@@ -13,7 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
-import { getDeptPrefix, getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 import { HqDailyAttendanceRecord, HqDailyDressCodeRecord, HqDailyDutyRecord } from '@/types/hq';
 import { toPng } from 'html-to-image';
@@ -69,18 +69,42 @@ export default function DailyReportPage() {
       setLoading(true);
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
+      // 1. Fetch from listStaffCards to align with Staff Roster
+      const unifiedStaffCards = await listStaffCards({
+        dept: 'all',
+        status: 'all',
+        role: 'personnel',
+        fullEnrichment: false
+      });
+
       const staffSnaps = await Promise.all(depts.map(d => 
         getDocs(collection(db, getDeptCollection(d)))
           .catch(() => ({ docs: [] } as any))
       ));
       const allStaff: any[] = [];
+      const seenIds = new Set<string>();
 
+      // First add from unifiedStaffCards
+      unifiedStaffCards.forEach(s => {
+        if (s.status === 'active' && s.isActive !== false) {
+          allStaff.push({
+            ...s,
+            id: s.staffId,
+            department: s.dept
+          });
+          seenIds.add(s.staffId);
+        }
+      });
+
+      // Supplement with manual fetch to make sure NO active staff is missed
       staffSnaps.forEach((snap, i) => {
         snap.docs.forEach((doc: any) => {
           const data = doc.data();
+          const sid = doc.id;
           const status = String(data.status || (data.isActive !== false ? 'active' : 'inactive')).toLowerCase();
-          if (status === 'active') {
-            allStaff.push({ id: doc.id, department: depts[i], ...data });
+          if (status === 'active' && !seenIds.has(sid)) {
+            allStaff.push({ id: sid, department: depts[i], ...data });
+            seenIds.add(sid);
           }
         });
       });

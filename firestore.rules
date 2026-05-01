@@ -453,6 +453,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Leads & CRM Collections ────────────────────────
+    match /leads/{leadId} {
+      allow read, write: if isAuth() && (
+        isHqTier1()
+        || isRehabAdminOrAbove()
+        || isHospitalAdminOrAbove()
+        || isSpimsAdminOrAbove()
+        || isSpimsAdminOrAbove()
+        || isHospitalAdminOrAbove()
+      );
+    }
+
+    match /hq_lead_responses/{responseId} {
+      allow read, write: if isAuth() && (
+        isHqTier1()
+        || isRehabAdminOrAbove()
+        || isHospitalAdminOrAbove()
+        || isSpimsAdminOrAbove()
+        || isSpimsAdminOrAbove()
+        || isHospitalAdminOrAbove()
+      );
+    }
+
     // ── Staff fines ────────────────────────────────────
     // Admin/superadmin read and write. Staff reads own fines.
     match /rehab_fines/{docId} {

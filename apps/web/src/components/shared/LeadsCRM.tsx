@@ -39,7 +39,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { cn, formatDateDMY } from '@/lib/utils';
 
-type LeadStatus = 'NEW' | 'No Response' | 'Scheduled Callback' | 'Busy' | 'DC';
+type LeadStatus = 'NEW' | 'No Response' | 'Scheduled Callback' | 'Busy' | 'DC' | 'Nill' | 'No';
 
 interface Lead {
   id: string;
@@ -71,9 +71,11 @@ const STATUS_CONFIG: Record<LeadStatus, { color: string; bg: string; text: strin
   'Scheduled Callback': { color: 'amber', bg: 'bg-amber-100', text: 'text-amber-700' },
   'Busy': { color: 'purple', bg: 'bg-purple-100', text: 'text-purple-700' },
   'DC': { color: 'red', bg: 'bg-red-100', text: 'text-red-700' },
+  'Nill': { color: 'gray', bg: 'bg-gray-100', text: 'text-gray-700' },
+  'No': { color: 'gray', bg: 'bg-gray-100', text: 'text-gray-700' },
 };
 
-const ADDICTION_TYPES = ['Ice', 'Heroin', 'Charas', 'Alcohol', 'Other'];
+const ADDICTION_TYPES = ['', 'Nill', 'No', 'Ice', 'Heroin', 'Charas', 'Alcohol', 'Other'];
 
 export default function LeadsCRM({ department }: LeadsCRMProps) {
   const [leads, setLeads] = useState<Lead[]>([]);

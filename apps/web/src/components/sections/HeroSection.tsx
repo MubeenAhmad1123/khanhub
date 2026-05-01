@@ -182,23 +182,26 @@ const ImageCarousel = memo(function ImageCarousel() {
 
       {/* Progress Indicators - 100% Guaranteed Round Small Dots */}
       <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 max-w-[280px] sm:max-w-none">
-        {DEPARTMENT_IMAGES.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setCurrentIndex(idx)}
-            className={`rounded-full transition-all duration-300 flex-shrink-0 ${
-              idx === currentIndex ? 'bg-primary-600 scale-110' : 'bg-neutral-300 hover:bg-primary-300'
-            }`}
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              minWidth: '8px',
-              minHeight: '8px'
-            }}
-            aria-label={`Go to slide ${idx + 1}`}
-          />
-        ))}
+        {Array.from({ length: Math.ceil(DEPARTMENT_IMAGES.length / 2) }).map((_, idx) => {
+          const isCurrentInGroup = Math.floor(currentIndex / 2) === idx;
+          return (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx * 2)}
+              className={`rounded-full transition-all duration-300 flex-shrink-0 ${
+                isCurrentInGroup ? 'bg-primary-600 scale-110' : 'bg-neutral-300 hover:bg-primary-300'
+              }`}
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                minWidth: '8px',
+                minHeight: '8px'
+              }}
+              aria-label={`Go to slides ${idx * 2 + 1} and ${idx * 2 + 2}`}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -247,7 +250,7 @@ export default function HeroSection() {
 
   return (
     <section
-      className="relative min-h-screen flex items-center overflow-hidden bg-white"
+      className="relative min-h-screen flex items-center w-full overflow-x-hidden overflow-y-clip bg-white"
       itemScope
       itemType="https://schema.org/Organization"
     >
