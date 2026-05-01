@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
@@ -104,7 +104,7 @@ export default function DailyReportPage() {
           .catch(() => ({ docs: [] } as any))
       ));
       const contribSnaps = await Promise.all(depts.map(d => 
-        getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))
+        getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate)))
           .catch(() => ({ docs: [] } as any))
       ));
 
@@ -118,9 +118,8 @@ export default function DailyReportPage() {
       attSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
         let sid = data.staffId || d.id;
-        if (sid.includes('_')) {
-          const parts = sid.split('_');
-          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
+          sid = sid.slice(0, -(reportDate.length + 1));
         }
         attMap.set(sid, data);
       }));
@@ -128,9 +127,8 @@ export default function DailyReportPage() {
       dressSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
         let sid = data.staffId || d.id;
-        if (sid.includes('_')) {
-          const parts = sid.split('_');
-          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
+          sid = sid.slice(0, -(reportDate.length + 1));
         }
         dressMap.set(sid, data);
       }));
@@ -138,9 +136,8 @@ export default function DailyReportPage() {
       dutySnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
         let sid = data.staffId || d.id;
-        if (sid.includes('_')) {
-          const parts = sid.split('_');
-          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
+          sid = sid.slice(0, -(reportDate.length + 1));
         }
         const existing = dutyMap.get(sid);
         if (!existing || (!existing.duties && data.duties)) {
@@ -151,9 +148,8 @@ export default function DailyReportPage() {
       fineSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
         let sid = data.staffId || d.id;
-        if (sid.includes('_')) {
-          const parts = sid.split('_');
-          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
+          sid = sid.slice(0, -(reportDate.length + 1));
         }
         const existing = fineMap.get(sid) || [];
         fineMap.set(sid, [...existing, data]);
@@ -162,12 +158,10 @@ export default function DailyReportPage() {
       contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
         let sid = data.staffId || d.id;
-        if (sid.includes('_')) {
-          const parts = sid.split('_');
-          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
+          sid = sid.slice(0, -(reportDate.length + 1));
         }
-        const existing = contribMap.get(sid) || 0;
-        contribMap.set(sid, existing + 1);
+        contribMap.set(sid, data);
       }));
 
       // 3. Process Report Rows
@@ -193,26 +187,30 @@ export default function DailyReportPage() {
         const dress = dressMap.get(sid);
         const duty = dutyMap.get(sid);
         const finesList = fineMap.get(sid) || [];
-        const contribCount = contribMap.get(sid) || 0;
+        const contribRecord = contribMap.get(sid);
 
-        const uniformConfig = s.dressCodeConfig || [];
+        const uniformConfig = s.dressCodeConfig && s.dressCodeConfig.length > 0 ? s.dressCodeConfig : [
+          { key: 'uniform', label: 'Uniform' },
+          { key: 'shoes', label: 'Polished Shoes' },
+          { key: 'card', label: 'Identity Card' }
+        ];
         const uniformItems = dress?.items || [];
         const uniformMissing = uniformConfig.filter((c: any) => {
           const item = uniformItems.find((i: any) => i.key === c.key);
           return !item || item.status === 'no';
         }).map((c: any) => c.label);
 
-        const uniformScore = (uniformConfig.length > 0 && uniformMissing.length === 0) ? 1 : 0;
-
-        const dutyConfig = s.dutyConfig || [];
+        const dutyConfig = s.dutyConfig && s.dutyConfig.length > 0 ? s.dutyConfig : [
+          { key: 'morning', label: 'Morning Duty' },
+          { key: 'afternoon', label: 'Afternoon Duty' },
+          { key: 'evening', label: 'Evening Duty' }
+        ];
         const dutyItems = duty?.duties || [];
         const dutiesPending = dutyConfig.filter((c: any) => {
           const item = dutyItems.find((d: any) => d.key === c.key);
           return !item || item.status !== 'done';
         }).map((c: any) => c.label);
 
-        const dutyScore = (dutyConfig.length > 0 && dutiesPending.length === 0) ? 1 : 0;
-        const contribScore = contribCount > 0 ? 1 : 0;
         const fineTotal = finesList.reduce((acc: number, f: any) => acc + (Number(f.amount) || 0), 0);
 
         const rawStatus = att?.status || 'unmarked';
@@ -256,13 +254,29 @@ export default function DailyReportPage() {
 
         const onLeave = attendanceStatus === 'leave';
 
-        const uniformStatus: DailyReportRow['uniformStatus'] = onLeave ? 'na' : (uniformConfig.length === 0 ? 'na' :
-          (uniformMissing.length === 0 ? 'yes' :
-            (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete')));
+        let uniformStatus: DailyReportRow['uniformStatus'] = 'no';
+        if (onLeave) {
+          uniformStatus = 'na';
+        } else if (dress?.status) {
+          uniformStatus = dress.status;
+        } else {
+          uniformStatus = (uniformConfig.length === 0 ? 'na' :
+            (uniformMissing.length === 0 ? 'yes' :
+              (uniformMissing.length === uniformConfig.length ? 'no' : 'incomplete')));
+        }
 
-        const dutyStatus: DailyReportRow['dutyStatus'] = onLeave ? 'na' : (dutyConfig.length === 0 ? 'na' :
-          (dutiesPending.length === 0 ? 'yes' :
-            (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete')));
+        let dutyStatus: DailyReportRow['dutyStatus'] = 'no';
+        if (onLeave) {
+          dutyStatus = 'na';
+        } else if (duty?.status) {
+          dutyStatus = duty.status;
+        } else {
+          dutyStatus = (dutyConfig.length === 0 ? 'na' :
+            (dutiesPending.length === 0 ? 'yes' :
+              (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete')));
+        }
+
+        const contribScore = (contribRecord && (contribRecord.status === 'yes' || contribRecord.isApproved === true)) ? 1 : 0;
 
         const attPoint = (attendanceStatus === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
@@ -279,7 +293,7 @@ export default function DailyReportPage() {
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
-          gpStatus: onLeave ? 'na' : (contribScore > 0 ? 'yes' : 'no'),
+          gpStatus: onLeave ? 'na' : (contribRecord?.status || (contribScore > 0 ? 'yes' : 'no')),
           dailyScore: totalDailyPoints,
           fines: fineTotal,
           fineReason: finesList.length > 0 ? finesList[0].reason : '',
@@ -290,10 +304,10 @@ export default function DailyReportPage() {
           },
           arrivalTime: att?.arrivalTime,
           dutyStartTime: s.dutyStartTime || '09:00',
-          uniformConfig: s.dressCodeConfig || [],
-          dutyConfig: s.dutyConfig || [],
-          uniformItems: dress?.items || [],
-          dutyItems: duty?.duties || []
+          uniformConfig,
+          dutyConfig,
+          uniformItems,
+          dutyItems
         };
       });
 
@@ -459,34 +473,76 @@ export default function DailyReportPage() {
           }
         }
 
-        if (field === 'uniformStatus' && value === 'incomplete') {
-          const config = updatedRow.uniformConfig || [];
-          const checked = updatedRow.uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
-          setActiveChecklist({
-            id: updatedRow.id,
-            type: 'uniform',
-            items: config.length > 0 ? config : [
-              { key: 'uniform', label: 'Uniform' },
-              { key: 'shoes', label: 'Polished Shoes' },
-              { key: 'card', label: 'Identity Card' }
-            ],
-            checkedKeys: checked
-          });
+        if (field === 'uniformStatus') {
+          const config = updatedRow.uniformConfig && updatedRow.uniformConfig.length > 0 ? updatedRow.uniformConfig : [
+            { key: 'uniform', label: 'Uniform' },
+            { key: 'shoes', label: 'Polished Shoes' },
+            { key: 'card', label: 'Identity Card' }
+          ];
+          if (value === 'yes') {
+            updatedRow.uniformItems = config.map((c: any) => ({ key: c.key, status: 'yes' }));
+            updatedRow.details.uniformMissing = [];
+          } else if (value === 'no') {
+            updatedRow.uniformItems = config.map((c: any) => ({ key: c.key, status: 'no' }));
+            updatedRow.details.uniformMissing = config.map((c: any) => c.label);
+          } else if (value === 'incomplete') {
+            const checked = updatedRow.uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+            if (checked.length === 0) {
+              updatedRow.uniformItems = config.map((c: any, idx: number) => ({
+                key: c.key,
+                status: idx === 0 ? 'yes' : 'no'
+              }));
+              updatedRow.details.uniformMissing = config.slice(1).map((c: any) => c.label);
+            } else {
+              updatedRow.uniformItems = config.map((c: any) => ({
+                key: c.key,
+                status: checked.includes(c.key) ? 'yes' : 'no'
+              }));
+              updatedRow.details.uniformMissing = config.filter((c: any) => !checked.includes(c.key)).map((c: any) => c.label);
+            }
+            setActiveChecklist({
+              id: updatedRow.id,
+              type: 'uniform',
+              items: config,
+              checkedKeys: updatedRow.uniformItems.filter((i: any) => i.status === 'yes').map((i: any) => i.key)
+            });
+          }
         }
 
-        if (field === 'dutyStatus' && value === 'incomplete') {
-          const config = updatedRow.dutyConfig || [];
-          const checked = updatedRow.dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
-          setActiveChecklist({
-            id: updatedRow.id,
-            type: 'duty',
-            items: config.length > 0 ? config : [
-              { key: 'morning', label: 'Morning Duty' },
-              { key: 'afternoon', label: 'Afternoon Duty' },
-              { key: 'evening', label: 'Evening Duty' }
-            ],
-            checkedKeys: checked
-          });
+        if (field === 'dutyStatus') {
+          const config = updatedRow.dutyConfig && updatedRow.dutyConfig.length > 0 ? updatedRow.dutyConfig : [
+            { key: 'morning', label: 'Morning Duty' },
+            { key: 'afternoon', label: 'Afternoon Duty' },
+            { key: 'evening', label: 'Evening Duty' }
+          ];
+          if (value === 'yes') {
+            updatedRow.dutyItems = config.map((c: any) => ({ key: c.key, status: 'done' }));
+            updatedRow.details.dutiesPending = [];
+          } else if (value === 'no') {
+            updatedRow.dutyItems = config.map((c: any) => ({ key: c.key, status: 'not_done' }));
+            updatedRow.details.dutiesPending = config.map((c: any) => c.label);
+          } else if (value === 'incomplete') {
+            const checked = updatedRow.dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+            if (checked.length === 0) {
+              updatedRow.dutyItems = config.map((c: any, idx: number) => ({
+                key: c.key,
+                status: idx === 0 ? 'done' : 'not_done'
+              }));
+              updatedRow.details.dutiesPending = config.slice(1).map((c: any) => c.label);
+            } else {
+              updatedRow.dutyItems = config.map((c: any) => ({
+                key: c.key,
+                status: checked.includes(c.key) ? 'done' : 'not_done'
+              }));
+              updatedRow.details.dutiesPending = config.filter((c: any) => !checked.includes(c.key)).map((c: any) => c.label);
+            }
+            setActiveChecklist({
+              id: updatedRow.id,
+              type: 'duty',
+              items: config,
+              checkedKeys: updatedRow.dutyItems.filter((i: any) => i.status === 'done').map((i: any) => i.key)
+            });
+          }
         }
 
         return updatedRow;
@@ -626,6 +682,21 @@ export default function DailyReportPage() {
             // Document might not exist, safe to ignore
           }
         }
+
+        // Sync to primary staff document for immediate visibility across pages
+        const staffDocRef = doc(db, `${prefix}_users`, row.id);
+        await updateDoc(staffDocRef, {
+          todayAttendance: row.attendance,
+          todayUniformStatus: row.uniformStatus,
+          todayDutyStatus: row.dutyStatus,
+          todayDailyScore: row.dailyScore,
+          todayFines: row.fines,
+          todayFineReason: row.fineReason || '',
+          lastDailyAssessmentDate: reportDate,
+          updatedAt: Timestamp.now()
+        }).catch((err) => {
+          console.warn(`Could not sync to ${prefix}_users/${row.id}:`, err);
+        });
       }
       setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
       toast.success("Assessment saved successfully!", { id: 'save-assessment' });
@@ -816,10 +887,10 @@ export default function DailyReportPage() {
                         </div>
                         <div>
                           <a
-                            href={`/hq/dashboard/manager/staff/${row.id}`}
+                            href={`/hq/dashboard/manager/staff/${row.department}_${row.id}`}
                             onClick={(e) => {
                               e.preventDefault();
-                              router.push(`/hq/dashboard/manager/staff/${row.id}`);
+                              router.push(`/hq/dashboard/manager/staff/${row.department}_${row.id}`);
                             }}
                             className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
                           >
