@@ -86,6 +86,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   const [customResponses, setCustomResponses] = useState<CustomResponse[]>([]);
   const [showCustomResponseInput, setShowCustomResponseInput] = useState(false);
   const [newCustomResponse, setNewCustomResponse] = useState('');
+  const [customStatusValue, setCustomStatusValue] = useState('');
+  const [customAddictionValue, setCustomAddictionValue] = useState('');
   
   const [sortConfig, setSortConfig] = useState<{ key: 'createdAt' | 'name'; direction: 'asc' | 'desc' }>({ 
     key: 'createdAt', 
@@ -198,8 +200,31 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
 
     setIsSubmitting(true);
     try {
+      let finalStatus = formData.status;
+      if (formData.status === 'ADD_NEW' && customStatusValue.trim()) {
+        const id = customStatusValue.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+        if (!STATUS_CONFIG[id as LeadStatus] && !customResponses.find(r => r.id === id)) {
+          await addDoc(collection(db, 'hq_lead_responses'), {
+            id,
+            name: customStatusValue.trim(),
+            color: 'gray',
+            createdAt: Timestamp.now()
+          });
+          finalStatus = id;
+        } else {
+          finalStatus = id;
+        }
+      }
+
+      let finalAddiction = formData.addiction;
+      if (department === 'rehab' && (formData.addiction === 'CUSTOM' || formData.addiction === 'Other') && customAddictionValue.trim()) {
+        finalAddiction = customAddictionValue.trim();
+      }
+
       await addDoc(collection(db, 'leads'), {
         ...formData,
+        status: finalStatus,
+        addiction: finalAddiction,
         department,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
@@ -207,6 +232,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       toast.success('Lead added successfully');
       setIsAddModalOpen(false);
       setFormData({ name: '', contact: '', address: '', addiction: department === 'rehab' ? 'Ice' : '', status: 'NEW', notes: '', callNotes: '' });
+      setCustomStatusValue('');
+      setCustomAddictionValue('');
     } catch (err) {
       toast.error('Failed to add lead');
     } finally {
@@ -453,11 +480,30 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                       STATUS_CONFIG[lead.status as LeadStatus]?.text || 'text-gray-700'
                     )}
                     value={lead.status}
-                    onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                    onChange={async (e) => {
+                      if (e.target.value === 'ADD_NEW') {
+                        const val = window.prompt('Enter new custom status:');
+                        if (val && val.trim()) {
+                          const id = val.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                          if (!STATUS_CONFIG[id as LeadStatus] && !customResponses.find(r => r.id === id)) {
+                            await addDoc(collection(db, 'hq_lead_responses'), {
+                              id,
+                              name: val.trim(),
+                              color: 'gray',
+                              createdAt: Timestamp.now()
+                            });
+                          }
+                          handleStatusUpdate(lead.id, id);
+                        }
+                      } else {
+                        handleStatusUpdate(lead.id, e.target.value);
+                      }
+                    }}
                   >
                     {allResponses.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
+                    <option value="ADD_NEW" className="text-indigo-600 font-black">+ CUSTOM</option>
                   </select>
                 </td>
                 <td className="px-6 py-4">
@@ -616,11 +662,30 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                       STATUS_CONFIG[lead.status as LeadStatus]?.text || 'text-gray-700'
                     )}
                     value={lead.status}
-                    onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                    onChange={async (e) => {
+                      if (e.target.value === 'ADD_NEW') {
+                        const val = window.prompt('Enter new custom status:');
+                        if (val && val.trim()) {
+                          const id = val.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                          if (!STATUS_CONFIG[id as LeadStatus] && !customResponses.find(r => r.id === id)) {
+                            await addDoc(collection(db, 'hq_lead_responses'), {
+                              id,
+                              name: val.trim(),
+                              color: 'gray',
+                              createdAt: Timestamp.now()
+                            });
+                          }
+                          handleStatusUpdate(lead.id, id);
+                        }
+                      } else {
+                        handleStatusUpdate(lead.id, e.target.value);
+                      }
+                    }}
                   >
                     {allResponses.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
+                    <option value="ADD_NEW" className="text-indigo-600 font-black">+ CUSTOM</option>
                   </select>
                 </div>
 
@@ -720,7 +785,16 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                       onChange={(e) => setFormData({...formData, addiction: e.target.value})}
                     >
                       {ADDICTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      <option value="CUSTOM">+ Add Custom Addiction</option>
                     </select>
+                    {(formData.addiction === 'CUSTOM' || formData.addiction === 'Other') && (
+                      <input
+                        placeholder="Custom addiction type..."
+                        className="w-full mt-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-400"
+                        value={customAddictionValue}
+                        onChange={(e) => setCustomAddictionValue(e.target.value)}
+                      />
+                    )}
                   </div>
                 )}
                 <div className={cn("space-y-2", department !== 'rehab' && "col-span-1 md:col-span-2")}>
@@ -731,7 +805,16 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                   >
                     {allResponses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    <option value="ADD_NEW">+ Add Custom Status</option>
                   </select>
+                  {formData.status === 'ADD_NEW' && (
+                    <input
+                      placeholder="Custom status name..."
+                      className="w-full mt-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-400"
+                      value={customStatusValue}
+                      onChange={(e) => setCustomStatusValue(e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
 
