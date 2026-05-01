@@ -36,17 +36,55 @@ const DEPARTMENT_IMAGES = [
 ];
 
 const ImageCarousel = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % DEPARTMENT_IMAGES.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-8 lg:mb-0 lg:w-72 lg:h-72 flex-shrink-0">
-      <div className="absolute inset-0 drop-shadow-xl">
-        <Image
-          src="/logo-circle.webp"
-          alt="Khan Hub"
-          fill
-          className="object-contain"
-          sizes="(max-width: 640px) 192px, 256px"
-          priority
-        />
+    <div className="flex flex-col items-center justify-center gap-4">
+      <div 
+        className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto lg:w-72 lg:h-72 flex-shrink-0 transition-all duration-300 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-100 shadow-sm"
+        style={{
+          transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
+          transformStyle: 'preserve-3d'
+        }}
+      >
+        {DEPARTMENT_IMAGES.map((img, index) => (
+          <div
+            key={img.src}
+            className={`absolute inset-0 transition-opacity duration-300 rounded-full overflow-hidden flex items-center justify-center ${
+              index === currentIndex ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <Image
+              src={img.src}
+              alt={img.alt}
+              fill
+              className="object-contain rounded-full"
+              sizes="(max-width: 640px) 192px, 256px"
+              priority
+            />
+          </div>
+        ))}
+      </div>
+      
+      {/* Pagination Dots */}
+      <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-xs mx-auto">
+        {DEPARTMENT_IMAGES.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              index === currentIndex ? 'w-4 bg-indigo-600' : 'w-1.5 bg-gray-300 hover:bg-gray-400'
+            }`}
+            aria-label={`Go to image ${index + 1}`}
+          />
+        ))}
       </div>
     </div>
   );

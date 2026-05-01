@@ -377,7 +377,7 @@ export default function Navbar() {
             {/* Search Button (Desktop/Tablet) */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-neutral-500 hover:text-primary-600 hover:bg-primary-50/50 transition-all group"
+              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 transition-all group"
               aria-label="Open Search"
             >
               <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -407,6 +407,13 @@ export default function Navbar() {
                 <span className="hidden lg:inline group-hover:text-red-700 transition-colors">Emergency</span>
               </Link>
               <Link
+                href="/donate"
+                className="flex items-center gap-2 px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 rounded-lg text-xs sm:text-sm lg:text-sm font-bold text-white bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700 shadow-lg shadow-success-500/30 hover:shadow-success-500/50 hover:scale-105 transition-all duration-300 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-success-500 focus:ring-offset-2"
+              >
+                <span className="hidden sm:inline" aria-hidden="true">💝</span>Donate
+              </Link>
+              <UserMenu />
+              <Link
                 href="/download-app"
                 className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-bold text-primary-600 bg-primary-50/70 border-2 border-primary-200/60 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 transition-all duration-300 whitespace-nowrap group shadow-sm shadow-primary-200/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 aria-label="Download Mobile App"
@@ -416,40 +423,14 @@ export default function Navbar() {
                 </div>
                 <span>Download App</span>
               </Link>
-              <Link
-                href="/donate"
-                className="flex items-center gap-2 px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 rounded-lg text-xs sm:text-sm lg:text-sm font-bold text-white bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700 shadow-lg shadow-success-500/30 hover:shadow-success-500/50 hover:scale-105 transition-all duration-300 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-success-500 focus:ring-offset-2"
-              >
-                <span className="hidden sm:inline" aria-hidden="true">💝</span>Donate
-              </Link>
-              <UserMenu />
             </div>
 
             {/* Mobile Icons Row - Compact to fit all 7 items */}
             <div className="md:hidden flex items-center gap-0 sm:gap-1 flex-1 justify-end mr-0.5 sm:mr-1">
-              {/* Download App - Compact Icon only Animates (Moved to Far Left) */}
-              <a
-                href="/download-app"
-                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[24px] group"
-                aria-label="Download Mobile App"
-              >
-                <div className="animate-flip">
-                  <Image
-                    src="/app-download.webp"
-                    alt="Download App"
-                    width={12}
-                    height={12}
-                    className="rounded-md shadow-sm"
-                    priority
-                  />
-                </div>
-                <span className="text-[6px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">App</span>
-              </a>
-
               {/* Search Toggle (Mobile) */}
               <button
                 onClick={() => setSearchOpen(true)}
-                className="p-1 rounded-lg text-neutral-700 hover:text-primary-600 transition-colors flex flex-col items-center justify-center gap-0.5 min-w-[28px]"
+                className="p-1 rounded-lg text-blue-600 hover:text-blue-700 transition-colors flex flex-col items-center justify-center gap-0.5 min-w-[28px]"
                 aria-label="Open Search"
               >
                 <Search className="w-3.5 h-3.5" />
@@ -478,7 +459,7 @@ export default function Navbar() {
                 );
               })}
 
-              {/* Login / Dashboard Mobile Icon (Far Right) */}
+              {/* Login / Dashboard Mobile Icon */}
               <Link
                 href={dashboardHref}
                 className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[24px] group"
@@ -493,6 +474,25 @@ export default function Navbar() {
                   {user ? "Dash" : "Login"}
                 </span>
               </Link>
+
+              {/* Download App - Compact Icon only Animates (Moved to Right of Login) */}
+              <a
+                href="/download-app"
+                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[24px] group"
+                aria-label="Download Mobile App"
+              >
+                <div className="animate-flip">
+                  <Image
+                    src="/app-download.webp"
+                    alt="Download App"
+                    width={12}
+                    height={12}
+                    className="rounded-md shadow-sm"
+                    priority
+                  />
+                </div>
+                <span className="text-[6px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">App</span>
+              </a>
             </div>
 
             {/* Mobile Hamburger Button */}

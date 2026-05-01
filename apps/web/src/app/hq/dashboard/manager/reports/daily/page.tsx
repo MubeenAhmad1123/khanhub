@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
@@ -115,23 +115,57 @@ export default function DailyReportPage() {
       const fineMap = new Map();
       const contribMap = new Map();
 
-      attSnaps.forEach(snap => snap.docs.forEach((d: any) => attMap.set(d.data().staffId || d.id, d.data())));
-      dressSnaps.forEach(snap => snap.docs.forEach((d: any) => dressMap.set(d.data().staffId || d.id, d.data())));
+      attSnaps.forEach(snap => snap.docs.forEach((d: any) => {
+        const data = d.data();
+        let sid = data.staffId || d.id;
+        if (sid.includes('_')) {
+          const parts = sid.split('_');
+          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        }
+        attMap.set(sid, data);
+      }));
+
+      dressSnaps.forEach(snap => snap.docs.forEach((d: any) => {
+        const data = d.data();
+        let sid = data.staffId || d.id;
+        if (sid.includes('_')) {
+          const parts = sid.split('_');
+          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        }
+        dressMap.set(sid, data);
+      }));
+
       dutySnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
-        const sid = data.staffId || d.id;
+        let sid = data.staffId || d.id;
+        if (sid.includes('_')) {
+          const parts = sid.split('_');
+          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        }
         const existing = dutyMap.get(sid);
         if (!existing || (!existing.duties && data.duties)) {
           dutyMap.set(sid, data);
         }
       }));
+
       fineSnaps.forEach(snap => snap.docs.forEach((d: any) => {
-        const sid = d.data().staffId || d.id;
+        const data = d.data();
+        let sid = data.staffId || d.id;
+        if (sid.includes('_')) {
+          const parts = sid.split('_');
+          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        }
         const existing = fineMap.get(sid) || [];
-        fineMap.set(sid, [...existing, d.data()]);
+        fineMap.set(sid, [...existing, data]);
       }));
+
       contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
-        const sid = d.data().staffId || d.id;
+        const data = d.data();
+        let sid = data.staffId || d.id;
+        if (sid.includes('_')) {
+          const parts = sid.split('_');
+          sid = parts[0].length > 10 ? parts[0] : parts[1];
+        }
         const existing = contribMap.get(sid) || 0;
         contribMap.set(sid, existing + 1);
       }));
@@ -385,7 +419,7 @@ export default function DailyReportPage() {
     }));
   };
 
-  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus', value: any) => {
+  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus' | 'fines' | 'fineReason', value: any) => {
     setReportData(prev => prev.map(row => {
       if (row.id === id) {
         const updatedRow = {
@@ -530,7 +564,7 @@ export default function DailyReportPage() {
 
       for (const row of dirtyRows) {
         const prefix = getDeptPrefix(row.department as StaffDept);
-        const attId = `${reportDate}_${row.id}`;
+        const attId = `${row.id}_${reportDate}`;
 
         await setDoc(doc(db, `${prefix}_attendance`, attId), {
           staffId: row.id,
@@ -576,15 +610,21 @@ export default function DailyReportPage() {
         }
 
         if (row.fines > 0) {
-          await addDoc(collection(db, `${prefix}_fines`), {
+          await setDoc(doc(db, `${prefix}_fines`, attId), {
             staffId: row.id,
             amount: row.fines,
-            reason: row.attendance === 'absent' ? 'Absent without leave' : 'Penalty',
+            reason: row.fineReason || (row.attendance === 'absent' ? 'Absent without leave' : 'Penalty'),
             status: 'unpaid',
             date: reportDate,
             createdAt: Timestamp.now(),
             markedBy: session?.uid
-          });
+          }, { merge: true });
+        } else {
+          try {
+            await deleteDoc(doc(db, `${prefix}_fines`, attId));
+          } catch (err) {
+            // Document might not exist, safe to ignore
+          }
         }
       }
       setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
@@ -775,9 +815,16 @@ export default function DailyReportPage() {
                           {row.name[0]}
                         </div>
                         <div>
-                          <Link href={`/hq/dashboard/manager/staff/${row.id}`} className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer">
+                          <a
+                            href={`/hq/dashboard/manager/staff/${row.id}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              router.push(`/hq/dashboard/manager/staff/${row.id}`);
+                            }}
+                            className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
+                          >
                             {row.name}
-                          </Link>
+                          </a>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
                         </div>
                       </div>
@@ -934,12 +981,22 @@ export default function DailyReportPage() {
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <span className={`text-sm font-bold ${row.fines > 0 ? 'text-rose-600' : 'text-gray-400'}`}>
-                        {row.fines > 0 ? `₨${row.fines}` : '-'}
-                      </span>
-                      {row.fines > 0 && row.fineReason && (
-                        <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">{row.fineReason}</p>
-                      )}
+                      <div className="flex flex-col gap-1 items-center">
+                        <input
+                          type="number"
+                          value={row.fines || ''}
+                          onChange={(e) => handleInlineUpdate(row.id, 'fines', Number(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                        />
+                        <input
+                          type="text"
+                          value={row.fineReason || ''}
+                          onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
+                          placeholder="Reason"
+                          className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                        />
+                      </div>
                     </td>
 
                   </tr>
