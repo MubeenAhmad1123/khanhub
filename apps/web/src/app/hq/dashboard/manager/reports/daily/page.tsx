@@ -1052,23 +1052,43 @@ export default function DailyReportPage() {
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col gap-1 items-center">
-                        <input
-                          type="number"
-                          value={row.fines || ''}
-                          onChange={(e) => handleInlineUpdate(row.id, 'fines', Number(e.target.value) || 0)}
-                          placeholder="0"
-                          className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
-                        />
-                        <input
-                          type="text"
-                          value={row.fineReason || ''}
-                          onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
-                          placeholder="Reason"
-                          className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
-                        />
+                      <div className="flex flex-col gap-1.5 items-center">
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            value={row.fines || ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : Number(e.target.value);
+                              handleInlineUpdate(row.id, 'fines', val);
+                            }}
+                            placeholder="0"
+                            className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                          />
+                          {row.fines > 0 && (
+                            <button
+                              onClick={() => {
+                                handleInlineUpdate(row.id, 'fines', 0);
+                                handleInlineUpdate(row.id, 'fineReason', '');
+                              }}
+                              className="text-rose-500 hover:text-rose-700 transition-colors"
+                              title="Remove fine"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          )}
+                        </div>
+                        {row.fines > 0 && (
+                          <input
+                            type="text"
+                            value={row.fineReason || ''}
+                            onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
+                            placeholder="Reason"
+                            className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                          />
+                        )}
                       </div>
                     </td>
+
 
                   </tr>
                 ))}
@@ -1090,9 +1110,8 @@ export default function DailyReportPage() {
         {/* Signature & Legal Disclaimer */}
         <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100 print:pt-6 print:mt-6">
           <div className="flex flex-col gap-1">
-            <div className="w-32 h-px bg-gray-300 mb-2" />
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Authorized Signature</p>
-            <p className="text-[10px] text-gray-400 mt-1 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
+            <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
+            <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
