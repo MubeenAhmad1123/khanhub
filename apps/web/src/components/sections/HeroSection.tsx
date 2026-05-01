@@ -167,14 +167,14 @@ const ImageCarousel = memo(function ImageCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Progress Indicators - FIXED STATIC SIZE */}
-      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-wrap justify-center items-center gap-1.5 w-full max-w-[280px] sm:max-w-none">
+      {/* Progress Indicators - FIXED STATIC SIZE ON A SINGLE LINE */}
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-nowrap justify-center items-center gap-1.5 w-full max-w-[280px] sm:max-w-none">
         {DEPARTMENT_IMAGES.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
-            className={`h-2 w-2 rounded-full transition-colors duration-300 flex-shrink-0 ${idx === currentIndex
-              ? 'bg-primary-500 scale-110'
+            className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 flex-shrink-0 ${idx === currentIndex
+              ? 'bg-primary-500'
               : 'bg-neutral-300 hover:bg-primary-300'
               }`}
             aria-label={`Go to slide ${idx + 1}`}

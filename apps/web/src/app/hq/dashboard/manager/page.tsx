@@ -36,44 +36,17 @@ const DEPARTMENT_IMAGES = [
 ];
 
 const ImageCarousel = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % DEPARTMENT_IMAGES.length);
-    }, DEPARTMENT_IMAGES[currentIndex].duration);
-    return () => clearTimeout(timer);
-  }, [currentIndex]);
-
   return (
     <div className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-8 lg:mb-0 lg:w-72 lg:h-72 flex-shrink-0">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.5 }}
-          className="absolute inset-0 drop-shadow-xl"
-        >
-          <Image
-            src={DEPARTMENT_IMAGES[currentIndex].src}
-            alt={DEPARTMENT_IMAGES[currentIndex].alt}
-            fill
-            className="object-contain"
-            sizes="(max-width: 640px) 192px, 256px"
-            priority={currentIndex === 0}
-          />
-        </motion.div>
-      </AnimatePresence>
-      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5">
-        {DEPARTMENT_IMAGES.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setCurrentIndex(idx)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-4 bg-indigo-500' : 'w-1.5 bg-gray-300 hover:bg-indigo-300'}`}
-          />
-        ))}
+      <div className="absolute inset-0 drop-shadow-xl">
+        <Image
+          src="/logo-circle.webp"
+          alt="Khan Hub"
+          fill
+          className="object-contain"
+          sizes="(max-width: 640px) 192px, 256px"
+          priority
+        />
       </div>
     </div>
   );
