@@ -346,6 +346,41 @@ export default function DailyReportPage() {
     }));
   };
 
+  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus', value: any) => {
+    setReportData(prev => prev.map(row => {
+      if (row.id === id) {
+        const updatedRow = {
+          ...row,
+          [field]: value,
+          isDirty: true
+        };
+
+        const onLeave = updatedRow.attendance === 'leave';
+        const attPoint = (updatedRow.attendance === 'present') ? 1 : 0;
+        const uniformPoint = (!onLeave && updatedRow.uniformStatus === 'yes') ? 1 : 0;
+        const dutyPoint = (!onLeave && updatedRow.dutyStatus === 'yes') ? 1 : 0;
+        const contribPoint = (!onLeave && updatedRow.gpStatus === 'yes') ? 1 : 0;
+
+        updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint + contribPoint;
+
+        if (field === 'attendance') {
+          if (value === 'absent') {
+            updatedRow.fines = 500;
+            updatedRow.fineReason = 'Absent without leave';
+          } else if (value === 'unmarked') {
+            updatedRow.fines = 0;
+            updatedRow.fineReason = '';
+          } else {
+            updatedRow.fines = 0;
+            updatedRow.fineReason = '';
+          }
+        }
+        return updatedRow;
+      }
+      return row;
+    }));
+  };
+
   const saveAssessment = async () => {
     const dirtyRows = reportData.filter(r => r.isDirty);
     if (dirtyRows.length === 0) {
@@ -369,6 +404,37 @@ export default function DailyReportPage() {
           updatedAt: Timestamp.now(),
           markedBy: session?.uid
         }, { merge: true });
+
+        if (row.uniformStatus !== 'na') {
+          await setDoc(doc(db, `${prefix}_dress_logs`, attId), {
+            staffId: row.id,
+            date: reportDate,
+            status: row.uniformStatus,
+            updatedAt: Timestamp.now(),
+            markedBy: session?.uid
+          }, { merge: true });
+        }
+
+        if (row.dutyStatus !== 'na') {
+          await setDoc(doc(db, `${prefix}_duty_logs`, attId), {
+            staffId: row.id,
+            date: reportDate,
+            status: row.dutyStatus,
+            updatedAt: Timestamp.now(),
+            markedBy: session?.uid
+          }, { merge: true });
+        }
+
+        if (row.gpStatus !== 'na') {
+          await setDoc(doc(db, `${prefix}_contributions`, attId), {
+            staffId: row.id,
+            date: reportDate,
+            status: row.gpStatus,
+            isApproved: row.gpStatus === 'yes',
+            updatedAt: Timestamp.now(),
+            markedBy: session?.uid
+          }, { merge: true });
+        }
 
         if (row.fines > 0) {
           await addDoc(collection(db, `${prefix}_fines`), {
@@ -570,39 +636,54 @@ export default function DailyReportPage() {
                           {row.name[0]}
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug">{row.name}</p>
+                          <Link href={`/hq/dashboard/manager/staff/${row.id}`} className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer">
+                            {row.name}
+                          </Link>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
                         </div>
                       </div>
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider ${row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                      <select
+                        value={row.attendance}
+                        onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                          row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                           row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                            row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                            row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border border-cyan-100' :
-                              'bg-gray-50 text-gray-700 border border-gray-200'
-                        }`}>
-                        {row.attendance === 'present' ? <CheckCircle size={12} /> :
-                          row.attendance === 'absent' ? <XCircle size={12} /> :
-                            row.attendance === 'late' ? <Clock size={12} /> : <Info size={12} />}
-                        {row.attendance}
-                        {row.attendance === 'late' && (row as any).arrivalTime && (
-                          <span className="ml-1 font-mono">@{(row as any).arrivalTime}</span>
-                        )}
-                      </div>
+                          row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                          row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border border-cyan-100' :
+                          'bg-gray-50 text-gray-700 border border-gray-200'
+                        }`}
+                      >
+                        <option value="unmarked">Unmarked</option>
+                        <option value="present">Present</option>
+                        <option value="absent">Absent</option>
+                        <option value="late">Late</option>
+                        <option value="leave">Leave</option>
+                      </select>
+                      {row.attendance === 'late' && (row as any).arrivalTime && (
+                        <span className="ml-1 font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100">@{(row as any).arrivalTime}</span>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                              row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                'bg-gray-50 text-gray-700 border border-gray-200'
-                          }`}>
-                          {row.uniformStatus === 'yes' ? <CheckCircle size={12} /> : row.uniformStatus === 'no' ? <XCircle size={12} /> : <AlertTriangle size={12} />}
-                          {row.uniformStatus}
-                        </div>
+                        <select
+                          value={row.uniformStatus}
+                          onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                            row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                            row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                            row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            'bg-gray-50 text-gray-700 border border-gray-200'
+                          }`}
+                        >
+                          <option value="na">N/A</option>
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                          <option value="incomplete">Incomplete</option>
+                        </select>
                         {row.uniformStatus === 'incomplete' && (row as any).details?.uniformMissing?.length > 0 && (
                           <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
                         )}
@@ -611,14 +692,21 @@ export default function DailyReportPage() {
 
                     <td className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                              row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                'bg-gray-50 text-gray-700 border border-gray-200'
-                          }`}>
-                          {row.dutyStatus === 'yes' ? <CheckCircle size={12} /> : row.dutyStatus === 'no' ? <XCircle size={12} /> : <AlertTriangle size={12} />}
-                          {row.dutyStatus}
-                        </div>
+                        <select
+                          value={row.dutyStatus}
+                          onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                            row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                            row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                            row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            'bg-gray-50 text-gray-700 border border-gray-200'
+                          }`}
+                        >
+                          <option value="na">N/A</option>
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                          <option value="incomplete">Incomplete</option>
+                        </select>
                         {row.dutyStatus === 'incomplete' && (row as any).details?.dutiesPending?.length > 0 && (
                           <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
                         )}
@@ -626,12 +714,17 @@ export default function DailyReportPage() {
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                          'bg-rose-50 text-rose-700 border-rose-100'
-                        }`}>
-                        {row.gpStatus === 'yes' ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                        {row.gpStatus}
-                      </div>
+                      <select
+                        value={row.gpStatus}
+                        onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                          row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          'bg-rose-50 text-rose-700 border border-rose-100'
+                        }`}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
                     </td>
 
                     <td className="px-6 py-4 text-center">

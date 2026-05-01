@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { 
   Calendar, Clock, CheckCircle2, TrendingUp, DollarSign, 
   Users, ChevronDown, ChevronUp, ShieldCheck, Receipt,
-  ArrowRightCircle, History
+  ArrowRightCircle, History, Trash2
 } from 'lucide-react';
 
 export type Payment = {
@@ -28,12 +28,19 @@ export type MonthRecord = {
 export type FinanceHistoryProps = {
   patientName: string;
   records: MonthRecord[];
+  onDeletePayments?: (paymentIds: string[]) => void;
 };
 
-const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records }) => {
+const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records: initialRecords, onDeletePayments }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedMonths, setExpandedMonths] = useState<Record<number, boolean>>({ 0: true }); // Expand first month by default
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
+  const [localRecords, setLocalRecords] = useState<MonthRecord[]>(initialRecords);
+
+  useEffect(() => {
+    setLocalRecords(initialRecords);
+  }, [initialRecords]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -60,8 +67,31 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records })
     }));
   };
 
-  const totalPaidOverall = records.reduce((acc, curr) => acc + curr.totalPaid, 0);
-  const totalRemainingOverall = records.reduce((acc, curr) => acc + curr.remaining, 0);
+  const totalPaidOverall = localRecords.reduce((acc, curr) => acc + curr.totalPaid, 0);
+  const totalRemainingOverall = localRecords.reduce((acc, curr) => acc + curr.remaining, 0);
+
+  const handleDelete = () => {
+    if (onDeletePayments) {
+      onDeletePayments(selectedPayments);
+    }
+    // Also update UI state locally
+    const updated = localRecords.map(record => {
+      const remainingPayments = record.payments.filter(p => {
+        const pId = p.id || `${p.date}-${p.amount}-${p.receivedBy}`;
+        return !selectedPayments.includes(pId);
+      });
+      const totalPaid = remainingPayments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = Math.max(0, record.package - totalPaid);
+      return {
+        ...record,
+        payments: remainingPayments,
+        totalPaid,
+        remaining
+      };
+    });
+    setLocalRecords(updated);
+    setSelectedPayments([]);
+  };
 
   return (
     <div 
@@ -91,7 +121,7 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records })
 
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header Section */}
-        <div className={`mb-12 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div className={`mb-8 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-3 border border-blue-100">
@@ -113,9 +143,35 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records })
           </div>
         </div>
 
+        {/* Bulk Actions Interface */}
+        {selectedPayments.length > 0 && (
+          <div className="bg-slate-900 border border-slate-800 text-white p-4 mb-8 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-2xl animate-fade-in transition-all duration-300">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse flex-shrink-0" />
+              <p className="font-bold text-sm">
+                Selected {selectedPayments.length} transaction{selectedPayments.length > 1 ? 's' : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                onClick={() => setSelectedPayments([])}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs transition-colors border border-slate-700"
+              >
+                Cancel Selection
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-2 border border-rose-500 shadow-lg shadow-rose-500/20"
+              >
+                <Trash2 size={14} /> Delete Selected
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Vertical Timeline Journey */}
         <div className="relative pl-6 sm:pl-12 border-l-4 border-slate-100 py-4 space-y-12">
-          {records.map((month, mIdx) => (
+          {localRecords.map((month, mIdx) => (
             <div 
               key={mIdx} 
               className={`relative transition-all duration-700 delay-[${mIdx * 100}ms] ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
@@ -195,62 +251,83 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records })
                         No transactions recorded for this period.
                       </div>
                     ) : (
-                      month.payments.map((p, pIdx) => (
-                        <div key={pIdx} className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow group/item">
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 group-hover/item:scale-110 transition-transform">
-                                <Receipt size={20} />
-                              </div>
-                              <div>
-                                <h4 className="text-xl font-black text-slate-900 leading-none">
-                                  PKR {p.amount.toLocaleString('en-PK')}
-                                </h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Clock size={12} className="text-slate-400" />
-                                  <span className="text-xs text-slate-500 font-bold">{p.date}</span>
-                                </div>
-                              </div>
+                      month.payments.map((p, pIdx) => {
+                        const paymentId = p.id || `${p.date}-${p.amount}-${p.receivedBy}`;
+                        const isSelected = selectedPayments.includes(paymentId);
+                        return (
+                          <div key={pIdx} className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow group/item flex flex-row gap-4 items-start">
+                            <div className="flex-shrink-0 pt-3">
+                              <input 
+                                type="checkbox"
+                                checked={isSelected}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPayments(prev => [...prev, paymentId]);
+                                  } else {
+                                    setSelectedPayments(prev => prev.filter(id => id !== paymentId));
+                                  }
+                                }}
+                                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              />
                             </div>
-
-                            <div className="flex items-center gap-3 self-end sm:self-center">
-                              <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                p.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' : 
-                                p.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
-                                'bg-rose-100 text-rose-700'
-                              }`}>
-                                {p.status}
-                              </div>
-                              {p.verifiedByHQ && (
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-200">
-                                  <ShieldCheck size={12} /> HQ Verified
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 group-hover/item:scale-110 transition-transform">
+                                    <Receipt size={20} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-xl font-black text-slate-900 leading-none">
+                                      PKR {p.amount.toLocaleString('en-PK')}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Clock size={12} className="text-slate-400" />
+                                      <span className="text-xs text-slate-500 font-bold">{p.date}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
+
+                                <div className="flex items-center gap-3 self-end sm:self-center">
+                                  <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                    p.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' : 
+                                    p.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
+                                    'bg-rose-100 text-rose-700'
+                                  }`}>
+                                    {p.status}
+                                  </div>
+                                  {p.verifiedByHQ && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-200">
+                                      <ShieldCheck size={12} /> HQ Verified
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col sm:flex-row gap-4 text-xs font-bold leading-relaxed">
+                                <div className="flex-1">
+                                  <span className="text-slate-400 uppercase tracking-widest text-[9px] block mb-1">Received By</span>
+                                  <div className="flex items-center gap-2 text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 w-fit">
+                                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-700">
+                                      {p.receivedBy.charAt(0)}
+                                    </div>
+                                    {p.receivedBy}
+                                  </div>
+                                </div>
+                                
+                                {(p.note || p.receivedBy.includes('sir')) && (
+                                  <div className="flex-1">
+                                    <span className="text-slate-400 uppercase tracking-widest text-[9px] block mb-1">Transaction Note</span>
+                                    <div className="text-slate-500 bg-blue-50/30 px-3 py-2 rounded-xl border border-blue-100/50 italic">
+                                      "{p.note || `Payment verified and processed via ${p.receivedBy}`}"
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-
-                          <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col sm:flex-row gap-4 text-xs font-bold leading-relaxed">
-                            <div className="flex-1">
-                              <span className="text-slate-400 uppercase tracking-widest text-[9px] block mb-1">Received By</span>
-                              <div className="flex items-center gap-2 text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 w-fit">
-                                <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-700">
-                                  {p.receivedBy.charAt(0)}
-                                </div>
-                                {p.receivedBy}
-                              </div>
-                            </div>
-                            
-                            {(p.note || p.receivedBy.includes('sir')) && (
-                              <div className="flex-1">
-                                <span className="text-slate-400 uppercase tracking-widest text-[9px] block mb-1">Transaction Note</span>
-                                <div className="text-slate-500 bg-blue-50/30 px-3 py-2 rounded-xl border border-blue-100/50 italic">
-                                  "{p.note || `Payment verified and processed via ${p.receivedBy}`}"
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
