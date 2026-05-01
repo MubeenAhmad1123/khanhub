@@ -978,7 +978,20 @@ export default function DailyReportPage() {
                               }}
                               className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
                             >
-                              Missing: {row.details?.uniformMissing?.length > 0 ? row.details.uniformMissing.join(', ') : 'Click to configure'}
+                              Missing: {(() => {
+                                const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                                  { key: 'uniform', label: 'Uniform' },
+                                  { key: 'shoes', label: 'Polished Shoes' },
+                                  { key: 'card', label: 'Identity Card' }
+                                ];
+                                const missing = row.details?.uniformMissing?.length > 0
+                                  ? row.details.uniformMissing
+                                  : config.filter((c: any) => {
+                                      const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                      return !item || item.status === 'no';
+                                    }).map((c: any) => c.label);
+                                return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                              })()}
                             </button>
                           </div>
                         )}
@@ -1021,7 +1034,20 @@ export default function DailyReportPage() {
                               }}
                               className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
                             >
-                              Pending: {row.details?.dutiesPending?.length > 0 ? row.details.dutiesPending.join(', ') : 'Click to configure'}
+                              Pending: {(() => {
+                                const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                                  { key: 'morning', label: 'Morning Duty' },
+                                  { key: 'afternoon', label: 'Afternoon Duty' },
+                                  { key: 'evening', label: 'Evening Duty' }
+                                ];
+                                const pending = row.details?.dutiesPending?.length > 0
+                                  ? row.details.dutiesPending
+                                  : config.filter((c: any) => {
+                                      const item = row.dutyItems?.find((i: any) => i.key === c.key);
+                                      return !item || item.status !== 'done';
+                                    }).map((c: any) => c.label);
+                                return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                              })()}
                             </button>
                           </div>
                         )}

@@ -343,13 +343,13 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Summary Cards */}
-      <div className="flex flex-nowrap overflow-x-auto md:grid md:grid-cols-6 lg:grid-cols-8 gap-4 no-scrollbar pb-2 md:pb-0">
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-[130px] md:min-w-0 flex-shrink-0">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Leads</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-3 w-full max-w-full">
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-0">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">Total Leads</p>
           <p className={cn("text-2xl font-black mt-1", themeClasses.text)}>{stats.total}</p>
         </div>
         {allResponses.map((config) => (
-          <div key={config.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-[130px] md:min-w-0 flex-shrink-0">
+          <div key={config.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-0">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">{config.name}</p>
             <p className={cn("text-2xl font-black mt-1", 
               config.id === 'NEW' ? 'text-blue-700' : 
@@ -361,7 +361,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white p-3 md:p-4 rounded-3xl md:rounded-[2rem] border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between w-full max-w-full overflow-hidden">
+      <div className="bg-white p-3 md:p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between w-full max-w-full overflow-hidden">
         <div className="relative w-full md:w-96 min-w-0">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
@@ -373,9 +373,9 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
           />
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           <select 
-            className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none cursor-pointer"
+            className="w-full sm:w-auto bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none cursor-pointer"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -388,7 +388,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
             className={cn("flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg", themeClasses.primary, themeClasses.hover)}
           >
             <Plus size={18} />
-            Add New Lead
+            <span className="truncate">Add New Lead</span>
           </button>
         </div>
       </div>
@@ -610,13 +610,13 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
         ) : (
           filteredLeads.map((lead) => (
             <div key={lead.id} className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group w-full max-w-full overflow-hidden">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg flex-shrink-0", themeClasses.primary)}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white flex-shrink-0", themeClasses.primary)}>
                     {lead.name[0]?.toUpperCase()}
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">{lead.name}</h4>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight truncate">{lead.name}</h4>
                     <p className="text-[10px] text-gray-400 font-bold">{lead.createdAt ? formatDateDMY(lead.createdAt) : 'Just now'}</p>
                   </div>
                 </div>
@@ -624,40 +624,40 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => handleDeleteLead(lead.id)}
-                    className="w-8 h-8 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:text-rose-600 hover:bg-rose-50 transition-all"
+                    className="w-8 h-8 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-50">
-                <div>
+              <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-50 w-full max-w-full overflow-hidden">
+                <div className="min-w-0">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Contact</p>
-                  <p className="text-xs font-black text-gray-700 mt-0.5 select-all">{lead.contact}</p>
+                  <p className="text-xs font-black text-gray-700 mt-0.5 select-all break-all">{lead.contact}</p>
                 </div>
 
                 {department === 'rehab' && (
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Addiction</p>
-                    <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600">
+                    <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600 truncate max-w-full">
                       {lead.addiction}
                     </span>
                   </div>
                 )}
 
-                <div className="col-span-2">
+                <div className="col-span-2 min-w-0">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Address / City</p>
-                  <p className="text-xs font-bold text-gray-600 mt-0.5 truncate">{lead.address || '—'}</p>
+                  <p className="text-xs font-bold text-gray-600 mt-0.5 break-words line-clamp-2">{lead.address || '—'}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Status Update</label>
                   <select 
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer border-none font-sans",
+                      "w-full sm:w-auto px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer border-none font-sans",
                       STATUS_CONFIG[lead.status as LeadStatus]?.bg || 'bg-gray-100',
                       STATUS_CONFIG[lead.status as LeadStatus]?.text || 'text-gray-700'
                     )}
@@ -697,7 +697,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 />
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-gray-100/60">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100/60">
                 <button 
                   onClick={() => handleCall(lead.id, lead.contact)}
                   className="flex-1 py-3 bg-blue-50 text-blue-600 flex items-center justify-center gap-2 rounded-2xl hover:bg-blue-600 hover:text-white transition-all text-xs font-black uppercase tracking-wider"
