@@ -27,6 +27,7 @@ interface DailyReportRow {
   uniformStatus: 'yes' | 'no' | 'incomplete' | 'na';
   dutyStatus: 'yes' | 'no' | 'incomplete' | 'na';
   gpStatus: 'yes' | 'no' | 'invalid' | 'na';
+  gpLink?: string;
   dailyScore: number;
   totalScore?: number;
   fines: number;
@@ -294,6 +295,7 @@ export default function DailyReportPage() {
           uniformStatus,
           dutyStatus,
           gpStatus: onLeave ? 'na' : (contribRecord?.status || (contribScore > 0 ? 'yes' : 'no')),
+          gpLink: contribRecord?.link || '',
           dailyScore: totalDailyPoints,
           fines: fineTotal,
           fineReason: finesList.length > 0 ? finesList[0].reason : '',
@@ -433,7 +435,7 @@ export default function DailyReportPage() {
     }));
   };
 
-  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus' | 'fines' | 'fineReason', value: any) => {
+  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus' | 'fines' | 'fineReason' | 'gpLink', value: any) => {
     setReportData(prev => prev.map(row => {
       if (row.id === id) {
         const updatedRow = {
@@ -660,6 +662,7 @@ export default function DailyReportPage() {
             date: reportDate,
             status: row.gpStatus,
             isApproved: row.gpStatus === 'yes',
+            link: row.gpLink || '',
             updatedAt: Timestamp.now(),
             markedBy: session?.uid
           }, { merge: true });
@@ -887,10 +890,10 @@ export default function DailyReportPage() {
                         </div>
                         <div>
                           <a
-                            href={`/hq/dashboard/manager/staff/${row.department}_${row.id}`}
+                            href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
                             onClick={(e) => {
                               e.preventDefault();
-                              router.push(`/hq/dashboard/manager/staff/${row.department}_${row.id}`);
+                              router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
                             }}
                             className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
                           >
@@ -1032,17 +1035,28 @@ export default function DailyReportPage() {
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <select
-                        value={row.gpStatus}
-                        onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
-                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                          row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                          'bg-rose-50 text-rose-700 border border-rose-100'
-                        }`}
-                      >
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                      </select>
+                      <div className="flex flex-col gap-1 items-center">
+                        <select
+                          value={row.gpStatus}
+                          onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
+                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                            row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                            'bg-rose-50 text-rose-700 border border-rose-100'
+                          }`}
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                        {row.gpStatus === 'yes' && (
+                          <input
+                            type="text"
+                            value={row.gpLink || ''}
+                            onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
+                            placeholder="GP Line / Post"
+                            className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none mt-1"
+                          />
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-6 py-4 text-center">

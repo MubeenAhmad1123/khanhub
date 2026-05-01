@@ -409,13 +409,21 @@ export default function StaffProfilePage() {
 
       console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix} | Range: ${start} to ${end}`);
       const t1 = Date.now();
-      const [attSnap, dressSnap, dutySnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).then(s => { console.log(`[StaffProfile] Att loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).then(s => { console.log(`[StaffProfile] Dress loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).then(s => { console.log(`[StaffProfile] Duty loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).then(s => { console.log(`[StaffProfile] Salary loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).then(s => { console.log(`[StaffProfile] Tasks loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
-        getDoc(doc(db, `hq_meta`, 'config')).then(s => { console.log(`[StaffProfile] Meta loaded in ${Date.now()-t1}ms`); return s; }).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
+      const [
+        attSnap1, attSnap2,
+        dressSnap1, dressSnap2,
+        dutySnap1, dutySnap2,
+        salarySnap, tasksSnap, metaDoc
+      ] = await Promise.all([
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', `${prefix}_${uid}`))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', `${prefix}_${uid}`))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', `${prefix}_${uid}`))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(() => ({ docs: [] } as any)),
+        getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any))
       ]);
       console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
 
@@ -430,7 +438,7 @@ export default function StaffProfilePage() {
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
-      attSnap.docs.forEach((d: any) => { 
+      [...attSnap1.docs, ...attSnap2.docs].forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
           aMap[data.date] = data as HqDailyAttendanceRecord; 
@@ -439,7 +447,7 @@ export default function StaffProfilePage() {
       setAttendanceMap(aMap);
 
       const drMap: Record<string, HqDailyDressCodeRecord> = {};
-      dressSnap.docs.forEach((d: any) => { 
+      [...dressSnap1.docs, ...dressSnap2.docs].forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
           drMap[data.date] = data as HqDailyDressCodeRecord; 
@@ -448,11 +456,9 @@ export default function StaffProfilePage() {
       setDressMap(drMap);
 
       const duMap: Record<string, HqDailyDutyRecord> = {};
-      dutySnap.docs.forEach((d: any) => { 
+      [...dutySnap1.docs, ...dutySnap2.docs].forEach((d: any) => { 
         const data = d.data();
-        // Filter by date in-memory
         if (data.date >= start && data.date <= end) {
-          // Prioritize checklist records (with duties array) over assessment records for the grid map
           if (!duMap[data.date] || (data.duties && !duMap[data.date].duties)) {
             duMap[data.date] = data as HqDailyDutyRecord; 
           }
@@ -461,17 +467,24 @@ export default function StaffProfilePage() {
       setDutyMap(duMap);
 
       // Populate array states for calculations and lists
-      setAttendance(attSnap.docs.map((d: any) => d.data()));
-      setDressLogs(dressSnap.docs.map((d: any) => d.data()));
-      setDutyLogs(dutySnap.docs.map((d: any) => d.data()));
+      setAttendance([...attSnap1.docs, ...attSnap2.docs].map((d: any) => d.data()));
+      setDressLogs([...dressSnap1.docs, ...dressSnap2.docs].map((d: any) => d.data()));
+      setDutyLogs([...dutySnap1.docs, ...dutySnap2.docs].map((d: any) => d.data()));
       setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
       setSpecialTasks(tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
 
       // Fetch growth history (all records)
-      const historySnap = await getDocs(
-        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), orderBy('date', 'desc'))
-      );
-      setGrowthHistory(historySnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+      const [historySnap1, historySnap2] = await Promise.all([
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid))),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', `${prefix}_${uid}`)))
+      ]);
+      const historyRows = [...historySnap1.docs, ...historySnap2.docs].map((d: any) => ({ id: d.id, ...d.data() }));
+      historyRows.sort((a, b) => {
+        const d1 = a.date || '';
+        const d2 = b.date || '';
+        return d2.localeCompare(d1);
+      });
+      setGrowthHistory(historyRows);
 
     } catch (err) {
       console.error("[StaffProfile] fetchData ERROR:", err);
