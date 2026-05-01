@@ -976,13 +976,10 @@ export default function DailyReportPage() {
                                   checkedKeys: checked
                                 });
                               }}
-                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none"
+                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
                             >
-                              Checklist
+                              Missing: {row.details?.uniformMissing?.length > 0 ? row.details.uniformMissing.join(', ') : 'Click to configure'}
                             </button>
-                            {row.details?.uniformMissing?.length > 0 && (
-                              <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">Missing: {row.details.uniformMissing.join(', ')}</p>
-                            )}
                           </div>
                         )}
                       </div>
@@ -1022,13 +1019,10 @@ export default function DailyReportPage() {
                                   checkedKeys: checked
                                 });
                               }}
-                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none"
+                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
                             >
-                              Checklist
+                              Pending: {row.details?.dutiesPending?.length > 0 ? row.details.dutiesPending.join(', ') : 'Click to configure'}
                             </button>
-                            {row.details?.dutiesPending?.length > 0 && (
-                              <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">Pending: {row.details.dutiesPending.join(', ')}</p>
-                            )}
                           </div>
                         )}
                       </div>
