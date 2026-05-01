@@ -37,6 +37,12 @@ interface DailyReportRow {
     finesReason: string[];
   };
   isDirty?: boolean;
+  arrivalTime?: string;
+  dutyStartTime?: string;
+  uniformConfig?: any[];
+  dutyConfig?: any[];
+  uniformItems?: any[];
+  dutyItems?: any[];
 }
 
 export default function DailyReportPage() {
@@ -248,7 +254,12 @@ export default function DailyReportPage() {
             dutiesPending: onLeave ? [] : dutiesPending,
             finesReason: finesList.map((f: any) => `${f.reason} (₨${f.amount})`)
           },
-          arrivalTime: att?.arrivalTime
+          arrivalTime: att?.arrivalTime,
+          dutyStartTime: s.dutyStartTime || '09:00',
+          uniformConfig: s.dressCodeConfig || [],
+          dutyConfig: s.dutyConfig || [],
+          uniformItems: dress?.items || [],
+          dutyItems: duty?.duties || []
         };
       });
 
@@ -310,6 +321,34 @@ export default function DailyReportPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [saving, setSaving] = useState(false);
 
+  const [activeChecklist, setActiveChecklist] = useState<{
+    id: string;
+    type: 'uniform' | 'duty';
+    items: { key: string; label: string }[];
+    checkedKeys: string[];
+  } | null>(null);
+
+  const [latePicker, setLatePicker] = useState<{
+    id: string;
+    dutyStartTime: string;
+    arrivalTime: string;
+    lateMinutes: number;
+  } | null>(null);
+
+  const calculateLateMinutes = (startTime: string, arrivalTime: string) => {
+    if (!startTime || !arrivalTime) return 0;
+    const [sH, sM] = startTime.split(':').map(Number);
+    const [aH, aM] = arrivalTime.split(':').map(Number);
+    if (isNaN(sH) || isNaN(sM) || isNaN(aH) || isNaN(aM)) return 0;
+
+    const startMinutes = sH * 60 + sM;
+    const arrivalMinutes = aH * 60 + aM;
+    
+    let diff = arrivalMinutes - startMinutes;
+    if (diff < 0) diff += 24 * 60;
+    return diff > 0 ? diff : 0;
+  };
+
   const getAutoValues = (status: DailyReportRow['attendance']) => {
     switch (status) {
       case 'present':
@@ -370,15 +409,112 @@ export default function DailyReportPage() {
           } else if (value === 'unmarked') {
             updatedRow.fines = 0;
             updatedRow.fineReason = '';
+          } else if (value === 'late') {
+            const start = updatedRow.dutyStartTime || '09:00';
+            setLatePicker({
+              id: updatedRow.id,
+              dutyStartTime: start,
+              arrivalTime: start,
+              lateMinutes: 0
+            });
+            updatedRow.fines = 0;
+            updatedRow.fineReason = '';
           } else {
             updatedRow.fines = 0;
             updatedRow.fineReason = '';
           }
         }
+
+        if (field === 'uniformStatus' && value === 'incomplete') {
+          const config = updatedRow.uniformConfig || [];
+          const checked = updatedRow.uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+          setActiveChecklist({
+            id: updatedRow.id,
+            type: 'uniform',
+            items: config.length > 0 ? config : [
+              { key: 'uniform', label: 'Uniform' },
+              { key: 'shoes', label: 'Polished Shoes' },
+              { key: 'card', label: 'Identity Card' }
+            ],
+            checkedKeys: checked
+          });
+        }
+
+        if (field === 'dutyStatus' && value === 'incomplete') {
+          const config = updatedRow.dutyConfig || [];
+          const checked = updatedRow.dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+          setActiveChecklist({
+            id: updatedRow.id,
+            type: 'duty',
+            items: config.length > 0 ? config : [
+              { key: 'morning', label: 'Morning Duty' },
+              { key: 'afternoon', label: 'Afternoon Duty' },
+              { key: 'evening', label: 'Evening Duty' }
+            ],
+            checkedKeys: checked
+          });
+        }
+
         return updatedRow;
       }
       return row;
     }));
+  };
+
+  const handleSaveChecklist = (id: string, type: 'uniform' | 'duty', checkedKeys: string[]) => {
+    setReportData(prev => prev.map(row => {
+      if (row.id === id) {
+        const config = type === 'uniform' ? (row.uniformConfig || []) : (row.dutyConfig || []);
+        const total = config.length;
+        const checkedCount = checkedKeys.length;
+
+        let status: 'yes' | 'no' | 'incomplete' = 'no';
+        if (checkedCount === total && total > 0) {
+          status = 'yes';
+        } else if (checkedCount > 0) {
+          status = 'incomplete';
+        }
+
+        const updatedRow = {
+          ...row,
+          isDirty: true
+        };
+
+        if (type === 'uniform') {
+          updatedRow.uniformStatus = status;
+          updatedRow.uniformItems = config.map((c: any) => ({
+            key: c.key,
+            status: checkedKeys.includes(c.key) ? 'yes' : 'no'
+          }));
+          updatedRow.details = {
+            ...updatedRow.details,
+            uniformMissing: config.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
+          };
+        } else {
+          updatedRow.dutyStatus = status;
+          updatedRow.dutyItems = config.map((c: any) => ({
+            key: c.key,
+            status: checkedKeys.includes(c.key) ? 'done' : 'pending'
+          }));
+          updatedRow.details = {
+            ...updatedRow.details,
+            dutiesPending: config.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
+          };
+        }
+
+        const onLeave = updatedRow.attendance === 'leave';
+        const attPoint = (updatedRow.attendance === 'present') ? 1 : 0;
+        const uniformPoint = (!onLeave && updatedRow.uniformStatus === 'yes') ? 1 : 0;
+        const dutyPoint = (!onLeave && updatedRow.dutyStatus === 'yes') ? 1 : 0;
+        const contribPoint = (!onLeave && updatedRow.gpStatus === 'yes') ? 1 : 0;
+
+        updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint + contribPoint;
+
+        return updatedRow;
+      }
+      return row;
+    }));
+    setActiveChecklist(null);
   };
 
   const saveAssessment = async () => {
@@ -401,6 +537,7 @@ export default function DailyReportPage() {
           date: reportDate,
           status: row.attendance === 'late' ? 'present' : row.attendance,
           isLate: row.attendance === 'late',
+          arrivalTime: (row as any).arrivalTime || null,
           updatedAt: Timestamp.now(),
           markedBy: session?.uid
         }, { merge: true });
@@ -410,6 +547,7 @@ export default function DailyReportPage() {
             staffId: row.id,
             date: reportDate,
             status: row.uniformStatus,
+            items: (row as any).uniformItems || [],
             updatedAt: Timestamp.now(),
             markedBy: session?.uid
           }, { merge: true });
@@ -420,6 +558,7 @@ export default function DailyReportPage() {
             staffId: row.id,
             date: reportDate,
             status: row.dutyStatus,
+            duties: (row as any).dutyItems || [],
             updatedAt: Timestamp.now(),
             markedBy: session?.uid
           }, { merge: true });
@@ -648,7 +787,7 @@ export default function DailyReportPage() {
                       <select
                         value={row.attendance}
                         onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
                           row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                           row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
                           row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
@@ -662,8 +801,23 @@ export default function DailyReportPage() {
                         <option value="late">Late</option>
                         <option value="leave">Leave</option>
                       </select>
-                      {row.attendance === 'late' && (row as any).arrivalTime && (
-                        <span className="ml-1 font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100">@{(row as any).arrivalTime}</span>
+                      {row.attendance === 'late' && (
+                        <div className="mt-1 flex justify-center">
+                          <span
+                            onClick={() => {
+                              const start = row.dutyStartTime || '09:00';
+                              setLatePicker({
+                                id: row.id,
+                                dutyStartTime: start,
+                                arrivalTime: (row as any).arrivalTime || start,
+                                lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
+                              });
+                            }}
+                            className="font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100 hover:bg-gray-100 cursor-pointer select-none"
+                          >
+                            @{(row as any).arrivalTime || 'Set Time'}
+                          </span>
+                        </div>
                       )}
                     </td>
 
@@ -672,7 +826,7 @@ export default function DailyReportPage() {
                         <select
                           value={row.uniformStatus}
                           onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
                             row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                             row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
                             row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
@@ -684,8 +838,31 @@ export default function DailyReportPage() {
                           <option value="no">No</option>
                           <option value="incomplete">Incomplete</option>
                         </select>
-                        {row.uniformStatus === 'incomplete' && (row as any).details?.uniformMissing?.length > 0 && (
-                          <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
+                        {row.uniformStatus === 'incomplete' && (
+                          <div className="flex flex-col items-center">
+                            <button
+                              onClick={() => {
+                                const config = (row as any).uniformConfig || [];
+                                const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+                                setActiveChecklist({
+                                  id: row.id,
+                                  type: 'uniform',
+                                  items: config.length > 0 ? config : [
+                                    { key: 'uniform', label: 'Uniform' },
+                                    { key: 'shoes', label: 'Polished Shoes' },
+                                    { key: 'card', label: 'Identity Card' }
+                                  ],
+                                  checkedKeys: checked
+                                });
+                              }}
+                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none"
+                            >
+                              Checklist
+                            </button>
+                            {row.details?.uniformMissing?.length > 0 && (
+                              <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">Missing: {row.details.uniformMissing.join(', ')}</p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -695,7 +872,7 @@ export default function DailyReportPage() {
                         <select
                           value={row.dutyStatus}
                           onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
                             row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                             row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
                             row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
@@ -707,8 +884,31 @@ export default function DailyReportPage() {
                           <option value="no">No</option>
                           <option value="incomplete">Incomplete</option>
                         </select>
-                        {row.dutyStatus === 'incomplete' && (row as any).details?.dutiesPending?.length > 0 && (
-                          <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
+                        {row.dutyStatus === 'incomplete' && (
+                          <div className="flex flex-col items-center">
+                            <button
+                              onClick={() => {
+                                const config = (row as any).dutyConfig || [];
+                                const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+                                setActiveChecklist({
+                                  id: row.id,
+                                  type: 'duty',
+                                  items: config.length > 0 ? config : [
+                                    { key: 'morning', label: 'Morning Duty' },
+                                    { key: 'afternoon', label: 'Afternoon Duty' },
+                                    { key: 'evening', label: 'Evening Duty' }
+                                  ],
+                                  checkedKeys: checked
+                                });
+                              }}
+                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none"
+                            >
+                              Checklist
+                            </button>
+                            {row.details?.dutiesPending?.length > 0 && (
+                              <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">Pending: {row.details.dutiesPending.join(', ')}</p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -717,7 +917,7 @@ export default function DailyReportPage() {
                       <select
                         value={row.gpStatus}
                         onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 ${
+                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
                           row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                           'bg-rose-50 text-rose-700 border border-rose-100'
                         }`}
@@ -774,6 +974,139 @@ export default function DailyReportPage() {
             </div>
           </div>
         </div>
+
+        {/* ACTIVE CHECKLIST MODAL */}
+        {activeChecklist && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white border border-gray-100 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
+              <h3 className="text-base font-bold text-gray-900 leading-snug tracking-tight mb-1">
+                Configure {activeChecklist.type === 'uniform' ? 'Uniform Status' : 'Duty Completion'}
+              </h3>
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-4">
+                Mark completed items for {activeChecklist.type === 'uniform' ? 'dress code' : 'daily tasks'}
+              </p>
+
+              <div className="space-y-2 mb-6 max-h-52 overflow-y-auto pr-1">
+                {activeChecklist.items.map((item) => {
+                  const isChecked = activeChecklist.checkedKeys.includes(item.key);
+                  return (
+                    <label
+                      key={item.key}
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
+                        isChecked ? 'bg-indigo-50/40 border-indigo-100 text-indigo-900' : 'bg-gray-50/30 border-gray-100 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-xs font-bold uppercase tracking-wider select-none">{item.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setActiveChecklist(prev => {
+                            if (!prev) return null;
+                            const newChecked = checked
+                              ? [...prev.checkedKeys, item.key]
+                              : prev.checkedKeys.filter(k => k !== item.key);
+                            return { ...prev, checkedKeys: newChecked };
+                          });
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveChecklist(null)}
+                  className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-600 font-bold text-xs uppercase tracking-wider rounded-xl border border-gray-100 hover:bg-gray-100 transition-all select-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSaveChecklist(activeChecklist.id, activeChecklist.type, activeChecklist.checkedKeys)}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-indigo-700 transition-all select-none shadow-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LATE PICKER TIME MODAL */}
+        {latePicker && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white border border-gray-100 rounded-3xl max-w-sm w-full p-6 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
+              <h3 className="text-base font-bold text-gray-900 leading-snug tracking-tight mb-1">
+                Mark Late Arrival Time
+              </h3>
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-4">
+                Calculate time late relative to duty start
+              </p>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Shift Start Time</p>
+                  <p className="font-mono text-sm font-bold text-gray-700 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 select-none">
+                    {latePicker.dutyStartTime}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Arrival Time</label>
+                  <input
+                    type="time"
+                    value={latePicker.arrivalTime}
+                    onChange={(e) => {
+                      const arrival = e.target.value;
+                      setLatePicker(prev => {
+                        if (!prev) return null;
+                        const lateMins = calculateLateMinutes(prev.dutyStartTime, arrival);
+                        return { ...prev, arrivalTime: arrival, lateMinutes: lateMins };
+                      });
+                    }}
+                    className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl px-3 py-2 text-sm font-mono font-bold outline-none focus:border-indigo-500 cursor-pointer select-none"
+                  />
+                </div>
+
+                <div className="bg-amber-50/50 border border-amber-100 rounded-xl px-3 py-2 flex items-center justify-between select-none">
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Late Penalty</span>
+                  <span className="font-mono text-xs font-bold text-amber-700">{latePicker.lateMinutes} mins late</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLatePicker(null)}
+                  className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-600 font-bold text-xs uppercase tracking-wider rounded-xl border border-gray-100 hover:bg-gray-100 transition-all select-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setReportData(prev => prev.map(row => {
+                      if (row.id === latePicker.id) {
+                        return {
+                          ...row,
+                          attendance: 'late',
+                          arrivalTime: latePicker.arrivalTime,
+                          isDirty: true
+                        };
+                      }
+                      return row;
+                    }));
+                    setLatePicker(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-indigo-700 transition-all select-none shadow-sm"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
