@@ -37,6 +37,7 @@ export default function FinanceHistory({ payments, monthlyDetails }: FinanceHist
     }));
   };
 
+  const overallBill = monthlyDetails.reduce((acc, curr) => acc + curr.totalDue, 0);
   const overallPaid = monthlyDetails.reduce((acc, curr) => acc + curr.totalPaid, 0);
   const overallRemaining = monthlyDetails.reduce((acc, curr) => acc + curr.remaining, 0);
 
@@ -60,6 +61,7 @@ export default function FinanceHistory({ payments, monthlyDetails }: FinanceHist
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <SummaryStats icon={<DollarSign size={16} />} label="Total Bill" value={`₨${overallBill.toLocaleString('en-PK')}`} color="bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100/60 dark:border-blue-800/40" />
               <SummaryStats icon={<ArrowUpRight size={16} />} label="Total Deposited" value={`₨${overallPaid.toLocaleString('en-PK')}`} color="bg-emerald-50/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/60 dark:border-emerald-800/40" />
               <SummaryStats icon={<ArrowDownLeft size={16} />} label="Remaining Balance" value={`₨${overallRemaining.toLocaleString('en-PK')}`} color="bg-rose-50/50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-100/60 dark:border-rose-800/40" />
             </div>

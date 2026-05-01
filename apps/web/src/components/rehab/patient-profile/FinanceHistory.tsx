@@ -67,6 +67,7 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records: i
     }));
   };
 
+  const totalPackageOverall = localRecords.reduce((acc, curr) => acc + curr.package, 0);
   const totalPaidOverall = localRecords.reduce((acc, curr) => acc + curr.totalPaid, 0);
   const totalRemainingOverall = localRecords.reduce((acc, curr) => acc + curr.remaining, 0);
 
@@ -125,6 +126,7 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records: i
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <SummaryStats icon={<DollarSign size={16} />} label="Total Bill" value={`PKR ${totalPackageOverall.toLocaleString('en-PK')}`} color="bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100/60 dark:border-blue-800/40" />
               <SummaryStats icon={<ArrowUpRight size={16} />} label="Total Paid" value={`PKR ${totalPaidOverall.toLocaleString('en-PK')}`} color="bg-emerald-50/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/60 dark:border-emerald-800/40" />
               <SummaryStats icon={<ArrowDownLeft size={16} />} label="Total Remaining" value={`PKR ${totalRemainingOverall.toLocaleString('en-PK')}`} color="bg-rose-50/50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-100/60 dark:border-rose-800/40" />
             </div>

@@ -144,7 +144,20 @@ export default function SuperadminStaffPage() {
             >
               System Overview
             </button>
-            {drillLevel !== 'overview' && (
+            <button
+              onClick={() => {
+                setDrillLevel('list');
+                setDrillPresence(null);
+                setDrillDept(null);
+              }}
+              className={cn(
+                "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                drillLevel === 'list' && !drillDept ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-indigo-600"
+              )}
+            >
+              Full Roster
+            </button>
+            {drillLevel !== 'overview' && drillLevel !== 'list' && (
               <>
                 <ChevronRight size={14} className="text-gray-300" />
                 <button
@@ -313,17 +326,21 @@ export default function SuperadminStaffPage() {
               </div>
             )}
 
-            {drillLevel === 'list' && drillDept && (
+            {drillLevel === 'list' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {enriching && (
                   <div className="mb-8 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3 text-indigo-600 text-xs font-bold animate-pulse">
                     <Zap className="animate-spin" size={14} />
-                    Syncing historical dossiers for {DEPT_INFO[drillDept]?.label}...
+                    Syncing historical dossiers for {drillDept ? DEPT_INFO[drillDept]?.label : 'All Departments'}...
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {groupedByDept[drillDept]
-                    ?.filter(r => drillPresence === 'present' ? r.isPresentToday : !r.isPresentToday)
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {(drillDept ? (groupedByDept[drillDept] || []) : filtered)
+                    ?.filter(r => {
+                      if (!drillPresence) return true;
+                      const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
+                      return drillPresence === 'present' ? isPresent : !isPresent;
+                    })
                     ?.map(r => <StaffInteractiveCard key={r.id} row={r} />)}
                 </div>
               </div>
@@ -338,133 +355,90 @@ export default function SuperadminStaffPage() {
 function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
   const info = DEPT_INFO[r.dept] || { color: 'border-gray-200', bg: 'bg-gray-50', text: 'text-black', gradient: '' };
   
+  const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
+  
   return (
     <Link
       href={`/hq/dashboard/superadmin/staff/${r.id}`}
-      className="group relative flex flex-col bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-2xl shadow-gray-200/50 hover:shadow-indigo-500/20 hover:-translate-y-4 transition-all duration-700"
+      className="group relative flex flex-col justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 hover:shadow-md hover:border-indigo-200/50 transition-all h-full"
     >
-      {/* Background Gradient Layer */}
-      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-5 dark:opacity-10 group-hover:opacity-20 transition-opacity duration-700", info.gradient)} />
-      
-      {/* Top Banner Accent */}
-      <div className={cn("absolute top-0 left-0 w-full h-2 bg-gradient-to-r", 
-        r.dept === 'hq' ? 'from-purple-500 to-indigo-500' :
-        r.dept === 'rehab' ? 'from-teal-500 to-emerald-500' :
-        r.dept === 'spims' ? 'from-sky-500 to-blue-500' :
-        r.dept === 'hospital' ? 'from-rose-500 to-pink-500' :
-        'from-violet-500 to-fuchsia-500'
-      )} />
+      <div className="flex flex-col gap-2">
+        {/* Department & Status Header */}
+        <div className="flex items-center justify-between">
+          <span className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md", info.bg, info.text)}>
+            {r.dept}
+          </span>
+          <span className={cn(
+            "flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border",
+            isPresent 
+              ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+              : 'bg-rose-50 text-rose-600 border-rose-100'
+          )}>
+            <span className={cn("w-1.5 h-1.5 rounded-full", isPresent ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
+            {isPresent ? 'Pres' : 'Abs'}
+          </span>
+        </div>
 
-      <div className="relative z-10 p-10">
-        <div className="flex items-start justify-between mb-12">
-          <div className="flex-1 min-w-0">
-            <div className={cn("inline-flex px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] mb-8 shadow-xl", info.bg, info.text)}>
-              {info.label}
-            </div>
-            <h3 className="text-5xl font-black text-gray-900 leading-none mb-4 tracking-tighter group-hover:text-indigo-600 transition-colors">
-              {r.name.split(' ')[0]}
-              <span className="block text-2xl font-bold text-gray-400 mt-2 tracking-tight">{r.name.split(' ').slice(1).join(' ')}</span>
-            </h3>
-            <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.4em] flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-indigo-500" />
-              {r.designation}
+        {/* Name & Avatar */}
+        <div className="flex items-center gap-2 mt-1">
+          <div className="w-10 h-10 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
+            {r.photoUrl ? (
+              <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
+            ) : (
+              <Users2 size={16} className={info.text} />
+            )}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 leading-tight truncate group-hover:text-indigo-600 transition-colors">
+              {r.name}
+            </h4>
+            <p className="text-[10px] font-medium text-slate-400 truncate tracking-tight">
+              {r.designation || r.role}
             </p>
           </div>
-          <div className="relative group/avatar">
-            <div className={cn("absolute -inset-2 rounded-[3rem] bg-gradient-to-br blur-2xl opacity-0 group-hover/avatar:opacity-40 transition-opacity duration-500", info.gradient)} />
-            <div className="w-32 h-32 rounded-[3rem] border-8 border-gray-50 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0 ml-6 shadow-2xl transition-all duration-700 group-hover:rotate-6 group-hover:scale-110 relative z-10">
-              {r.photoUrl ? (
-                <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className={cn("w-full h-full flex items-center justify-center", info.bg, info.text)}>
-                   <Users2 size={56} strokeWidth={2.5} />
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* Dynamic Performance Matrix */}
-        <div className="bg-gray-50 rounded-[2.5rem] p-10 mb-10 border border-gray-100 relative overflow-hidden group/matrix shadow-inner">
-          <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover/matrix:opacity-10 transition-opacity duration-1000", info.gradient)} />
-          
-          <div className="flex items-center justify-between mb-8 relative z-10">
-            <div className="flex items-center gap-5">
-              <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl", 
-                (r.todayDailyScore || 0) >= 3 ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'
-              )}>
-                <Zap size={32} className="fill-white/20" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-2">Matrix Index</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-4xl font-black text-gray-900 leading-none">{r.todayDailyScore || 0}</p>
-                  <p className="text-[10px] font-black text-gray-400">/ 5.0</p>
-                </div>
-              </div>
-            </div>
-            <div className={cn(
-              "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl animate-in zoom-in duration-500",
-              (r.todayDailyScore || 0) >= 3 ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'
+        {/* Small Tags Matrix */}
+        <div className="grid grid-cols-2 gap-1.5 mt-1 border-t border-slate-50 pt-2">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-bold text-slate-400 uppercase">Dress</span>
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center",
+              r.todayUniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+              r.todayUniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+              'bg-slate-50 text-slate-400 border border-slate-100'
             )}>
-              {(r.todayDailyScore || 0) >= 3 ? 'Optimal' : 'Low Index'}
-            </div>
+              {r.todayUniformStatus || 'N/A'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-5 relative z-10">
-            <MetricStatus label="Dress" status={r.todayUniformStatus || 'na'} color={info.text} />
-            <MetricStatus label="Duty" status={r.todayDutyStatus || 'na'} color={info.text} />
+          <div className="flex flex-col">
+            <span className="text-[8px] font-bold text-slate-400 uppercase">Duty</span>
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center",
+              r.todayDutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+              r.todayDutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+              'bg-slate-50 text-slate-400 border border-slate-100'
+            )}>
+              {r.todayDutyStatus || 'N/A'}
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Vital Stats Dashboard */}
-        <div className="grid grid-cols-2 gap-6 mb-10">
-          <div className="relative group/stat">
-            <div className="relative p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-xl transition-all group-hover:scale-105 group-hover:border-emerald-500/30">
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="p-4 rounded-2xl bg-emerald-500 text-white shadow-xl shadow-emerald-500/20">
-                  <TrendingUp size={24} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 block mb-2">Growth Matrix</span>
-                  <span className="text-4xl font-black text-gray-900 tracking-tighter">{r.growthPointsTotal}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="relative group/stat">
-            <div className="relative p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-xl transition-all group-hover:scale-105 group-hover:border-rose-500/30">
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="p-4 rounded-2xl bg-rose-500 text-white shadow-xl shadow-rose-500/20">
-                  <Star size={24} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 block mb-2">Liability</span>
-                  <span className="text-3xl font-black text-gray-900 tracking-tighter">₨{Number(r.totalFines || 0).toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Dynamic Performance Matrix & Score */}
+      <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-2 mt-2">
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-xs font-black text-slate-800 dark:text-slate-100 leading-none">
+            {r.todayDailyScore || 0}
+          </span>
+          <span className="text-[8px] font-bold text-slate-400">/5</span>
         </div>
-
-        <div className="pt-10 border-t border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-5 group/btn">
-            <div className="w-14 h-14 rounded-2xl bg-gray-900 text-white flex items-center justify-center transition-all group-hover/btn:scale-110 group-hover/btn:rotate-12 shadow-2xl">
-              <ChevronRight size={28} strokeWidth={3} />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-[0.4em] text-gray-900">View Dossier</span>
-          </div>
-          
-          <div className={cn(
-            "flex items-center gap-3 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.3em] border",
-            r.isActive ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-          )}>
-            <div className={cn("w-3 h-3 rounded-full shadow-lg", 
-              r.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
-            )} />
-            {r.isActive ? 'Active' : 'Offline'}
-          </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px] font-bold text-slate-400 uppercase">Fines:</span>
+          <span className="text-[9px] font-black text-slate-700 dark:text-slate-200">
+            ₨{Number(r.totalFines || 0).toLocaleString()}
+          </span>
         </div>
       </div>
     </Link>

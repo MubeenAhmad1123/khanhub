@@ -84,18 +84,32 @@ export default function DailyReportPage() {
       const allStaff: any[] = [];
       const seenIds = new Set<string>();
 
-      // First add from unifiedStaffCards
-      const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
-      
-      unifiedStaffCards.forEach(s => {
+      const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
+
+      const isEligibleStaff = (s: any) => {
         const r = String(s.role || '').toLowerCase();
+        const n = String(s.name || s.displayName || '').toLowerCase();
+        const e = String(s.email || '').toLowerCase();
+        
+        if (n.includes('super') || n.includes('network') || e.includes('super') || e.includes('network')) {
+          return false;
+        }
+
         const isInternee = r.includes('internee');
         const isTrial = r.includes('trial');
         const isContract = r.includes('contract');
         const isWorker = r.includes('worker') || r.includes('junior');
         const isValidStaffRole = isInternee || isTrial || isContract || isWorker || STAFF_WHITELIST.includes(r);
 
-        if (s.status === 'active' && s.isActive !== false && isValidStaffRole) {
+        const statusStr = String(s.status || '').toLowerCase();
+        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
+
+        return isActive && isValidStaffRole;
+      };
+
+      // First add from unifiedStaffCards
+      unifiedStaffCards.forEach(s => {
+        if (isEligibleStaff(s)) {
           allStaff.push({
             ...s,
             id: s.staffId,
@@ -110,16 +124,8 @@ export default function DailyReportPage() {
         snap.docs.forEach((doc: any) => {
           const data = doc.data();
           const sid = doc.id;
-          const status = String(data.status || (data.isActive !== false ? 'active' : 'inactive')).toLowerCase();
-          
-          const r = String(data.role || '').toLowerCase();
-          const isInternee = r.includes('internee');
-          const isTrial = r.includes('trial');
-          const isContract = r.includes('contract');
-          const isWorker = r.includes('worker') || r.includes('junior');
-          const isValidStaffRole = isInternee || isTrial || isContract || isWorker || STAFF_WHITELIST.includes(r);
 
-          if (status === 'active' && isValidStaffRole && !seenIds.has(sid)) {
+          if (isEligibleStaff(data) && !seenIds.has(sid)) {
             allStaff.push({ id: sid, department: depts[i], ...data });
             seenIds.add(sid);
           }
