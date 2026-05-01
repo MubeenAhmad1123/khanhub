@@ -70,18 +70,16 @@ export default function DailyReportPage() {
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
       const staffSnaps = await Promise.all(depts.map(d => 
-        getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))
+        getDocs(collection(db, getDeptCollection(d)))
           .catch(() => ({ docs: [] } as any))
       ));
       const allStaff: any[] = [];
-      const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker'];
 
       staffSnaps.forEach((snap, i) => {
         snap.docs.forEach((doc: any) => {
           const data = doc.data();
-          const role = String(data.role || '').toLowerCase();
           const status = String(data.status || (data.isActive !== false ? 'active' : 'inactive')).toLowerCase();
-          if (staffRoles.includes(role) && status === 'active') {
+          if (status === 'active') {
             allStaff.push({ id: doc.id, department: depts[i], ...data });
           }
         });
