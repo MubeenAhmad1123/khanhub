@@ -217,7 +217,9 @@ export default function ManagerOverviewPage() {
         let allContribs: any[] = [];
         contribSnaps.forEach((snap, i) => {
           const d = depts[i];
-          const docs = snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
+          const docs = snap.docs
+            .map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }))
+            .filter((c: any) => c.content && c.content.trim() !== '');
           allContribs = [...allContribs, ...docs];
         });
 

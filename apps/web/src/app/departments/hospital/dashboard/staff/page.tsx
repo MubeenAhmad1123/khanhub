@@ -227,7 +227,11 @@ export default function StaffSelfPage() {
   };
 
   const handleContribution = async () => {
-    if (!contributionText.trim() || !staffProfile) return;
+    if (!contributionText.trim()) {
+      toast.error('Contribution cannot be empty!');
+      return;
+    }
+    if (!staffProfile) return;
     setContribLoading(true);
     try {
       await addDoc(collection(db, 'hospital_contributions'), {

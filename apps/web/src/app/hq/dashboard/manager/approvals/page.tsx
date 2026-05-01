@@ -73,11 +73,13 @@ export default function ManagerApprovalsPage() {
         for (let i = 0; i < depts.length; i++) {
           const dept = depts[i];
           const snap = snaps[i];
-          const docs = snap.docs.map(docSnap => ({ 
-            id: docSnap.id, 
-            ...docSnap.data(), 
-            dept 
-          }));
+          const docs = snap.docs
+            .map(docSnap => ({ 
+              id: docSnap.id, 
+              ...docSnap.data() as any, 
+              dept 
+            }))
+            .filter((c: any) => c.content && typeof c.content === 'string' && c.content.trim() !== '');
           allContribs = [...allContribs, ...docs];
         }
 

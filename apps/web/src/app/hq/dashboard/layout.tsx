@@ -15,6 +15,7 @@ import type { HqRole, HqSession } from '@/types/hq';
 import { db, auth } from '@/lib/firebase';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
+import { HqManagerApprovalsNavBadge } from '@/components/hq/HqManagerApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
 import { HqNotificationPermissionBanner } from '@/components/hq/HqNotificationPermissionBanner';
 import { Spinner } from '@/components/ui';
@@ -373,6 +374,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 <span className="flex-1">{item.label}</span>
                 {item.label === 'Approvals' && viewMode === 'hq' && role === 'superadmin' && (
                   <HqSuperadminApprovalsNavBadge />
+                )}
+                {item.label === 'Contributions' && viewMode === 'hq' && role === 'manager' && (
+                  <HqManagerApprovalsNavBadge />
                 )}
               </Link>
             );
