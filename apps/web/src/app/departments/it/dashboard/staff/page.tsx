@@ -413,7 +413,11 @@ export default function StaffSelfPage() {
                   <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 text-[10px] font-black">
                     {idx + 1}
                   </div>
-                  <p className="text-sm font-bold text-slate-700">{duty.description || duty}</p>
+                  <p className="text-sm font-bold text-slate-700">
+                    {typeof duty === 'object' && duty !== null 
+                      ? (duty.description || duty.label || duty.name || JSON.stringify(duty)) 
+                      : (duty || 'Unknown Duty')}
+                  </p>
                 </div>
               ))}
             </div>
