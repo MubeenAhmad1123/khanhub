@@ -5,13 +5,15 @@ import LeadsCRM from '@/components/shared/LeadsCRM';
 
 export default function SpimsLeadsPage() {
   return (
-    <div className="p-6 md:p-10 space-y-8">
+    <div className="p-4 md:p-10 space-y-6 max-w-full overflow-x-hidden">
       <div>
-        <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Leads & Call Manager</h1>
+        <h1 className="text-2xl md:text-3xl font-black text-gray-900 uppercase tracking-tight">Leads & Call Manager</h1>
         <p className="text-gray-500 font-bold mt-1 uppercase text-xs tracking-widest">SPIMS Enrollment CRM</p>
       </div>
       
-      <LeadsCRM department="spims" />
+      <div className="w-full max-w-full overflow-x-hidden">
+        <LeadsCRM department="spims" />
+      </div>
     </div>
   );
 }

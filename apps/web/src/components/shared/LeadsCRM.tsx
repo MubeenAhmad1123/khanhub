@@ -341,7 +341,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   }[department];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Summary Cards */}
       <div className="flex flex-nowrap overflow-x-auto md:grid md:grid-cols-6 lg:grid-cols-8 gap-4 no-scrollbar pb-2 md:pb-0">
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-[130px] md:min-w-0 flex-shrink-0">
@@ -361,8 +361,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
+      <div className="bg-white p-3 md:p-4 rounded-3xl md:rounded-[2rem] border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between w-full max-w-full overflow-hidden">
+        <div className="relative w-full md:w-96 min-w-0">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
             type="text"
@@ -596,7 +596,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       </div>
 
       {/* Mobile Card-Based CRM UI */}
-      <div className="block md:hidden space-y-4">
+      <div className="block md:hidden space-y-4 w-full max-w-full overflow-hidden">
         {loading ? (
           <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
             <Loader2 className={cn("mx-auto animate-spin", themeClasses.text)} size={32} />
@@ -609,7 +609,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
           </div>
         ) : (
           filteredLeads.map((lead) => (
-            <div key={lead.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group">
+            <div key={lead.id} className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group w-full max-w-full overflow-hidden">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg flex-shrink-0", themeClasses.primary)}>
