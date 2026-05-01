@@ -97,23 +97,36 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     name: '',
     contact: '',
     address: '',
-    addiction: 'Ice',
+    addiction: department === 'rehab' ? 'Ice' : '',
     status: 'NEW',
     notes: '',
     callNotes: ''
   });
 
   useEffect(() => {
+    // Reset form on department change
+    setFormData({
+      name: '',
+      contact: '',
+      address: '',
+      addiction: department === 'rehab' ? 'Ice' : '',
+      status: 'NEW',
+      notes: '',
+      callNotes: ''
+    });
+
     // Sync Leads
     const q = query(
       collection(db, 'leads'), 
-      where('department', '==', department),
-      orderBy(sortConfig.key, sortConfig.direction)
+      where('department', '==', department)
     );
 
     const unsubscribeLeads = onSnapshot(q, (snap) => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead));
       setLeads(docs);
+      setLoading(false);
+    }, (err) => {
+      console.error('Leads onSnapshot error:', err);
       setLoading(false);
     });
 
@@ -128,10 +141,10 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       unsubscribeLeads();
       unsubscribeResponses();
     };
-  }, [department, sortConfig]);
+  }, [department]);
 
   const filteredLeads = useMemo(() => {
-    return leads.filter(l => {
+    const matched = leads.filter(l => {
       const name = l.name || '';
       const contact = l.contact || '';
       const address = l.address || '';
@@ -141,7 +154,21 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       const matchesStatus = statusFilter === 'all' || l.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [leads, searchQuery, statusFilter]);
+
+    return matched.sort((a, b) => {
+      if (sortConfig.key === 'createdAt') {
+        const aTime = a.createdAt?.seconds || a.createdAt?.toMillis?.() || 0;
+        const bTime = b.createdAt?.seconds || b.createdAt?.toMillis?.() || 0;
+        return sortConfig.direction === 'asc' ? aTime - bTime : bTime - aTime;
+      } else {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        return sortConfig.direction === 'asc' 
+          ? aName.localeCompare(bName) 
+          : bName.localeCompare(aName);
+      }
+    });
+  }, [leads, searchQuery, statusFilter, sortConfig]);
 
   const allResponses = useMemo(() => {
     const base = Object.keys(STATUS_CONFIG).map(id => ({
@@ -179,7 +206,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       });
       toast.success('Lead added successfully');
       setIsAddModalOpen(false);
-      setFormData({ name: '', contact: '', address: '', addiction: 'Ice', status: 'NEW', notes: '', callNotes: '' });
+      setFormData({ name: '', contact: '', address: '', addiction: department === 'rehab' ? 'Ice' : '', status: 'NEW', notes: '', callNotes: '' });
     } catch (err) {
       toast.error('Failed to add lead');
     } finally {
@@ -289,13 +316,13 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-8 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex flex-nowrap overflow-x-auto md:grid md:grid-cols-6 lg:grid-cols-8 gap-4 no-scrollbar pb-2 md:pb-0">
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-[130px] md:min-w-0 flex-shrink-0">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Leads</p>
           <p className={cn("text-2xl font-black mt-1", themeClasses.text)}>{stats.total}</p>
         </div>
         {allResponses.map((config) => (
-          <div key={config.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div key={config.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm min-w-[130px] md:min-w-0 flex-shrink-0">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">{config.name}</p>
             <p className={cn("text-2xl font-black mt-1", 
               config.id === 'NEW' ? 'text-blue-700' : 
@@ -339,8 +366,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
         </div>
       </div>
 
-      {/* Spreadsheet UI */}
-      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden overflow-x-auto no-scrollbar">
+      {/* Desktop Spreadsheet UI */}
+      <div className="hidden md:block bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden overflow-x-auto no-scrollbar">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
@@ -357,7 +384,9 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 </div>
               </th>
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact</th>
-              <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Addiction</th>
+              {department === 'rehab' && (
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Addiction</th>
+              )}
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Address</th>
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest min-w-[200px]">Call Notes</th>
@@ -378,14 +407,14 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-20 text-center">
+                <td colSpan={department === 'rehab' ? 7 : 6} className="py-20 text-center">
                   <Loader2 className={cn("mx-auto animate-spin", themeClasses.text)} size={32} />
                   <p className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest animate-pulse">Syncing leads...</p>
                 </td>
               </tr>
             ) : filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-20 text-center">
+                <td colSpan={department === 'rehab' ? 7 : 6} className="py-20 text-center">
                   <Activity className="mx-auto text-gray-200" size={48} />
                   <p className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest">No matching leads found</p>
                 </td>
@@ -394,7 +423,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
               <tr key={lead.id} className="hover:bg-gray-50/50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-white", themeClasses.primary)}>
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-white flex-shrink-0", themeClasses.primary)}>
                       {lead.name[0]?.toUpperCase()}
                     </div>
                     <div>
@@ -406,11 +435,13 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 <td className="px-6 py-4">
                   <p className="text-sm font-bold text-gray-700">{lead.contact}</p>
                 </td>
-                <td className="px-6 py-4">
-                  <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-black uppercase text-gray-600">
-                    {lead.addiction}
-                  </span>
-                </td>
+                {department === 'rehab' && (
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-black uppercase text-gray-600">
+                      {lead.addiction}
+                    </span>
+                  </td>
+                )}
                 <td className="px-6 py-4">
                   <p className="text-xs text-gray-500 font-medium truncate max-w-[150px]">{lead.address}</p>
                 </td>
@@ -518,6 +549,110 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
         </table>
       </div>
 
+      {/* Mobile Card-Based CRM UI */}
+      <div className="block md:hidden space-y-4">
+        {loading ? (
+          <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <Loader2 className={cn("mx-auto animate-spin", themeClasses.text)} size={32} />
+            <p className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest animate-pulse">Syncing leads...</p>
+          </div>
+        ) : filteredLeads.length === 0 ? (
+          <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <Activity className="mx-auto text-gray-200" size={48} />
+            <p className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest">No matching leads found</p>
+          </div>
+        ) : (
+          filteredLeads.map((lead) => (
+            <div key={lead.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg flex-shrink-0", themeClasses.primary)}>
+                    {lead.name[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">{lead.name}</h4>
+                    <p className="text-[10px] text-gray-400 font-bold">{lead.createdAt ? formatDateDMY(lead.createdAt) : 'Just now'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleDeleteLead(lead.id)}
+                    className="w-8 h-8 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:text-rose-600 hover:bg-rose-50 transition-all"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-50">
+                <div>
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Contact</p>
+                  <p className="text-xs font-black text-gray-700 mt-0.5 select-all">{lead.contact}</p>
+                </div>
+
+                {department === 'rehab' && (
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Addiction</p>
+                    <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600">
+                      {lead.addiction}
+                    </span>
+                  </div>
+                )}
+
+                <div className="col-span-2">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Address / City</p>
+                  <p className="text-xs font-bold text-gray-600 mt-0.5 truncate">{lead.address || '—'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Status Update</label>
+                  <select 
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer border-none font-sans",
+                      STATUS_CONFIG[lead.status as LeadStatus]?.bg || 'bg-gray-100',
+                      STATUS_CONFIG[lead.status as LeadStatus]?.text || 'text-gray-700'
+                    )}
+                    value={lead.status}
+                    onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                  >
+                    {allResponses.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <textarea 
+                  defaultValue={lead.callNotes}
+                  onBlur={(e) => handleCallNotesUpdate(lead.id, e.target.value)}
+                  placeholder="Enter call notes..."
+                  className="w-full bg-gray-50 border-none rounded-xl p-3 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-indigo-300 transition-all resize-none h-16 no-scrollbar"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-gray-100/60">
+                <button 
+                  onClick={() => handleCall(lead.id, lead.contact)}
+                  className="flex-1 py-3 bg-blue-50 text-blue-600 flex items-center justify-center gap-2 rounded-2xl hover:bg-blue-600 hover:text-white transition-all text-xs font-black uppercase tracking-wider"
+                >
+                  <PhoneCall size={16} />
+                  Call
+                </button>
+                <button 
+                  onClick={() => handleWhatsApp(lead.contact, lead.name)}
+                  className="flex-1 py-3 bg-emerald-50 text-emerald-600 flex items-center justify-center gap-2 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all text-xs font-black uppercase tracking-wider"
+                >
+                  <MessageSquare size={16} />
+                  WhatsApp
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Add Lead Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -575,18 +710,20 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
-                  <select 
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
-                    value={formData.addiction}
-                    onChange={(e) => setFormData({...formData, addiction: e.target.value})}
-                  >
-                    {ADDICTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {department === 'rehab' && (
+                  <div className="space-y-2">
+                    <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
+                      value={formData.addiction}
+                      onChange={(e) => setFormData({...formData, addiction: e.target.value})}
+                    >
+                      {ADDICTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className={cn("space-y-2", department !== 'rehab' && "col-span-1 md:col-span-2")}>
                   <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Initial Status</label>
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
