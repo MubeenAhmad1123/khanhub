@@ -1326,30 +1326,30 @@ export default function StaffProfilePage() {
   };
 
   if (loading || sessionLoading) return (
-    <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
+    <div className={`min-h-screen flex items-center justify-center bg-[#F8FAFC]`}>
       <Spinner showText={true} />
     </div>
   );
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 pb-20 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
+    <div className={`min-h-screen transition-colors duration-300 pb-20 bg-[#F8FAFC] text-gray-900`}>
       {/* Dynamic Header */}
-      <div className={`border-b sticky top-0 z-20 shadow-sm transition-colors ${isDark ? 'bg-zinc-900/90 backdrop-blur-xl border-zinc-800' : 'bg-white border-gray-100'}`}>
+      <div className={`border-b sticky top-0 z-20 shadow-sm transition-colors bg-white border-gray-100`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/hq/dashboard/manager/staff" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-black hover:text-white' : 'text-black hover:text-gray-900'}`}>
-            <div className={`p-2 rounded-xl ${isDark ? 'group-hover:bg-black/90' : 'group-hover:bg-gray-100'}`}><ArrowLeft size={18} /></div>
+          <Link href="/hq/dashboard/manager/staff" className={`flex items-center gap-2 group transition-colors text-black hover:text-gray-900`}>
+            <div className={`p-2 rounded-xl group-hover:bg-gray-100`}><ArrowLeft size={18} /></div>
             <span className="text-xs font-black uppercase tracking-widest leading-none">Directory</span>
           </Link>
 
           <div className="flex items-center gap-4">
             <button
               onClick={handleRecalculate}
-              className={`p-2.5 rounded-xl transition-all shadow-sm ${isDark ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'bg-orange-50 text-orange-600 shadow-orange-100'}`}
+              className={`p-2.5 rounded-xl transition-all shadow-sm bg-orange-50 text-orange-600 shadow-orange-100`}
               title="Recalculate Growth Points"
             >
               <Target size={18} />
             </button>
-            <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
+            <div className={`h-6 w-px bg-gray-100`} />
             <div className="text-right hidden sm:block">
               <p className="text-[10px] font-[1000] text-black uppercase tracking-widest leading-tight">Growth Points</p>
               <p className="text-sm font-[1000] text-black">{computedScores.growthPoint}</p>
@@ -1363,7 +1363,7 @@ export default function StaffProfilePage() {
 
           {/* Sidebar */}
           <div className="lg:col-span-4 space-y-6">
-            <div className={`rounded-[2.5rem] p-8 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+            <div className={`rounded-[2.5rem] p-8 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-colors ${'bg-white border-gray-100'
               }`}>
               <div className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-br ${theme.bg} opacity-100`} />
 
@@ -1371,23 +1371,23 @@ export default function StaffProfilePage() {
                 {staff?.photoUrl ? (
                   <img src={staff.photoUrl} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-transparent shadow-2xl" />
                 ) : (
-                  <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black ring-8 shadow-inner ${isDark ? 'bg-zinc-800 text-black ring-zinc-900/50' : 'bg-gray-100 text-black ring-white'
+                  <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black ring-8 shadow-inner ${'bg-gray-100 text-black ring-white'
                     }`}>
                     {staff?.name?.[0]}
                   </div>
                 )}
-                <label className={`absolute bottom-0 right-0 p-3 rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
+                <label className={`absolute bottom-0 right-0 p-3 rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform ${'bg-gray-900 text-white'
                   }`}>
                   <Camera size={18} />
                   <input type="file" className="hidden" onChange={handlePhotoUpload} accept="image/webp" />
                 </label>
               </div>
 
-              <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{staff?.name || 'Unknown Staff'}</h2>
+              <h2 className={`text-2xl font-black text-gray-900`}>{staff?.name || 'Unknown Staff'}</h2>
               <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1 mb-4">{staff?.designation || 'Position N/A'}</p>
 
               <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-black' : 'bg-gray-50 border-gray-100 text-black'
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${'bg-gray-50 border-gray-100 text-black'
                   }`}>
                   ID: {staff?.employeeId || staff?.customId || '—'}
                 </span>
@@ -1396,14 +1396,14 @@ export default function StaffProfilePage() {
                     {staff.seniority}
                   </span>
                 )}
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-black border-zinc-700' : 'bg-gray-50 text-black')
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : ('bg-gray-50 text-black')
                   }`}>
                   {staff?.dept || 'General'}
                 </span>
               </div>
 
               <div className="w-full grid grid-cols-2 gap-4 mt-4">
-                <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
+                <div className={`rounded-2xl p-4 text-left bg-gray-50`}>
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Lifecycle Status</p>
                   <select 
                     className={`bg-transparent font-black text-xs uppercase outline-none border-none cursor-pointer w-full p-0 m-0 ${
@@ -1421,9 +1421,9 @@ export default function StaffProfilePage() {
                     <option value="terminated">Terminated</option>
                   </select>
                 </div>
-                <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
+                <div className={`rounded-2xl p-4 text-left bg-gray-50`}>
                   <p className="text-[10px] font-black text-black uppercase tracking-widest mb-1">Base Salary</p>
-                  <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
+                  <p className={`font-black text-xs text-gray-900`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
                 </div>
               </div>
 
@@ -1436,19 +1436,19 @@ export default function StaffProfilePage() {
                 <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-1">Calculated minus ₨{staff?.totalFines?.toLocaleString() || 0} fines</p>
               </div>
 
-              <div className={`w-full mt-4 rounded-2xl p-4 text-left border ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-amber-50/50 border-amber-100'}`}>
+              <div className={`w-full mt-4 rounded-2xl p-4 text-left border bg-amber-50/50 border-amber-100`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Lock className={`w-3 h-3 ${isDark ? 'text-black' : 'text-amber-500'}`} />
+                  <Lock className={`w-3 h-3 text-amber-500`} />
                   <p className="text-[10px] font-black text-black uppercase tracking-widest">Portal Credentials</p>
                 </div>
                 <div className="space-y-2">
                   <div>
                     <p className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Login Email / ID</p>
-                    <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.email || staff?.customId || 'No Email Registered'}</p>
+                    <p className={`font-mono text-xs font-bold text-indigo-600`}>{staff?.email || staff?.customId || 'No Email Registered'}</p>
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Password</p>
-                    <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
+                    <p className={`font-mono text-xs font-bold text-indigo-600`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
                   </div>
                 </div>
               </div>
@@ -1468,7 +1468,7 @@ export default function StaffProfilePage() {
 
 
             {/* Tabs */}
-            <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+            <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${'bg-white border-gray-100'
               }`}>
               {[
                 { id: 'profile', label: 'View Profile', icon: <User size={12} /> },
@@ -1585,23 +1585,23 @@ export default function StaffProfilePage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className={`p-8 rounded-[2.5rem] border bg-white border-gray-100 shadow-sm`}>
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
                       <Shield size={14} className="text-indigo-500" /> Active Dress Code
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {staff?.dressCodeConfig?.length ? staff.dressCodeConfig.map(i => (
-                        <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
+                        <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border bg-gray-50 border-gray-100`}>{i.label}</span>
                       )) : <p className="text-xs text-black italic">No configuration found</p>}
                     </div>
                   </div>
-                  <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className={`p-8 rounded-[2.5rem] border bg-white border-gray-100 shadow-sm`}>
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
                       <ClipboardList size={14} className="text-teal-500" /> Operational Duties
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {staff?.dutyConfig?.length ? staff.dutyConfig.map(i => (
-                        <div key={i.key} className={`group flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>
+                        <div key={i.key} className={`group flex items-center gap-2 px-4 py-2 rounded-xl border transition-all bg-gray-50 border-gray-100`}>
                           <span className="text-[9px] font-black uppercase tracking-widest">{i.label}</span>
                           <button 
                             onClick={() => handleDeleteConfig('duty', i.key)}
@@ -1621,10 +1621,10 @@ export default function StaffProfilePage() {
 
               <div className="space-y-6 animate-in fade-in duration-500">
                 {/* 1. Matrix View */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors bg-white border-gray-100`}>
                   <div className="flex flex-col sm:flex-row justify-between mb-8">
                     <div>
-                      <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 text-gray-900`}>
                         <Activity className={theme.text} /> Operational Health Check
                       </h3>
                       <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Audit attendance, duty, and compliance patterns</p>
@@ -1682,7 +1682,7 @@ export default function StaffProfilePage() {
                           const status = dayRecord?.items?.find((i: any) => i.key === dress.key)?.status || 'na';
                           return (
                             <div key={dress.key} className="flex items-center justify-between">
-                              <span className={`text-xs font-bold ${isDark ? 'text-black' : 'text-black'}`}>{dress.label}</span>
+                              <span className={`text-xs font-bold text-black`}>{dress.label}</span>
                               <HqCheckCell type="dresscode" size="md" value={status} onToggle={(next) => toggleDress(todayStr, dress.key, next)} />
                             </div>
                           );
@@ -1717,7 +1717,7 @@ export default function StaffProfilePage() {
                           const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
                           return (
                             <div key={duty.key} className="flex items-center justify-between">
-                              <span className={`text-xs font-bold ${isDark ? 'text-black' : 'text-black'}`}>{duty.label}</span>
+                              <span className={`text-xs font-bold text-black`}>{duty.label}</span>
                               <HqCheckCell type="duty" size="md" value={status} onToggle={(next) => toggleDuty(todayStr, duty.key, next)} />
                             </div>
                           );
@@ -1726,12 +1726,12 @@ export default function StaffProfilePage() {
                     </div>
                   </div>
 
-                  <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
+                  <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 border-gray-200`}>
                     <span className="text-[10px] font-black text-black uppercase tracking-widest">Attendance</span>
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => toggleAttendance(todayStr, 'present')}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'present' ? 'bg-emerald-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 ${attendanceMap[todayStr]?.status === 'present' ? 'bg-emerald-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Present
                       </button>
@@ -1740,19 +1740,19 @@ export default function StaffProfilePage() {
                           toggleAttendance(todayStr, 'late');
                           handleAttendanceCell(todayStr);
                         }}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'late' ? 'bg-amber-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 ${attendanceMap[todayStr]?.status === 'late' ? 'bg-amber-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Late Entry
                       </button>
                       <button
                         onClick={() => toggleAttendance(todayStr, 'absent')}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Absent
                       </button>
                       <button
                         onClick={() => toggleAttendance(todayStr, 'leave')}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none ${attendanceMap[todayStr]?.status === 'leave' || attendanceMap[todayStr]?.status === 'paid_leave' || attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-blue-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-[1000] uppercase tracking-widest transition-all shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 ${attendanceMap[todayStr]?.status === 'leave' || attendanceMap[todayStr]?.status === 'paid_leave' || attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-blue-400 text-black' : 'bg-white text-black opacity-40 hover:opacity-100'}`}
                       >
                         Leave
                       </button>
@@ -1760,9 +1760,9 @@ export default function StaffProfilePage() {
                   </div>
 
                 {/* Mark Duty Module */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${'bg-white border-gray-100'
                   }`}>
-                  <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 text-gray-900`}>
                     <Award className="text-indigo-500" /> Assess Daily Duty
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1770,7 +1770,7 @@ export default function StaffProfilePage() {
                       <div>
                         <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
                         <select
-                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
+                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${'bg-gray-50 text-gray-900'
                             }`}
                           value={dutyForm.type}
                           onChange={e => setDutyForm({ ...dutyForm, type: e.target.value })}
@@ -1786,14 +1786,14 @@ export default function StaffProfilePage() {
                           onClick={() => setDutyForm({ ...dutyForm, status: 'completed' })}
                           className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'completed'
                             ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
-                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-black' : 'bg-white border-gray-100 text-black')
+                            : ('bg-white border-gray-100 text-black')
                             }`}
                         >Completed</button>
                         <button
                           onClick={() => setDutyForm({ ...dutyForm, status: 'not_completed' })}
                           className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'not_completed'
                             ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
-                            : (isDark ? 'bg-zinc-800 border-zinc-700 text-black' : 'bg-white border-gray-100 text-black')
+                            : ('bg-white border-gray-100 text-black')
                             }`}
                         >Fine</button>
                       </div>
@@ -1805,7 +1805,7 @@ export default function StaffProfilePage() {
                             <input
                               type="number"
                               placeholder="0.00"
-                              className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-rose-50 text-rose-900 placeholder:text-rose-300'}`}
+                              className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-rose-50 text-rose-900 placeholder:text-rose-300`}
                               value={dutyForm.fineAmount}
                               onChange={e => setDutyForm({ ...dutyForm, fineAmount: e.target.value })}
                             />
@@ -1815,7 +1815,7 @@ export default function StaffProfilePage() {
                             <input
                               type="text"
                               placeholder="Late arrival / Misbehavior / etc."
-                              className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-rose-50 text-rose-900 placeholder:text-rose-300'}`}
+                              className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-rose-50 text-rose-900 placeholder:text-rose-300`}
                               value={dutyForm.fineReason}
                               onChange={e => setDutyForm({ ...dutyForm, fineReason: e.target.value })}
                             />
@@ -1826,7 +1826,7 @@ export default function StaffProfilePage() {
                     <div className="space-y-4">
                       <textarea
                         placeholder="Operational performance notes..."
-                        className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${isDark ? 'bg-zinc-800 text-white placeholder:text-black' : 'bg-gray-50 text-gray-900'
+                        className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${'bg-gray-50 text-gray-900'
                           }`}
                         value={dutyForm.comment}
                         onChange={e => setDutyForm({ ...dutyForm, comment: e.target.value })}
@@ -1836,7 +1836,7 @@ export default function StaffProfilePage() {
                   <button
                     onClick={handleMarkDuty}
                     disabled={markingDuty}
-                    className={`w-full py-4 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-50 transition-all ${isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-gray-900 text-white hover:bg-black'
+                    className={`w-full py-4 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-50 transition-all ${'bg-gray-900 text-white hover:bg-black'
                       }`}
                   >
                     {markingDuty ? 'Recording...' : 'Finalize Assessment'}
@@ -1844,7 +1844,7 @@ export default function StaffProfilePage() {
                 </div>
 
                 {/* Professional Meeting Scheduler */}
-                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-black/5 animate-in slide-in-from-bottom-4 duration-700'}`}>
+                <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-xl shadow-black/5 animate-in slide-in-from-bottom-4 duration-700`}>
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-14 h-14 rounded-3xl bg-black text-white flex items-center justify-center shadow-2xl">
                       <Calendar size={24} />
@@ -1861,7 +1861,7 @@ export default function StaffProfilePage() {
                       <input 
                         type="text" 
                         placeholder="Performance Review / Policy Update"
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-black'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-black`}
                         value={meetingForm.title}
                         onChange={e => setMeetingForm({ ...meetingForm, title: e.target.value })}
                       />
@@ -1870,7 +1870,7 @@ export default function StaffProfilePage() {
                       <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Date</label>
                       <input 
                         type="date" 
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-black'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all bg-gray-50 border-gray-100 text-gray-900 focus:border-black`}
                         value={meetingForm.date}
                         onChange={e => setMeetingForm({ ...meetingForm, date: e.target.value })}
                       />
@@ -1879,7 +1879,7 @@ export default function StaffProfilePage() {
                       <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Time</label>
                       <input 
                         type="time" 
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-black'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all bg-gray-50 border-gray-100 text-gray-900 focus:border-black`}
                         value={meetingForm.time}
                         onChange={e => setMeetingForm({ ...meetingForm, time: e.target.value })}
                       />
@@ -1891,7 +1891,7 @@ export default function StaffProfilePage() {
                     <input 
                       type="text" 
                       placeholder="Conference Room / Manager Office"
-                      className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-black' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-black'}`}
+                      className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 transition-all bg-gray-50 border-gray-100 text-gray-900 focus:border-black`}
                       value={meetingForm.location}
                       onChange={e => setMeetingForm({ ...meetingForm, location: e.target.value })}
                     />
@@ -1914,7 +1914,7 @@ export default function StaffProfilePage() {
                 {/* Duty Logs (Audit) moved to Action tab */}
                 {dutyLogs.length === 0 ? <div className="p-20 text-center text-black font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
                   dutyLogs.map(log => (
-                    <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
+                    <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${'bg-white border-gray-100 hover:border-indigo-200'
                       }`}>
                       <div className={`p-3 rounded-2xl ${log.status === 'completed' ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
                         <Award size={20} />
@@ -1922,7 +1922,7 @@ export default function StaffProfilePage() {
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <div>
-                            <h4 className={`font-black capitalize text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
+                            <h4 className={`font-black capitalize text-sm text-gray-900`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
                             <p className="text-[10px] text-black font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${log.status === 'completed' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
@@ -1930,14 +1930,14 @@ export default function StaffProfilePage() {
                             {log.status}
                           </span>
                         </div>
-                        <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-black' : 'text-black'}`}>{log.comment || 'No assessment recorded'}</p>
+                        <p className={`text-sm mt-3 italic leading-relaxed text-black`}>{log.comment || 'No assessment recorded'}</p>
                       </div>
                     </div>
                   ))
                 )}
 
                 {/* Daily Contributions Sync */}
-                <div className={`p-8 rounded-[2.5rem] border-2 border-dashed ${isDark ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50/50 border-indigo-100'}`}>
+                <div className={`p-8 rounded-[2.5rem] border-2 border-dashed bg-indigo-50/50 border-indigo-100`}>
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -1979,11 +1979,11 @@ export default function StaffProfilePage() {
             {activeTab === 'tasks' && (
               <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Special Tasks */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${'bg-white border-gray-100'
                   }`}>
                   <div className="flex flex-col sm:flex-row justify-between mb-8">
                     <div>
-                      <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 text-gray-900`}>
                         <Target className="text-purple-500" /> Administrative Task Matrix
                       </h3>
                       <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Assign one-off operational missions</p>
@@ -1993,14 +1993,14 @@ export default function StaffProfilePage() {
                   <div className="flex flex-col md:flex-row gap-4 mb-8">
                     <input
                       type="text"
-                      className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
+                      className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${'bg-gray-50 text-gray-900'
                         }`}
                       placeholder="Describe the temporary task..."
                       value={newTaskText}
                       onChange={e => setNewTaskText(e.target.value)}
                     />
                     <select
-                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-none ${isDark ? 'bg-zinc-800 text-purple-400' : 'bg-gray-50 text-purple-600'}`}
+                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-none bg-gray-50 text-purple-600`}
                       value={newTaskRecurrence}
                       onChange={e => setNewTaskRecurrence(e.target.value as any)}
                     >
@@ -2013,7 +2013,7 @@ export default function StaffProfilePage() {
                       <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
                         <input
                           type="number"
-                          className={`w-20 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                          className={`w-20 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-gray-50 text-gray-900`}
                           value={newTaskIntervalDays}
                           onChange={e => setNewTaskIntervalDays(Number(e.target.value))}
                           min={1}
@@ -2035,11 +2035,11 @@ export default function StaffProfilePage() {
                       <div className="py-6 text-center text-black font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
                     ) : (
                       specialTasks.map(task => (
-                        <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') :
-                          isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
+                        <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? ('bg-emerald-50 border-emerald-100') :
+                          'bg-gray-50 border-gray-100'
                           }`}>
                           <div>
-                            <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
+                            <p className={`text-sm font-black text-gray-900`}>{task.description}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <p className="text-[10px] text-black font-bold uppercase tracking-widest">By {task.assignedByName}</p>
                               {(task as any).category === 'meeting' && (
@@ -2068,9 +2068,9 @@ export default function StaffProfilePage() {
                 </div>
 
                 {/* Schedule Meeting Section */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors bg-white border-gray-100`}>
                   <div className="mb-8">
-                    <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 text-gray-900`}>
                       <Calendar className="text-amber-500" /> Schedule Professional Meeting
                     </h3>
                     <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Notify staff member of formal discussions</p>
@@ -2082,7 +2082,7 @@ export default function StaffProfilePage() {
                       <input
                         type="text"
                         placeholder="Performance Review / Policy Update"
-                        className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                        className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-gray-50 text-gray-900`}
                         value={meetingForm.title}
                         onChange={e => setMeetingForm({ ...meetingForm, title: e.target.value })}
                       />
@@ -2092,7 +2092,7 @@ export default function StaffProfilePage() {
                         <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Date</label>
                         <input
                           type="date"
-                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-gray-50 text-gray-900`}
                           value={meetingForm.date}
                           onChange={e => setMeetingForm({ ...meetingForm, date: e.target.value })}
                         />
@@ -2101,7 +2101,7 @@ export default function StaffProfilePage() {
                         <label className="text-[9px] font-black text-black uppercase tracking-widest ml-1 mb-1 block">Time</label>
                         <input
                           type="time"
-                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-gray-50 text-gray-900`}
                           value={meetingForm.time}
                           onChange={e => setMeetingForm({ ...meetingForm, time: e.target.value })}
                         />
@@ -2114,7 +2114,7 @@ export default function StaffProfilePage() {
                     <input
                       type="text"
                       placeholder="Conference Room / Online / Staff Desk"
-                      className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'}`}
+                      className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none bg-gray-50 text-gray-900`}
                       value={meetingForm.location}
                       onChange={e => setMeetingForm({ ...meetingForm, location: e.target.value })}
                     />
@@ -2132,7 +2132,7 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'attendance' && (
-              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all bg-white border-gray-100`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Monthly Attendance Grid</h3>
                   <div className="flex gap-2 w-full sm:w-auto">
@@ -2140,7 +2140,7 @@ export default function StaffProfilePage() {
                       type="month"
                       value={selectedMonth}
                       onChange={e => setSelectedMonth(e.target.value)}
-                      className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
+                      className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none bg-gray-100 text-gray-900`}
                     />
                   </div>
                 </div>
@@ -2186,8 +2186,8 @@ export default function StaffProfilePage() {
                               <button
                                 onClick={() => handleAttendanceCell(d)}
                                 className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.arrivalTime
-                                  ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600')
-                                  : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')
+                                  ? ('bg-indigo-50 text-indigo-600')
+                                  : ('bg-gray-100 text-black')
                                   }`}
                               >
                                 {attendanceMap[d]?.arrivalTime || 'Set'}
@@ -2244,8 +2244,8 @@ export default function StaffProfilePage() {
                               <button
                                 onClick={() => handleAttendanceCell(d)}
                                 className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.departureTime
-                                  ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-600')
-                                  : (isDark ? 'bg-zinc-800 text-black' : 'bg-gray-100 text-black')
+                                  ? ('bg-rose-50 text-rose-600')
+                                  : ('bg-gray-100 text-black')
                                   }`}
                               >
                                 {attendanceMap[d]?.departureTime || 'Set'}
@@ -2280,7 +2280,7 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'dress' && (
-              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all bg-white border-gray-100`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Dress Code Compliance</h3>
                   <p className="text-[10px] font-black text-black uppercase tracking-widest">Monthly Item Grids</p>
@@ -2329,7 +2329,7 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'duties' && (
-              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all bg-white border-gray-100`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Daily Duty Logs</h3>
                   <p className="text-[10px] font-black text-black uppercase tracking-widest">Performance Tracking</p>
@@ -2380,7 +2380,7 @@ export default function StaffProfilePage() {
             {activeTab === 'edit' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Header Section */}
-                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+                <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-xl shadow-blue-900/5`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div>
                       <h3 className="text-2xl font-black uppercase tracking-tight italic flex items-center gap-3">
@@ -2401,7 +2401,7 @@ export default function StaffProfilePage() {
                 </div>
 
                 {/* Section 1: Work Identity */}
-                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm`}>
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                       <Lock size={20} />
@@ -2420,7 +2420,7 @@ export default function StaffProfilePage() {
                         value={editForm.employeeId}
                         placeholder="KH-STAFF-001"
                         onChange={e => setEditForm({ ...editForm, employeeId: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                       />
                       <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-2 ml-2">Visual ID for reporting</p>
                     </div>
@@ -2433,7 +2433,7 @@ export default function StaffProfilePage() {
                         value={editForm.customId}
                         placeholder="spims-admin"
                         onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-900 border-indigo-500/30 text-indigo-300 focus:border-indigo-500' : 'bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500`}
                       />
                       <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
                     </div>
@@ -2441,21 +2441,21 @@ export default function StaffProfilePage() {
                     {/* Name & Father Name */}
                     <div className="grid grid-cols-1 gap-6">
                       <div className="space-y-2">
-                        <label className={`text-[10px] font-black uppercase tracking-widest px-1 ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>Legal Name</label>
+                        <label className={`text-[10px] font-black uppercase tracking-widest px-1 text-indigo-600`}>Legal Name</label>
                         <input
                           type="text"
                           value={editForm.name}
                           onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl border-2 text-sm font-black uppercase outline-none transition-all ${isDark ? 'bg-[#1A1A1A] text-white' : 'bg-white text-black'}`}
+                          className={`w-full h-14 px-6 rounded-2xl border-2 text-sm font-black uppercase outline-none transition-all bg-white text-black`}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className={`text-[10px] font-black uppercase tracking-widest px-1 ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>Father's Name</label>
+                        <label className={`text-[10px] font-black uppercase tracking-widest px-1 text-indigo-600`}>Father's Name</label>
                         <input
                           type="text"
                           value={editForm.fatherName}
                           onChange={e => setEditForm({ ...editForm, fatherName: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl border-2 text-sm font-black uppercase outline-none transition-all ${isDark ? 'bg-[#1A1A1A] text-white' : 'bg-white text-black'}`}
+                          className={`w-full h-14 px-6 rounded-2xl border-2 text-sm font-black uppercase outline-none transition-all bg-white text-black`}
                         />
                       </div>
                     </div>
@@ -2469,7 +2469,7 @@ export default function StaffProfilePage() {
                         value={editForm.designation}
                         placeholder="Senior Nurse / Manager"
                         onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                       />
                     </div>
                     <div>
@@ -2477,7 +2477,7 @@ export default function StaffProfilePage() {
                       <select
                         value={editForm.seniority}
                         onChange={e => setEditForm({ ...editForm, seniority: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-indigo-500/30 text-indigo-300 focus:border-indigo-500' : 'bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500`}
                       >
                         <option value="">Select Seniority...</option>
                         <option value="fresher">Fresher</option>
@@ -2503,7 +2503,7 @@ export default function StaffProfilePage() {
                           value={editForm.monthlySalary}
                           onChange={e => setEditForm({ ...editForm, monthlySalary: Number(e.target.value) })}
                           placeholder="50000"
-                          className={`w-full h-14 pl-14 pr-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                          className={`w-full h-14 pl-14 pr-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                         />
                       </div>
                     </div>
@@ -2512,7 +2512,7 @@ export default function StaffProfilePage() {
                       <select
                         value={editForm.department}
                         onChange={e => setEditForm({ ...editForm, department: e.target.value as StaffDept })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                       >
                         {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
                           <option key={d} value={d}>{d.toUpperCase()}</option>
@@ -2520,7 +2520,7 @@ export default function StaffProfilePage() {
                       </select>
                     </div>
 
-                    <div className={`p-4 rounded-2xl border border-dashed flex flex-col justify-center ${isDark ? 'border-zinc-800 bg-zinc-900/20' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className={`p-4 rounded-2xl border border-dashed flex flex-col justify-center border-gray-200 bg-gray-50/50`}>
                       <label className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-2 block flex items-center gap-2">
                         <ArrowLeft size={10} className="rotate-180" /> Secondary Depts
                       </label>
@@ -2539,7 +2539,7 @@ export default function StaffProfilePage() {
                             }}
                             className={`px-2 py-1 rounded-lg text-[7px] font-bold uppercase tracking-wider border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept)
                               ? 'bg-indigo-600 border-indigo-600 text-white'
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-black' : 'bg-white border-gray-200 text-black')
+                              : ('bg-white border-gray-200 text-black')
                               }`}
                           >
                             {d}
@@ -2551,7 +2551,7 @@ export default function StaffProfilePage() {
                 </div>
 
                 {/* Section 2: Personal Information */}
-                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm`}>
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
                       <User size={20} />
@@ -2571,7 +2571,7 @@ export default function StaffProfilePage() {
                           type="date"
                           value={editForm.dob}
                           onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                         />
                       </div>
                       <div>
@@ -2579,7 +2579,7 @@ export default function StaffProfilePage() {
                         <select
                           value={editForm.gender}
                           onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                         >
                           <option value="male">Male</option>
                           <option value="female">Female</option>
@@ -2597,7 +2597,7 @@ export default function StaffProfilePage() {
                           placeholder="00000-0000000-0"
                           value={editForm.cnic}
                           onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                         />
                       </div>
                       <div>
@@ -2606,7 +2606,7 @@ export default function StaffProfilePage() {
                           type="date"
                           value={editForm.joiningDate}
                           onChange={e => setEditForm({ ...editForm, joiningDate: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                         />
                       </div>
                     </div>
@@ -2620,7 +2620,7 @@ export default function StaffProfilePage() {
                           placeholder="B+"
                           value={editForm.bloodGroup}
                           onChange={e => setEditForm({ ...editForm, bloodGroup: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2631,7 +2631,7 @@ export default function StaffProfilePage() {
                             placeholder="Name"
                             value={editForm.emergencyContactName}
                             onChange={e => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
-                            className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-orange-500/20 text-white focus:border-orange-500' : 'bg-orange-50/30 border-orange-100 text-gray-900 focus:border-orange-500'}`}
+                            className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-orange-50/30 border-orange-100 text-gray-900 focus:border-orange-500`}
                           />
                         </div>
                         <div>
@@ -2641,7 +2641,7 @@ export default function StaffProfilePage() {
                             placeholder="03xx-xxxxxxx"
                             value={editForm.emergencyPhone}
                             onChange={e => setEditForm({ ...editForm, emergencyPhone: e.target.value })}
-                            className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-orange-500/20 text-white focus:border-orange-500' : 'bg-orange-50/30 border-orange-100 text-gray-900 focus:border-orange-500'}`}
+                            className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-orange-50/30 border-orange-100 text-gray-900 focus:border-orange-500`}
                           />
                         </div>
                       </div>
@@ -2652,7 +2652,7 @@ export default function StaffProfilePage() {
                 {/* Section 3: Operations & Extensions */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Custom Basic Info */}
-                  <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm`}>
                     <div className="flex items-center gap-4 mb-8">
                       <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
                         <Plus size={20} />
@@ -2666,7 +2666,7 @@ export default function StaffProfilePage() {
                     <div className="space-y-3 mb-8 min-h-[100px]">
                       {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
                         <div key={key} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                          <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-black' : 'bg-gray-50 border-gray-100 text-black'}`}>
+                          <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center bg-gray-50 border-gray-100 text-black`}>
                             <span className="text-black font-extrabold uppercase whitespace-nowrap">{key.replace(/_/g, ' ')}:</span>
                             <span className="break-all">{val}</span>
                           </div>
@@ -2693,13 +2693,13 @@ export default function StaffProfilePage() {
                     <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-dashed border-gray-200">
                       <input
                         placeholder="Label"
-                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500'}`}
+                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500`}
                         value={newExtraField.key}
                         onChange={e => setNewExtraField({ ...newExtraField, key: e.target.value })}
                       />
                       <input
                         placeholder="Value"
-                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500'}`}
+                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500`}
                         value={newExtraField.value}
                         onChange={e => setNewExtraField({ ...newExtraField, value: e.target.value })}
                       />
@@ -2720,7 +2720,7 @@ export default function StaffProfilePage() {
                   </div>
 
                   {/* Shift Timing */}
-                  <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm`}>
                     <div className="flex items-center gap-4 mb-8">
                       <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                         <Clock size={20} />
@@ -2743,7 +2743,7 @@ export default function StaffProfilePage() {
                           type="time"
                           value={editForm.dutyStartTime}
                           onChange={e => setEditForm({ ...editForm, dutyStartTime: e.target.value })}
-                          className={`w-full h-16 px-6 rounded-[2rem] text-xl font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-emerald-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500'}`}
+                          className={`w-full h-16 px-6 rounded-[2rem] text-xl font-black outline-none border-4 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500`}
                         />
                       </div>
                       <div>
@@ -2752,7 +2752,7 @@ export default function StaffProfilePage() {
                           type="time"
                           value={editForm.dutyEndTime}
                           onChange={e => setEditForm({ ...editForm, dutyEndTime: e.target.value })}
-                          className={`w-full h-16 px-6 rounded-[2rem] text-xl font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-emerald-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500'}`}
+                          className={`w-full h-16 px-6 rounded-[2rem] text-xl font-black outline-none border-4 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500`}
                         />
                       </div>
                     </div>
@@ -2762,7 +2762,7 @@ export default function StaffProfilePage() {
                 {/* Section 4: Advanced Configuration */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Dress Code Config */}
-                  <div className={`p-10 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-100/50 border-gray-200'}`}>
+                  <div className={`p-10 rounded-[2.5rem] border transition-all bg-gray-100/50 border-gray-200`}>
                     <div className="flex items-center justify-between mb-8">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center">
@@ -2779,11 +2779,11 @@ export default function StaffProfilePage() {
                     </div>
 
                     {addingConfig?.type === 'dress' && (
-                      <div className={`p-6 rounded-[2rem] border-2 mb-8 transition-all animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900/80 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.2)]' : 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/10'}`}>
+                      <div className={`p-6 rounded-[2rem] border-2 mb-8 transition-all animate-in zoom-in-95 duration-200 bg-white border-indigo-200 shadow-xl shadow-indigo-500/10`}>
                         <div className="flex flex-col gap-4">
                           {addingConfig.mode === 'select' ? (
                             <select
-                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
                               value={addingConfigSelection}
                               onChange={e => {
                                 if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
@@ -2802,7 +2802,7 @@ export default function StaffProfilePage() {
                               type="text"
                               placeholder="Type a new global dress code item (e.g. Scarf)"
                               autoFocus
-                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 focus:border-indigo-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 focus:border-indigo-500 transition-all bg-gray-50 border-gray-200 text-gray-900`}
                               value={addingConfigCustom}
                               onChange={e => setAddingConfigCustom(e.target.value)}
                             />
@@ -2815,14 +2815,14 @@ export default function StaffProfilePage() {
                             >
                               {processingConfig ? 'Processing...' : 'Add to Profile'}
                             </button>
-                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-black hover:bg-black/90' : 'border-gray-200 text-black hover:bg-white'}`}>Cancel</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all border-gray-200 text-black hover:bg-white`}>Cancel</button>
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {editForm.dressCodeConfig.map((item, idx) => (
-                        <div key={item.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'}`}>
+                        <div key={item.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:scale-[1.02] bg-white border-gray-200`}>
                           <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
                           <button
                             onClick={() => {
@@ -2841,7 +2841,7 @@ export default function StaffProfilePage() {
                   </div>
 
                   {/* Duty Config */}
-                  <div className={`p-10 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-100/50 border-gray-200'}`}>
+                  <div className={`p-10 rounded-[2.5rem] border transition-all bg-gray-100/50 border-gray-200`}>
                     <div className="flex items-center justify-between mb-8">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white flex items-center justify-center">
@@ -2858,11 +2858,11 @@ export default function StaffProfilePage() {
                     </div>
 
                     {addingConfig?.type === 'duty' && (
-                      <div className={`p-6 rounded-[2rem] border-2 mb-8 transition-all animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900/80 border-teal-500/30 shadow-[0_0_30px_rgba(20,184,166,0.2)]' : 'bg-white border-teal-200 shadow-xl shadow-teal-500/10'}`}>
+                      <div className={`p-6 rounded-[2rem] border-2 mb-8 transition-all animate-in zoom-in-95 duration-200 bg-white border-teal-200 shadow-xl shadow-teal-500/10`}>
                         <div className="flex flex-col gap-4">
                           {addingConfig.mode === 'select' ? (
                             <select
-                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-teal-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500`}
                               value={addingConfigSelection}
                               onChange={e => {
                                 if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
@@ -2881,7 +2881,7 @@ export default function StaffProfilePage() {
                               type="text"
                               placeholder="Type a new global duty (e.g. Night Shift Guard)"
                               autoFocus
-                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 focus:border-teal-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 focus:border-teal-500 transition-all bg-gray-50 border-gray-200 text-gray-900`}
                               value={addingConfigCustom}
                               onChange={e => setAddingConfigCustom(e.target.value)}
                             />
@@ -2894,14 +2894,14 @@ export default function StaffProfilePage() {
                             >
                               {processingConfig ? 'Processing...' : 'Add to Profile'}
                             </button>
-                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-black hover:bg-black/90' : 'border-gray-200 text-black hover:bg-white'}`}>Cancel</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all border-gray-200 text-black hover:bg-white`}>Cancel</button>
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {editForm.dutyConfig.map((item, idx) => (
-                        <div key={item.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'}`}>
+                        <div key={item.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:scale-[1.02] bg-white border-gray-200`}>
                           <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
                           <button
                             onClick={() => {
@@ -2922,7 +2922,7 @@ export default function StaffProfilePage() {
 
                 {/* Bottom Synchronization Info */}
                 <div className="mt-12 flex items-center justify-between px-10">
-                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-black' : 'text-black'}`}>
+                  <p className={`text-[10px] font-black uppercase tracking-widest text-black`}>
                     Last synchronized with global KhanHub registry
                   </p>
                   <button
@@ -2941,7 +2941,7 @@ export default function StaffProfilePage() {
 
                 {/* Danger Zone */}
                 <div className="mt-16 pt-12 border-t-2 border-dashed border-rose-500/20">
-                  <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-rose-500/5 border-rose-500/10' : 'bg-rose-50 border-rose-100'}`}>
+                  <div className={`p-8 rounded-[2.5rem] border transition-all bg-rose-50 border-rose-100`}>
                     <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                       <div className="flex items-center gap-6">
                         <div className={`w-16 h-16 rounded-3xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0`}>
@@ -2949,7 +2949,7 @@ export default function StaffProfilePage() {
                         </div>
                         <div>
                           <h4 className="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Danger Zone</h4>
-                          <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-black' : 'text-black'}`}>
+                          <p className={`text-xs font-bold leading-relaxed text-black`}>
                             Permanently delete this staff profile and all associated data records.<br />
                             This action cannot be undone and will revoke all access immediately.
                           </p>
@@ -2972,13 +2972,13 @@ export default function StaffProfilePage() {
             {showDeleteConfirm && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => !isDeleting && setShowDeleteConfirm(false)} />
-                <div className={`relative w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl border ${isDark ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-gray-100'}`}>
+                <div className={`relative w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl border bg-white border-gray-100`}>
                   <div className="flex flex-col items-center text-center">
                     <div className="w-20 h-20 rounded-[2rem] bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6">
                       <Trash2 size={40} />
                     </div>
-                    <h3 className={`text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>Confirm Deletion</h3>
-                    <p className={`text-sm font-bold leading-relaxed mb-8 ${isDark ? 'text-black' : 'text-black'}`}>
+                    <h3 className={`text-2xl font-black mb-2 text-gray-900 uppercase tracking-tight`}>Confirm Deletion</h3>
+                    <p className={`text-sm font-bold leading-relaxed mb-8 text-black`}>
                       Are you absolutely sure? This will permanently delete
                       <span className="mx-1 text-rose-500 font-black underline decoration-2 underline-offset-4">{staff?.name}</span>
                       from the system.
@@ -3002,7 +3002,7 @@ export default function StaffProfilePage() {
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
-                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${isDark ? 'border-zinc-700 text-black hover:bg-black/90' : 'border-gray-200 text-black hover:bg-white'
+                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${'border-gray-200 text-black hover:bg-white'
                           } disabled:opacity-50`}
                       >
                         Cancel
@@ -3022,7 +3022,7 @@ export default function StaffProfilePage() {
 
             {activeTab === 'payroll' && (
               <div className="space-y-6">
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all bg-white border-gray-100`}>
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
@@ -3035,43 +3035,43 @@ export default function StaffProfilePage() {
                         setPayrollForm(p => ({ ...p, basicSalary: staff?.monthlySalary || 0 }));
                         setShowPayrollModal(!showPayrollModal);
                       }}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : (isDark ? 'bg-zinc-800 text-amber-500' : 'bg-amber-50 text-amber-600')}`}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : ('bg-amber-50 text-amber-600')}`}
                     >
                       {showPayrollModal ? 'Cancel' : 'Generate Slip'}
                     </button>
                   </div>
 
                   {showPayrollModal && (
-                    <div className={`p-6 rounded-3xl border mb-8 ${isDark ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-50/50 border-amber-100'}`}>
+                    <div className={`p-6 rounded-3xl border mb-8 bg-amber-50/50 border-amber-100`}>
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Month (YYYY-MM)</label>
-                          <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.month} onChange={e => setPayrollForm({ ...payrollForm, month: e.target.value })} />
+                          <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.month} onChange={e => setPayrollForm({ ...payrollForm, month: e.target.value })} />
                         </div>
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Basic Salary (PKR)</label>
-                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({ ...payrollForm, basicSalary: Number(e.target.value) })} />
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({ ...payrollForm, basicSalary: Number(e.target.value) })} />
                         </div>
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Present Days</label>
-                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.presentDays} onChange={e => setPayrollForm({ ...payrollForm, presentDays: Number(e.target.value) })} />
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.presentDays} onChange={e => setPayrollForm({ ...payrollForm, presentDays: Number(e.target.value) })} />
                         </div>
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Bonuses (PKR)</label>
-                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonuses} onChange={e => setPayrollForm({ ...payrollForm, bonuses: Number(e.target.value) })} />
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.bonuses} onChange={e => setPayrollForm({ ...payrollForm, bonuses: Number(e.target.value) })} />
                         </div>
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Bonus Reason</label>
-                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({ ...payrollForm, bonusReason: e.target.value })} placeholder="e.g. Performance" />
+                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({ ...payrollForm, bonusReason: e.target.value })} placeholder="e.g. Performance" />
                         </div>
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Deductions (PKR)</label>
-                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductions} onChange={e => setPayrollForm({ ...payrollForm, deductions: Number(e.target.value) })} />
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.deductions} onChange={e => setPayrollForm({ ...payrollForm, deductions: Number(e.target.value) })} />
                         </div>
                         <div className="sm:col-span-2">
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Deduction Reason</label>
-                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({ ...payrollForm, deductionReason: e.target.value })} placeholder="e.g. Absences" />
+                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({ ...payrollForm, deductionReason: e.target.value })} placeholder="e.g. Absences" />
                         </div>
                       </div>
                       <button onClick={handleGenerateSlip} className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20">Finalize Slip</button>
@@ -3088,7 +3088,7 @@ export default function StaffProfilePage() {
                   ) : (
                     <div className="grid gap-4">
                       {salaryRecords.sort((a, b) => (b.month || '').localeCompare(a.month || '')).map(record => (
-                        <div key={record.id} className={`p-6 rounded-[2.5rem] border transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-800/30 border-zinc-700/50 hover:border-amber-500/30' : 'bg-gray-50 border-gray-100 hover:border-amber-200'
+                        <div key={record.id} className={`p-6 rounded-[2.5rem] border transition-all hover:scale-[1.01] ${'bg-gray-50 border-gray-100 hover:border-amber-200'
                           }`}>
                           <div className="flex flex-col md:flex-row justify-between gap-6">
                             <div className="flex gap-4">
@@ -3099,7 +3099,7 @@ export default function StaffProfilePage() {
                                 <DollarSign size={24} />
                               </div>
                               <div>
-                                <h4 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>
+                                <h4 className={`text-lg font-black text-gray-900 uppercase tracking-tight`}>
                                   {record.month ? new Date(record.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Unknown Month'}
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1">
@@ -3117,15 +3117,15 @@ export default function StaffProfilePage() {
                             </div>
 
                             <div className="md:text-right">
-                              <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
+                              <p className={`text-2xl font-black text-gray-900`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
                               <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Net Payable Amount</p>
                             </div>
                           </div>
 
-                          <div className={`mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-dashed ${isDark ? 'border-dashed border-zinc-700/50' : 'border-gray-200'}`}>
+                          <div className={`mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-dashed border-gray-200`}>
                             <div>
                               <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Base Earnings</p>
-                              <p className={`text-xs font-bold ${isDark ? 'text-black' : 'text-black'}`}>
+                              <p className={`text-xs font-bold text-black`}>
                                 ₨{Math.round(((record as any).basicSalary || 0) / 30 * ((record as any).presentDays || 0)).toLocaleString()}
                               </p>
                               <p className="text-[9px] text-black mt-1 uppercase font-black">Pro-rated attendance</p>
@@ -3134,7 +3134,7 @@ export default function StaffProfilePage() {
                             {((record as any).bonus > 0) && (
                               <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                                 <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Performance Bonus (+)</p>
-                                <p className={`text-xs font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                <p className={`text-xs font-bold text-emerald-600`}>
                                   ₨{(record as any).bonus.toLocaleString()}
                                 </p>
                                 <p className="text-[10px] text-emerald-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).bonusReason || 'Incentive'}</p>
@@ -3144,7 +3144,7 @@ export default function StaffProfilePage() {
                             {((record as any).otherDeductions > 0) && (
                               <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10">
                                 <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Other Deductions (-)</p>
-                                <p className={`text-xs font-bold ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                                <p className={`text-xs font-bold text-rose-600`}>
                                   ₨{(record as any).otherDeductions.toLocaleString()}
                                 </p>
                                 <p className="text-[10px] text-rose-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).deductionReason || 'Adjustment'}</p>
@@ -3163,7 +3163,7 @@ export default function StaffProfilePage() {
             {activeTab === 'score' && (
               <div className="space-y-6">
                 {/* Score Breakdown Analysis */}
-                <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+                <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all bg-white border-gray-100 shadow-xl shadow-blue-900/5`}>
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Performance Breakdown</h3>
@@ -3172,7 +3172,7 @@ export default function StaffProfilePage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
+                      <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest bg-gray-900 text-white`}>
                         Total Score: {computedScores.attendance + computedScores.punctuality + computedScores.uniform + computedScores.working + computedScores.growthPoint}
                       </span>
                       <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
@@ -3188,12 +3188,12 @@ export default function StaffProfilePage() {
                       { label: 'Uniform', score: computedScores.uniform, max: (computedScores.workingDays || 0) * 1, icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                       { label: 'Duties', score: computedScores.working, max: (computedScores.workingDays || 0) * 1, icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                     ].map((stat, i) => (
-                      <div key={i} className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-200/50'} flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
+                      <div key={i} className={`p-6 rounded-3xl border bg-gray-50 border-gray-200/50 flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
                           {stat.icon}
                         </div>
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-1">{stat.label}</h4>
-                        <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.score}</p>
+                        <p className={`text-xl font-black text-gray-900`}>{stat.score}</p>
                         <div className="w-full h-1 bg-zinc-700/20 rounded-full mt-4 overflow-hidden">
                           <div
                             className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`}
@@ -3207,7 +3207,7 @@ export default function StaffProfilePage() {
                     ))}
                   </div>
 
-                  <div className={`mt-8 p-6 rounded-3xl border border-dashed ${isDark ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50/50 border-indigo-100'}`}>
+                  <div className={`mt-8 p-6 rounded-3xl border border-dashed bg-indigo-50/50 border-indigo-100`}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
                         <Sparkles size={14} />
@@ -3216,12 +3216,12 @@ export default function StaffProfilePage() {
                     </div>
                     <div className="flex items-center justify-between mb-6">
                       <div className="space-y-1">
-                        <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {computedScores.growthPoint}</p>
+                        <p className={`text-sm font-black text-gray-900`}>Extra Points: {computedScores.growthPoint}</p>
                         <p className="text-[10px] font-bold text-black uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>
-                        <p className={`text-sm font-bold ${isDark ? 'text-black' : 'text-black'}`}>T-3 Management Candidate</p>
+                        <p className={`text-sm font-bold text-black`}>T-3 Management Candidate</p>
                       </div>
                     </div>
 
@@ -3231,7 +3231,7 @@ export default function StaffProfilePage() {
                         <p className="text-[10px] font-bold text-black opacity-30 uppercase text-center py-4">No contribution records found</p>
                       ) : (
                         growthHistory.map((item, idx) => (
-                          <div key={item.id || idx} className={`p-4 rounded-2xl border flex items-center justify-between transition-all hover:bg-white ${isDark ? 'bg-zinc-800/30 border-zinc-700' : 'bg-white/50 border-gray-100'}`}>
+                          <div key={item.id || idx} className={`p-4 rounded-2xl border flex items-center justify-between transition-all hover:bg-white bg-white/50 border-gray-100`}>
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-xs">
                                 +{item.points || 1}

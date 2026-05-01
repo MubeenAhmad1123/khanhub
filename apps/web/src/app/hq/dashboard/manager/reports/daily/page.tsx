@@ -48,8 +48,6 @@ export default function DailyReportPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [downloading, setDownloading] = useState(false);
-  // UI standard - forced light theme
-  const isDark = false;
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -103,8 +101,6 @@ export default function DailyReportPage() {
         getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))
           .catch(() => ({ docs: [] } as any))
       ));
-      
-      // Removed full growth_points fetch to prevent 429 - GP status now driven by today's contributions
 
       // Maps for fast lookup
       const attMap = new Map();
@@ -112,7 +108,6 @@ export default function DailyReportPage() {
       const dutyMap = new Map();
       const fineMap = new Map();
       const contribMap = new Map();
-      const gpMap = new Map();
 
       attSnaps.forEach(snap => snap.docs.forEach((d: any) => attMap.set(d.data().staffId || d.id, d.data())));
       dressSnaps.forEach(snap => snap.docs.forEach((d: any) => dressMap.set(d.data().staffId || d.id, d.data())));
@@ -137,7 +132,6 @@ export default function DailyReportPage() {
 
       // 3. Process Report Rows
       const rows: DailyReportRow[] = allStaff.map(s => {
-        // Helper to convert any time string (HH:mm, HH:mm AM/PM) to minutes from midnight
         const timeToMinutes = (timeStr?: string) => {
           if (!timeStr) return null;
           const clean = timeStr.trim().toUpperCase();
@@ -160,9 +154,7 @@ export default function DailyReportPage() {
         const duty = dutyMap.get(sid);
         const finesList = fineMap.get(sid) || [];
         const contribCount = contribMap.get(sid) || 0;
-        const totalGP = gpMap.get(sid) || 0;
 
-        // Uniform Score (1 if all ticked, 0 if any missing)
         const uniformConfig = s.dressCodeConfig || [];
         const uniformItems = dress?.items || [];
         const uniformMissing = uniformConfig.filter((c: any) => {
@@ -172,7 +164,6 @@ export default function DailyReportPage() {
 
         const uniformScore = (uniformConfig.length > 0 && uniformMissing.length === 0) ? 1 : 0;
 
-        // Duty Score (1 if all duties performed, 0 if any not)
         const dutyConfig = s.dutyConfig || [];
         const dutyItems = duty?.duties || [];
         const dutiesPending = dutyConfig.filter((c: any) => {
@@ -181,13 +172,9 @@ export default function DailyReportPage() {
         }).map((c: any) => c.label);
 
         const dutyScore = (dutyConfig.length > 0 && dutiesPending.length === 0) ? 1 : 0;
-
-        // Contribution Score (1 if at least one approved contribution today)
         const contribScore = contribCount > 0 ? 1 : 0;
-
         const fineTotal = finesList.reduce((acc: number, f: any) => acc + (Number(f.amount) || 0), 0);
 
-        // Determine statuses based on data
         const rawStatus = att?.status || 'unmarked';
         let attendanceStatus: DailyReportRow['attendance'] = 'unmarked';
 
@@ -197,32 +184,27 @@ export default function DailyReportPage() {
           attendanceStatus = rawStatus as any;
         }
 
-        // Use arrivedOnTime from new schema, fallback to isLate if it exists
         const arrivalTime = att?.arrivalTime;
         const departureTime = att?.departureTime;
-        const shiftStart = s.dutyStartTime; // Strictly from profile
-        const shiftEnd = s.dutyEndTime;     // Strictly from profile
+        const shiftStart = s.dutyStartTime;
+        const shiftEnd = s.dutyEndTime;
 
         let isLate = att?.arrivedOnTime === false || (att?.isLate && (attendanceStatus === 'present' || rawStatus === 'present'));
 
-        // Dynamic Shift Check: Strictly use profile dutyStartTime and dutyEndTime
         if ((attendanceStatus === 'present' || rawStatus === 'present')) {
           const arrMin = timeToMinutes(arrivalTime);
           const startMin = timeToMinutes(shiftStart);
           const depMin = timeToMinutes(departureTime);
           const endMin = timeToMinutes(shiftEnd);
 
-          // Arrival Lateness (Strict: even 1 min late = penalty)
           if (arrMin !== null && startMin !== null) {
             if (arrMin > startMin) {
               isLate = true;
             } else {
-              // If arriving exactly at or before start time, they are on time
               if (att?.arrivedOnTime !== false) isLate = false;
             }
           }
 
-          // Early Departure (Strict: even 1 min early = penalty)
           if (depMin !== null && endMin !== null) {
             if (depMin < endMin) {
               isLate = true;
@@ -242,7 +224,6 @@ export default function DailyReportPage() {
           (dutiesPending.length === 0 ? 'yes' :
             (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete')));
 
-        // Point Calculation (1 point each, total 4)
         const attPoint = (attendanceStatus === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
         const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
@@ -258,7 +239,6 @@ export default function DailyReportPage() {
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
-          // GP status is specifically tied to contribution approval as requested
           gpStatus: onLeave ? 'na' : (contribScore > 0 ? 'yes' : 'no'),
           dailyScore: totalDailyPoints,
           fines: fineTotal,
@@ -295,10 +275,6 @@ export default function DailyReportPage() {
     });
   }, [reportData, search, deptFilter]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleDownloadImage = async () => {
     const element = document.getElementById('daily-performance-report-content');
     if (!element) return;
@@ -307,11 +283,10 @@ export default function DailyReportPage() {
       setDownloading(true);
       toast.loading("Preparing high-quality image...", { id: 'download-image' });
 
-      // Ensure element is visible and styles are loaded
       const dataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 2,
-        backgroundColor: isDark ? '#0A0A0A' : '#F8FAFC',
+        backgroundColor: '#FDFDFD',
         style: {
           padding: '20px',
           borderRadius: '0'
@@ -386,7 +361,6 @@ export default function DailyReportPage() {
         const prefix = getDeptPrefix(row.department as StaffDept);
         const attId = `${reportDate}_${row.id}`;
 
-        // 1. Save Attendance
         await setDoc(doc(db, `${prefix}_attendance`, attId), {
           staffId: row.id,
           date: reportDate,
@@ -396,7 +370,6 @@ export default function DailyReportPage() {
           markedBy: session?.uid
         }, { merge: true });
 
-        // 2. Save Fine if any
         if (row.fines > 0) {
           await addDoc(collection(db, `${prefix}_fines`), {
             staffId: row.id,
@@ -421,127 +394,134 @@ export default function DailyReportPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
-        <Spinner showText={true} />
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <p className="text-gray-500 text-xs font-semibold">Generating Reports...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#FCFBF4] text-black font-bold'}`}>
-      <div id="daily-performance-report-content" className={`max-w-7xl mx-auto space-y-8 p-8 rounded-[3rem] ${isDark ? 'bg-zinc-950' : 'bg-white border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]'} print:p-0 print:shadow-none`}>
+    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans p-4 md:p-8 pb-32">
+      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-8 p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
             <Link
               href="/hq/dashboard/manager"
-              className={`p-3 rounded-2xl border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-black/90' : 'bg-white border-gray-100 hover:shadow-lg'}`}
+              className="p-3.5 bg-white border border-gray-100 rounded-2xl hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={20} className="text-gray-600" />
             </Link>
             <div>
-              <h1 className="text-3xl font-[1000] tracking-tight text-black">Daily Performance Report</h1>
-              <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                <Shield size={12} className="text-black" /> Operational Assessment & Audit Log
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 leading-snug">Daily Performance Report</h1>
+              <p className="text-gray-500 text-sm font-medium mt-0.5 flex items-center gap-2">
+                <Shield size={16} className="text-indigo-500" /> Operational Assessment & Audit Log
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:border-gray-200">
               <Calendar size={18} className="text-indigo-500" />
               <input
                 type="date"
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
-                className="bg-transparent border-none outline-none font-black text-xs uppercase tracking-widest text-indigo-600"
+                className="bg-transparent border-none outline-none font-bold text-xs text-gray-800"
               />
             </div>
             <button
               onClick={saveAssessment}
               disabled={saving || !reportData.some(r => r.isDirty)}
-              className="flex items-center gap-3 px-6 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-50 hover:scale-[1.02] active:scale-95"
+              className="flex items-center gap-2 px-5 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:-translate-y-0.5 active:translate-y-0 duration-200"
             >
-              {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
               Save Assessment
             </button>
             <button
               onClick={handleDownloadImage}
-              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-xs font-black transition-all shadow-xl hover:scale-[1.02] active:scale-95 ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
-                }`}
+              className="flex items-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
             >
-              <Download size={18} />
-              Export Image
+              <Download size={16} /> Export Image
             </button>
           </div>
         </div>
 
         {/* Branding for Image Export (Hidden in UI) */}
-        <div className="hidden print:block mb-10 pb-8 border-b-2 border-gray-100">
+        <div className="hidden print:block mb-8 pb-6 border-b border-gray-100">
           <div className="flex justify-between items-end">
             <div>
-              <h1 className="text-4xl font-[1000] uppercase tracking-tighter text-gray-900">Khan Hub HQ</h1>
-              <p className="text-lg font-black text-indigo-600 uppercase tracking-[0.2em] mt-1">Performance Intelligence Ledger</p>
-              <p className="text-sm font-bold text-black mt-4 italic">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <h1 className="text-3xl font-bold text-gray-900 leading-none">Khan Hub HQ</h1>
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mt-2">Performance Intelligence Ledger</p>
+              <p className="text-sm text-gray-600 mt-2 font-medium">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
             <div className="text-right">
-              <div className="inline-block px-4 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-xl">Verified Audit</div>
-              <p className="text-[10px] font-bold text-black mt-2">Document Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
+              <div className="inline-block px-3 py-1.5 bg-gray-50 border border-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl">Verified Audit</div>
+              <p className="text-xs text-gray-400 mt-2 font-mono">Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
             </div>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Total Points Earned</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-[1000] text-black">
+          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-gray-900">
                 {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
               </span>
-              <TrendingUp size={16} className="text-emerald-500" />
+              <div className="p-2 bg-emerald-50 rounded-xl">
+                <TrendingUp size={20} className="text-emerald-500" />
+              </div>
             </div>
           </div>
 
-          <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Total Deductions (Fine)</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-[1000] text-rose-600">
+          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-gray-900">
                 ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
               </span>
-              <AlertTriangle size={16} className="text-rose-500" />
+              <div className="p-2 bg-rose-50 rounded-xl">
+                <AlertTriangle size={20} className="text-rose-500" />
+              </div>
             </div>
           </div>
 
-          <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-black mb-2">Operational GP Index</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-[1000] text-indigo-600">
+          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-gray-900">
                 {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
               </span>
-              <CheckCircle size={16} className="text-indigo-500" />
+              <div className="p-2 bg-indigo-50 rounded-xl">
+                <CheckCircle size={20} className="text-indigo-500" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Controls & Filter Tabs */}
-        <div className="space-y-6 print:hidden">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="space-y-4 print:hidden">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative group">
-              <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-black' : 'text-black'}`} size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-indigo-600" size={18} />
               <input
                 type="text"
                 placeholder="Search staff by name or role..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={`w-full pl-12 pr-4 py-4 rounded-2xl border-none outline-none font-bold text-sm shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 ${isDark ? 'bg-white/5 text-white' : 'bg-white text-gray-900'}`}
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-100 bg-white font-semibold text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none placeholder:text-gray-300"
               />
             </div>
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className={`px-6 py-4 rounded-2xl border-2 border-black outline-none font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${isDark ? 'bg-white/5 text-black' : 'bg-white text-black'}`}
+              className="px-4 py-3 rounded-2xl border border-gray-100 bg-white font-bold text-xs text-gray-700 cursor-pointer focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all duration-200"
             >
               <option value="all">Global Matrix</option>
               {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
@@ -555,9 +535,9 @@ export default function DailyReportPage() {
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
-                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === f
-                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-black dark:border-white'
-                    : 'bg-white text-black border-gray-100 hover:border-gray-200 dark:bg-white/5 dark:border-zinc-800'
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${activeFilter === f
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
                   }`}
               >
                 {f}
@@ -567,105 +547,105 @@ export default function DailyReportPage() {
         </div>
 
         {/* Report Table */}
-        <div className={`rounded-[2.5rem] border overflow-hidden shadow-sm ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'}`}>
+        <div className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-separate border-spacing-0">
-              <thead className="sticky top-0 z-10">
-                <tr className={`${isDark ? 'bg-zinc-900' : 'bg-gray-50'} border-b border-gray-100 dark:border-zinc-800`}>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black">Staff Identity</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Attendance</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Uniform</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Duties</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">GP</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Score (4)</th>
-                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-black text-center">Fine</th>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Staff Identity</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">GP</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (4)</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-gray-50">
                 {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
-                  <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-amber-500/5' : 'hover:bg-white/50 dark:hover:bg-white/5'}`}>
-                    <td className="px-6 py-5">
+                  <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-indigo-50/30' : 'hover:bg-gray-50/30 transition-colors duration-200'}`}>
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-black group-hover:border-indigo-500' : 'bg-gray-50 border-white text-black shadow-sm group-hover:border-indigo-200'}`}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform">
                           {row.name[0]}
                         </div>
                         <div>
-                          <p className="font-black text-xs text-gray-900 dark:text-black truncate max-w-[120px]">{row.name}</p>
-                          <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">{row.designation}</p>
+                          <p className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug">{row.name}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${row.attendance === 'present' ? 'bg-emerald-400 text-black' :
-                          row.attendance === 'absent' ? 'bg-rose-400 text-black' :
-                            row.attendance === 'late' ? 'bg-amber-400 text-black' :
-                            row.attendance === 'leave' ? 'bg-cyan-400 text-black' :
-                              'bg-white text-black'
+                    <td className="px-6 py-4 text-center">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider ${row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                            row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border border-cyan-100' :
+                              'bg-gray-50 text-gray-700 border border-gray-200'
                         }`}>
                         {row.attendance === 'present' ? <CheckCircle size={12} /> :
                           row.attendance === 'absent' ? <XCircle size={12} /> :
                             row.attendance === 'late' ? <Clock size={12} /> : <Info size={12} />}
                         {row.attendance}
                         {row.attendance === 'late' && (row as any).arrivalTime && (
-                          <span className="ml-1 opacity-60">@{(row as any).arrivalTime}</span>
+                          <span className="ml-1 font-mono">@{(row as any).arrivalTime}</span>
                         )}
                       </div>
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-                      <div className={`flex flex-col items-center gap-1`}>
-                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${row.uniformStatus === 'yes' ? 'bg-emerald-400 text-black' :
-                            row.uniformStatus === 'no' ? 'bg-rose-400 text-black' :
-                              row.uniformStatus === 'incomplete' ? 'bg-amber-400 text-black' :
-                                'bg-white text-black'
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                              row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                'bg-gray-50 text-gray-700 border border-gray-200'
                           }`}>
-                          {row.uniformStatus === 'yes' ? <CheckCircle size={10} /> : row.uniformStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
+                          {row.uniformStatus === 'yes' ? <CheckCircle size={12} /> : row.uniformStatus === 'no' ? <XCircle size={12} /> : <AlertTriangle size={12} />}
                           {row.uniformStatus}
                         </div>
                         {row.uniformStatus === 'incomplete' && (row as any).details?.uniformMissing?.length > 0 && (
-                          <p className="text-[7px] font-black text-rose-600 uppercase leading-none mt-2">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
+                          <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">Missing: {(row as any).details.uniformMissing.join(', ')}</p>
                         )}
                       </div>
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-                      <div className={`flex flex-col items-center gap-1`}>
-                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${row.dutyStatus === 'yes' ? 'bg-emerald-400 text-black' :
-                            row.dutyStatus === 'no' ? 'bg-rose-400 text-black' :
-                              row.dutyStatus === 'incomplete' ? 'bg-amber-400 text-black' :
-                                'bg-white text-black'
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                              row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                'bg-gray-50 text-gray-700 border border-gray-200'
                           }`}>
-                          {row.dutyStatus === 'yes' ? <CheckCircle size={10} /> : row.dutyStatus === 'no' ? <XCircle size={10} /> : <AlertTriangle size={10} />}
+                          {row.dutyStatus === 'yes' ? <CheckCircle size={12} /> : row.dutyStatus === 'no' ? <XCircle size={12} /> : <AlertTriangle size={12} />}
                           {row.dutyStatus}
                         </div>
                         {row.dutyStatus === 'incomplete' && (row as any).details?.dutiesPending?.length > 0 && (
-                          <p className="text-[7px] font-black text-rose-600 uppercase leading-none mt-2">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
+                          <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">Pending: {(row as any).details.dutiesPending.join(', ')}</p>
                         )}
                       </div>
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${row.gpStatus === 'yes' ? 'bg-emerald-400 text-black' :
-                          'bg-rose-400 text-black'
+                    <td className="px-6 py-4 text-center">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          'bg-rose-50 text-rose-700 border-rose-100'
                         }`}>
-                        {row.gpStatus === 'yes' ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                        {row.gpStatus === 'yes' ? <CheckCircle size={12} /> : <XCircle size={12} />}
                         {row.gpStatus}
                       </div>
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-                      <span className={`text-sm font-black ${row.dailyScore >= 3 ? 'text-emerald-500' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`text-sm font-bold ${row.dailyScore >= 3 ? 'text-emerald-600' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
                         {row.dailyScore} / 4
                       </span>
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-                      <span className={`text-xs font-black ${row.fines > 0 ? 'text-rose-600' : 'text-black'}`}>
-                        {row.fines > 0 ? `₨${row.fines}` : '0'}
+                    <td className="px-6 py-4 text-center">
+                      <span className={`text-sm font-bold ${row.fines > 0 ? 'text-rose-600' : 'text-gray-400'}`}>
+                        {row.fines > 0 ? `₨${row.fines}` : '-'}
                       </span>
                       {row.fines > 0 && row.fineReason && (
-                        <p className="text-[8px] font-bold text-rose-500/60 uppercase mt-1 leading-none italic">{row.fineReason}</p>
+                        <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">{row.fineReason}</p>
                       )}
                     </td>
 
@@ -676,28 +656,28 @@ export default function DailyReportPage() {
           </div>
 
           {filteredData.length === 0 && (
-            <div className="py-24 text-center">
-              <div className="w-20 h-20 bg-gray-50 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                <Search size={32} className="text-black" />
+            <div className="py-16 text-center">
+              <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <Search size={22} className="text-gray-400" />
               </div>
-              <h3 className="font-black text-xl">No Analytics Data</h3>
-              <p className="text-black text-sm font-medium mt-1 uppercase tracking-widest">Adjust filters or search criteria</p>
+              <h3 className="font-bold text-base text-gray-900 leading-snug">No Analytics Data</h3>
+              <p className="text-gray-400 text-xs font-medium mt-1">Adjust filters or search criteria</p>
             </div>
           )}
         </div>
 
         {/* Signature & Legal Disclaimer */}
-        <div className="flex items-center justify-between pt-12 mt-12 border-t border-gray-100 print:pt-8 print:mt-8">
-          <div className="flex flex-col gap-2">
-            <div className="w-48 h-px bg-black opacity-20" />
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Manager Authorized Signature</p>
-            <p className="text-[8px] font-bold text-black opacity-40 uppercase tracking-widest mt-1">Audit Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
+        <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100 print:pt-6 print:mt-6">
+          <div className="flex flex-col gap-1">
+            <div className="w-32 h-px bg-gray-300 mb-2" />
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Authorized Signature</p>
+            <p className="text-[10px] text-gray-400 mt-1 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
           </div>
           <div className="text-right">
-            <p className="text-[9px] font-bold text-black uppercase tracking-widest">© {new Date().getFullYear()} Khan Hub HQ • Growth Points Ledger</p>
-            <div className="flex items-center justify-end gap-2 mt-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Integrity Verified</p>
+            <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
+            <div className="flex items-center justify-end gap-2 mt-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Verified Audit</p>
             </div>
           </div>
         </div>

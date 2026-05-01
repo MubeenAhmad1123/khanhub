@@ -170,15 +170,15 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFBF4] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="relative w-16 h-16">
-            <div className="absolute inset-0 border-4 border-rose-500/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-rose-500/10 rounded-full" />
             <div className="absolute inset-0 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
           </div>
           <div className="space-y-2 text-center">
-            <p className="text-rose-600 dark:text-rose-400 text-sm font-black uppercase tracking-[0.3em] animate-pulse">Initializing</p>
-            <p className="text-gray-400 text-[10px] font-medium uppercase tracking-widest">Rehab Protocol v2.0</p>
+            <p className="text-rose-600 text-sm font-black uppercase tracking-[0.3em] animate-pulse">Initializing</p>
+            <p className="text-gray-400 text-[10px] font-medium uppercase tracking-widest">Rehab Protocol v3.0</p>
           </div>
         </div>
       </div>
@@ -194,30 +194,30 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-white/50 dark:bg-black/50 backdrop-blur-xl border-r border-gray-200/50 dark:border-white/5">
+      <div className="flex flex-col h-full bg-white/40 backdrop-blur-3xl border-r border-rose-100/50 shadow-[4px_0_24px_rgba(244,63,94,0.03)]">
         {/* Header */}
         <div className="p-8">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
             className="flex items-center gap-2 text-gray-400 hover:text-rose-600 text-[10px] font-bold mb-8 transition-all group uppercase tracking-widest"
           >
-            <div className="w-6 h-6 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-rose-500/50 transition-colors">
+            <div className="w-6 h-6 rounded-full border border-rose-100 flex items-center justify-center group-hover:border-rose-500/50 transition-colors bg-white">
               <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
             </div>
             {viewMode === 'hq' ? 'Return to Nexus' : 'Main Hub'}
           </Link>
 
           <div className="flex items-center gap-4 mb-8">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all duration-500 ${
-              viewMode === 'hq' ? 'bg-gradient-to-br from-indigo-500 to-purple-600 rotate-3' : 'bg-gradient-to-br from-rose-400 to-pink-500 -rotate-3'
+            <div className={`w-12 h-12 rounded-[22px] flex items-center justify-center text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-700 hover:scale-105 ${
+              viewMode === 'hq' ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rotate-3' : 'bg-gradient-to-br from-rose-400 via-pink-500 to-orange-400 -rotate-3'
             }`}>
               {viewMode === 'hq' ? <Shield size={24} /> : <Heart size={24} />}
             </div>
             <div>
-              <p className="font-black text-lg leading-tight tracking-tight dark:text-white">
+              <p className="font-black text-xl leading-tight tracking-tight text-gray-900">
                 {viewMode === 'hq' ? 'HQ Admin' : 'Rehab'}
               </p>
-              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+              <p className="text-rose-500/80 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5">
                 {viewMode === 'hq' ? 'System Core' : 'Care Grid'}
               </p>
             </div>
@@ -228,35 +228,37 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all group"
+                className="w-full flex items-center justify-between px-5 py-4 rounded-3xl border border-rose-100 bg-white/80 hover:bg-white transition-all group shadow-sm hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
-                  <ExternalLink size={14} className="text-rose-500 group-hover:rotate-12 transition-transform" />
-                  <span className="text-[11px] font-black uppercase tracking-tight dark:text-gray-200">Switch Grid</span>
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center group-hover:bg-rose-100 transition-colors">
+                    <ExternalLink size={14} className="text-rose-500 group-hover:rotate-12 transition-transform" />
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-tight text-gray-700">Switch Grid</span>
                 </div>
-                <ChevronLeft size={14} className={`text-gray-400 transition-transform duration-300 ${portalOpen ? '-rotate-90' : ''}`} />
+                <ChevronLeft size={14} className={`text-rose-300 transition-transform duration-300 ${portalOpen ? '-rotate-90' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-3xl border border-gray-200 dark:border-white/10 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-2xl shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
-                  <div className="space-y-1.5">
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-[2.5rem] border border-rose-100 bg-white/95 backdrop-blur-3xl shadow-[0_20px_50px_rgba(244,63,94,0.15)] p-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="space-y-2">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
                         key={key}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
+                        className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all group ${
                           pathname.includes(key)
-                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
-                            : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
+                            ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/20'
+                            : 'hover:bg-rose-50 text-gray-600'
                         }`}
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 group-hover:bg-rose-500/10'
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                          pathname.includes(key) ? 'bg-white/20 scale-110' : 'bg-gray-100 group-hover:bg-white'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>
-                        <span className="text-xs font-black uppercase tracking-tight">{info.label}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{info.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -267,11 +269,11 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
           {/* Nav Switcher */}
           {isHqAdmin && (
-            <div className="flex p-1.5 bg-gray-100/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/5 mb-8">
+            <div className="flex p-1.5 bg-rose-50/50 rounded-[1.5rem] border border-rose-100/50 mb-8">
               <button
                 onClick={() => setViewMode('dept')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-white dark:bg-white/10 shadow-sm text-rose-600 dark:text-rose-400' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'dept' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-rose-300 hover:text-rose-500'
                 }`}
               >
                 LOCAL
@@ -279,7 +281,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
               <button
                 onClick={() => setViewMode('hq')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-white dark:bg-white/10 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'hq' ? 'bg-white shadow-md text-indigo-600 scale-105' : 'text-rose-300 hover:text-rose-500'
                 }`}
               >
                 CORE
@@ -289,7 +291,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-6 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-6 space-y-3 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -297,21 +299,21 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
+                className={`flex items-center gap-4 px-6 py-4 rounded-[2rem] text-sm transition-all relative group overflow-hidden ${
                   isActive 
-                    ? 'bg-gradient-to-r from-rose-500/10 to-transparent text-rose-600 dark:text-rose-400' 
-                    : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/50 dark:hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-rose-500/10 to-rose-50/20 text-rose-600 shadow-[0_4px_12px_rgba(244,63,94,0.05)]' 
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-white hover:shadow-sm'
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-rose-500 rounded-r-full shadow-[0_0_12px_rgba(244,63,94,0.5)]" />
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1.5 bg-gradient-to-b from-rose-400 to-rose-600 rounded-r-full" />
                 )}
-                <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-rose-500' : ''}`}>
+                <div className={`transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 ${isActive ? 'text-rose-500' : 'text-gray-400 group-hover:text-rose-400'}`}>
                   {item.icon}
                 </div>
-                <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.label}</span>
+                <span className="flex-1 font-black uppercase tracking-[0.1em] text-[11px]">{item.label}</span>
                 {isActive && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-bounce" />
                 )}
               </Link>
             );
@@ -320,22 +322,22 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
         {/* User & Bottom */}
         <div className="p-8 space-y-6">
-          <div className="flex items-center gap-4 px-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-white dark:to-gray-300 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-xl">
+          <div className="flex items-center gap-4 px-3 py-4 rounded-[2rem] bg-white shadow-sm border border-rose-50/50">
+            <div className="w-10 h-10 rounded-[18px] bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white font-black text-sm shadow-lg">
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+              <p className="text-xs font-black truncate text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
               <div className="flex items-center gap-2 mt-1">
-                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                 <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{user?.customId}</p>
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                 <p className="text-[9px] font-bold text-rose-400/80 truncate tracking-[0.15em] uppercase">{user?.customId}</p>
               </div>
             </div>
           </div>
 
           <button 
             onClick={handleSignOut} 
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-[11px] font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 transition-all group"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-[2rem] border border-rose-100 bg-white text-[11px] font-black text-rose-500 hover:bg-rose-500 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all duration-500 group"
           >
             <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
             DISCONNECT
@@ -346,7 +348,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   };
 
   return (
-    <div className={`min-h-screen flex bg-[#FDFDFD] dark:bg-[#050505] text-black dark:text-white transition-colors duration-500 font-sans`}>
+    <div className={`min-h-screen flex bg-[#FCFBF4] text-gray-900 transition-colors duration-500 font-sans`}>
       {/* Sidebar Desktop */}
       <aside className={`hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30`}>
         <SidebarContent />
@@ -362,10 +364,10 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
       <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
-      } bg-white dark:bg-[#0A0A0A] shadow-2xl`}>
+      } bg-white shadow-2xl`}>
         <button 
           onClick={() => setSidebarOpen(false)} 
-          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white z-50 hover:rotate-90 transition-all"
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 z-50 hover:rotate-90 transition-all"
         >
           <X size={18} />
         </button>
@@ -375,46 +377,46 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       {/* Main Content Area */}
       <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
         {/* Background Decorative Elements */}
-        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
-        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
+        <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-rose-500/10 to-orange-500/5 rounded-full blur-[140px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-pink-500/10 to-indigo-500/5 rounded-full blur-[140px] -ml-64 -mb-64 pointer-events-none" />
 
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 py-4 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-20 bg-white/90 backdrop-blur-3xl border-b border-rose-100/50 px-6 py-4 flex items-center justify-between shadow-sm">
           <button 
             onClick={() => setSidebarOpen(true)} 
-            className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white"
+            className="w-11 h-11 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 shadow-sm active:scale-95 transition-all"
           >
             <Menu size={20} />
           </button>
           <div className="flex flex-col items-center">
-            <span className="font-black text-xs uppercase tracking-[0.2em] dark:text-white">Rehab Grid</span>
-            <span className="text-[8px] font-bold text-rose-500 uppercase tracking-widest mt-0.5">Secure Protocol</span>
+            <span className="font-black text-[10px] uppercase tracking-[0.3em] text-gray-900">Rehab Grid</span>
+            <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest mt-1 px-2 py-0.5 bg-rose-50 rounded-lg">Secure Protocol</span>
           </div>
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-rose-500/20">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-400 via-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-rose-500/20">
             {user?.displayName?.[0]}
           </div>
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FDFDFD]/80 dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-12 py-6 items-center justify-between">
+        <header className="hidden lg:flex sticky top-0 z-20 bg-white/40 backdrop-blur-3xl border-b border-rose-100/50 px-12 py-6 items-center justify-between shadow-[0_1px_10px_rgba(244,63,94,0.02)]">
           <div className="flex flex-col">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-gray-400">Khan Hub Network</h2>
-            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mt-1">Rehab Department Portal</p>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400">Khan Hub Network</h2>
+            <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mt-1 bg-rose-50 px-3 py-1 rounded-full inline-block border border-rose-100">Rehab Department Portal</p>
           </div>
           
           <div className="flex items-center gap-8">
              {user?.uid && <StaffNotifications uid={user.uid} dept="rehab" />}
              
-             <div className="h-8 w-px bg-gray-200 dark:bg-white/10" />
+             <div className="h-8 w-px bg-rose-100" />
 
-             <div className="flex items-center gap-4 pl-2">
+             <div className="flex items-center gap-5 pl-2">
                 <div className="flex flex-col items-end">
-                   <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
-                   <span className="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-rose-500/20">
+                   <p className="text-xs font-black text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
+                   <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black uppercase tracking-wider mt-1 shadow-sm">
                       {role && ROLE_LABELS[role]}
                    </span>
                 </div>
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
+                <div className="w-12 h-12 rounded-[20px] bg-white border border-rose-100 flex items-center justify-center text-rose-600 font-black text-sm shadow-sm hover:shadow-md transition-all cursor-pointer">
                    {user?.displayName?.[0]}
                 </div>
              </div>

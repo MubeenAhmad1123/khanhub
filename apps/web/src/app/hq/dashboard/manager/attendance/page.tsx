@@ -39,7 +39,7 @@ export default function ManagerAttendancePage() {
   useEffect(() => {
     if (!session || session.role !== 'manager') return;
     fetchData();
-  }, [session, selectedDate]);
+  }, [session, selectedDate, deptFilter]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -158,70 +158,70 @@ export default function ManagerAttendancePage() {
 
   if (sessionLoading || (loading && staff.length === 0)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-black" />
-          <p className="text-black text-[10px] font-black uppercase tracking-[0.3em]">Calibrating</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <p className="text-gray-500 text-xs font-semibold">Loading Attendance...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF8] pb-32 text-black">
+    <div className="min-h-screen bg-[#FDFDFD] pb-32 text-gray-900 font-sans">
       {/* Header Section */}
-      <div className="bg-white border-b-4 border-black sticky top-0 z-30 px-4 md:px-8 py-8">
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-30 px-4 md:px-8 py-6 backdrop-blur-md">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shadow-2xl">
-                  <Calendar size={24} />
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-sm">
+                  <Calendar size={20} />
                 </div>
-                <h1 className="text-3xl font-black text-black tracking-tight uppercase">Attendance Register</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Attendance Register</h1>
               </div>
-              <p className="text-black text-xs font-black uppercase tracking-[0.2em] opacity-40">Administrative Personnel Oversight</p>
+              <p className="text-gray-500 text-xs font-medium">Daily attendance records & operational oversight</p>
             </div>
 
             {/* Date Selector */}
-            <div className="flex items-center bg-black/5 rounded-3xl p-1.5 border-2 border-black/10 transition-all hover:border-black">
+            <div className="flex items-center bg-gray-50 rounded-2xl p-1 border border-gray-100 transition-all hover:border-gray-200">
               <button 
                 onClick={() => changeDate(-1)}
-                className="p-4 hover:bg-black hover:text-white rounded-2xl transition-all text-black active:scale-90"
+                className="p-3 hover:bg-white hover:shadow-sm hover:text-gray-900 rounded-xl transition-all text-gray-600 active:scale-90"
               >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={18} />
               </button>
-              <div className="px-8 flex flex-col items-center min-w-[220px]">
-                <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] opacity-40 mb-1">Operational Date</span>
+              <div className="px-5 flex flex-col items-center min-w-[160px]">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Selected Date</span>
                 <input 
                   type="date" 
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-sm font-black text-black focus:ring-0 p-0 text-center uppercase tracking-widest cursor-pointer"
+                  className="bg-transparent border-none text-xs font-bold text-gray-800 focus:ring-0 p-0 text-center cursor-pointer outline-none"
                 />
               </div>
               <button 
                 onClick={() => changeDate(1)}
-                className="p-4 hover:bg-black hover:text-white rounded-2xl transition-all text-black active:scale-90"
+                className="p-3 hover:bg-white hover:shadow-sm hover:text-gray-900 rounded-xl transition-all text-gray-600 active:scale-90"
               >
-                <ChevronRight size={24} />
+                <ChevronRight size={18} />
               </button>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-6 mt-10">
-            <div className="bg-white border-2 border-black rounded-[2rem] p-6 flex flex-col items-center shadow-xl shadow-black/5">
-              <span className="text-3xl font-black text-black">{stats.present}</span>
-              <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Confirmed Present</span>
+          <div className="grid grid-cols-3 gap-4 md:gap-6 mt-6">
+            <div className="bg-white border border-gray-100 rounded-3xl p-5 flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300">
+              <span className="text-2xl md:text-3xl font-bold text-emerald-600 leading-none mb-1">{stats.present}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Present</span>
             </div>
-            <div className="bg-white border-2 border-black rounded-[2rem] p-6 flex flex-col items-center shadow-xl shadow-black/5">
-              <span className="text-3xl font-black text-black">{stats.absent}</span>
-              <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] mt-1">Noted Absent</span>
+            <div className="bg-white border border-gray-100 rounded-3xl p-5 flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300">
+              <span className="text-2xl md:text-3xl font-bold text-rose-600 leading-none mb-1">{stats.absent}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Absent</span>
             </div>
-            <div className="bg-black border-2 border-black rounded-[2rem] p-6 flex flex-col items-center shadow-2xl shadow-black/20">
-              <span className="text-3xl font-black text-white">{stats.unmarked}</span>
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] mt-1">Pending Entry</span>
+            <div className="bg-white border border-indigo-50 rounded-3xl p-5 flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300">
+              <span className="text-2xl md:text-3xl font-bold text-indigo-600 leading-none mb-1">{stats.unmarked}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unmarked</span>
             </div>
           </div>
         </div>
@@ -229,114 +229,119 @@ export default function ManagerAttendancePage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
         {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-6 mb-10">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1 relative group">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-black w-5 h-5 transition-transform group-focus-within:scale-110" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 transition-colors group-focus-within:text-indigo-600" />
             <input 
               type="text" 
-              placeholder="Query operative by identity..."
+              placeholder="Search by name or Employee ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border-2 border-black/10 rounded-2xl pl-16 pr-6 py-5 text-sm font-black shadow-xl shadow-black/5 focus:border-black outline-none transition-all placeholder:text-black/30 placeholder:uppercase placeholder:tracking-widest"
+              className="w-full bg-white border border-gray-100 rounded-2xl pl-11 pr-4 py-3 text-sm font-semibold shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all placeholder:text-gray-300"
             />
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <select 
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="bg-white border-2 border-black/10 rounded-2xl px-8 py-5 text-sm font-black shadow-xl shadow-black/5 focus:border-black outline-none transition-all appearance-none min-w-[200px] uppercase tracking-widest cursor-pointer"
+              className="bg-white border border-gray-100 rounded-2xl px-5 py-3 text-xs font-bold shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all cursor-pointer min-w-[160px]"
             >
               <option value="all">Global Fleet</option>
               <option value="hq">HQ Admin</option>
-              <option value="rehab">Rehab Fleet</option>
-              <option value="spims">SPIMS Fleet</option>
+              <option value="rehab">Rehab Center</option>
+              <option value="spims">SPIMS Academy</option>
+              <option value="hospital">Khan Hospital</option>
+              <option value="sukoon">Sukoon Center</option>
+              <option value="welfare">Khan Welfare</option>
+              <option value="job-center">Job Center</option>
+              <option value="social-media">Social Media</option>
+              <option value="it">IT Department</option>
             </select>
-            <button className="bg-black text-white border-2 border-black rounded-2xl px-6 py-5 shadow-2xl hover:bg-white hover:text-black transition-all active:scale-95">
-              <FileSpreadsheet size={24} />
+            <button className="bg-gray-900 text-white hover:bg-black border border-gray-800 rounded-2xl px-4 py-3 shadow-sm transition-all active:scale-95 flex items-center justify-center">
+              <FileSpreadsheet size={18} />
             </button>
           </div>
         </div>
 
         {/* Staff Table */}
-        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300">
           <div className="table-responsive">
-
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-50">
-                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest">Employee</th>
-                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest hidden md:table-cell">Department</th>
-                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest text-center">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black text-black uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredStaff.map((s, idx) => {
-                const att = attendance[s.id];
-                return (
-                  <tr key={s.id} className="hover:bg-white/50 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center text-black font-black text-sm shadow-inner group-hover:scale-105 transition-transform">
-                          {s.name[0].toUpperCase()}
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Employee</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider hidden md:table-cell">Department</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Status</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredStaff.map((s, idx) => {
+                  const att = attendance[s.id];
+                  return (
+                    <tr key={s.id} className="hover:bg-gray-50/30 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-bold text-xs group-hover:scale-105 transition-transform">
+                            {s.name[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{s.name}</div>
+                            <div className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider">{s.employeeId || 'No ID'}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-black text-gray-900 group-hover:text-teal-600 transition-colors">{s.name}</div>
-                          <div className="text-[10px] font-mono text-black font-bold uppercase tracking-wider">{s.employeeId || 'No ID'}</div>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <span className="inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-gray-50 text-gray-600 border border-gray-100">
+                          {s.department || 'General'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {!att ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-gray-50 text-gray-400 border border-gray-100">
+                            <Clock size={12} /> Unmarked
+                          </span>
+                        ) : att.status === 'present' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            <CheckCircle2 size={12} /> Present
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100">
+                            <XCircle size={12} /> Absent
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button 
+                            onClick={() => toggleAttendance(s.id, att?.status)}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all border",
+                              att?.status === 'present' 
+                                ? "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                : "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-sm"
+                            )}
+                          >
+                            {att?.status === 'present' ? 'Mark Absent' : 'Mark Present'}
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5 hidden md:table-cell">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gray-100 text-black border border-gray-200/50">
-                        {s.department || 'General'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6 text-center">
-                      {!att ? (
-                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] bg-black/5 text-black border border-black/10">
-                          <Clock size={10} /> Pending
-                        </span>
-                      ) : att.status === 'present' ? (
-                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] bg-black text-white border border-black shadow-lg shadow-black/10">
-                          <CheckCircle2 size={10} /> Confirmed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] bg-white text-black border-2 border-black">
-                          <XCircle size={10} /> Absentee
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <button 
-                          onClick={() => toggleAttendance(s.id, att?.status)}
-                          className={cn(
-                            "px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border-2",
-                            att?.status === 'present' 
-                              ? "bg-white text-black border-black hover:bg-black hover:text-white"
-                              : "bg-black text-white border-black hover:bg-white hover:text-black shadow-xl shadow-black/10"
-                          )}
-                        >
-                          {att?.status === 'present' ? 'Mark Absent' : 'Mark Present'}
-                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredStaff.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Search className="w-8 h-8 text-gray-200 mb-1" />
+                        <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">No staff found matching filters</p>
                       </div>
                     </td>
                   </tr>
-                );
-              })}
-              {filteredStaff.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <Search className="w-12 h-12 text-gray-100" />
-                      <p className="text-black font-bold text-sm uppercase tracking-widest">No staff found matching filters</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-              </div>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

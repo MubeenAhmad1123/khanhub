@@ -9,9 +9,75 @@ import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
   ArrowRight, Loader2, AlertTriangle, TrendingUp,
-  ChevronRight, KeyRound, Calendar, Send
+  ChevronRight, KeyRound, Calendar, Send, Activity
 } from 'lucide-react';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
+
+const DEPARTMENT_IMAGES = [
+  { src: '/logo-circle.webp', alt: 'Khan Hub', duration: 4000 },
+  { src: '/images/education-circle.webp', alt: 'Education Department', duration: 2500 },
+  { src: '/images/enterprises-circle.webp', alt: 'Enterprises', duration: 2500 },
+  { src: '/images/institute-health-sciences-circle.webp', alt: 'Institute of Health Sciences', duration: 2500 },
+  { src: '/images/job-circle.webp', alt: 'Job Department', duration: 2500 },
+  { src: '/images/marketing-circle.webp', alt: 'Marketing', duration: 2500 },
+  { src: '/images/medical-center-circle.webp', alt: 'Medical Center', duration: 2500 },
+  { src: '/images/prosthetic-circle.webp', alt: 'Prosthetic Department', duration: 2500 },
+  { src: '/images/rehab-circle.webp', alt: 'Rehabilitation', duration: 2500 },
+  { src: '/images/residential-circle.webp', alt: 'Residential', duration: 2500 },
+  { src: '/images/skill-circle.webp', alt: 'Skill Development', duration: 2500 },
+  { src: '/images/sukoon-circle.webp', alt: 'Sukoon', duration: 2500 },
+  { src: '/images/surgical-repair-circle.webp', alt: 'Surgical Repair', duration: 2500 },
+  { src: '/images/surgical-services-circle.webp', alt: 'Surgical Services', duration: 2500 },
+  { src: '/images/transport-circle.webp', alt: 'Transport', duration: 2500 },
+  { src: '/images/travel-and-tour-circle.webp', alt: 'Travel and Tour', duration: 2500 },
+  { src: '/images/welfare-organization-circle.webp', alt: 'Welfare Organization', duration: 2500 },
+];
+
+const ImageCarousel = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % DEPARTMENT_IMAGES.length);
+    }, DEPARTMENT_IMAGES[currentIndex].duration);
+    return () => clearTimeout(timer);
+  }, [currentIndex]);
+
+  return (
+    <div className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-8 lg:mb-0 lg:w-72 lg:h-72 flex-shrink-0">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.5 }}
+          className="absolute inset-0 drop-shadow-xl"
+        >
+          <Image
+            src={DEPARTMENT_IMAGES[currentIndex].src}
+            alt={DEPARTMENT_IMAGES[currentIndex].alt}
+            fill
+            className="object-contain"
+            sizes="(max-width: 640px) 192px, 256px"
+            priority={currentIndex === 0}
+          />
+        </motion.div>
+      </AnimatePresence>
+      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {DEPARTMENT_IMAGES.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrentIndex(idx)}
+            className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-4 bg-indigo-500' : 'w-1.5 bg-gray-300 hover:bg-indigo-300'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 function timeAgo(dateInput: any): string {
   if (!dateInput) return 'N/A';
@@ -222,64 +288,78 @@ export default function ManagerOverviewPage() {
 
   if (sessionLoading || loading || !mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF4]">
-        <Loader2 className="w-10 h-10 animate-spin text-black" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF4] text-black p-4 md:p-8 space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight uppercase italic">Managerial Command</h1>
-          <p className="text-black/60 text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">Global Departmental Oversight • Real-time Operational Metrics</p>
+    <div className="min-h-screen bg-gray-50/50 text-gray-900 p-4 md:p-8 space-y-8 font-sans">
+      {/* Header Section with Carousel */}
+      <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div className="flex-1 space-y-4 text-center lg:text-left order-2 lg:order-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-2">
+            <Activity size={14} />
+            <span>Managerial Command Center</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+            Global Departmental Oversight
+          </h1>
+          <p className="text-gray-500 max-w-xl mx-auto lg:mx-0">
+            Real-time operational metrics and performance intelligence across all institutional divisions.
+          </p>
+          
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
+            <button 
+              onClick={() => setShowBroadcast(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all hover:bg-indigo-700 hover:shadow-md hover:scale-105 active:scale-95"
+            >
+              <Calendar size={18} /> Broadcast Meeting
+            </button>
+            <Link 
+              href="/hq/dashboard/manager/reports/daily"
+              className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-all hover:bg-gray-50 hover:shadow-sm hover:border-gray-300"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live Connection</span>
+              </div>
+              <div className="w-px h-4 bg-gray-200" />
+              <span className="text-gray-500">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <button 
-            onClick={() => setShowBroadcast(true)}
-            className="flex items-center gap-3 px-8 py-4 bg-white border-4 border-black text-black rounded-[2rem] text-xs font-black uppercase tracking-widest transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
-          >
-            <Calendar size={18} /> Broadcast Meeting
-          </button>
-          <Link 
-            href="/hq/dashboard/manager/reports/daily"
-            className="flex items-center gap-4 px-6 py-3 bg-white border-2 border-black rounded-2xl shadow-sm hover:bg-gray-50 transition-all"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live Connection</p>
-            </div>
-            <div className="w-px h-4 bg-black/10" />
-            <p className="text-[9px] font-black uppercase tracking-widest text-black/60">
-              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </p>
-          </Link>
+
+        {/* Carousel implementation like mobile view */}
+        <div className="order-1 lg:order-2 flex justify-center w-full lg:w-auto relative z-10">
+           <ImageCarousel />
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-        <StatCard label="Total Staff" value={stats.totalStaff} icon={<Users size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('total')} />
-        <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('present')} />
-        <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('absent')} />
-        <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('leave')} />
-        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-white" textColor="text-black" onClick={() => setSelectedMetric('notMarked')} />
-        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-white" textColor="text-black" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard label="Total Staff" value={stats.totalStaff} icon={<Users size={20} />} color="bg-indigo-50" textColor="text-indigo-600" onClick={() => setSelectedMetric('total')} />
+        <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-emerald-50" textColor="text-emerald-600" onClick={() => setSelectedMetric('present')} />
+        <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-rose-50" textColor="text-rose-600" onClick={() => setSelectedMetric('absent')} />
+        <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-amber-50" textColor="text-amber-600" onClick={() => setSelectedMetric('leave')} />
+        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-gray-100" textColor="text-gray-600" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-blue-50" textColor="text-blue-600" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
 
       {/* Metric Detail View */}
       {selectedMetric && (
-        <div className="p-8 rounded-[3rem] border-4 border-black bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-black/5">
+        <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
             <div>
-              <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-4">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900">
                 {selectedMetric === 'notMarked' ? 'Registry Variance' : 
                  selectedMetric === 'present' ? 'Verified Personnel' :
                  selectedMetric === 'absent' ? 'Personnel Deficit' :
                  selectedMetric === 'leave' ? 'Authorized Leave' : 'Personnel Registry'}
-                <span className="text-[10px] px-3 py-1 bg-black text-white rounded-full font-black uppercase tracking-widest">
+                <span className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">
                   {allStaff.filter(s => {
                     const status = attMap.get(s.id);
                     if (selectedMetric === 'notMarked') return !status;
@@ -291,7 +371,7 @@ export default function ManagerOverviewPage() {
                 </span>
               </h2>
             </div>
-            <button onClick={() => setSelectedMetric(null)} className="text-[9px] font-black uppercase tracking-widest px-4 py-2 border-2 border-black rounded-xl hover:bg-black hover:text-white transition-all">Collapse View</button>
+            <button onClick={() => setSelectedMetric(null)} className="text-xs font-semibold px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-all">Collapse View</button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -304,17 +384,17 @@ export default function ManagerOverviewPage() {
               if (selectedMetric === 'total') return true;
               return false;
             }).map(s => (
-              <div key={s.id} className="p-5 rounded-2xl border-2 border-black bg-white flex items-center justify-between group hover:bg-gray-50 transition-all">
-                <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="flex items-center gap-4 truncate">
-                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-black text-xs">
+              <div key={s.id} className="p-4 rounded-xl border border-gray-100 bg-white flex items-center justify-between group hover:border-indigo-100 hover:shadow-sm transition-all">
+                <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="flex items-center gap-3 truncate">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
                     {s.name?.[0] || 'S'}
                   </div>
                   <div className="truncate">
-                    <p className="text-sm font-black truncate">{s.name}</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-black/40">{s.department}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">{s.department}</p>
                   </div>
                 </Link>
-                <ChevronRight size={16} className="text-black/20 group-hover:text-black group-hover:translate-x-1 transition-all" />
+                <ChevronRight size={16} className="text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
               </div>
             ))}
           </div>
@@ -324,45 +404,45 @@ export default function ManagerOverviewPage() {
       {/* Main Analysis Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Department Breakdown */}
-        <div className="lg:col-span-7 rounded-[3.5rem] p-10 border-4 border-black bg-white shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
-          <div className="flex items-center justify-between mb-12">
+        <div className="lg:col-span-7 bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-3xl font-black uppercase tracking-tight italic">Institutional Velocity</h3>
-              <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.3em] mt-2 italic">Real-time attendance density by division</p>
+              <h3 className="text-xl font-bold text-gray-900">Institutional Velocity</h3>
+              <p className="text-sm text-gray-500 mt-1">Real-time attendance density by division</p>
             </div>
-            <div className="px-6 py-2 bg-black text-white rounded-2xl text-[9px] font-black uppercase tracking-widest">
+            <div className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">
               24H Matrix
             </div>
           </div>
 
-          <div className="space-y-10">
+          <div className="space-y-6">
             {Object.entries(deptStats).map(([dept, data]) => (
               <div key={dept} className="group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-2 h-2 rounded-full bg-black group-hover:scale-150 transition-all" />
-                    <span className="text-xs font-black uppercase tracking-[0.2em]">{dept}</span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 opacity-50 group-hover:opacity-100 group-hover:scale-125 transition-all" />
+                    <span className="text-sm font-semibold text-gray-700 uppercase">{dept}</span>
                   </div>
-                  <div className="flex gap-6">
+                  <div className="flex gap-4">
                     <div className="text-right">
-                      <span className="block text-[8px] font-black text-emerald-600 uppercase tracking-widest">Verified</span>
-                      <span className="text-sm font-black">{data.present}</span>
+                      <span className="block text-xs font-medium text-gray-400">Verified</span>
+                      <span className="text-sm font-bold text-gray-900">{data.present}</span>
                     </div>
                     <div className="text-right">
-                      <span className="block text-[8px] font-black text-rose-600 uppercase tracking-widest">Deficit</span>
-                      <span className="text-sm font-black">{data.absent}</span>
+                      <span className="block text-xs font-medium text-gray-400">Deficit</span>
+                      <span className="text-sm font-bold text-gray-900">{data.absent}</span>
                     </div>
                   </div>
                 </div>
-                <div className="h-4 w-full rounded-full bg-gray-50 border-2 border-black overflow-hidden flex p-0.5">
+                <div className="h-3 w-full rounded-full bg-gray-100 overflow-hidden flex">
                   {data.total > 0 ? (
                     <>
-                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-black rounded-full mr-0.5 transition-all duration-1000" />
-                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-black/40 rounded-full mr-0.5 transition-all duration-1000" />
-                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-black/10 rounded-full transition-all duration-1000" />
+                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 transition-all duration-1000" />
+                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-400 transition-all duration-1000" />
+                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-300 transition-all duration-1000" />
                     </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-50 italic text-[8px] font-bold opacity-30 uppercase tracking-widest">Registry Empty</div>
+                    <div className="w-full h-full flex items-center justify-center bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-medium">Registry Empty</div>
                   )}
                 </div>
               </div>
@@ -371,44 +451,44 @@ export default function ManagerOverviewPage() {
         </div>
         
         {/* Operations & Pending */}
-        <div className="lg:col-span-5 space-y-8">
-          <div className="p-8 rounded-[3rem] border-4 border-black bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-            <h3 className="text-xl font-black uppercase tracking-tight mb-8">Priority Operations</h3>
-            <div className="grid grid-cols-1 gap-4">
+        <div className="lg:col-span-5 space-y-6">
+          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Priority Operations</h3>
+            <div className="grid grid-cols-1 gap-3">
               {[
-                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-black" /> },
-                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-black" /> },
-                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-black" /> },
-                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-black" /> }
+                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-indigo-600" /> },
+                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-emerald-600" /> },
+                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-blue-600" /> },
+                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-amber-600" /> }
               ].map((op, i) => (
-                <Link key={i} href={op.href} className="flex items-center justify-between p-6 rounded-2xl border-2 border-black hover:bg-black hover:text-white transition-all group">
+                <Link key={i} href={op.href} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-black/5 group-hover:bg-white/10">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                       {op.icon}
                     </div>
-                    <span className="text-sm font-black uppercase tracking-widest">{op.label}</span>
+                    <span className="text-sm font-semibold text-gray-700">{op.label}</span>
                   </div>
-                  <ChevronRight size={18} strokeWidth={3} />
+                  <ChevronRight size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
                 </Link>
               ))}
             </div>
           </div>
 
           {pendingList.length > 0 && (
-            <div className="p-8 rounded-[3rem] border-4 border-black bg-black text-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-black uppercase tracking-tight italic">Pending Sync</h3>
-                <Link href="/hq/dashboard/manager/approvals" className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100">View Grid</Link>
+            <div className="bg-indigo-950 rounded-3xl p-8 border border-indigo-900 shadow-lg text-white">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Pending Sync</h3>
+                <Link href="/hq/dashboard/manager/approvals" className="text-xs text-indigo-300 hover:text-white transition-colors font-medium">View All</Link>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {pendingList.map(p => (
-                  <div key={p.id} className="p-5 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer">
+                  <div key={p.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between hover:bg-white/10 transition-all cursor-pointer">
                     <div className="truncate pr-4">
-                      <p className="text-sm font-black truncate">{p.title}</p>
-                      <p className="text-[9px] font-bold opacity-40 uppercase mt-1">{p.dept} • {p.staffName}</p>
+                      <p className="text-sm font-semibold text-indigo-50 truncate">{p.title}</p>
+                      <p className="text-xs text-indigo-300 mt-1 uppercase tracking-wider">{p.dept} • {p.staffName}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] font-black text-emerald-400 italic">{timeAgo(p.createdAt)}</p>
+                      <p className="text-xs font-medium text-emerald-400">{timeAgo(p.createdAt)}</p>
                     </div>
                   </div>
                 ))}
@@ -420,66 +500,66 @@ export default function ManagerOverviewPage() {
 
       {/* Broadcast Modal */}
       {showBroadcast && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white border-8 border-black rounded-[4rem] p-10 shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-300">
-            <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Broadcast Meeting</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40 mb-8 italic">Notify all personnel in a specific division</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Broadcast Meeting</h2>
+            <p className="text-sm text-gray-500 mb-6">Notify all personnel in a specific division</p>
             
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Target Department</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Target Department</label>
                 <select 
                   value={broadcastForm.dept}
                   onChange={e => setBroadcastForm({ ...broadcastForm, dept: e.target.value as any })}
-                  className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 >
                   {Object.keys(deptStats).map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Meeting Title</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Meeting Title</label>
                 <input 
                   type="text"
                   placeholder="e.g. Monthly Operational Review"
                   value={broadcastForm.title}
                   onChange={e => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
-                  className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Time</label>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Time</label>
                   <input 
                     type="time"
                     value={broadcastForm.time}
                     onChange={e => setBroadcastForm({ ...broadcastForm, time: e.target.value })}
-                    className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-widest mb-2 block">Location</label>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Location</label>
                   <input 
                     type="text"
                     value={broadcastForm.location}
                     onChange={e => setBroadcastForm({ ...broadcastForm, location: e.target.value })}
-                    className="w-full bg-gray-50 border-4 border-black rounded-2xl px-6 py-4 text-sm font-black outline-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-3 pt-4">
                 <button 
                   onClick={() => setShowBroadcast(false)}
-                  className="flex-1 px-8 py-5 border-4 border-black text-black rounded-[2rem] text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
+                  className="flex-1 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleBroadcastMeeting}
                   disabled={sendingBroadcast || !broadcastForm.title}
-                  className="flex-1 px-8 py-5 bg-black text-white border-4 border-black rounded-[2rem] text-xs font-black uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 hover:shadow-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
                 >
                   {sendingBroadcast ? 'Sending...' : <><Send size={16} /> Send Signal</>}
                 </button>
@@ -496,14 +576,14 @@ function StatCard({ label, value, icon, color, textColor, urgent, onClick }: any
   return (
     <button 
       onClick={onClick}
-      className={`relative flex flex-col p-8 rounded-[2.5rem] border-4 border-black transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-left group`}
+      className={`relative flex flex-col p-6 rounded-3xl border border-gray-100 transition-all hover:-translate-y-1 hover:shadow-md bg-white text-left group`}
     >
-      <div className={`w-12 h-12 rounded-2xl ${color} ${textColor} flex items-center justify-center mb-6 border-2 border-black/5 group-hover:scale-110 transition-transform shadow-inner`}>
+      <div className={`w-12 h-12 rounded-xl ${color} ${textColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
         {icon}
       </div>
-      <p className="text-5xl font-[1000] tracking-tighter mb-2 text-black">{value}</p>
-      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black opacity-40 group-hover:opacity-100 transition-opacity italic">{label}</p>
-      {urgent && <div className="absolute top-6 right-6 w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
+      <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
+      <p className="text-xs font-medium text-gray-500">{label}</p>
+      {urgent && <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
     </button>
   );
 }
