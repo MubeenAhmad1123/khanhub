@@ -138,7 +138,8 @@ export default function StaffProfilePage() {
     basicInfoExtras: {} as Record<string, string>,
     joiningDate: '',
     seniority: '',
-    fatherName: ''
+    fatherName: '',
+    defaultPassword: ''
   });
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
@@ -395,7 +396,8 @@ export default function StaffProfilePage() {
         basicInfoExtras: profile.basicInfoExtras || {},
         joiningDate: profile.joiningDate ? toDate(profile.joiningDate).toISOString().slice(0, 10) : '',
         seniority: profile.seniority || '',
-        fatherName: profile.fatherName || ''
+        fatherName: profile.fatherName || '',
+        defaultPassword: profile.defaultPassword || ''
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -2437,6 +2439,21 @@ export default function StaffProfilePage() {
                       />
                       <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
                     </div>
+
+                    <div>
+                      <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block flex items-center gap-2">
+                        <Lock size={10} /> Portal Password
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.defaultPassword || ''}
+                        placeholder="Set or Reset Password"
+                        onChange={e => setEditForm({ ...editForm, defaultPassword: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500`}
+                      />
+                      <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Set/Reset login password</p>
+                    </div>
+
 
                     {/* Name & Father Name */}
                     <div className="grid grid-cols-1 gap-6">
