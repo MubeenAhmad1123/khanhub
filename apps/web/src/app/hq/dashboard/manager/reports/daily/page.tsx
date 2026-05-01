@@ -85,8 +85,17 @@ export default function DailyReportPage() {
       const seenIds = new Set<string>();
 
       // First add from unifiedStaffCards
+      const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
+      
       unifiedStaffCards.forEach(s => {
-        if (s.status === 'active' && s.isActive !== false) {
+        const r = String(s.role || '').toLowerCase();
+        const isInternee = r.includes('internee');
+        const isTrial = r.includes('trial');
+        const isContract = r.includes('contract');
+        const isWorker = r.includes('worker') || r.includes('junior');
+        const isValidStaffRole = isInternee || isTrial || isContract || isWorker || STAFF_WHITELIST.includes(r);
+
+        if (s.status === 'active' && s.isActive !== false && isValidStaffRole) {
           allStaff.push({
             ...s,
             id: s.staffId,
@@ -102,7 +111,15 @@ export default function DailyReportPage() {
           const data = doc.data();
           const sid = doc.id;
           const status = String(data.status || (data.isActive !== false ? 'active' : 'inactive')).toLowerCase();
-          if (status === 'active' && !seenIds.has(sid)) {
+          
+          const r = String(data.role || '').toLowerCase();
+          const isInternee = r.includes('internee');
+          const isTrial = r.includes('trial');
+          const isContract = r.includes('contract');
+          const isWorker = r.includes('worker') || r.includes('junior');
+          const isValidStaffRole = isInternee || isTrial || isContract || isWorker || STAFF_WHITELIST.includes(r);
+
+          if (status === 'active' && isValidStaffRole && !seenIds.has(sid)) {
             allStaff.push({ id: sid, department: depts[i], ...data });
             seenIds.add(sid);
           }
