@@ -32,12 +32,14 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/patient', icon: UserCircle, roles: ['family'] },
 ];
 
-const ROLE_COLORS: Record<HospitalRole, string> = {
+const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-emerald-500',
   staff: 'bg-blue-500',
   family: 'bg-purple-500',
   cashier: 'bg-orange-500',
-  superadmin: 'bg-rose-500'
+  superadmin: 'bg-rose-500',
+  worker: 'bg-indigo-500',
+  receptionist: 'bg-indigo-500'
 };
 
 export default function HospitalDashboardLayout({
@@ -119,7 +121,9 @@ export default function HospitalDashboardLayout({
         return;
       }
       const data = snap.data();
-      if (data?.isActive === false || (data?.role && data.role.toLowerCase() !== user.role.toLowerCase())) {
+      const dbRole = (data?.role || '').toLowerCase();
+      const sRole = (user?.role || '').toLowerCase();
+      if (data?.isActive === false || (dbRole && sRole && dbRole !== sRole)) {
         handleSignOut();
         return;
       }
@@ -135,9 +139,21 @@ export default function HospitalDashboardLayout({
     return () => unsub();
   }, [user, handleSignOut]);
 
-  const filteredNavItems = NAV_ITEMS.filter(item => 
-    user && item.roles.includes(user.role as HospitalRole)
-  );
+  const userRole = (user?.role || '').toLowerCase();
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (!user) return false;
+    const itemRoles = item.roles.map(r => r.toLowerCase());
+    
+    // Exact match:
+    if (itemRoles.includes(userRole)) return true;
+
+    // Special fallback mappings for worker / receptionist roles
+    if (userRole === 'worker' || userRole === 'receptionist') {
+      if (itemRoles.includes('staff')) return true;
+      if (item.title === 'Leads & CRM') return true;
+    }
+    return false;
+  });
 
   if (loading) {
     return (
