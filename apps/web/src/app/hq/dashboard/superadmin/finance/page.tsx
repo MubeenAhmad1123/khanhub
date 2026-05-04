@@ -708,8 +708,7 @@ export default function SuperadminFinancePage() {
         )}
       </AnimatePresence>
 
-      {/* ── Main Data Hub ────────────────────────────────────────────────────── */}
-      <main className="relative min-h-[85vh] flex flex-col p-2 lg:p-4 overflow-hidden">
+      <main className="relative min-h-[85vh] flex flex-col p-1 sm:p-2 lg:p-4 overflow-hidden">
         <AnimatePresence mode="wait">
           {viewMode === 'visual' ? (
             <motion.div
@@ -718,10 +717,10 @@ export default function SuperadminFinancePage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 min-h-[110vh] rounded-[4rem] bg-white shadow-2xl shadow-gray-200/50 relative overflow-hidden flex flex-col items-center border border-gray-100"
+              className="flex-1 min-h-[110vh] rounded-[2rem] sm:rounded-[3rem] lg:rounded-[4rem] bg-white shadow-2xl shadow-gray-200/50 relative overflow-hidden flex flex-col items-center border border-gray-100"
             >
               <div className="absolute inset-0 bg-grid-black/[0.01] pointer-events-none" />
-              <div className="w-full relative z-10 p-4 lg:p-8">
+              <div className="w-full relative z-10 p-1 sm:p-4 lg:p-8">
                 <FinanceHub departments={hubDepts} onUpdate={loadData} />
               </div>
             </motion.div>

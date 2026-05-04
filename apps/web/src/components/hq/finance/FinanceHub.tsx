@@ -36,7 +36,7 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
   if (!departments || departments.length === 0) return null;
 
   return (
-    <div ref={containerRef} className="relative w-full flex flex-col items-center gap-0 px-4 py-8 md:px-8 bg-transparent">
+    <div ref={containerRef} className="relative w-full flex flex-col items-center gap-0 px-1 sm:px-4 py-8 md:px-8 bg-transparent">
       
       {/* 1. Grand Total Card */}
       <motion.div
@@ -47,7 +47,7 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
         whileHover={{ scale: 1.01 }}
         className="relative z-10 w-full max-w-5xl mx-auto mb-12 perspective-2000"
       >
-        <div className="relative rounded-[3rem] bg-white border border-gray-100 p-12 lg:p-16 text-center overflow-hidden shadow-2xl shadow-gray-200/60 group">
+        <div className="relative rounded-[1.5rem] sm:rounded-[2.5rem] lg:rounded-[3rem] bg-white border border-gray-100 p-4 sm:p-12 lg:p-16 text-center overflow-hidden shadow-2xl shadow-gray-200/60 group">
           
           {/* Animated background pulse (Subtle) */}
           <motion.div 
@@ -74,7 +74,7 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
             <div className="flex flex-col items-center justify-center gap-4 mb-12">
               <div className="relative">
                 <span className="text-[13px] font-bold text-gray-400 uppercase tracking-[0.2em] block mb-3">Available Liquidity Matrix</span>
-                <p className="text-7xl md:text-8xl font-black tracking-tighter text-gray-900 leading-none">
+                <p className="text-4xl xs:text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter text-gray-900 leading-none">
                   Rs. {totalToday.toLocaleString()}
                 </p>
                 <div className="absolute -top-6 -right-12">
