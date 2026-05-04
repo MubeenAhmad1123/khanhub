@@ -52,7 +52,7 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
         await userRef.update({ role: 'superadmin' });
         finalData.role = 'superadmin';
       }
-      if (finalData.isActive === false) {
+      if (finalData.role !== 'superadmin' && finalData.isActive === false) {
         return { success: false, error: 'Account is disabled.' };
       }
     }
@@ -174,7 +174,7 @@ export async function loginHqUser({
     const userDoc = snap.docs[0];
     const userData = userDoc.data();
 
-    if (userData.isActive === false) {
+    if (userData.role !== 'superadmin' && userData.isActive === false) {
       return { success: false, error: 'Account deactivated. Contact admin.' };
     }
 

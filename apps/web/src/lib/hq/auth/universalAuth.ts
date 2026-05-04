@@ -346,7 +346,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
     }
 
     // 2. Security checks
-    if (finalData.isActive === false) return { success: false, error: 'Your account is currently inactive.' };
+    if (finalData.role !== 'superadmin' && finalData.isActive === false) return { success: false, error: 'Your account is currently inactive.' };
 
     // Block superadmin login via ID/Password — only Google (whitelist) is allowed
     if (dept.id === 'hq' && finalData.role === 'superadmin') {
