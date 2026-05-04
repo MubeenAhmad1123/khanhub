@@ -39,7 +39,7 @@ export const DeptHubNode: React.FC<DeptHubNodeProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
       whileHover={{ y: -8, scale: 1.02 }}
-      className="relative w-64 md:w-72 mt-20"
+      className="relative w-full max-w-[calc(100%-32px)] xs:max-w-xs sm:max-w-xs md:w-72 mt-20 mx-auto"
     >
       {/* Target Dot — pipe target point */}
       <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-400 opacity-60 z-20" />
