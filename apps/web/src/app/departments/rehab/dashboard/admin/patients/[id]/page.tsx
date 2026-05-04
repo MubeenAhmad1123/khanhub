@@ -1055,7 +1055,7 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tab Content Areas */}
-        <div className="bg-white dark:bg-gray-900 rounded-b-2xl shadow-sm border border-gray-100 dark:border-white/10 border-t-0 w-full p-4 md:p-6 min-h-[400px] transition-colors duration-300">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 min-h-[400px] transition-colors duration-300">
           
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
