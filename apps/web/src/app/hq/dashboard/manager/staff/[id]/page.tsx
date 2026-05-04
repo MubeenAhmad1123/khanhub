@@ -17,7 +17,7 @@ import {
   TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
-  Sparkles, Save, CheckCircle, Info, Download, Printer
+  Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import {
@@ -229,6 +229,7 @@ export default function StaffProfilePage() {
 
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [showReset, setShowReset] = useState(false);
+  const [showDefaultPassword, setShowDefaultPassword] = useState(false);
 
   const monthDays = useMemo(() => {
     const days = [];
@@ -1466,14 +1467,29 @@ export default function StaffProfilePage() {
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Password</p>
-                    <p className={`font-mono text-xs font-bold text-indigo-600`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className={`font-mono text-xs font-bold text-indigo-600`}>
+                        {staff?.defaultPassword
+                          ? (showDefaultPassword ? staff.defaultPassword : '••••••••')
+                          : 'Custom (Reset Required)'}
+                      </p>
+                      {staff?.defaultPassword && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDefaultPassword(!showDefaultPassword)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+                        >
+                          {showDefaultPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => setShowReset(true)}
                     className="w-full mt-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-[10px] font-black uppercase tracking-widest text-white shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 border border-amber-600/30"
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    Reset Password
+                    {staff?.defaultPassword ? 'Reset Password' : 'Set Password'}
                   </button>
                 </div>
               </div>
@@ -3418,6 +3434,7 @@ export default function StaffProfilePage() {
           uid={staff.staffId || staff.id || ''}
           portal={(staff.dept || 'hq') as any}
           onClose={() => setShowReset(false)}
+          isPasswordSet={!!staff?.defaultPassword}
         />
       )}
     </div>
