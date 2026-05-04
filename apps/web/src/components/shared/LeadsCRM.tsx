@@ -83,6 +83,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [customResponses, setCustomResponses] = useState<CustomResponse[]>([]);
@@ -238,6 +240,59 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       setCustomAddictionValue('');
     } catch (err) {
       toast.error('Failed to add lead');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLead) return;
+    if (!editingLead.name || !editingLead.contact) {
+      toast.error('Name and Contact are required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      let finalStatus = editingLead.status;
+      if (editingLead.status === 'ADD_NEW' && customStatusValue.trim()) {
+        const id = customStatusValue.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+        if (!STATUS_CONFIG[id as LeadStatus] && !customResponses.find(r => r.id === id)) {
+          await addDoc(collection(db, 'hq_lead_responses'), {
+            id,
+            name: customStatusValue.trim(),
+            color: 'gray',
+            createdAt: Timestamp.now()
+          });
+          finalStatus = id;
+        } else {
+          finalStatus = id;
+        }
+      }
+
+      let finalAddiction = editingLead.addiction;
+      if (department === 'rehab' && (editingLead.addiction === 'CUSTOM' || editingLead.addiction === 'Other') && customAddictionValue.trim()) {
+        finalAddiction = customAddictionValue.trim();
+      }
+
+      await updateDoc(doc(db, 'leads', editingLead.id), {
+        name: editingLead.name,
+        contact: editingLead.contact,
+        address: editingLead.address,
+        addiction: finalAddiction,
+        status: finalStatus,
+        notes: editingLead.notes || '',
+        callNotes: editingLead.callNotes || '',
+        updatedAt: Timestamp.now()
+      });
+      toast.success('Lead updated successfully');
+      setIsEditModalOpen(false);
+      setEditingLead(null);
+      setCustomStatusValue('');
+      setCustomAddictionValue('');
+    } catch (err) {
+      toast.error('Failed to update lead');
     } finally {
       setIsSubmitting(false);
     }
@@ -568,6 +623,16 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     ) : (
                       <>
                         <button 
+                          onClick={() => {
+                            setEditingLead(lead);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center hover:bg-teal-600 hover:text-white transition-all shadow-sm group/btn"
+                          title="Edit Lead"
+                        >
+                          <Edit2 size={18} className="group-hover/btn:scale-110 transition-transform" />
+                        </button>
+                        <button 
                           onClick={() => handleCall(lead.id, lead.contact)}
                           className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm group/btn"
                           title="Call Lead"
@@ -624,6 +689,15 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      setEditingLead(lead);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="w-8 h-8 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:text-teal-600 hover:bg-teal-50 transition-all flex-shrink-0"
+                  >
+                    <Edit2 size={16} />
+                  </button>
                   <button 
                     onClick={() => handleDeleteLead(lead.id)}
                     className="w-8 h-8 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0"
@@ -849,6 +923,141 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
               >
                 {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
                 {isSubmitting ? 'SAVING...' : 'REGISTER LEAD'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lead Modal */}
+      {isEditModalOpen && editingLead && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 scale-in-center">
+            <div className={cn("p-8 text-white flex justify-between items-center", themeClasses.primary)}>
+              <div>
+                <h3 className="text-2xl font-black uppercase tracking-tight">Edit Lead</h3>
+                <p className="text-xs font-bold text-white/70 mt-1">Modify lead information</p>
+              </div>
+              <button onClick={() => { setIsEditModalOpen(false); setEditingLead(null); }} className="bg-white/10 p-2 rounded-xl hover:bg-white/20 transition-all">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditLead} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Full Name *</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <input 
+                      required
+                      placeholder="e.g. Amir Khan"
+                      className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none"
+                      value={editingLead.name || ''}
+                      onChange={(e) => setEditingLead({...editingLead, name: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Phone Number *</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <input 
+                      required
+                      placeholder="03XXXXXXXXX"
+                      className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none"
+                      value={editingLead.contact || ''}
+                      onChange={(e) => setEditingLead({...editingLead, contact: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Address / City</label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                  <input 
+                    placeholder="e.g. Peshawar, KP"
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none"
+                    value={editingLead.address || ''}
+                    onChange={(e) => setEditingLead({...editingLead, address: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {department === 'rehab' && (
+                  <div className="space-y-2">
+                    <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
+                      value={editingLead.addiction || ''}
+                      onChange={(e) => setEditingLead({...editingLead, addiction: e.target.value})}
+                    >
+                      {ADDICTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      <option value="CUSTOM">+ Add Custom Addiction</option>
+                    </select>
+                    {(editingLead.addiction === 'CUSTOM' || editingLead.addiction === 'Other') && (
+                      <input
+                        placeholder="Custom addiction type..."
+                        className="w-full mt-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-400"
+                        value={customAddictionValue}
+                        onChange={(e) => setCustomAddictionValue(e.target.value)}
+                      />
+                    )}
+                  </div>
+                )}
+                <div className={cn("space-y-2", department !== 'rehab' && "col-span-1 md:col-span-2")}>
+                  <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Current Status</label>
+                  <select 
+                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
+                    value={editingLead.status || ''}
+                    onChange={(e) => setEditingLead({...editingLead, status: e.target.value})}
+                  >
+                    {allResponses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    <option value="ADD_NEW">+ Add Custom Status</option>
+                  </select>
+                  {editingLead.status === 'ADD_NEW' && (
+                    <input
+                      placeholder="Custom status name..."
+                      className="w-full mt-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-400"
+                      value={customStatusValue}
+                      onChange={(e) => setCustomStatusValue(e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Remarks</label>
+                <textarea 
+                  rows={2}
+                  placeholder="Notes from initial contact..."
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none resize-none"
+                  value={editingLead.notes || ''}
+                  onChange={(e) => setEditingLead({...editingLead, notes: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Call Notes</label>
+                <textarea 
+                  rows={2}
+                  placeholder="Important call notes..."
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none resize-none"
+                  value={editingLead.callNotes || ''}
+                  onChange={(e) => setEditingLead({...editingLead, callNotes: e.target.value})}
+                />
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className={cn("w-full py-4 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3", themeClasses.primary, themeClasses.hover)}
+              >
+                {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                {isSubmitting ? 'SAVING...' : 'UPDATE LEAD'}
               </button>
             </form>
           </div>
