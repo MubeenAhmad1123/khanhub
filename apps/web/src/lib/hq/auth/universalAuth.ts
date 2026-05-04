@@ -392,8 +392,8 @@ export async function loginUniversal(customId: string, password: string, deptHin
       customId: finalData.customId || customId.trim().toUpperCase(),
       name: finalData.name || finalData.displayName || 'User',
       role: finalData.role,
-      loginTime: Date.now(),
-      ...finalData
+      ...finalData,
+      loginTime: Date.now()
     };
     console.log('[UniversalAuth] Setting localStorage for:', dept.sessionKey);
     localStorage.setItem(dept.sessionKey, JSON.stringify(session));

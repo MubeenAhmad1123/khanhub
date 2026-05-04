@@ -110,7 +110,7 @@ export default function HospitalDashboardLayout({
   }, [router, handleSignOut]);
 
   useEffect(() => {
-    if (!user || !user.uid) return;
+    if (!user || !user.uid || !user.role) return;
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'hospital_users', user.uid), (snap) => {
@@ -119,7 +119,7 @@ export default function HospitalDashboardLayout({
         return;
       }
       const data = snap.data();
-      if (data?.isActive === false || data?.role !== user.role) {
+      if (data?.isActive === false || (data?.role && data.role.toLowerCase() !== user.role.toLowerCase())) {
         handleSignOut();
         return;
       }
@@ -127,7 +127,7 @@ export default function HospitalDashboardLayout({
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('hospital_login_time');
         const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
-        if (logoutTime > loginTime) {
+        if (loginTime > 0 && logoutTime > loginTime) {
           handleSignOut();
         }
       }
