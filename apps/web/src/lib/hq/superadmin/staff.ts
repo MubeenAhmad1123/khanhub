@@ -126,17 +126,42 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
   ]);
 
   const attMap: Record<string, any> = {};
-  attSnap.docs.forEach((d: any) => attMap[d.data().staffId] = d.data());
+  attSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    let sid = data.staffId || d.id;
+    if (!data.staffId && sid.endsWith(`_${date}`)) {
+      sid = sid.slice(0, -(date.length + 1));
+    }
+    attMap[sid] = data;
+  });
   
   const dressMap: Record<string, any> = {};
-  dressSnap.docs.forEach((d: any) => dressMap[d.data().staffId] = d.data());
+  dressSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    let sid = data.staffId || d.id;
+    if (!data.staffId && sid.endsWith(`_${date}`)) {
+      sid = sid.slice(0, -(date.length + 1));
+    }
+    dressMap[sid] = data;
+  });
   
   const dutyMap: Record<string, any> = {};
-  dutySnap.docs.forEach((d: any) => dutyMap[d.data().staffId] = d.data());
-  
+  dutySnap.docs.forEach((d: any) => {
+    const data = d.data();
+    let sid = data.staffId || d.id;
+    if (!data.staffId && sid.endsWith(`_${date}`)) {
+      sid = sid.slice(0, -(date.length + 1));
+    }
+    dutyMap[sid] = data;
+  });
+
   const contribCounts: Record<string, number> = {};
   contribSnap.docs.forEach((d: any) => {
-    const sid = d.data().staffId;
+    const data = d.data();
+    let sid = data.staffId || d.id;
+    if (!data.staffId && sid.endsWith(`_${date}`)) {
+      sid = sid.slice(0, -(date.length + 1));
+    }
     contribCounts[sid] = (contribCounts[sid] || 0) + 1;
   });
 
@@ -208,11 +233,19 @@ export async function listStaffCards({
   );
 
   const rows = base.flat().filter((s: any) => {
-    const active = s.isActive !== false;
-    const staffStatus = s.status || (active ? 'active' : 'inactive');
+    // 1. Exclude system accounts (super, network)
+    const n = String(s.name || s.displayName || '').toLowerCase();
+    const e = String(s.email || '').toLowerCase();
+    if (n.includes('super') || n.includes('network') || e.includes('super') || e.includes('network')) {
+      return false;
+    }
 
-    if (status === 'active' && staffStatus !== 'active') return false;
-    if (status === 'inactive' && (staffStatus === 'active')) return false;
+    // 2. Strict Active Check
+    const statusStr = String(s.status || '').toLowerCase();
+    const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
+    
+    if (status === 'active' && !isActuallyActive) return false;
+    if (status === 'inactive' && isActuallyActive) return false;
 
     const normalizedRole = normalizeRole(s.role);
     if (normalizedRole === 'superadmin') return false;

@@ -42,6 +42,7 @@ export default function AdmitPatientPage() {
   const [maritalStatus, setMaritalStatus] = useState('');
   const [children, setChildren] = useState('0');
   const [address, setAddress] = useState('');
+  const [patientId, setPatientId] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
 
@@ -136,6 +137,7 @@ export default function AdmitPatientPage() {
       // 2. Create patient document in Firestore
       const patientRef = await addDoc(collection(db, 'rehab_patients'), {
         name,
+        patientId: patientId.trim() || null,
         fatherName,
         age: Number(age),
         dateOfBirth: dateOfBirth || null,
@@ -245,10 +247,14 @@ export default function AdmitPatientPage() {
             {/* SECTION 1: Login Credentials */}
             <div className="space-y-4">
               <SectionHeader icon={Shield} title="Login Credentials" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
                   <input required placeholder="e.g. REHAB-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient ID (Serial Number) *</label>
+                  <input required placeholder="e.g. 58" className={inputStyle} value={patientId} onChange={e => setPatientId(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>

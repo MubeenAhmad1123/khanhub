@@ -87,6 +87,7 @@ export const SPIMS_COURSES = [
 
 export interface SpimsStudent {
   id: string;
+  studentId?: string;
 
   // Personal
   rollNo: string;
@@ -258,6 +259,7 @@ export interface StaffContribution {
 
 export interface Patient {
   id: string;
+  patientId?: string;
 
   // Basic Identity
   inpatientNumber: string;         // e.g. "SPIMS-058"

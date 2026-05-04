@@ -73,6 +73,7 @@ export default function AdmissionTab({
     try {
       await updateStudent(student.id, {
         rollNo: form.rollNo,
+        studentId: form.studentId,
         name: form.name,
         fatherName: form.fatherName,
         cnic: form.cnic,
@@ -153,6 +154,15 @@ export default function AdmissionTab({
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
               value={form.rollNo ?? ''}
               onChange={(e) => setForm({ ...form, rollNo: e.target.value })}
+            />
+          )}
+          {fld(
+            'Student ID',
+            <input
+              disabled={!canEdit}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+              value={form.studentId ?? ''}
+              onChange={(e) => setForm({ ...form, studentId: e.target.value })}
             />
           )}
           {fld(

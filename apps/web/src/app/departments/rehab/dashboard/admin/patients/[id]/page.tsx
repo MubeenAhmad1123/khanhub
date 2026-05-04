@@ -72,6 +72,7 @@ export default function PatientDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
+    patientId: '',
     diagnosis: '',
     packageAmount: 0,
     photoUrl: '',
@@ -238,6 +239,7 @@ export default function PatientDetailPage() {
       });
       setEditForm({
         name: data.name || '',
+        patientId: data.patientId || '',
         diagnosis: data.diagnosis || '',
         packageAmount: data.packageAmount || data.monthlyPackage || 0,
         photoUrl: data.photoUrl || '',
@@ -574,6 +576,7 @@ export default function PatientDetailPage() {
 
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         name: editForm.name,
+        patientId: editForm.patientId || null,
         diagnosis: editForm.diagnosis,
         packageAmount: monthlyPkg,
         monthlyPackage: monthlyPkg,
@@ -599,6 +602,7 @@ export default function PatientDetailPage() {
         return { 
           ...prev, 
           name: editForm.name,
+          patientId: editForm.patientId || null,
           diagnosis: editForm.diagnosis,
           packageAmount: monthlyPkg,
           monthlyPackage: monthlyPkg,
@@ -1080,6 +1084,10 @@ export default function PatientDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                     <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
                   </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patient ID</label>
+                    <input type="text" value={editForm.patientId} onChange={e => setEditForm({...editForm, patientId: e.target.value})} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
+                  </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Photo
@@ -1222,6 +1230,12 @@ export default function PatientDetailPage() {
                     <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
                     <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5">
                       {patient.assignedStaffId || 'None'}
+                    </span>
+                  </div>
+                  <div className="w-full">
+                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient ID</span>
+                    <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5">
+                      {patient.patientId || 'None'}
                     </span>
                   </div>
                   <div className="sm:col-span-2 pt-2 w-full">

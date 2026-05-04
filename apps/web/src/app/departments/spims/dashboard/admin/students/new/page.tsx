@@ -59,6 +59,7 @@ export default function NewSpimsStudentPage() {
   const [percentage, setPercentage] = useState('');
 
   const [rollNo, setRollNo] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [course, setCourse] = useState<string>(() => SPIMS_COURSES[0] || '');
   const [session, setSession] = useState('');
   const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -103,6 +104,7 @@ export default function NewSpimsStudentPage() {
       
       const studentDocId = await createStudent({
         rollNo: rollNo.trim(),
+        studentId: studentId.trim(),
         name: name.trim(),
         fatherName: fatherName.trim(),
         cnic: cnic.trim(),
@@ -239,6 +241,7 @@ export default function NewSpimsStudentPage() {
                 </div>
               </div>
               <Field label="Roll Number (optional)" value={rollNo} onChange={setRollNo} placeholder="e.g. 2024-001" />
+              <Field label="Student ID" value={studentId} onChange={setStudentId} placeholder="e.g. SPIMS-STU-001" />
             </div>
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest pt-4">Personal</h2>
             <div className="grid sm:grid-cols-2 gap-4">
