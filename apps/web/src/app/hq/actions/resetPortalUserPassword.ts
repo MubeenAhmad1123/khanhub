@@ -50,14 +50,119 @@ export async function resetPortalUserPassword(
 
   try {
     const app = getAdminApp();
-    await getAuth(app).updateUser(uid, { password: newPassword });
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let authUid: string | null = null;
+
+    // Layer 1: Check if the passed `uid` is already a valid Firebase Auth UID
+    try {
+      const u = await auth.getUser(uid);
+      if (u) {
+        authUid = u.uid;
+      }
+    } catch {
+      // Not found by direct UID
+    }
+
+    // Layer 2: Read Firestore doc and try various UID and email fields
+    const col = COLLECTION_BY_PORTAL[portal];
+    let docData: any = null;
+    if (!authUid && col) {
+      try {
+        const snap = await db.collection(col).doc(uid).get();
+        if (snap.exists) {
+          docData = snap.data();
+          const candidateUid = docData.loginUserId || docData.authUid || docData.uid;
+          if (candidateUid) {
+            try {
+              const u = await auth.getUser(candidateUid);
+              if (u) authUid = u.uid;
+            } catch {
+              // candidate UID not valid
+            }
+          }
+
+          if (!authUid) {
+            const email = docData.loginEmail || docData.email;
+            if (email) {
+              try {
+                const u = await auth.getUserByEmail(email);
+                if (u) authUid = u.uid;
+              } catch {
+                // Not found by exact field email
+              }
+            }
+          }
+        }
+      } catch {
+        // Firestore fetch failed
+      }
+    }
+
+    // Layer 3: Fallback by looking up constructed emails using various domains
+    if (!authUid) {
+      const domains = [
+        `@${portal}.khanhub.com.pk`,
+        `@${portal}.khanhub`,
+        `@${portal.replace('-', '_')}.khanhub.com.pk`,
+        `@${portal.replace('-', '_')}.khanhub`,
+        `@khanhub.com.pk`,
+        `@khanhub`
+      ];
+
+      const candidateIds = new Set<string>();
+      if (docData?.customId) candidateIds.add(String(docData.customId).toLowerCase());
+      if (docData?.userId) candidateIds.add(String(docData.userId).toLowerCase());
+      if (uid) candidateIds.add(uid.toLowerCase());
+
+      for (const id of candidateIds) {
+        for (const domain of domains) {
+          if (authUid) break;
+          try {
+            const u = await auth.getUserByEmail(`${id}${domain}`);
+            if (u) {
+              authUid = u.uid;
+              break;
+            }
+          } catch {
+            // Not found
+          }
+        }
+      }
+    }
+
+    // Layer 4: Final fallback - try getUserByEmail with uid directly in case uid is an email
+    if (!authUid && uid && uid.includes('@')) {
+      try {
+        const u = await auth.getUserByEmail(uid);
+        if (u) authUid = u.uid;
+      } catch {
+        // Not found
+      }
+    }
+
+    if (!authUid) {
+      return { 
+        success: false, 
+        error: `Could not resolve Firebase Auth account for identifier: "${uid}". Please check if the user has an Auth account or if the email is valid.` 
+      };
+    }
+
+    // Now update the password in Firebase Auth
+    await auth.updateUser(authUid, { password: newPassword });
 
     // Also update plaintext password in Firestore for display in Credential Hub
-    const col = COLLECTION_BY_PORTAL[portal];
     if (col) {
-      await getFirestore(app).collection(col).doc(uid).update({
-        password: newPassword
-      });
+      const updates: any = {
+        password: newPassword,
+        defaultPassword: newPassword
+      };
+
+      await db.collection(col).doc(uid).set(updates, { merge: true }).catch(() => null);
+      if (authUid && authUid !== uid) {
+        await db.collection(col).doc(authUid).set(updates, { merge: true }).catch(() => null);
+      }
     }
 
     return { success: true };
