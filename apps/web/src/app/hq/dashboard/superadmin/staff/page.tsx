@@ -47,6 +47,233 @@ export default function SuperadminStaffPage() {
   const [drillLevel, setDrillLevel] = useState<'overview' | 'presence' | 'department' | 'list'>('overview');
   const [drillPresence, setDrillPresence] = useState<'present' | 'absent' | null>(null);
   const [drillDept, setDrillDept] = useState<StaffDept | null>(null);
+  const [activeChecklist, setActiveChecklist] = useState<{
+    staffId: string;
+    dept: StaffDept;
+    type: 'uniform' | 'duty';
+    items: { key: string; label: string }[];
+    checkedKeys: string[];
+    row: StaffCardRow;
+  } | null>(null);
+
+  const handleStatusChange = async (
+    row: StaffCardRow,
+    type: 'uniform' | 'duty',
+    newStatus: 'yes' | 'no' | 'incomplete' | 'na'
+  ) => {
+    const config = type === 'uniform' 
+      ? ((row as any).dressCodeConfig || [
+          { key: 'uniform', label: 'Uniform' },
+          { key: 'shoes', label: 'Polished Shoes' },
+          { key: 'card', label: 'Identity Card' }
+        ])
+      : ((row as any).dutyConfig || [
+          { key: 'morning', label: 'Morning Duty' },
+          { key: 'afternoon', label: 'Afternoon Duty' },
+          { key: 'evening', label: 'Evening Duty' }
+        ]);
+
+    if (newStatus === 'incomplete') {
+      const checked: string[] = [];
+      setActiveChecklist({
+        staffId: row.staffId,
+        dept: row.dept,
+        type,
+        items: config,
+        checkedKeys: checked,
+        row
+      });
+      return;
+    }
+
+    try {
+      const { setDoc, doc, updateDoc, Timestamp } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      const { getDeptPrefix } = await import('@/lib/hq/superadmin/staff');
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const prefix = getDeptPrefix(row.dept);
+      const attId = `${row.staffId}_${todayStr}`;
+
+      const items = config.map((c: any) => ({
+        key: c.key,
+        status: type === 'uniform' ? (newStatus === 'yes' ? 'yes' : 'no') : (newStatus === 'yes' ? 'done' : 'not_done')
+      }));
+
+      if (type === 'uniform') {
+        if (newStatus !== 'na') {
+          await setDoc(doc(db, `${prefix}_dress_logs`, attId), {
+            staffId: row.staffId,
+            date: todayStr,
+            status: newStatus,
+            items,
+            updatedAt: Timestamp.now(),
+            markedBy: session?.uid
+          }, { merge: true });
+        }
+      } else {
+        if (newStatus !== 'na') {
+          await setDoc(doc(db, `${prefix}_duty_logs`, attId), {
+            staffId: row.staffId,
+            date: todayStr,
+            status: newStatus,
+            duties: items,
+            updatedAt: Timestamp.now(),
+            markedBy: session?.uid
+          }, { merge: true });
+        }
+      }
+
+      const currentUniform = type === 'uniform' ? newStatus : (row.todayUniformStatus || 'na');
+      const currentDuty = type === 'duty' ? newStatus : (row.todayDutyStatus || 'na');
+      
+      const attPoint = row.isPresentToday || (row.todayDailyScore || 0) > 0 ? 1 : 0;
+      const uniformPoint = currentUniform === 'yes' ? 1 : 0;
+      const dutyPoint = currentDuty === 'yes' ? 1 : 0;
+      const contribPoint = (row.todayDailyScore || 0) > (attPoint + (row.todayUniformStatus === 'yes' ? 1 : 0) + (row.todayDutyStatus === 'yes' ? 1 : 0)) ? 1 : 0;
+      
+      const newScore = attPoint + uniformPoint + dutyPoint + contribPoint;
+
+      const staffDocRef = doc(db, `${prefix}_users`, row.staffId);
+      await updateDoc(staffDocRef, {
+        todayUniformStatus: currentUniform,
+        todayDutyStatus: currentDuty,
+        todayDailyScore: newScore,
+        lastDailyAssessmentDate: todayStr,
+        updatedAt: Timestamp.now()
+      }).catch(err => {
+        console.warn(`Could not sync to ${prefix}_users/${row.staffId}:`, err);
+      });
+
+      setRows(prev => prev.map(r => {
+        if (r.id === row.id) {
+          return {
+            ...r,
+            todayUniformStatus: type === 'uniform' ? newStatus : r.todayUniformStatus,
+            todayDutyStatus: type === 'duty' ? newStatus : r.todayDutyStatus,
+            todayDailyScore: newScore,
+            isPresentToday: newScore > 0
+          };
+        }
+        return r;
+      }));
+
+      const { toast } = await import('react-hot-toast');
+      toast.success(`${type === 'uniform' ? 'Dress' : 'Duty'} status updated successfully!`);
+    } catch (err) {
+      console.error(err);
+      const { toast } = await import('react-hot-toast');
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleSaveChecklist = async (
+    staffId: string,
+    dept: StaffDept,
+    type: 'uniform' | 'duty',
+    checkedKeys: string[],
+    row: StaffCardRow
+  ) => {
+    const config = type === 'uniform' 
+      ? ((row as any).dressCodeConfig || [
+          { key: 'uniform', label: 'Uniform' },
+          { key: 'shoes', label: 'Polished Shoes' },
+          { key: 'card', label: 'Identity Card' }
+        ])
+      : ((row as any).dutyConfig || [
+          { key: 'morning', label: 'Morning Duty' },
+          { key: 'afternoon', label: 'Afternoon Duty' },
+          { key: 'evening', label: 'Evening Duty' }
+        ]);
+
+    const total = config.length;
+    const checkedCount = checkedKeys.length;
+
+    let status: 'yes' | 'no' | 'incomplete' = 'no';
+    if (checkedCount === total && total > 0) {
+      status = 'yes';
+    } else if (checkedCount > 0) {
+      status = 'incomplete';
+    }
+
+    try {
+      const { setDoc, doc, updateDoc, Timestamp } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      const { getDeptPrefix } = await import('@/lib/hq/superadmin/staff');
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const prefix = getDeptPrefix(dept);
+      const attId = `${staffId}_${todayStr}`;
+
+      const items = config.map((c: any) => ({
+        key: c.key,
+        status: checkedKeys.includes(c.key) ? (type === 'uniform' ? 'yes' : 'done') : (type === 'uniform' ? 'no' : 'not_done')
+      }));
+
+      if (type === 'uniform') {
+        await setDoc(doc(db, `${prefix}_dress_logs`, attId), {
+          staffId,
+          date: todayStr,
+          status,
+          items,
+          updatedAt: Timestamp.now(),
+          markedBy: session?.uid
+        }, { merge: true });
+      } else {
+        await setDoc(doc(db, `${prefix}_duty_logs`, attId), {
+          staffId,
+          date: todayStr,
+          status,
+          duties: items,
+          updatedAt: Timestamp.now(),
+          markedBy: session?.uid
+        }, { merge: true });
+      }
+
+      const currentUniform = type === 'uniform' ? status : (row.todayUniformStatus || 'na');
+      const currentDuty = type === 'duty' ? status : (row.todayDutyStatus || 'na');
+      
+      const attPoint = row.isPresentToday || (row.todayDailyScore || 0) > 0 ? 1 : 0;
+      const uniformPoint = currentUniform === 'yes' ? 1 : 0;
+      const dutyPoint = currentDuty === 'yes' ? 1 : 0;
+      const contribPoint = (row.todayDailyScore || 0) > (attPoint + (row.todayUniformStatus === 'yes' ? 1 : 0) + (row.todayDutyStatus === 'yes' ? 1 : 0)) ? 1 : 0;
+      
+      const newScore = attPoint + uniformPoint + dutyPoint + contribPoint;
+
+      const staffDocRef = doc(db, `${prefix}_users`, staffId);
+      await updateDoc(staffDocRef, {
+        todayUniformStatus: currentUniform,
+        todayDutyStatus: currentDuty,
+        todayDailyScore: newScore,
+        lastDailyAssessmentDate: todayStr,
+        updatedAt: Timestamp.now()
+      }).catch(err => {
+        console.warn(`Could not sync to ${prefix}_users/${staffId}:`, err);
+      });
+
+      setRows(prev => prev.map(r => {
+        if (r.id === row.id) {
+          return {
+            ...r,
+            todayUniformStatus: type === 'uniform' ? status : r.todayUniformStatus,
+            todayDutyStatus: type === 'duty' ? status : r.todayDutyStatus,
+            todayDailyScore: newScore,
+            isPresentToday: newScore > 0
+          };
+        }
+        return r;
+      }));
+
+      const { toast } = await import('react-hot-toast');
+      toast.success(`${type === 'uniform' ? 'Dress' : 'Duty'} status updated successfully!`);
+    } catch (err) {
+      console.error(err);
+      const { toast } = await import('react-hot-toast');
+      toast.error('Failed to update status');
+    }
+
+    setActiveChecklist(null);
+  };
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -280,7 +507,7 @@ export default function SuperadminStaffPage() {
             )}
 
             {drillLevel === 'presence' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="grid grid-cols-2 gap-3 sm:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <PresenceCard 
                   type="present"
                   count={filtered.filter(r => r.isPresentToday).length}
@@ -341,7 +568,77 @@ export default function SuperadminStaffPage() {
                       const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
                       return drillPresence === 'present' ? isPresent : !isPresent;
                     })
-                    ?.map(r => <StaffInteractiveCard key={r.id} row={r} />)}
+                    ?.map(r => (
+                      <StaffInteractiveCard 
+                        key={r.id} 
+                        row={r} 
+                        onStatusChange={handleStatusChange} 
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
+            
+            {activeChecklist && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-gray-100 shadow-2xl animate-in zoom-in-95 duration-300">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-black uppercase tracking-tight text-gray-900">
+                      Update {activeChecklist.type === 'uniform' ? 'Dress' : 'Duty'} Items
+                    </h3>
+                    <button 
+                      onClick={() => setActiveChecklist(null)}
+                      className="text-gray-400 hover:text-gray-600 font-bold text-lg"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-4 font-bold uppercase tracking-wider">
+                    Select the completed items for {activeChecklist.row.name}
+                  </p>
+                  <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+                    {activeChecklist.items.map(item => {
+                      const isChecked = activeChecklist.checkedKeys.includes(item.key);
+                      return (
+                        <label 
+                          key={item.key} 
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
+                            isChecked 
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' 
+                              : 'bg-gray-50/50 border-gray-100 text-gray-700 hover:bg-gray-50'
+                          )}
+                        >
+                          <span className="text-xs font-bold">{item.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const next = e.target.checked 
+                                ? [...activeChecklist.checkedKeys, item.key]
+                                : activeChecklist.checkedKeys.filter(k => k !== item.key);
+                              setActiveChecklist({ ...activeChecklist, checkedKeys: next });
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() => setActiveChecklist(null)}
+                      className="flex-1 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSaveChecklist(activeChecklist.staffId, activeChecklist.dept, activeChecklist.type, activeChecklist.checkedKeys, activeChecklist.row)}
+                      className="flex-1 py-3 text-[10px] font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all border border-emerald-700 shadow-lg shadow-emerald-600/20"
+                    >
+                      Save Status
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -352,7 +649,7 @@ export default function SuperadminStaffPage() {
   );
 }
 
-function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
+function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; onStatusChange: (row: StaffCardRow, type: 'uniform' | 'duty', status: any) => void }) {
   const info = DEPT_INFO[r.dept] || { color: 'border-gray-200', bg: 'bg-gray-50', text: 'text-black', gradient: '' };
   
   const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
@@ -369,13 +666,13 @@ function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
             {r.dept}
           </span>
           <span className={cn(
-            "flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border",
+            "flex flex-col items-center justify-center text-[9px] font-black uppercase px-2 py-0.5 rounded-md border text-center leading-none select-none min-w-[30px]",
             isPresent 
               ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
               : 'bg-rose-50 text-rose-600 border-rose-100'
           )}>
-            <span className={cn("w-1.5 h-1.5 rounded-full", isPresent ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
-            {isPresent ? 'Pres' : 'Abs'}
+            <span className="text-[7px] font-bold opacity-75">Att</span>
+            <span className="text-[10px] font-black">{isPresent ? 'P' : 'A'}</span>
           </span>
         </div>
 
@@ -402,37 +699,64 @@ function StaffInteractiveCard({ row: r }: { row: StaffCardRow }) {
         <div className="grid grid-cols-2 gap-1.5 mt-1 border-t border-slate-50 pt-2">
           <div className="flex flex-col">
             <span className="text-[8px] font-bold text-slate-400 uppercase">Dress</span>
-            <span className={cn(
-              "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center",
-              r.todayUniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-              r.todayUniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-              'bg-slate-50 text-slate-400 border border-slate-100'
-            )}>
-              {r.todayUniformStatus || 'N/A'}
-            </span>
+            <select
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onChange={(e) => onStatusChange(r, 'uniform', e.target.value as any)}
+              value={r.todayUniformStatus || 'na'}
+              className={cn(
+                "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center cursor-pointer border bg-white outline-none h-[22px]",
+                r.todayUniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                r.todayUniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                r.todayUniformStatus === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                'bg-slate-50 text-slate-400 border-slate-100'
+              )}
+            >
+              <option value="na">N/A</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="incomplete">Inc</option>
+            </select>
           </div>
 
           <div className="flex flex-col">
             <span className="text-[8px] font-bold text-slate-400 uppercase">Duty</span>
-            <span className={cn(
-              "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center",
-              r.todayDutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-              r.todayDutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-              'bg-slate-50 text-slate-400 border border-slate-100'
-            )}>
-              {r.todayDutyStatus || 'N/A'}
-            </span>
+            <select
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onChange={(e) => onStatusChange(r, 'duty', e.target.value as any)}
+              value={r.todayDutyStatus || 'na'}
+              className={cn(
+                "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center cursor-pointer border bg-white outline-none h-[22px]",
+                r.todayDutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                r.todayDutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                r.todayDutyStatus === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                'bg-slate-50 text-slate-400 border-slate-100'
+              )}
+            >
+              <option value="na">N/A</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="incomplete">Inc</option>
+            </select>
           </div>
         </div>
       </div>
 
       {/* Dynamic Performance Matrix & Score */}
       <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-2 mt-2">
-        <div className="flex items-baseline gap-0.5">
-          <span className="text-xs font-black text-slate-800 dark:text-slate-100 leading-none">
-            {r.todayDailyScore || 0}
-          </span>
-          <span className="text-[8px] font-bold text-slate-400">/5</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px] font-bold text-slate-400 uppercase">Score:</span>
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-xs font-black text-slate-800 dark:text-slate-100 leading-none">
+              {r.todayDailyScore || 0}
+            </span>
+            <span className="text-[8px] font-bold text-slate-400">/5</span>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-[8px] font-bold text-slate-400 uppercase">Fines:</span>
@@ -489,29 +813,29 @@ function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent', co
     <div 
       onClick={onClick}
       className={cn(
-        "group relative p-12 rounded-[3rem] border transition-all cursor-pointer overflow-hidden",
+        "group relative p-4 sm:p-12 rounded-[2rem] sm:rounded-[3rem] border transition-all cursor-pointer overflow-hidden",
         isPresent ? "bg-emerald-50 border-emerald-100 shadow-emerald-500/5 hover:border-emerald-500/20 shadow-xl hover:shadow-2xl" : "bg-rose-50 border-rose-100 shadow-rose-500/5 hover:border-rose-500/20 shadow-xl hover:shadow-2xl"
       )}
     >
       <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity", isPresent ? "from-emerald-500" : "from-rose-500")} />
-      <div className="relative z-10 flex flex-col items-center text-center gap-6">
-        <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center", isPresent ? "bg-white text-emerald-600 shadow-lg shadow-emerald-500/10" : "bg-white text-rose-600 shadow-lg shadow-rose-500/10")}>
-          {isPresent ? <ShieldCheck size={40} /> : <Zap size={40} />}
+      <div className="relative z-10 flex flex-col items-center text-center gap-3 sm:gap-6">
+        <div className={cn("w-10 h-10 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center", isPresent ? "bg-white text-emerald-600 shadow-lg shadow-emerald-500/10" : "bg-white text-rose-600 shadow-lg shadow-rose-500/10")}>
+          {isPresent ? <ShieldCheck className="w-5 h-5 sm:w-10 sm:h-10" /> : <Zap className="w-5 h-5 sm:w-10 sm:h-10" />}
         </div>
         <div>
-          <h2 className={cn("text-4xl font-black uppercase tracking-tight mb-2", isPresent ? "text-emerald-900" : "text-rose-900")}>
+          <h2 className={cn("text-xs sm:text-4xl font-black uppercase tracking-tight sm:mb-2", isPresent ? "text-emerald-900" : "text-rose-900")}>
             {isPresent ? 'Present Now' : 'Absent Units'}
           </h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily attendance synchronization</p>
+          <p className="hidden sm:block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily attendance synchronization</p>
         </div>
-        <div className={cn("text-7xl font-black leading-none", isPresent ? "text-emerald-600" : "text-rose-600")}>
+        <div className={cn("text-2xl sm:text-7xl font-black leading-none", isPresent ? "text-emerald-600" : "text-rose-600")}>
           {count}
         </div>
         <button className={cn(
-          "px-8 py-4 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] transition-all",
+          "px-3 py-1.5 sm:px-8 sm:py-4 text-white rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-[0.2em] transition-all whitespace-nowrap",
           isPresent ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
         )}>
-          View Department Breakdown
+          View Depts
         </button>
       </div>
     </div>

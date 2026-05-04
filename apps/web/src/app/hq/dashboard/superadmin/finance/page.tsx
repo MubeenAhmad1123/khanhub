@@ -745,19 +745,19 @@ export default function SuperadminFinancePage() {
                   
                   <div className="space-y-4">
                     {data.map((dept) => (
-                      <div key={dept.deptId} className="flex items-center justify-between p-8 rounded-[2.5rem] bg-gray-50 dark:bg-white/[0.03] border border-black/5 hover:border-primary/20 transition-all group hover:shadow-2xl shadow-black/5">
-                        <div className="flex items-center gap-6">
-                          <div className="w-14 h-14 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                            <Database size={24} />
+                      <div key={dept.deptId} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-gray-50 dark:bg-white/[0.03] border border-black/5 hover:border-primary/20 transition-all group hover:shadow-2xl shadow-black/5 gap-4 sm:gap-6">
+                        <div className="flex items-center gap-4 sm:gap-6">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform shrink-0">
+                            <Database size={20} className="sm:w-6 sm:h-6" />
                           </div>
                           <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">Terminal: {dept.deptId}</p>
-                            <p className="text-xl font-black text-black dark:text-white uppercase tracking-tight">{dept.deptName}</p>
+                            <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-primary mb-1">Terminal: {dept.deptId}</p>
+                            <p className="text-base sm:text-xl font-black text-black dark:text-white uppercase tracking-tight">{dept.deptName}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-black text-black dark:text-white tracking-tighter leading-none mb-1">RS {dept.totalIncome.toLocaleString()}</p>
-                          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">{dept.percentOfTotal.toFixed(1)}% Velocity</p>
+                        <div className="text-left sm:text-right">
+                          <p className="text-xl sm:text-2xl font-black text-black dark:text-white tracking-tighter leading-none mb-1">RS {dept.totalIncome.toLocaleString()}</p>
+                          <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-emerald-500">{dept.percentOfTotal.toFixed(1)}% Velocity</p>
                         </div>
                       </div>
                     ))}
