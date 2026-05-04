@@ -389,12 +389,12 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       accent: 'text-emerald-400'
     },
     hospital: {
-      primary: 'bg-rose-900',
-      hover: 'hover:bg-rose-950',
-      text: 'text-rose-900',
-      border: 'border-rose-100',
-      bg: 'bg-rose-50',
-      accent: 'text-rose-400'
+      primary: 'bg-rose-600',
+      hover: 'hover:bg-rose-700',
+      text: 'text-rose-600',
+      border: 'border-rose-200/60',
+      bg: 'bg-rose-50/50',
+      accent: 'text-rose-500'
     }
   }[department];
 
