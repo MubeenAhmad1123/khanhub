@@ -360,7 +360,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
   };
 
   const handleCall = (id: string, number: string) => {
-    window.location.href = `tel:${number}`;
+    const cleaned = number.replace(/[^\d+]/g, '');
+    window.location.href = `tel:${cleaned}`;
     setActiveCallId(id);
   };
 
