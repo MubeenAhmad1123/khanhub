@@ -270,3 +270,14 @@ export async function createHqFirebaseAuthAccount({
     return { success: false, error: err.message };
   }
 }
+
+export async function createAuthCustomToken(uid: string) {
+  try {
+    const auth = getAdminAuth();
+    const token = await auth.createCustomToken(uid);
+    return { success: true, customToken: token };
+  } catch (err: any) {
+    console.error('[createAuthCustomToken] Error:', err);
+    return { success: false, error: err.message };
+  }
+}

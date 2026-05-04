@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
-import { setHqSessionCookieFromIdToken, setUserDashboardClaims } from '@/app/hq/actions/auth';
+import { setHqSessionCookieFromIdToken, setUserDashboardClaims, createAuthCustomToken } from '@/app/hq/actions/auth';
 import { isSuperadminEmail } from './superadminWhitelist';
 
 export interface DepartmentAuthInfo {
@@ -301,8 +301,30 @@ export async function loginUniversal(customId: string, password: string, deptHin
       let lastError: any;
       console.log('[UniversalAuth] Attempting robust auth for discovered user');
 
+      // If the password matches the plaintext password stored in Firestore,
+      // create a Custom Token to log them in directly.
+      if (finalData && (
+        finalData.password === password || 
+        finalData.password?.trim() === password.trim() ||
+        finalData.defaultPassword === password ||
+        finalData.defaultPassword?.trim() === password.trim() ||
+        finalData.pin === password ||
+        finalData.pin?.trim() === password.trim()
+      )) {
+        console.log('[UniversalAuth] Plaintext password/pin matches. Creating Custom Token fallback.');
+        try {
+          const res = await createAuthCustomToken(uid);
+          if (res.success && res.customToken) {
+            const { signInWithCustomToken } = await import('firebase/auth');
+            cred = await signInWithCustomToken(auth, res.customToken);
+          }
+        } catch (e: any) {
+          console.error('[UniversalAuth] Custom token login fallback failed:', e);
+        }
+      }
+
       // Try any explicit email stored in Firestore first
-      if (finalData.email && typeof finalData.email === 'string' && finalData.email.includes('@')) {
+      if (!cred && finalData.email && typeof finalData.email === 'string' && finalData.email.includes('@')) {
         try {
           const cleanEmail = finalData.email.replace(/\s+/g, '');
           console.log('[UniversalAuth] Trying Firestore email:', cleanEmail);
