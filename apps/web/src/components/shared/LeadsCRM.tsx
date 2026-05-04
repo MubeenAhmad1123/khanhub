@@ -103,7 +103,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     name: '',
     contact: '',
     address: '',
-    addiction: department === 'rehab' ? 'Ice' : '',
+    addiction: (department === 'rehab' || department === 'hospital') ? 'Ice' : '',
     status: 'NEW',
     notes: '',
     callNotes: ''
@@ -115,7 +115,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       name: '',
       contact: '',
       address: '',
-      addiction: department === 'rehab' ? 'Ice' : '',
+      addiction: (department === 'rehab' || department === 'hospital') ? 'Ice' : '',
       status: 'NEW',
       notes: '',
       callNotes: ''
@@ -221,7 +221,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       }
 
       let finalAddiction = formData.addiction;
-      if (department === 'rehab' && (formData.addiction === 'CUSTOM' || formData.addiction === 'Other') && customAddictionValue.trim()) {
+      if ((department === 'rehab' || department === 'hospital') && (formData.addiction === 'CUSTOM' || formData.addiction === 'Other') && customAddictionValue.trim()) {
         finalAddiction = customAddictionValue.trim();
       }
 
@@ -235,7 +235,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       });
       toast.success('Lead added successfully');
       setIsAddModalOpen(false);
-      setFormData({ name: '', contact: '', address: '', addiction: department === 'rehab' ? 'Ice' : '', status: 'NEW', notes: '', callNotes: '' });
+      setFormData({ name: '', contact: '', address: '', addiction: (department === 'rehab' || department === 'hospital') ? 'Ice' : '', status: 'NEW', notes: '', callNotes: '' });
       setCustomStatusValue('');
       setCustomAddictionValue('');
     } catch (err) {
@@ -272,7 +272,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       }
 
       let finalAddiction = editingLead.addiction;
-      if (department === 'rehab' && (editingLead.addiction === 'CUSTOM' || editingLead.addiction === 'Other') && customAddictionValue.trim()) {
+      if ((department === 'rehab' || department === 'hospital') && (editingLead.addiction === 'CUSTOM' || editingLead.addiction === 'Other') && customAddictionValue.trim()) {
         finalAddiction = customAddictionValue.trim();
       }
 
@@ -469,7 +469,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 </div>
               </th>
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact</th>
-              {department === 'rehab' && (
+              {(department === 'rehab' || department === 'hospital') && (
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Addiction</th>
               )}
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Address</th>
@@ -492,14 +492,14 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={department === 'rehab' ? 7 : 6} className="py-20 text-center">
+                <td colSpan={(department === 'rehab' || department === 'hospital') ? 7 : 6} className="py-20 text-center">
                   <Loader2 className={cn("mx-auto animate-spin", themeClasses.text)} size={32} />
                   <p className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest animate-pulse">Syncing leads...</p>
                 </td>
               </tr>
             ) : filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={department === 'rehab' ? 7 : 6} className="py-20 text-center">
+                <td colSpan={(department === 'rehab' || department === 'hospital') ? 7 : 6} className="py-20 text-center">
                   <Activity className="mx-auto text-gray-200" size={48} />
                   <p className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest">No matching leads found</p>
                 </td>
@@ -520,7 +520,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                 <td className="px-6 py-4">
                   <p className="text-sm font-bold text-gray-700">{lead.contact}</p>
                 </td>
-                {department === 'rehab' && (
+                {(department === 'rehab' || department === 'hospital') && (
                   <td className="px-6 py-4">
                     <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-black uppercase text-gray-600">
                       {lead.addiction}
@@ -714,7 +714,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                   <p className="text-xs font-black text-gray-700 mt-0.5 select-all break-all">{lead.contact}</p>
                 </div>
 
-                {department === 'rehab' && (
+                {(department === 'rehab' || department === 'hospital') && (
                   <div className="min-w-0">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Addiction</p>
                     <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600 truncate max-w-full">
@@ -853,7 +853,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {department === 'rehab' && (
+                {(department === 'rehab' || department === 'hospital') && (
                   <div className="space-y-2">
                     <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
                     <select 
@@ -874,7 +874,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     )}
                   </div>
                 )}
-                <div className={cn("space-y-2", department !== 'rehab' && "col-span-1 md:col-span-2")}>
+                <div className={cn("space-y-2", (department !== 'rehab' && department !== 'hospital') && "col-span-1 md:col-span-2")}>
                   <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Initial Status</label>
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
@@ -988,7 +988,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {department === 'rehab' && (
+                {(department === 'rehab' || department === 'hospital') && (
                   <div className="space-y-2">
                     <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
                     <select 
@@ -1009,7 +1009,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     )}
                   </div>
                 )}
-                <div className={cn("space-y-2", department !== 'rehab' && "col-span-1 md:col-span-2")}>
+                <div className={cn("space-y-2", (department !== 'rehab' && department !== 'hospital') && "col-span-1 md:col-span-2")}>
                   <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Current Status</label>
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
