@@ -45,6 +45,7 @@ import {
 } from '@/types/hq';
 import { awardStaffPoint } from '@/app/hq/actions/points';
 import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
+import LeadsCRM from '@/components/shared/LeadsCRM';
 
 // Define unified icons for tasks
 import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS } from '@/data/hqConfig';
@@ -108,7 +109,7 @@ export default function StaffProfilePage() {
   const lastFetchedId = useRef<string | null>(null);
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action' | 'leads'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processingConfig, setProcessingConfig] = useState(false);
@@ -1504,6 +1505,7 @@ export default function StaffProfilePage() {
                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12} /> },
                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} /> },
                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} /> },
+                ...(staffId === 'hospital_5mHY2l3o6NhGDji4CysY' || staffId?.includes('5mHY2l3o6NhGDji4CysY') ? [{ id: 'leads', label: 'Leads CRM', icon: <ClipboardList size={12} /> }] : []),
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3195,6 +3197,12 @@ export default function StaffProfilePage() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'leads' && (
+              <div className="space-y-6">
+                <LeadsCRM department={staff?.dept === 'rehab' || staff?.dept === 'spims' || staff?.dept === 'hospital' ? staff.dept : 'hospital'} />
               </div>
             )}
 
