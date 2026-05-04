@@ -143,9 +143,60 @@ export async function resetPortalUserPassword(
     }
 
     if (!authUid) {
+      // Create user on the fly if still not resolved
+      let email = docData?.loginEmail || docData?.email;
+      if (!email) {
+        const id = docData?.customId || docData?.userId || uid;
+        email = `${id.toLowerCase()}@${portal}.khanhub.com.pk`;
+      }
+
+      try {
+        const newUser = await auth.createUser({
+          uid: uid,
+          email: email,
+          password: newPassword,
+          displayName: docData?.displayName || docData?.name || uid,
+        });
+        authUid = newUser.uid;
+      } catch (err: any) {
+        if (err.code === 'auth/email-already-exists' || String(err.message).includes('already exists')) {
+          try {
+            const u = await auth.getUserByEmail(email);
+            authUid = u.uid;
+          } catch {
+            // Not found
+          }
+        }
+
+        if (!authUid) {
+          try {
+            const newUser = await auth.createUser({
+              email: email,
+              password: newPassword,
+              displayName: docData?.displayName || docData?.name || uid,
+            });
+            authUid = newUser.uid;
+          } catch (err2: any) {
+            try {
+              const uniqueEmail = `${uid.toLowerCase()}_${Date.now()}@${portal}.khanhub.com.pk`;
+              const newUser = await auth.createUser({
+                email: uniqueEmail,
+                password: newPassword,
+                displayName: docData?.displayName || docData?.name || uid,
+              });
+              authUid = newUser.uid;
+            } catch {
+              // Ignore
+            }
+          }
+        }
+      }
+    }
+
+    if (!authUid) {
       return { 
         success: false, 
-        error: `Could not resolve Firebase Auth account for identifier: "${uid}". Please check if the user has an Auth account or if the email is valid.` 
+        error: `Could not resolve or create Firebase Auth account for identifier: "${uid}".` 
       };
     }
 
