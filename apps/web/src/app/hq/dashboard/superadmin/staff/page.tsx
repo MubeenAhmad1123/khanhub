@@ -255,7 +255,7 @@ export default function SuperadminStaffPage() {
                       <ShieldCheck size={40} />
                     </div>
                     <div>
-                      <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tight mb-2">Active Staff</h2>
+                      <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tight mb-2">Total staff</h2>
                       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Global personnel status matrix</p>
                     </div>
                     <div className="text-6xl font-black text-indigo-600 leading-none">

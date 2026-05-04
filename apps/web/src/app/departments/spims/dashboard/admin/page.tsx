@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white">{totalStudents}</div>
-            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Active students</div>
+            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Total Student</div>
           </div>
         </div>
 

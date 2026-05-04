@@ -11,8 +11,7 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({ student }: ProfileHeaderProps) {
-  const balance = Number(student.remaining) || 0;
-  const isPending = balance > 0;
+  const totalPkg = Number(student.totalPackage) || 0;
 
   return (
     <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50">
@@ -73,10 +72,10 @@ export default function ProfileHeader({ student }: ProfileHeaderProps) {
               <div className="bg-gray-50/50 p-4 rounded-xl md:rounded-2xl border border-gray-100/50 flex flex-col items-center md:items-start">
                 <div className="flex items-center gap-3 text-gray-400 mb-1">
                   <Wallet size={14} className="text-[#1D9E75]" />
-                  <span className="text-[10px] font-black uppercase tracking-tighter">Current Balance</span>
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Total Package</span>
                 </div>
-                <p className={`text-xl font-black ${isPending ? 'text-amber-600' : 'text-[#1D9E75]'}`}>
-                  Rs {balance.toLocaleString()}
+                <p className="text-xl font-black text-[#1D9E75]">
+                  Rs {totalPkg.toLocaleString()}
                 </p>
               </div>
 
