@@ -23,6 +23,7 @@ interface DailyReportRow {
   name: string;
   department: string;
   designation: string;
+  staffId?: string;
   attendance: 'present' | 'absent' | 'late' | 'leave' | 'unmarked';
   uniformStatus: 'yes' | 'no' | 'incomplete' | 'na';
   dutyStatus: 'yes' | 'no' | 'incomplete' | 'na';
@@ -336,6 +337,7 @@ export default function DailyReportPage() {
           name: s.name || s.displayName || 'Staff',
           department: s.department,
           designation: s.designation || 'Staff Member',
+          staffId: s.staffId || s.customId || s.id,
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
@@ -930,8 +932,8 @@ export default function DailyReportPage() {
                   <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-indigo-50/30' : 'hover:bg-gray-50/30 transition-colors duration-200'}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform">
-                          {row.name[0]}
+                        <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
+                          {row.staffId || row.id}
                         </div>
                         <div>
                           <a
