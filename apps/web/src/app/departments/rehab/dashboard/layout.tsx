@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, PhoneCall,
+  ChevronLeft, ChevronRight, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, PhoneCall,
   LayoutDashboard, Heart, CalendarDays, User, UserCog, Shield, ArrowLeft, LogOut, Menu, X, CheckCircle, Users
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
@@ -72,6 +72,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleSignOut = useCallback(() => {
     console.log('[RehabLayout] Signing out and clearing session');
@@ -172,7 +173,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#FCFBF4] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FCFAF2] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="relative w-16 h-16">
             <div className="absolute inset-0 border-4 border-rose-500/10 rounded-full" />
@@ -192,7 +193,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
     : HQ_NAV_ITEMS;
 
-  const SidebarContent = () => {
+  const SidebarContent = ({ collapsed }: { collapsed?: boolean }) => {
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
@@ -210,23 +211,25 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           </Link>
 
           <div className="flex items-center gap-4 mb-8">
-            <div className={`w-12 h-12 rounded-[22px] flex items-center justify-center text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-700 hover:scale-105 ${
+            <div className={`w-12 h-12 flex-shrink-0 rounded-[22px] flex items-center justify-center text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-700 hover:scale-105 ${
               viewMode === 'hq' ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rotate-3' : 'bg-gradient-to-br from-rose-400 via-pink-500 to-orange-400 -rotate-3'
             }`}>
               {viewMode === 'hq' ? <Shield size={24} /> : <Heart size={24} />}
             </div>
-            <div>
-              <p className="font-black text-xl leading-tight tracking-tight text-gray-900">
-                {viewMode === 'hq' ? 'HQ Admin' : 'Rehab'}
-              </p>
-              <p className="text-rose-500/80 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5">
-                {viewMode === 'hq' ? 'System Core' : 'Care Grid'}
-              </p>
-            </div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="font-black text-xl leading-tight tracking-tight text-gray-900 truncate">
+                  {viewMode === 'hq' ? 'HQ Admin' : 'Rehab'}
+                </p>
+                <p className="text-rose-500/80 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5 truncate">
+                  {viewMode === 'hq' ? 'System Core' : 'Care Grid'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Jump Portal */}
-          {isHqAdmin && (
+          {isHqAdmin && !collapsed && (
             <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
@@ -270,7 +273,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           )}
 
           {/* Nav Switcher */}
-          {isHqAdmin && (
+          {isHqAdmin && !collapsed && (
             <div className="flex p-1.5 bg-rose-50/50 rounded-[1.5rem] border border-rose-100/50 mb-8">
               <button
                 onClick={() => setViewMode('dept')}
@@ -310,12 +313,12 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
                 {isActive && (
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-1.5 bg-gradient-to-b from-rose-400 to-rose-600 rounded-r-full" />
                 )}
-                <div className={`transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 ${isActive ? 'text-rose-500' : 'text-gray-400 group-hover:text-rose-400'}`}>
+                <div className={`transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 flex-shrink-0 ${isActive ? 'text-rose-500' : 'text-gray-400 group-hover:text-rose-400'}`}>
                   {item.icon}
                 </div>
-                <span className="flex-1 font-black uppercase tracking-[0.1em] text-[11px]">{item.label}</span>
-                {isActive && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-bounce" />
+                {!collapsed && <span className="flex-1 font-black uppercase tracking-[0.1em] text-[11px] truncate">{item.label}</span>}
+                {isActive && !collapsed && (
+                  <div className="w-1.5 h-1.5 flex-shrink-0 rounded-full bg-rose-500 animate-bounce" />
                 )}
               </Link>
             );
@@ -324,25 +327,28 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
         {/* User & Bottom */}
         <div className="p-8 space-y-6">
-          <div className="flex items-center gap-4 px-3 py-4 rounded-[2rem] bg-white shadow-sm border border-rose-50/50">
-            <div className="w-10 h-10 rounded-[18px] bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white font-black text-sm shadow-lg">
-              {user?.displayName?.[0]?.toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-black truncate text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                 <p className="text-[9px] font-bold text-rose-400/80 truncate tracking-[0.15em] uppercase">{user?.customId}</p>
+          {!collapsed && (
+            <div className="flex items-center gap-4 px-3 py-4 rounded-[2rem] bg-white shadow-sm border border-rose-50/50">
+              <div className="w-10 h-10 flex-shrink-0 rounded-[18px] bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white font-black text-sm shadow-lg">
+                {user?.displayName?.[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black truncate text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
+                <div className="flex items-center gap-2 mt-1">
+                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                   <p className="text-[9px] font-bold text-rose-400/80 truncate tracking-[0.15em] uppercase">{user?.customId}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <button 
             onClick={handleSignOut} 
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-[2rem] border border-rose-100 bg-white text-[11px] font-black text-rose-500 hover:bg-rose-500 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all duration-500 group"
+            className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-[2rem] border border-rose-100 bg-white text-[11px] font-black text-rose-500 hover:bg-rose-500 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all duration-500 group ${collapsed ? 'px-0' : ''}`}
+            title="Disconnect"
           >
-            <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
-            DISCONNECT
+            <LogOut size={16} className="group-hover:-translate-x-1 transition-transform flex-shrink-0" />
+            {!collapsed && 'DISCONNECT'}
           </button>
         </div>
       </div>
@@ -350,10 +356,16 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   };
 
   return (
-    <div className={`min-h-screen flex bg-[#FCFBF4] text-gray-900 transition-colors duration-500 font-sans`}>
+    <div className={`min-h-screen flex bg-[#FCFAF2] text-gray-900 transition-colors duration-500 font-sans`}>
       {/* Sidebar Desktop */}
-      <aside className={`hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30`}>
-        <SidebarContent />
+      <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen z-30 transition-all duration-300 ${isCollapsed ? 'w-24' : 'w-72'}`}>
+        <SidebarContent collapsed={isCollapsed} />
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-24 w-6 h-6 bg-white border border-rose-100 rounded-full flex items-center justify-center text-rose-500 shadow-sm z-50 hover:bg-rose-50 transition-transform"
+        >
+          {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
       </aside>
 
       {/* Mobile Sidebar */}
@@ -377,7 +389,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'}`}>
         {/* Background Decorative Elements */}
         <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-rose-500/10 to-orange-500/5 rounded-full blur-[140px] -mr-64 -mt-64 pointer-events-none" />
         <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-pink-500/10 to-indigo-500/5 rounded-full blur-[140px] -ml-64 -mb-64 pointer-events-none" />
