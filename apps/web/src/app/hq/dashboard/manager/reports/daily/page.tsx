@@ -386,28 +386,30 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('daily-report-table-capture');
+    // Target the table directly to avoid scrollbars and get full content width
+    const container = document.getElementById('daily-report-table-capture');
+    const table = container?.querySelector('table');
+    const element = (table || container) as HTMLElement;
+    
     if (!element) return;
 
     try {
       setDownloading(true);
       toast.loading("Preparing high-quality image...", { id: 'download-image' });
 
-      // Force the element to its full scrollable size during capture
-      // This prevents clipping on mobile/small screens
+      // Use scroll dimensions to ensure the entire table is rendered
       const width = element.scrollWidth;
       const height = element.scrollHeight;
 
       const dataUrl = await toPng(element, {
         quality: 1.0,
-        pixelRatio: 3, // Higher ratio for crystal clear text
-        backgroundColor: '#FDFDFD',
-        width: width,
-        height: height,
+        pixelRatio: 3, 
+        backgroundColor: '#FFFFFF',
+        width: width + 48, // Add space for padding
+        height: height + 48,
         style: {
-          padding: '0',
+          padding: '24px',
           margin: '0',
-          borderRadius: '0',
           width: width + 'px',
           height: height + 'px',
           overflow: 'visible'
