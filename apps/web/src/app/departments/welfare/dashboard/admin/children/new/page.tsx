@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 export default function NewChildAdmissionPage() {
   const router = useRouter();
@@ -200,23 +201,12 @@ export default function NewChildAdmissionPage() {
                 required
               />
             </div>
-            <div>
-              <label className={labelClass}>Date of Birth</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
-                <input 
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  name="dob" 
-                  value={formatDateDMY(formData.dob)} 
-                  onChange={handleChange} 
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setFormData(prev => ({ ...prev, dob: parsed.toISOString().split('T')[0] }));
-                  }}
-                  className={`${inputClass} pl-11`}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <BrutalistCalendar
+                label="Date of Birth"
+                value={formData.dob}
+                onChange={(val) => setFormData(prev => ({ ...prev, dob: val }))}
+              />
             </div>
             <div>
               <label className={labelClass}>Age (Auto)</label>
@@ -451,19 +441,11 @@ export default function NewChildAdmissionPage() {
               <h2 className="text-xl font-black text-gray-900 tracking-tight">Academic History</h2>
             </div>
             <div className="space-y-6">
-              <div>
-                <label className={labelClass}>Admission Date</label>
-                <input
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  name="admissionDate"
-                  value={formatDateDMY(formData.admissionDate)}
-                  onChange={handleChange}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setFormData(prev => ({ ...prev, admissionDate: parsed.toISOString().split('T')[0] }));
-                  }}
-                  className={inputClass}
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Admission Date"
+                  value={formData.admissionDate}
+                  onChange={(val) => setFormData(prev => ({ ...prev, admissionDate: val }))}
                 />
               </div>
               <div>

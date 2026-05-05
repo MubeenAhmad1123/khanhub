@@ -9,6 +9,7 @@ import { Loader2, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SPIMS_COURSES } from '@/types/spims';
 import { upsertAttendance, type SpimsStudentAttendanceStatus } from '@/lib/spims/studentAttendance';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 type StudentRow = { id: string; name: string; rollNo: string; course: string; session: string };
@@ -110,18 +111,11 @@ export default function SpimsAdminAttendancePage() {
 
       <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm space-y-4">
         <div className="grid sm:grid-cols-3 gap-4">
-          <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Date</label>
-            <input
-              type="text"
-              placeholder="DD MM YYYY"
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
-              value={formatDateDMY(date)}
-              onChange={(e) => setDate(e.target.value)}
-              onBlur={(e) => {
-                const parsed = parseDateDMY(e.target.value);
-                if (parsed) setDate(parsed.toISOString().split('T')[0]);
-              }}
+          <div className="space-y-1.5">
+            <BrutalistCalendar
+              label="Date"
+              value={date}
+              onChange={setDate}
             />
           </div>
           <div>

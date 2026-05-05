@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { SPIMS_COURSES } from '@/types/spims';
 import { subscribeAdminTests, deleteSpimsTest, type SpimsTest, type SpimsTestScope } from '@/lib/spims/tests';
 import { announceSpimsTestServer } from '@/app/hq/actions/spims';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 export default function SpimsAdminTestsPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function SpimsAdminTestsPage() {
   const [course, setCourse] = useState<string>(SPIMS_COURSES[0] || '');
   const [cohortSession, setCohortSession] = useState('');
   const [studentId, setStudentId] = useState('');
+  const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const raw = localStorage.getItem('spims_session');
@@ -84,6 +86,7 @@ export default function SpimsAdminTestsPage() {
         studentId: scope === 'student' ? studentId.trim() : null,
         note: note.trim() || null,
         createdBy: session?.customId || 'Admin',
+        testDate: testDate,
       });
 
       if (result.success) {
@@ -153,6 +156,15 @@ export default function SpimsAdminTestsPage() {
               <option value="student">Single student</option>
               <option value="all">All students</option>
             </select>
+          </div>
+
+          <div>
+            <BrutalistCalendar
+              label="Test Date"
+              value={testDate}
+              onChange={setTestDate}
+              className="border-gray-200"
+            />
           </div>
 
           {scope === 'course_session' ? (
@@ -260,6 +272,7 @@ export default function SpimsAdminTestsPage() {
                     {r.course ? ` • ${r.course}` : ''}
                     {r.session ? ` • Session ${r.session}` : ''}
                     {r.studentId ? ` • Student ${r.studentId}` : ''}
+                    {r.testDate ? ` • Test Date: ${r.testDate}` : ''}
                   </p>
                   {r.note ? <p className="mt-2 text-sm text-gray-700">{r.note}</p> : null}
                 </div>

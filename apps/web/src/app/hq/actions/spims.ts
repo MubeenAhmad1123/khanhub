@@ -31,6 +31,7 @@ export async function announceSpimsTestServer(params: {
   studentId?: string | null;
   note?: string | null;
   createdBy: string;
+  testDate?: string | null;
 }) {
   try {
     const app = getAdminApp();
