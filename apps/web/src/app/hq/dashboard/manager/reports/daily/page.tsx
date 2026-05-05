@@ -386,20 +386,31 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('daily-performance-report-content');
+    const element = document.getElementById('daily-report-table-capture');
     if (!element) return;
 
     try {
       setDownloading(true);
       toast.loading("Preparing high-quality image...", { id: 'download-image' });
 
+      // Force the element to its full scrollable size during capture
+      // This prevents clipping on mobile/small screens
+      const width = element.scrollWidth;
+      const height = element.scrollHeight;
+
       const dataUrl = await toPng(element, {
         quality: 1.0,
-        pixelRatio: 2,
+        pixelRatio: 3, // Higher ratio for crystal clear text
         backgroundColor: '#FDFDFD',
+        width: width,
+        height: height,
         style: {
-          padding: '20px',
-          borderRadius: '0'
+          padding: '0',
+          margin: '0',
+          borderRadius: '0',
+          width: width + 'px',
+          height: height + 'px',
+          overflow: 'visible'
         }
       });
 
@@ -915,7 +926,7 @@ export default function DailyReportPage() {
         </div>
 
         {/* Report Table */}
-        <div className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
+        <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
