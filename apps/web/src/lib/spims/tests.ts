@@ -31,6 +31,7 @@ export type SpimsTest = {
   note?: string | null;
   createdAt?: Timestamp | Date;
   createdBy?: string | null;
+  testDate?: string | null;
 };
 
 export async function createSpimsTest(input: Omit<SpimsTest, 'id' | 'createdAt'>) {
