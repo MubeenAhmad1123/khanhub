@@ -376,7 +376,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     email: data.email,
     phone: data.phone,
     customId: data.customId, // Login ID
-    employeeId: data.employeeId || data.customId, // Visual ID, fallback to customId
+    employeeId: data.employeeId, // Visual ID (KH-STAFF-001 etc)
     address: data.address,
     cnic: data.cnic,
     dob: data.dob,

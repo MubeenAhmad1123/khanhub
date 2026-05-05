@@ -1408,7 +1408,7 @@ export default function StaffProfilePage() {
               <div className="flex flex-wrap justify-center gap-2 mb-6">
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${'bg-gray-50 border-gray-100 text-black'
                   }`}>
-                  ID: {staff?.employeeId || staff?.customId || '—'}
+                  ID: {staff?.employeeId || '—'}
                 </span>
                 {staff?.seniority && (
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-indigo-500/10 text-indigo-500 border-indigo-500/20`}>
@@ -1598,6 +1598,10 @@ export default function StaffProfilePage() {
                         <p className={`text-sm font-black uppercase ${theme.text}`}>{staff.seniority}</p>
                       </div>
                     )}
+                    <div>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Employee ID</p>
+                      <p className="text-sm font-black font-mono">{staff?.employeeId || '—'}</p>
+                    </div>
                   </div>
 
                   <div className={`mt-10 p-8 rounded-3xl border border-dashed flex flex-col md:flex-row items-center justify-between gap-6 ${theme.light} ${theme.border}`}>

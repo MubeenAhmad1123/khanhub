@@ -24,6 +24,7 @@ interface DailyReportRow {
   department: string;
   designation: string;
   staffId?: string;
+  employeeId?: string;
   attendance: 'present' | 'absent' | 'late' | 'leave' | 'unmarked';
   uniformStatus: 'yes' | 'no' | 'incomplete' | 'na';
   dutyStatus: 'yes' | 'no' | 'incomplete' | 'na';
@@ -338,6 +339,7 @@ export default function DailyReportPage() {
           department: s.department,
           designation: s.designation || 'Staff Member',
           staffId: s.staffId || s.customId || s.id,
+          employeeId: s.employeeId || '—',
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
@@ -933,7 +935,7 @@ export default function DailyReportPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
-                          {row.staffId || row.id}
+                          {row.employeeId}
                         </div>
                         <div>
                           <a
