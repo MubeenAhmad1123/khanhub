@@ -1,17 +1,17 @@
 // apps/web/src/app/departments/spims/dashboard/admin/students/new/page.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight, Loader2, Save, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createStudent, firestoreDate } from '@/lib/spims/students';
+import { createStudent, firestoreDate, getStudent } from '@/lib/spims/students';
 import { createSpimsStudentUserServer } from '@/app/departments/rehab/actions/createRehabUser';
-import { SPIMS_COURSES, type SpimsStudentStatus } from '@/types/spims';
+import { SPIMS_COURSES, type SpimsStudentStatus, type SpimsStudent } from '@/types/spims';
 import { BrutalistCalendar } from '@/components/ui';
 
 const formatCnic = (val: string) => {
@@ -29,8 +29,14 @@ const formatCnic = (val: string) => {
   return formatted;
 };
 
-export default function NewSpimsStudentPage() {
+function NewSpimsStudentForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillName = searchParams.get('prefill_name');
+  const prefillLoginId = searchParams.get('prefill_login_id');
+  const prefillUid = searchParams.get('prefill_uid');
+  const reAdmissionFrom = searchParams.get('re_admission_from');
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -84,7 +90,46 @@ export default function NewSpimsStudentPage() {
       return;
     }
     setLoading(false);
-  }, [router]);
+
+    if (prefillName) setName(prefillName);
+    if (prefillLoginId) setLoginId(prefillLoginId);
+    if (reAdmissionFrom) {
+      setLoginPassword('RE-ENTER'); // Hint for re-admission
+      
+      // Fetch existing record to pre-fill more data
+      const fetchOldRecord = async () => {
+        try {
+          const old = await getStudent(reAdmissionFrom);
+          if (old) {
+            setFatherName(old.fatherName || '');
+            setCnic(old.cnic || '');
+            setContact(old.contact || '');
+            setFatherContact(old.fatherContact || '');
+            setAddress(old.address || '');
+            
+            if (old.dateOfBirth) {
+              if (typeof old.dateOfBirth === 'string') {
+                setDob(old.dateOfBirth);
+              } else {
+                const d = (old.dateOfBirth as any).toDate ? (old.dateOfBirth as any).toDate() : new Date(old.dateOfBirth as any);
+                setDob(d.toISOString().split('T')[0]);
+              }
+            }
+
+            setStudentOcc(old.studentOccupation || '');
+            setFatherOcc(old.fatherOccupation || '');
+            setQualification(old.qualification as any || 'Matric');
+            setBoard(old.board || '');
+            setRollNo(old.rollNo || '');
+            // We don't pre-fill course/session as they are likely changing
+          }
+        } catch (e) {
+          console.error('Error pre-filling from old record:', e);
+        }
+      };
+      fetchOldRecord();
+    }
+  }, [router, prefillName, prefillLoginId, reAdmissionFrom]);
 
   const submit = async () => {
     if (submitting) return;
@@ -147,7 +192,8 @@ export default function NewSpimsStudentPage() {
         loginId.trim().toUpperCase(),
         loginPassword,
         name.trim(),
-        studentDocId
+        studentDocId,
+        !!reAdmissionFrom
       );
 
       if (!authRes.success) {
@@ -157,6 +203,16 @@ export default function NewSpimsStudentPage() {
         setSubmitStatus('error');
         toast.error(authRes.error || 'Could not create login');
         return;
+      }
+
+      // If re-admission, mark the old record
+      if (reAdmissionFrom) {
+        try {
+          const { updateStudentStatus } = await import('@/lib/spims/students');
+          await updateStudentStatus(reAdmissionFrom, 'Left', `Re-admitted into new course: ${course} (${session})`);
+        } catch (e) {
+          console.error('Failed to update old student record:', e);
+        }
       }
 
       setSubmitStatus('success');
@@ -428,5 +484,17 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
       />
     </div>
+  );
+}
+
+export default function NewSpimsStudentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
+      </div>
+    }>
+      <NewSpimsStudentForm />
+    </Suspense>
   );
 }

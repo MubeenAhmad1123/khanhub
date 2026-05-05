@@ -20,7 +20,7 @@ import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 import { getCached, setCached } from '@/lib/queryCache';
 
-import type { SpimsStudent, SpimsFeePayment, SpimsFeeTrackerRecord } from '@/types/spims';
+import type { SpimsStudent, SpimsFeePayment, SpimsFeeTrackerRecord, SpimsStudentStatus } from '@/types/spims';
 
 export function firestoreDate(val: Date | string): Timestamp {
   const d = typeof val === 'string' ? new Date(`${val}T00:00:00`) : val;
@@ -46,16 +46,117 @@ export async function getStudent(id: string): Promise<SpimsStudent | null> {
   return mapStudent(snap.id, snap.data() as Record<string, unknown>);
 }
 
+export async function getUnifiedStudent(id: string): Promise<any | null> {
+  // Try getting profile first
+  let profile = await getStudent(id);
+  
+  // Try finding login by studentId or UID
+  const qLogin = query(
+    collection(db, 'spims_users'), 
+    where('role', '==', 'student')
+  );
+  const loginSnap = await getDocs(qLogin);
+  
+  // Look for match in logins
+  const login = loginSnap.docs.find(d => d.id === id || (d.data() as any).studentId === id);
+  const loginData = login ? { uid: login.id, ...login.data() } as any : null;
+
+  if (profile) {
+    return { ...profile, login: loginData };
+  }
+
+  if (loginData) {
+    const data = loginData as { 
+      studentId?: string; 
+      uid: string; 
+      displayName?: string; 
+      customId?: string; 
+    };
+    
+    return {
+      id: data.studentId || data.uid,
+      name: data.displayName || 'Unnamed Student',
+      rollNo: data.customId || 'N/A',
+      course: 'User Only (Missing Profile)',
+      session: 'N/A',
+      status: 'Active',
+      login: loginData,
+      isVirtual: true
+    };
+  }
+
+  return null;
+}
+
 export async function listStudents(): Promise<SpimsStudent[]> {
   const cacheKey = 'spims_students_list';
   const cached = getCached<SpimsStudent[]>(cacheKey);
   if (cached) return cached;
 
-  const q = query(collection(db, 'spims_students'), limit(100)); // Default limit for list
+  const q = query(collection(db, 'spims_students'), orderBy('name', 'asc'), limit(1000)); 
   const snap = await getDocs(q);
   const students = snap.docs.map((d) => mapStudent(d.id, d.data() as Record<string, unknown>));
-  setCached(cacheKey, students, 180); // 3 min cache
+  setCached(cacheKey, students, 60); // 1 min cache
   return students;
+}
+
+export async function listStudentLogins(): Promise<any[]> {
+  const q = query(collection(db, 'spims_users'), where('role', '==', 'student'), limit(1000));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+export async function listUnifiedStudents(): Promise<any[]> {
+  // Fetch profiles and logins in parallel
+  const [profiles, logins] = await Promise.all([
+    listStudents(),
+    listStudentLogins()
+  ]);
+
+  // Create a map for quick lookup of logins by studentId
+  const loginMap = new Map();
+  logins.forEach(l => {
+    if (l.studentId) {
+      loginMap.set(l.studentId, l);
+    }
+  });
+
+  // Start with all profile records
+  const unified = profiles.map(p => ({
+    ...p,
+    login: loginMap.get(p.id) || null
+  }));
+
+  // Find logins that DON'T have a matching profile record (orphaned or user-only students)
+  const profileIds = new Set(profiles.map(p => p.id));
+  logins.forEach(l => {
+    if (l.studentId && !profileIds.has(l.studentId)) {
+      unified.push({
+        id: l.studentId,
+        name: l.displayName || 'Unnamed Student',
+        rollNo: l.customId || 'N/A',
+        course: 'User Only (Missing Profile)',
+        session: 'N/A',
+        status: 'Active',
+        login: l,
+        isVirtual: true
+      } as any);
+    } else if (!l.studentId) {
+      // User with role student but NO studentId linked
+      unified.push({
+        id: `user-${l.uid}`,
+        name: l.displayName || 'Unnamed Student',
+        rollNo: l.customId || 'N/A',
+        course: 'Unlinked Login',
+        session: 'N/A',
+        status: 'Active',
+        login: l,
+        isVirtual: true
+      } as any);
+    }
+  });
+
+  return unified;
 }
 
 
@@ -149,6 +250,14 @@ export async function updateStudent(id: string, data: Partial<SpimsStudent>): Pr
   await updateDoc(doc(db, 'spims_students', id), patch);
 }
 
+export async function updateStudentStatus(id: string, status: SpimsStudentStatus, note?: string): Promise<void> {
+  const patch: any = { status, updatedAt: serverTimestamp() };
+  if (note) {
+    patch.statusNote = note;
+  }
+  await updateDoc(doc(db, 'spims_students', id), patch);
+}
+
 export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayment[]> {
   const cacheKey = `spims_fees_${studentId}`;
   const cached = getCached<SpimsFeePayment[]>(cacheKey);
@@ -200,4 +309,7 @@ export function buildFeeTrackerRecord(
       paymentType: f.type,
     })),
   };
+}
+export async function updateSpimsUserRole(uid: string, role: string): Promise<void> {
+  await updateDoc(doc(db, 'spims_users', uid), { role, updatedAt: serverTimestamp() });
 }

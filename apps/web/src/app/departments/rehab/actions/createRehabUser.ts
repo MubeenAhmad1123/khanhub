@@ -149,7 +149,8 @@ export async function createSpimsStudentUserServer(
   customId: string,
   password: string,
   displayName: string,
-  studentId: string
+  studentId: string,
+  isReadmission?: boolean
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -204,7 +205,7 @@ export async function createSpimsStudentUserServer(
           error: `Login ID already exists for a different account type.`,
         };
       }
-      if (existingProfile?.studentId && existingProfile.studentId !== nextStudentId) {
+      if (existingProfile?.studentId && existingProfile.studentId !== nextStudentId && !isReadmission) {
         return {
           success: false,
           error: `This Student Login ID is already assigned to another student.`,
