@@ -5,14 +5,14 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Plus, Search, GraduationCap, ArrowRight } from 'lucide-react';
-import { listStudents } from '@/lib/spims/students';
+import { listUnifiedStudents } from '@/lib/spims/students';
 import type { SpimsStudent } from '@/types/spims';
 import { formatDateDMY } from '@/lib/utils';
 
 export default function SpimsStudentsListPage() {
   const router = useRouter();
   const [session, setSession] = useState<{ role: string } | null>(null);
-  const [students, setStudents] = useState<SpimsStudent[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('all');
@@ -52,7 +52,7 @@ export default function SpimsStudentsListPage() {
   async function load() {
     try {
       setLoading(true);
-      const list = await listStudents();
+      const list = await listUnifiedStudents();
       setStudents(list);
     } catch (e) {
       console.error(e);
@@ -212,7 +212,14 @@ export default function SpimsStudentsListPage() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-gray-900 leading-none mb-1">{st.name}</span>
+                        <span className="text-sm font-black text-gray-900 leading-none mb-1 flex items-center gap-2">
+                          {st.name}
+                          {st.isVirtual && (
+                            <span className="text-[8px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md border border-amber-200 uppercase">
+                              Login Only
+                            </span>
+                          )}
+                        </span>
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{st.contact || (st as any).phone || 'N/A'}</span>
                       </div>
                     </td>
@@ -255,7 +262,14 @@ export default function SpimsStudentsListPage() {
                     <span className="text-[9px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-2 py-0.5 rounded-md">{st.rollNo}</span>
                     <span className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{st.course}</span>
                   </div>
-                  <h3 className="text-sm font-black text-gray-900 truncate mb-1">{st.name}</h3>
+                  <h3 className="text-sm font-black text-gray-900 truncate mb-1 flex items-center gap-2">
+                    {st.name}
+                    {st.isVirtual && (
+                      <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-md border border-amber-200 uppercase font-black">
+                        Login Only
+                      </span>
+                    )}
+                  </h3>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-500">{st.session}</span>
                     <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />

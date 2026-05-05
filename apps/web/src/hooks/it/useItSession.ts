@@ -63,6 +63,8 @@ export function useItSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useItSession] Remote logout listener error:', error);
       });
     };
 

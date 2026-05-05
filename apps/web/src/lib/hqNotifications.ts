@@ -106,8 +106,13 @@ export function subscribeHqNotifications(
     orderBy('createdAt', 'desc'),
     limit(30)
   );
-  return onSnapshot(q, (snap) => {
-    const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as HqNotification));
-    onUpdate(data);
-  });
+  return onSnapshot(q, 
+    (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as HqNotification));
+      onUpdate(data);
+    },
+    (err) => {
+      console.warn('[hqNotifications] Snapshot error (likely permissions):', err);
+    }
+  );
 }

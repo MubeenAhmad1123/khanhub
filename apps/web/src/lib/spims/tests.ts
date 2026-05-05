@@ -52,9 +52,14 @@ export async function deleteSpimsTest(id: string) {
 
 export function subscribeAdminTests(onData: (rows: SpimsTest[]) => void) {
   const q = query(collection(db, 'spims_tests'), orderBy('createdAt', 'desc'), limit(200));
-  return onSnapshot(q, (snap) => {
-    onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
-  });
+  return onSnapshot(q, 
+    (snap) => {
+      onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    },
+    (err) => {
+      console.warn('[tests] Admin tests snapshot error:', err);
+    }
+  );
 }
 
 export function subscribeStudentTests(params: {
@@ -80,10 +85,13 @@ export function subscribeStudentTests(params: {
 
   const unsubs: Array<() => void> = [];
   unsubs.push(
-    onSnapshot(query(collection(db, 'spims_tests'), where('scope', '==', 'all'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
-      buffers.all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-      push();
-    })
+    onSnapshot(query(collection(db, 'spims_tests'), where('scope', '==', 'all'), orderBy('createdAt', 'desc'), limit(50)), 
+      (snap) => {
+        buffers.all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        push();
+      },
+      (err) => console.warn('[tests] "all" scope snapshot error:', err)
+    )
   );
   unsubs.push(
     onSnapshot(
@@ -98,7 +106,8 @@ export function subscribeStudentTests(params: {
       (snap) => {
         buffers.cs = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         push();
-      }
+      },
+      (err) => console.warn('[tests] "course_session" scope snapshot error:', err)
     )
   );
   unsubs.push(
@@ -113,7 +122,8 @@ export function subscribeStudentTests(params: {
       (snap) => {
         buffers.student = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         push();
-      }
+      },
+      (err) => console.warn('[tests] "student" scope snapshot error:', err)
     )
   );
 

@@ -64,6 +64,8 @@ export function useWelfareSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useWelfareSession] Remote logout listener error:', error);
       });
     };
 

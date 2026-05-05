@@ -37,6 +37,8 @@ export function useMediaSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useMediaSession] Remote logout listener error:', error);
       });
     }
 

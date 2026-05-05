@@ -64,6 +64,8 @@ export function useSukoonSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useSukoonSession] Remote logout listener error:', error);
       });
     };
 

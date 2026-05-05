@@ -164,6 +164,8 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           handleSignOut();
         }
       }
+    }, (error) => {
+      console.error('Rehab session listener error:', error);
     });
     return () => unsub();
   }, [user, handleSignOut]);

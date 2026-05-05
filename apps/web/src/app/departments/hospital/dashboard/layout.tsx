@@ -135,6 +135,8 @@ export default function HospitalDashboardLayout({
           handleSignOut();
         }
       }
+    }, (error) => {
+      console.error('Hospital session listener error:', error);
     });
     return () => unsub();
   }, [user, handleSignOut]);

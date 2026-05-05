@@ -67,6 +67,8 @@ export function useSpimsSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useSpimsSession] Remote logout listener error:', error);
       });
     };
 

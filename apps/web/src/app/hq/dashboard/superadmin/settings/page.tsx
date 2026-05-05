@@ -44,7 +44,10 @@ export default function SuperadminSettingsPage() {
         setSettings({ ...DEFAULT, ...(snap.exists() ? (snap.data() as any) : {}) });
         setLoading(false);
       },
-      () => setLoading(false)
+      (err) => {
+        console.error('[Settings] onSnapshot error:', err);
+        setLoading(false);
+      }
     );
   }, [session]);
 

@@ -57,8 +57,13 @@ export function subscribeStudentAttendance(params: {
     orderBy('date', 'desc'),
     limit(90)
   );
-  return onSnapshot(q, (snap) => {
-    params.onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
-  });
+  return onSnapshot(q, 
+    (snap) => {
+      params.onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    },
+    (err) => {
+      console.warn('[studentAttendance] Snapshot error:', err);
+    }
+  );
 }
 

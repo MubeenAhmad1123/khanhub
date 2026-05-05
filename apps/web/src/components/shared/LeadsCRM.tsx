@@ -159,6 +159,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     const unsubscribeResponses = onSnapshot(qr, (snap) => {
       const resps = snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomResponse));
       setCustomResponses(resps);
+    }, (err) => {
+      console.error('CustomResponses onSnapshot error:', err);
     });
 
     return () => {

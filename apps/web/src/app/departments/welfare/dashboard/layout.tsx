@@ -155,6 +155,8 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
           handleSignOut();
         }
       }
+    }, (error) => {
+      console.error('Welfare session listener error:', error);
     });
     return () => unsub();
   }, [user, handleSignOut]);

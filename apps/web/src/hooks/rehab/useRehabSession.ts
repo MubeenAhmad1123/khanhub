@@ -64,6 +64,8 @@ export function useRehabSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useRehabSession] Remote logout listener error:', error);
       });
     };
 

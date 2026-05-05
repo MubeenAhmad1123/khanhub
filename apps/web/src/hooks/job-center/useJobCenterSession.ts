@@ -64,6 +64,8 @@ export function useJobCenterSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useJobCenterSession] Remote logout listener error:', error);
       });
     };
 

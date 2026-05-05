@@ -152,6 +152,8 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
           handleSignOut();
         }
       }
+    }, (error) => {
+      console.error('Sukoon session listener error:', error);
     });
     return () => unsub();
   }, [user, handleSignOut]);

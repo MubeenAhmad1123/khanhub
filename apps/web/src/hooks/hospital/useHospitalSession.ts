@@ -64,6 +64,8 @@ export function useHospitalSession() {
             signOut(auth).catch(() => {});
           }
         }
+      }, (error) => {
+        console.error('[useHospitalSession] Remote logout listener error:', error);
       });
     };
 

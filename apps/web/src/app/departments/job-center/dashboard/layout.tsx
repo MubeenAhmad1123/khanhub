@@ -157,6 +157,8 @@ export default function JobCenterDashboardLayout({ children }: { children: React
           handleSignOut();
         }
       }
+    }, (error) => {
+      console.error('JobCenter session listener error:', error);
     });
     return () => unsub();
   }, [user, handleSignOut]);

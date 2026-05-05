@@ -157,6 +157,8 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
           handleSignOut();
         }
       }
+    }, (error) => {
+      console.error('SPIMS session listener error:', error);
     });
     return () => unsub();
   }, [user, handleSignOut]);
