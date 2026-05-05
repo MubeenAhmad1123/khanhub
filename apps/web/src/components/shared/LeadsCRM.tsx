@@ -56,6 +56,7 @@ interface Lead {
   parentName?: string;
   patientName?: string;
   responseReview?: string;
+  diagnosis?: string;
   createdAt: any;
   updatedAt: any;
 }
@@ -116,7 +117,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
     studentName: '',
     parentName: '',
     patientName: '',
-    responseReview: ''
+    responseReview: '',
+    diagnosis: ''
   });
 
   useEffect(() => {
@@ -133,7 +135,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
       studentName: '',
       parentName: '',
       patientName: '',
-      responseReview: ''
+      responseReview: '',
+      diagnosis: ''
     });
 
     // Sync Leads
@@ -262,7 +265,8 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
         studentName: '',
         parentName: '',
         patientName: '',
-        responseReview: ''
+        responseReview: '',
+        diagnosis: ''
       });
       setCustomStatusValue('');
       setCustomAddictionValue('');
@@ -317,6 +321,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
         parentName: editingLead.parentName || '',
         patientName: editingLead.patientName || '',
         responseReview: editingLead.responseReview || '',
+        diagnosis: editingLead.diagnosis || '',
         updatedAt: Timestamp.now()
       });
       toast.success('Lead updated successfully');
@@ -514,7 +519,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
               {department === 'hospital' && (
                 <>
                   <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Addiction</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Diagnosis</th>
                 </>
               )}
               <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Address</th>
@@ -583,7 +588,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     <td className="px-6 py-4 text-xs font-bold text-gray-600">{lead.patientName || '—'}</td>
                     <td className="px-6 py-4">
                       <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-black uppercase text-gray-600">
-                        {lead.addiction}
+                        {lead.diagnosis || '—'}
                       </span>
                     </td>
                   </>
@@ -804,9 +809,9 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                       <p className="text-xs font-bold text-gray-600 mt-0.5 truncate">{lead.patientName || '—'}</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Addiction</p>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Diagnosis</p>
                       <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600 truncate max-w-full">
-                        {lead.addiction}
+                        {lead.diagnosis || '—'}
                       </span>
                     </div>
                   </>
@@ -990,7 +995,16 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Response Review</label>
+                      <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Diagnosis</label>
+                      <input 
+                        placeholder="e.g. Fever, Hypertension"
+                        className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none"
+                        value={formData.diagnosis}
+                        onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-1 md:col-span-2">
+                      <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Initial Response Review</label>
                       <input 
                         placeholder="Initial review/feedback"
                         className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none"
@@ -1001,7 +1015,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                   </>
                 )}
 
-                {(formData.department === 'rehab' || formData.department === 'hospital') && (
+                {formData.department === 'rehab' && (
                   <div className="space-y-2">
                     <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
                     <select 
@@ -1022,7 +1036,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     )}
                   </div>
                 )}
-                <div className={cn("space-y-2", (formData.department !== 'rehab' && formData.department !== 'hospital') && "col-span-1 md:col-span-2")}>
+                <div className={cn("space-y-2", (formData.department === 'spims') && "col-span-1 md:col-span-2")}>
                   <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Initial Status</label>
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
@@ -1184,6 +1198,15 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                       />
                     </div>
                     <div className="space-y-2">
+                      <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Diagnosis</label>
+                      <input 
+                        placeholder="e.g. Fever, Hypertension"
+                        className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none"
+                        value={editingLead.diagnosis || ''}
+                        onChange={(e) => setEditingLead({...editingLead, diagnosis: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-1 md:col-span-2">
                       <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Response Review</label>
                       <input 
                         placeholder="Initial review/feedback"
@@ -1195,7 +1218,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                   </>
                 )}
 
-                {(editingLead.department === 'rehab' || editingLead.department === 'hospital') && (
+                {editingLead.department === 'rehab' && (
                   <div className="space-y-2">
                     <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Addiction Type</label>
                     <select 
@@ -1216,7 +1239,7 @@ export default function LeadsCRM({ department }: LeadsCRMProps) {
                     )}
                   </div>
                 )}
-                <div className={cn("space-y-2", (editingLead.department !== 'rehab' && editingLead.department !== 'hospital') && "col-span-1 md:col-span-2")}>
+                <div className={cn("space-y-2", (editingLead.department === 'spims') && "col-span-1 md:col-span-2")}>
                   <label className={cn("text-[10px] font-black uppercase tracking-widest px-1", themeClasses.accent)}>Initial Status</label>
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
