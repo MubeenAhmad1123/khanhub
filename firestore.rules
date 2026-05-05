@@ -454,25 +454,18 @@ service cloud.firestore {
     }
 
     // ── Leads & CRM Collections ────────────────────────
+    // Access restricted to HQ and Kashmala (Receptionist)
     match /leads/{leadId} {
       allow read, write: if isAuth() && (
         isHqTier1()
-        || isRehabAdminOrAbove()
-        || isHospitalAdminOrAbove()
-        || isSpimsAdminOrAbove()
-        || isSpimsAdminOrAbove()
-        || isHospitalAdminOrAbove()
+        || request.auth.uid == '5mHY2l3o6NhGDji4CysY' // Kashmala Nazar (Receptionist)
       );
     }
 
     match /hq_lead_responses/{responseId} {
       allow read, write: if isAuth() && (
         isHqTier1()
-        || isRehabAdminOrAbove()
-        || isHospitalAdminOrAbove()
-        || isSpimsAdminOrAbove()
-        || isSpimsAdminOrAbove()
-        || isHospitalAdminOrAbove()
+        || request.auth.uid == '5mHY2l3o6NhGDji4CysY' // Kashmala Nazar (Receptionist)
       );
     }
 
@@ -1121,18 +1114,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isHospitalAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/hospital_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/hospital_users/$(request.auth.uid))
+        || isHqTier1()
+      );
     }
     function hospitalRole() {
-      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isHospitalRole(role) {
       return isHospitalAuth() && hospitalRole() == role;
     }
     function isHospitalAdminOrAbove() {
-      return isHospitalAuth()
-        && (hospitalRole() == 'admin' || hospitalRole() == 'superadmin');
+      let role = hospitalRole();
+      return isHospitalAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isHospitalSuperAdmin() {
       return isHospitalRole('superadmin');
@@ -1259,18 +1255,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isSukoonAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/sukoon_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/sukoon_users/$(request.auth.uid))
+        || isHqTier1()
+      );
     }
     function sukoonRole() {
-      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/sukoon_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isSukoonRole(role) {
       return isSukoonAuth() && sukoonRole() == role;
     }
     function isSukoonAdminOrAbove() {
-      return isSukoonAuth()
-        && (sukoonRole() == 'admin' || sukoonRole() == 'superadmin');
+      let role = sukoonRole();
+      return isSukoonAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isSukoonSuperAdmin() {
       return isSukoonRole('superadmin');
@@ -1398,18 +1397,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isWelfareAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/welfare_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/welfare_users/$(request.auth.uid))
+        || isHqTier1()
+      );
     }
     function welfareRole() {
-      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/welfare_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isWelfareRole(role) {
       return isWelfareAuth() && welfareRole() == role;
     }
     function isWelfareAdminOrAbove() {
-      return isWelfareAuth()
-        && (welfareRole() == 'admin' || welfareRole() == 'superadmin');
+      let role = welfareRole();
+      return isWelfareAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isWelfareSuperAdmin() {
       return isWelfareRole('superadmin');
