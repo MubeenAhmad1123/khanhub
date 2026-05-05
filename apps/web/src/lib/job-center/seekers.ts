@@ -16,6 +16,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { toDate } from '../utils';
+import { getCached, setCached } from '../queryCache';
+
 import type { 
   Seeker, 
   FeeRecord, 
@@ -56,9 +58,13 @@ export async function getSeeker(id: string): Promise<Seeker | null> {
 }
 
 export async function getSeekers(): Promise<Seeker[]> {
-  const q = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'));
+  const cacheKey = 'jobcenter_seekers_list';
+  const cached = getCached<Seeker[]>(cacheKey);
+  if (cached) return cached;
+
+  const q = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(100));
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
+  const seekers = snap.docs.map(doc => {
     const data = doc.data();
     return { 
       id: doc.id, 
@@ -66,7 +72,10 @@ export async function getSeekers(): Promise<Seeker[]> {
       createdAt: toDate(data.createdAt),
     } as Seeker;
   });
+  setCached(cacheKey, seekers, 180); // 3 min cache
+  return seekers;
 }
+
 
 export async function createSeeker(data: Omit<Seeker, 'id' | 'createdAt'>): Promise<string> {
   const res = await addDoc(collection(db, 'jobcenter_seekers'), {
@@ -217,17 +226,35 @@ export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'creat
 // ─── FINANCE HQ VIEW ──────────────────────────────────────────────────────────
 
 export async function getAllSeekersWithFinanceSummary(): Promise<SeekerFinanceSummary[]> {
-  // Load all active seekers
-  const seekersSnap = await getDocs(query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true)));
+  const cacheKey = 'jobcenter_seekers_finance_summary';
+  const cached = getCached<SeekerFinanceSummary[]>(cacheKey);
+  if (cached) return cached;
+
+  // Load limited seekers
+  const q = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(100));
+  const seekersSnap = await getDocs(q);
   const seekers = seekersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Seeker));
   
-  // Load ALL fees
-  const feesSnap = await getDocs(collection(db, 'jobcenter_fees'));
-  const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeeRecord));
+  if (seekers.length === 0) return [];
+
+  const seekerIds = seekers.map(s => s.id);
   
-  // Load ALL canteen records
-  const canteenSnap = await getDocs(collection(db, 'jobcenter_canteen'));
-  const allCanteen = canteenSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CanteenRecord));
+  // Batch fetch fees and canteen records for THESE seekers ONLY
+  const fetchInChunks = async (col: string, ids: string[]) => {
+    const results: any[] = [];
+    for (let i = 0; i < ids.length; i += 30) {
+      const chunk = ids.slice(i, i + 30);
+      const q = query(collection(db, col), where('seekerId', 'in', chunk));
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => results.push({ id: d.id, ...d.data() }));
+    }
+    return results;
+  };
+
+  const [allFees, allCanteen] = await Promise.all([
+    fetchInChunks('jobcenter_fees', seekerIds),
+    fetchInChunks('jobcenter_canteen', seekerIds)
+  ]);
   
   // Map fees/canteen by seekerId
   const feesBySeeker: Record<string, FeeRecord[]> = {};
@@ -242,15 +269,15 @@ export async function getAllSeekersWithFinanceSummary(): Promise<SeekerFinanceSu
     canteenBySeeker[c.seekerId].push(c);
   });
   
-  return seekers.map(s => {
+  const summary = seekers.map(s => {
     const sFees = feesBySeeker[s.id] || [];
     const sCanteen = canteenBySeeker[s.id] || [];
     
     const registrationFee = 0; // Job Center registration fee (if any)
     
     const totalReceived = sFees.reduce((acc, f) => {
-      const approvedPayments = (f.payments || []).filter(pay => pay.status === 'approved');
-      return acc + approvedPayments.reduce((sacc, pay) => sacc + pay.amount, 0);
+      const approvedPayments = (f.payments || []).filter((pay: any) => pay.status === 'approved');
+      return acc + approvedPayments.reduce((sacc: any, pay: any) => sacc + pay.amount, 0);
     }, 0);
     
     const totalCanteenDeposited = sCanteen.reduce((acc, c) => acc + (c.totalDeposited || 0), 0);
@@ -272,8 +299,12 @@ export async function getAllSeekersWithFinanceSummary(): Promise<SeekerFinanceSu
       contactNumber: s.contactNumber,
       isActive: s.isActive
     };
-  }).sort((a, b) => b.serialNumber - a.serialNumber);
+  });
+
+  setCached(cacheKey, summary, 180); // 3 min cache
+  return summary;
 }
+
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 

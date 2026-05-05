@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer, markSetupComplete } from '../actions/createSukoonUser';
+import { createSukoonUserServer, markSetupComplete } from '../actions/createSukoonUser';
 import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 
 export default function SetupPage() {
@@ -16,10 +16,10 @@ export default function SetupPage() {
   const [alreadySetup, setAlreadySetup] = useState(false);
 
   // form state
-  const [superAdminId, setSuperAdminId] = useState('REHAB-SA-001');
+  const [superAdminId, setSuperAdminId] = useState('SUK-SA-001');
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [cashierId, setCashierId] = useState('REHAB-CSH-001');
+  const [cashierId, setCashierId] = useState('SUK-CSH-001');
   const [cashierPassword, setCashierPassword] = useState('');
 
   // submission state
@@ -35,7 +35,7 @@ export default function SetupPage() {
   useEffect(() => {
     if (!mounted) return;
     import('../actions/createSukoonUser').then(m => {
-      m.debugEnvVars().then((result: unknown) => {
+      m.debugEnvVars().then((result: any) => {
         console.log('ENV CHECK:', result);
       });
     });
@@ -46,7 +46,7 @@ export default function SetupPage() {
     if (!mounted) return;
     async function checkSetup() {
       try {
-        const snap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+        const snap = await getDoc(doc(db, 'sukoon_meta', 'setup'));
         if (snap.exists() && snap.data()?.completed === true) {
           setAlreadySetup(true);
         }
@@ -75,13 +75,13 @@ export default function SetupPage() {
     setLoading(true);
     try {
       // 1. Create super admin
-      const saResult = await createRehabUserServer(
+      const saResult = await createSukoonUserServer(
         superAdminId, superAdminPassword, 'superadmin', 'Super Admin'
       );
       if (!saResult.success) throw new Error(saResult.error || 'Failed to create super admin');
 
       // 2. Create cashier
-      const cshResult = await createRehabUserServer(
+      const cshResult = await createSukoonUserServer(
         cashierId, cashierPassword, 'cashier', 'Cashier'
       );
       if (!cshResult.success) throw new Error(cshResult.error || 'Failed to create cashier');
@@ -91,7 +91,7 @@ export default function SetupPage() {
       if (!metaResult.success) throw new Error(metaResult.error || 'Failed to mark setup complete');
 
       setSuccess(true);
-      setTimeout(() => router.push('/departments/rehab/login'), 2000);
+      setTimeout(() => router.push('/departments/sukoon/login'), 2000);
     } catch (err: any) {
       setError(err.message || 'Setup failed. Please try again.');
     } finally {
@@ -138,7 +138,7 @@ export default function SetupPage() {
         <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl p-10 border border-gray-100">
           <h1 className="text-4xl font-black text-center text-gray-900 mb-2 tracking-tight">System Setup</h1>
           <p className="text-xs text-center tracking-[0.3em] text-gray-400 font-black uppercase mb-10">
-            Initialize Rehab Portal
+            Initialize Sukoon Portal
           </p>
 
           {error && (

@@ -1,21 +1,75 @@
-// src/app/departments/rehab/dashboard/profile/page.tsx
+// src/app/departments/spims/dashboard/profile/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
   doc, getDoc, updateDoc, collection, query, where, getDocs, 
-  addDoc, serverTimestamp, deleteDoc, orderBy, limit 
+  addDoc, serverTimestamp, deleteDoc, orderBy, limit, setDoc 
 } from 'firebase/firestore';
 import { 
   User, Camera, Save, Loader2, Shield, UserCog, 
   Heart, CheckCircle, Phone, X, Calendar, ClipboardCheck, 
-  Shirt, Award, Plus, Trash2, Clock
+  Shirt, Award, Plus, Trash2, Clock, Target, DollarSign,
+  TrendingUp, Activity, CreditCard, MapPin, Mail, Briefcase,
+  AlertCircle, ChevronRight, Download, Info
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+
+// --- Types ---
+interface AttendanceRecord {
+  id: string;
+  date: string;
+  status: 'present' | 'absent' | 'leave' | 'late';
+  arrivalTime?: string;
+  departureTime?: string;
+  note?: string;
+}
+
+interface DutyRecord {
+  id: string;
+  date: string;
+  dutyType: string;
+  status: 'completed' | 'not_done';
+  points: number;
+  comment?: string;
+}
+
+interface DressRecord {
+  id: string;
+  date: string;
+  status: 'yes' | 'no';
+  points: number;
+  comment?: string;
+}
+
+interface ContributionRecord {
+  id: string;
+  date: any;
+  title: string;
+  content: string;
+  isApproved: boolean;
+  points: number;
+}
+
+interface SpecialTask {
+  id: string;
+  task: string;
+  status: 'pending' | 'completed';
+  date: string;
+  points: number;
+}
+
+interface FineRecord {
+  id: string;
+  amount: number;
+  reason: string;
+  date: string;
+  status: 'paid' | 'unpaid';
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -26,53 +80,51 @@ export default function ProfilePage() {
   // Profile Data
   const [profile, setProfile] = useState<any>(null);
   const [staffDoc, setStaffDoc] = useState<any>(null);
-  const [patientDoc, setPatientDoc] = useState<any>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
-  // Tabs for Admin/Staff
-  const [activeTab, setActiveTab] = useState<'attendance'|'duties'|'dress'|'contributions'>('attendance');
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'special_tasks' | 'attendance' | 'finance' | 'dress' | 'duty' | 'score' | 'profile'>('special_tasks');
   
   // Metrics Data
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [duties, setDuties] = useState<any[]>([]);
-  const [dressLogs, setDressLogs] = useState<any[]>([]);
-  const [contributions, setContributions] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [duties, setDuties] = useState<DutyRecord[]>([]);
+  const [dressLogs, setDressLogs] = useState<DressRecord[]>([]);
+  const [contributions, setContributions] = useState<ContributionRecord[]>([]);
+  const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
+  const [fines, setFines] = useState<FineRecord[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
 
-  // Contributions State
-  const [isAddingContrib, setIsAddingContrib] = useState(false);
-  const [newContrib, setNewContrib] = useState({ title: '', content: '' });
-  const [submittingContrib, setSubmittingContrib] = useState(false);
+  // --- Styles ---
+  const glassStyle = "bg-white/60 backdrop-blur-xl border border-white/20 shadow-[10px_10px_20px_#d1d9e6,-10px_-10px_20px_#ffffff]";
+  const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
+  const neumorphicOutset = "shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]";
 
   const fetchMetrics = useCallback(async (sId: string, dept: string) => {
     try {
       const prefix = dept === 'hq' ? 'hq' : dept === 'spims' ? 'spims' : 'rehab';
       
-      const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId), limit(1)))
+      const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap, taskSnap, fineSnap] = await Promise.all([
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId), limit(1))),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30)))
       ]);
 
-      // Client-side sorting to avoid composite index requirement
-      const sortByDate = (docs: any[]) => [...docs].sort((a, b) => {
-        const dateA = a.date?.seconds || 0;
-        const dateB = b.date?.seconds || 0;
-        return dateB - dateA;
-      });
-
-      setAttendance(sortByDate(attSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setDuties(sortByDate(dutySnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setDressLogs(sortByDate(dressSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setContributions(sortByDate(contribSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      setAttendance(attSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord)));
+      setDuties(dutySnap.docs.map(d => ({ id: d.id, ...d.data() } as DutyRecord)));
+      setDressLogs(dressSnap.docs.map(d => ({ id: d.id, ...d.data() } as DressRecord)));
+      setContributions(contribSnap.docs.map(d => ({ id: d.id, ...d.data() } as ContributionRecord)));
+      setSpecialTasks(taskSnap.docs.map(d => ({ id: d.id, ...d.data() } as SpecialTask)));
+      setFines(fineSnap.docs.map(d => ({ id: d.id, ...d.data() } as FineRecord)));
       
       if (!pointsSnap.empty) {
         setGrowthPoints(pointsSnap.docs[0].data());
       }
     } catch (error) {
       console.error("Error fetching metrics:", error);
+      // Fallback for missing indexes or empty collections
     }
   }, []);
 
@@ -88,7 +140,6 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        // 1. User Doc
         const userSnap = await getDoc(doc(db, 'spims_users', parsed.uid));
         if (!userSnap.exists()) {
           toast.error("User not found");
@@ -98,26 +149,15 @@ export default function ProfilePage() {
         const uData = userSnap.data();
         setProfile({ id: userSnap.id, ...uData });
 
-        // 2. Role Data
         if (parsed.role === 'admin' || parsed.role === 'staff') {
-          // Find staff dock in rehab_staff or hq_staff
           let sSnap = await getDocs(query(collection(db, 'spims_staff'), where('loginUserId', '==', parsed.uid)));
-          if (sSnap.empty) {
-            sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
-          }
-          if (sSnap.empty) {
-            sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
-          }
-
+          if (sSnap.empty) sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+          
           if (!sSnap.empty) {
             const sd = sSnap.docs[0].data();
             setStaffDoc({ id: sSnap.docs[0].id, ...sd });
             fetchMetrics(sSnap.docs[0].id, sd.department || 'spims');
           }
-        } else if (parsed.role === 'student' && (uData.studentId || uData.patientId)) {
-          const sid = uData.studentId || uData.patientId;
-          const pSnap = await getDoc(doc(db, 'spims_students', sid));
-          if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
         }
       } catch (err) {
         console.error(err);
@@ -129,408 +169,460 @@ export default function ProfilePage() {
     loadProfile();
   }, [router, fetchMetrics]);
 
-  const displayedPhone =
-    session?.role === 'student'
-      ? (patientDoc?.contact || profile?.contact || profile?.phone || null)
-      : (profile?.contact || profile?.phone || null);
-
-  const displayedPhotoUrl =
-    session?.role === 'student'
-      ? (patientDoc?.photoUrl || profile?.photoUrl || null)
-      : (profile?.photoUrl || null);
-
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const handleUploadPhoto = async (file: File) => {
     if (!session?.uid) return;
     try {
       setUploadingPhoto(true);
       const url = await uploadToCloudinary(file, 'Khan Hub/spims/profile');
-
-      // Update user doc for all roles
       await updateDoc(doc(db, 'spims_users', session.uid), { photoUrl: url });
-
-      // Also update linked student doc if role=student
-      if (session.role === 'student' && patientDoc?.id) {
-        await updateDoc(doc(db, 'spims_students', patientDoc.id), { photoUrl: url });
-        setPatientDoc((p: any) => (p ? { ...p, photoUrl: url } : p));
-      }
-
-      setProfile((p: any) => (p ? { ...p, photoUrl: url } : p));
+      setProfile((p: any) => ({ ...p, photoUrl: url }));
       toast.success('Photo updated');
     } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || 'Failed to upload photo');
+      toast.error('Upload failed');
     } finally {
       setUploadingPhoto(false);
     }
   };
 
-  const handleAddContribution = async () => {
-    if (!newContrib.title || !newContrib.content) return toast.error("Fill all fields");
-    if (!staffDoc) return;
-
-    try {
-      setSubmittingContrib(true);
-      const prefix =
-        staffDoc.department === 'hq' ? 'hq' : staffDoc.department === 'spims' ? 'spims' : 'rehab';
-      await addDoc(collection(db, `${prefix}_contributions`), {
-        staffId: staffDoc.id,
-        title: newContrib.title,
-        content: newContrib.content,
-        isApproved: false,
-        createdAt: serverTimestamp(),
-        date: serverTimestamp()
-      });
-      
-      toast.success("Contribution submitted for approval");
-      setIsAddingContrib(false);
-      setNewContrib({ title: '', content: '' });
-      fetchMetrics(staffDoc.id, staffDoc.department || 'spims');
-    } catch (error) {
-      toast.error("Failed to submit");
-    } finally {
-      setSubmittingContrib(false);
-    }
-  };
-
-  const handleDeleteContribution = async (cid: string) => {
-    if (!confirm("Are you sure?")) return;
-    try {
-      const prefix =
-        staffDoc.department === 'hq' ? 'hq' : staffDoc.department === 'spims' ? 'spims' : 'rehab';
-      await deleteDoc(doc(db, `${prefix}_contributions`, cid));
-      toast.success("Deleted");
-      fetchMetrics(staffDoc.id, staffDoc.department || 'spims');
-    } catch (error) {
-      toast.error("Failed to delete");
-    }
-  };
+  const totalEarnings = useMemo(() => {
+    if (!profile?.monthlySalary) return 0;
+    const fineTotal = fines.reduce((acc, f) => acc + (f.amount || 0), 0);
+    return profile.monthlySalary - fineTotal;
+  }, [profile, fines]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-      <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+    <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
+      <div className="animate-spin text-indigo-600"><Loader2 size={40} /></div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 w-full max-w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10 w-full">
-        <div className="w-full px-4 md:px-8 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#f0f2f5] pb-24 text-slate-800 font-sans selection:bg-indigo-100">
+      {/* Premium Header */}
+      <div className="sticky top-0 z-50 px-4 py-6 md:px-12 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-white/20">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-100">
-              <User size={24} />
+            <div className={`p-3 rounded-2xl ${neumorphicOutset} bg-[#f0f2f5] text-indigo-600`}>
+              <User size={28} className="drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-gray-900 tracking-tight">My Profile</h1>
-              <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">{session?.role}</p>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Staff Portal</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Live Dashboard • {session?.role}</p>
+              </div>
             </div>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-6">
+             <div className={`px-6 py-3 rounded-2xl ${glassStyle} flex items-center gap-3`}>
+                <Award className="text-amber-500" size={20} />
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Total Points</p>
+                  <p className="text-lg font-black text-slate-900">{growthPoints?.totalPoints || 0}</p>
+                </div>
+             </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full mt-0 md:mt-8 md:max-w-5xl md:mx-auto md:px-4 space-y-3 md:space-y-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Basic Info Card */}
-        <div className="bg-white rounded-none md:rounded-[2.5rem] p-6 md:p-8 shadow-sm border-y border-gray-100 w-full flex flex-col items-center">
-          <div className="relative">
-            {displayedPhotoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={displayedPhotoUrl}
-                alt="Profile photo"
-                className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50"
+        {/* Left Column: Profile Card */}
+        <div className="lg:col-span-4 space-y-8">
+          <div className={`p-8 rounded-[3rem] ${glassStyle} flex flex-col items-center relative overflow-hidden`}>
+            {/* Background Accent */}
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl" />
+            
+            <div className="relative group">
+              <div className={`w-32 h-32 rounded-[2.5rem] overflow-hidden ${neumorphicOutset} border-4 border-white/50 relative`}>
+                {profile?.photoUrl ? (
+                  <img src={profile.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 flex items-center justify-center text-4xl font-black text-slate-300">
+                    {profile?.displayName?.[0]}
+                  </div>
+                )}
+                {uploadingPhoto && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                    <Loader2 className="animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <button 
+                onClick={() => fileRef.current?.click()}
+                className={`absolute -bottom-2 -right-2 p-3 rounded-2xl bg-indigo-600 text-white shadow-xl hover:scale-110 transition-transform`}
+              >
+                <Camera size={18} />
+              </button>
+              <input 
+                ref={fileRef} 
+                type="file" 
+                className="hidden" 
+                accept="image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
+                  handleUploadPhoto(file);
+                }} 
               />
-            ) : (
-              <div className="w-20 h-20 rounded-2xl mx-auto bg-teal-50 text-teal-600 flex items-center justify-center text-3xl font-black shadow-inner">
-                {profile?.displayName?.[0]}
-              </div>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleUploadPhoto(f);
-                if (e.target) e.target.value = '';
-              }}
-            />
-            <button
-              type="button"
-              disabled={uploadingPhoto}
-              onClick={() => fileRef.current?.click()}
-              className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
-              title="Upload photo"
-            >
-              {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin text-teal-600" /> : <Camera size={16} className="text-teal-600" />}
-            </button>
-          </div>
-          <h2 className="text-center text-xl font-black mt-3 text-gray-900">{profile?.displayName}</h2>
-          <span className="mx-auto mt-2 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-teal-500/10 text-teal-500">
-            {session?.role}
-          </span>
-          <p className="text-sm font-medium text-gray-500 flex items-center justify-center gap-2 mt-3">
-            <Phone size={14} className="text-teal-500" /> {displayedPhone || 'No phone provided'}
-          </p>
-        </div>
+            </div>
 
-        {/* Role Specific Content */}
-        {session?.role === 'student' ? (
-          <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-green-100 w-full">
-            <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
-              <Heart className="text-green-500" /> Linked student
-            </h3>
-            {patientDoc ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <div className="p-4 md:p-6 bg-green-50 rounded-2xl border border-green-100/50">
-                  <p className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">Name</p>
-                  <p className="text-sm font-bold text-gray-900">{patientDoc.name}</p>
-                </div>
-                <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
-                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(patientDoc.admissionDate)}</p>
-                </div>
-                <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-start gap-1">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                    {patientDoc.status || '—'}
-                  </span>
-                </div>
+            <h2 className="mt-6 text-2xl font-black text-slate-900 text-center">{profile?.displayName}</h2>
+            <p className="text-indigo-600 font-bold text-sm tracking-wide uppercase mt-1">{profile?.designation || 'Staff Member'}</p>
+            
+            <div className="mt-8 w-full space-y-4">
+              <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}>
+                <Mail className="text-slate-400" size={18} />
+                <span className="text-sm font-bold text-slate-600 truncate">{profile?.email}</span>
               </div>
-            ) : (
-              <p className="text-sm text-gray-400 font-medium italic">No student linked to this account.</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6 md:space-y-8 w-full">
-            {/* Growth Points Summary */}
-            <div className="grid grid-cols-2 gap-3 w-full px-3 md:px-0">
-              {[
-                { label: 'Attendance', val: growthPoints?.attendancePoints || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
-                { label: 'Duties', val: growthPoints?.dutyPoints || 0, color: 'text-teal-600', bg: 'bg-teal-50' },
-                { label: 'Dress Code', val: growthPoints?.dressCodePoints || 0, color: 'text-orange-600', bg: 'bg-orange-50' },
-                { label: 'Contribs', val: growthPoints?.contributionPoints || 0, color: 'text-purple-600', bg: 'bg-purple-50' },
-              ].map(stat => (
-                <div key={stat.label} className={`rounded-2xl p-4 text-center ${stat.bg} border border-[#F8FAFC] shadow-sm flex flex-col items-center justify-center`}>
-                  <span className={`text-2xl font-black block ${stat.color}`}>{stat.val}</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-gray-600">{stat.label}</span>
-                </div>
-              ))}
-              <div className="col-span-2 rounded-2xl p-4 text-center bg-teal-500/10 border border-teal-500/20 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black block text-teal-600">{growthPoints?.totalPoints || 0}</span>
-                <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-teal-800">Total Points</span>
+              <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}>
+                <Phone className="text-slate-400" size={18} />
+                <span className="text-sm font-bold text-slate-600">{profile?.phone || 'No Phone'}</span>
               </div>
             </div>
 
-            {/* Metric Tabs */}
-            <div className="bg-white rounded-none md:rounded-[2.5rem] shadow-sm border-y border-gray-100 overflow-hidden w-full">
-              <div className="w-full overflow-x-auto scrollbar-none border-b border-gray-50">
-                <div className="flex min-w-max gap-1 p-2 bg-gray-100 rounded-xl mx-4 my-3">
-                  {[
-                    { id: 'attendance', label: 'Attendance', icon: <Calendar size={13}/> },
-                    { id: 'duties', label: 'Duties', icon: <ClipboardCheck size={13}/> },
-                    { id: 'dress', label: 'Dress Code', icon: <Shirt size={13}/> },
-                    { id: 'contributions', label: 'Contribs', icon: <Award size={13}/> },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
-                        activeTab === tab.id 
-                          ? 'bg-white shadow-sm text-teal-600' 
-                          : 'opacity-40 hover:opacity-70'
-                      }`}
-                    >
-                      <span className="hidden sm:inline">{tab.icon}</span>
-                      {tab.label}
-                    </button>
+            <div className="mt-10 grid grid-cols-2 gap-4 w-full">
+              <div className={`p-4 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Emp ID</p>
+                <p className="text-lg font-black text-slate-900">#{profile?.employeeId || '---'}</p>
+              </div>
+              <div className={`p-4 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Joined</p>
+                <p className="text-lg font-black text-slate-900">{profile?.joiningDate ? formatDateDMY(profile.joiningDate).split('-')[2] : '2024'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats Overlay (Mobile friendly grid) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className={`p-6 rounded-[2.5rem] ${glassStyle} flex flex-col items-center justify-center text-center`}>
+              <TrendingUp size={24} className="text-green-500 mb-2" />
+              <p className="text-[10px] font-black uppercase text-slate-400">Attendance</p>
+              <p className="text-xl font-black text-slate-900">{Math.min(100, Math.floor((attendance.filter(a=>a.status==='present').length / 30) * 100))}%</p>
+            </div>
+            <div className={`p-6 rounded-[2.5rem] ${glassStyle} flex flex-col items-center justify-center text-center`}>
+              <Target size={24} className="text-indigo-500 mb-2" />
+              <p className="text-[10px] font-black uppercase text-slate-400">Tasks</p>
+              <p className="text-xl font-black text-slate-900">{specialTasks.filter(t=>t.status==='completed').length}/{specialTasks.length || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Main Content */}
+        <div className="lg:col-span-8 space-y-8">
+          
+          {/* Navigation Tabs - Neumorphic Style */}
+          <div className={`p-2 rounded-[2rem] ${neumorphicOutset} bg-[#f0f2f5] flex overflow-x-auto no-scrollbar gap-1`}>
+            {[
+              { id: 'special_tasks', label: 'Tasks', icon: <Target size={18} /> },
+              { id: 'attendance', label: 'Attendance', icon: <Calendar size={18} /> },
+              { id: 'finance', label: 'Finance', icon: <DollarSign size={18} /> },
+              { id: 'duty', label: 'Duty Logs', icon: <Activity size={18} /> },
+              { id: 'dress', label: 'Dress', icon: <Shirt size={18} /> },
+              { id: 'score', label: 'Score', icon: <TrendingUp size={18} /> },
+              { id: 'profile', label: 'Profile', icon: <Info size={18} /> },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-6 py-4 rounded-[1.5rem] text-sm font-black transition-all whitespace-nowrap
+                  ${activeTab === tab.id 
+                    ? `bg-indigo-600 text-white shadow-[4px_4px_10px_rgba(79,70,229,0.3)] scale-105` 
+                    : `text-slate-400 hover:text-slate-600 hover:bg-slate-200/50`}`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Dynamic Content Area */}
+          <div className={`p-8 md:p-10 rounded-[3.5rem] ${glassStyle} min-h-[500px]`}>
+            
+            {activeTab === 'special_tasks' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-black text-slate-900">Daily Special Tasks</h3>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-50 text-indigo-600">
+                    <CheckCircle size={18} />
+                    <span className="text-xs font-black uppercase">{specialTasks.filter(t=>t.status==='completed').length} Resolved</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {specialTasks.length > 0 ? specialTasks.map(task => (
+                    <div key={task.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between group hover:scale-[1.01] transition-transform`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${task.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                          {task.status === 'completed' ? <CheckCircle size={20} /> : <Clock size={20} />}
+                        </div>
+                        <div>
+                          <p className={`font-black ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.task}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{formatDateDMY(task.date)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-indigo-600 shadow-sm">+{task.points} PTS</div>
+                        <ChevronRight className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="py-20 flex flex-col items-center opacity-30">
+                      <Target size={60} className="text-slate-400 mb-4" />
+                      <p className="text-lg font-black">No active tasks</p>
+                      <p className="text-sm font-bold">You're all caught up for now!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'attendance' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-black text-slate-900">Attendance Log</h3>
+                  <div className={`px-4 py-2 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-2`}>
+                    <Calendar size={18} className="text-slate-400" />
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Last 30 Days</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {attendance.map(log => (
+                    <div key={log.id} className={`p-5 rounded-[2rem] ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
+                      <div>
+                        <p className="font-black text-slate-900">{formatDateDMY(log.date)}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock size={12} className="text-slate-400" />
+                          <p className="text-[10px] font-black text-slate-400 uppercase">{log.arrivalTime || '--:--'} to {log.departureTime || '--:--'}</p>
+                        </div>
+                      </div>
+                      <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                        log.status === 'present' ? 'bg-green-100 text-green-600' : 
+                        log.status === 'late' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'
+                      }`}>
+                        {log.status}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Month Navigator */}
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-50/50 border-b border-gray-50 w-full">
-                <button className="p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-gray-500">←</button>
-                <span className="text-[11px] font-black uppercase tracking-widest text-gray-600">
-                  {formatDateDMY(new Date())}
-                </span>
-                <button className="p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-gray-500">→</button>
-              </div>
-
-              <div className="p-4 md:p-8 w-full">
-                {activeTab === 'attendance' && (
-                  <div className="space-y-4">
-                    {attendance.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                        <span className="text-4xl">📋</span>
-                        <p className="text-sm font-black">No Records Found</p>
-                        <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                      </div>
-                    ) : (
-                      attendance.map(log => (
-                        <div key={log.id} className="flex flex-row items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full">
-                          <div className="flex flex-col gap-1 w-full">
-                            <p className="font-bold text-gray-900 text-sm">{formatDateDMY(log.date)}</p>
-                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{log.day}</p>
-                          </div>
-                          <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
-                            log.status === 'present' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {log.status}
-                          </span>
-                        </div>
-                      ))
-                    )}
+            {activeTab === 'finance' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-indigo-600 text-white relative overflow-hidden`}>
+                     <div className="absolute top-0 right-0 p-8 opacity-10"><DollarSign size={80} /></div>
+                     <p className="text-xs font-black uppercase tracking-[0.2em] opacity-60">Estimated Payable</p>
+                     <h4 className="text-4xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
+                     <div className="mt-6 flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full bg-white/20 text-[10px] font-black">Month: April 2024</span>
+                     </div>
                   </div>
-                )}
-
-                {activeTab === 'duties' && (
-                  <div className="space-y-4">
-                    {duties.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                        <span className="text-4xl">📋</span>
-                        <p className="text-sm font-black">No Records Found</p>
-                        <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                      </div>
-                    ) : (
-                      duties.map(log => (
-                        <div key={log.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4 w-full">
-                          <div className="flex-1 w-full">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <span className="text-[9px] font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-xl uppercase tracking-widest">
-                                {formatDateDMY(log.date)}
-                              </span>
-                              <h4 className="font-black text-gray-900 text-sm capitalize">{log.dutyType?.replace(/_/g, ' ')}</h4>
-                            </div>
-                            <p className="text-sm font-medium text-gray-600 leading-relaxed">{log.comment || 'No comments'}</p>
-                          </div>
-                   
-                          <div className={`flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-1 p-3 sm:p-2 w-full sm:w-[90px] rounded-xl sm:rounded-2xl shrink-0 ${log.status === 'completed' ? 'bg-teal-100/50 text-teal-600 border border-teal-100' : 'bg-red-100/50 text-red-600 border border-red-100'}`}>
-                              <span className="text-[9px] font-black uppercase tracking-widest">{log.status}</span>
-                              <span className="text-[11px] font-black text-gray-900 bg-white px-2 py-1 rounded-xl shadow-sm">+{log.points || 0} pts</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-white text-slate-900`}>
+                     <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Total Deductions</p>
+                     <h4 className="text-4xl font-black mt-2 text-rose-500">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4>
+                     <p className="mt-4 text-xs font-bold text-slate-400 flex items-center gap-1"><AlertCircle size={14} /> From late arrivals and fines</p>
                   </div>
-                )}
+                </div>
 
-                {activeTab === 'dress' && (
-                  <div className="space-y-4">
-                    {dressLogs.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                        <span className="text-4xl">📋</span>
-                        <p className="text-sm font-black">No Records Found</p>
-                        <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                      </div>
-                    ) : (
-                      dressLogs.map(log => (
-                        <div key={log.id} className="flex flex-row items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full">
-                          <div className="flex flex-col gap-1">
-                            <p className="font-bold text-gray-900 text-sm">{formatDateDMY(log.date)}</p>
-                            <p className="text-[11px] font-medium text-gray-500">{log.comment || 'Professional attire'}</p>
+                <h4 className="text-lg font-black text-slate-900 mb-6">Recent Transactions & Fines</h4>
+                <div className="space-y-4">
+                  {fines.length > 0 ? fines.map(fine => (
+                    <div key={fine.id} className={`p-6 rounded-3xl ${neumorphicInset} flex items-center justify-between`}>
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-2xl bg-rose-50 text-rose-500"><AlertCircle size={20} /></div>
+                          <div>
+                            <p className="font-black text-slate-900">{fine.reason}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{formatDateDMY(fine.date)}</p>
                           </div>
-                          <div className="flex flex-col items-end">
-                             <div className="text-sm font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-xl border border-teal-100">+{log.points || 0} pts</div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'contributions' && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-teal-50 p-4 md:p-6 rounded-2xl border border-teal-100 gap-4 w-full">
-                      <div className="flex flex-col gap-1">
-                        <h4 className="font-black text-teal-900 text-sm">Share your contribution</h4>
-                        <p className="text-[11px] text-teal-600 font-medium">Add records of extra work or achievements</p>
-                      </div>
-                      <button 
-                        onClick={() => setIsAddingContrib(true)}
-                        className="bg-teal-600 text-white px-6 py-3 sm:py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-teal-700 transition-all flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto shadow-md shadow-teal-600/20"
-                      >
-                        <Plus size={16} /> New Entry
-                      </button>
+                       </div>
+                       <p className="font-black text-rose-500">- Rs. {fine.amount}</p>
                     </div>
-
-                    {isAddingContrib && (
-                      <div className="p-4 md:p-6 bg-white border border-teal-200 rounded-2xl shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2 w-full">
-                        <div className="flex justify-between items-center w-full">
-                          <h4 className="font-black text-[11px] uppercase tracking-widest text-teal-600">New Contribution</h4>
-                          <button onClick={() => setIsAddingContrib(false)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"><X size={16} /></button>
-                        </div>
-                        <input 
-                           type="text" 
-                           placeholder="Title (e.g. Extra Patient Care)" 
-                           className="w-full px-4 py-3 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-teal-500 outline-none text-gray-900"
-                           value={newContrib.title}
-                           onChange={e => setNewContrib({...newContrib, title: e.target.value})}
-                        />
-                        <textarea 
-                           placeholder="Describe your contribution in detail..." 
-                           className="w-full px-4 py-4 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-teal-500 outline-none min-h-[120px] leading-relaxed text-gray-900"
-                           value={newContrib.content}
-                           onChange={e => setNewContrib({...newContrib, content: e.target.value})}
-                        />
-                        <button 
-                           onClick={handleAddContribution}
-                           disabled={submittingContrib}
-                           className="w-full bg-teal-600 text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-teal-100 hover:bg-teal-700 disabled:opacity-50 transition-all font-medium"
-                        >
-                          {submittingContrib ? 'Submitting...' : 'Submit Contribution'}
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="space-y-4 w-full">
-                      {contributions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                          <span className="text-4xl">📋</span>
-                          <p className="text-sm font-black">No Records Found</p>
-                          <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                        </div>
-                      ) : (
-                        contributions.map(c => (
-                          <div key={c.id} className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 w-full relative group transition-all hover:border-gray-200 flex flex-col">
-                            <div className="flex flex-row justify-between items-start mb-3 gap-4 w-full">
-                              <div className="flex flex-col gap-1 w-full">
-                                <h4 className="font-bold text-gray-900 text-sm">{c.title}</h4>
-                                <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">
-                                  {formatDateDMY(c.date || c.createdAt)}
-                                </p>
-                              </div>
-                              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
-                                <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
-                                  c.isApproved ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                                }`}>
-                                  {c.isApproved ? 'Approved' : 'Pending'}
-                                </span>
-                                {!c.isApproved && (
-                                  <button onClick={() => handleDeleteContribution(c.id)} className="p-2 text-gray-400 hover:text-red-500 bg-white border border-gray-100 hover:border-red-100 rounded-xl transition-colors mt-2 sm:mt-0">
-                                    <Trash2 size={16} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-600 font-medium leading-relaxed mb-4 whitespace-pre-wrap">{c.content}</p>
-                            {c.isApproved && (
-                              <div className="flex items-center justify-center sm:justify-start gap-2 text-teal-600 font-black text-[9px] uppercase tracking-widest bg-teal-50 px-3 py-2 rounded-xl border border-teal-100 w-full sm:w-fit mt-auto">
-                                <Award size={14} /> +{c.points || 0} Points Awarded
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
+                  )) : (
+                    <div className="py-10 text-center opacity-40">
+                      <p className="font-black">No recent fines recorded.</p>
+                      <p className="text-xs font-bold">Maintain discipline to keep it this way!</p>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {activeTab === 'duty' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                 <h3 className="text-2xl font-black text-slate-900 mb-8">Work Logs & Duties</h3>
+                 <div className="space-y-4">
+                    {duties.map(duty => (
+                      <div key={duty.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
+                        <div className="flex items-center gap-4">
+                           <div className={`p-3 rounded-2xl ${duty.status === 'completed' ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'}`}><Activity size={20} /></div>
+                           <div>
+                              <p className="font-black text-slate-900 capitalize">{duty.dutyType.replace(/_/g, ' ')}</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{formatDateDMY(duty.date)}</p>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                           <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${duty.status === 'completed' ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'}`}>
+                             {duty.status}
+                           </span>
+                           <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-indigo-600">+{duty.points} PTS</div>
+                        </div>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            )}
+
+            {activeTab === 'dress' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                 <h3 className="text-2xl font-black text-slate-900 mb-8">Dress Code Compliance</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {dressLogs.map(log => (
+                      <div key={log.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#f0f2f5] flex items-center justify-between`}>
+                        <div className="flex items-center gap-4">
+                           <div className={`p-3 rounded-2xl ${log.status === 'yes' ? 'bg-indigo-100 text-indigo-600' : 'bg-rose-100 text-rose-600'}`}><Shirt size={20} /></div>
+                           <div>
+                              <p className="font-black text-slate-900">{formatDateDMY(log.date)}</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{log.status === 'yes' ? 'Compliant' : 'Non-Compliant'}</p>
+                           </div>
+                        </div>
+                        {log.status === 'yes' && <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-indigo-600">+{log.points} PTS</div>}
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            )}
+
+            {activeTab === 'score' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h3 className="text-2xl font-black text-slate-900 mb-8">Performance Score Analysis</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
+                      <Activity className="mx-auto text-indigo-500 mb-2" size={32} />
+                      <p className="text-[10px] font-black uppercase text-slate-400">Reliability</p>
+                      <h4 className="text-3xl font-black mt-2 text-slate-900">92%</h4>
+                   </div>
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
+                      <Award className="mx-auto text-amber-500 mb-2" size={32} />
+                      <p className="text-[10px] font-black uppercase text-slate-400">Total Pts</p>
+                      <h4 className="text-3xl font-black mt-2 text-slate-900">{growthPoints?.totalPoints || 0}</h4>
+                   </div>
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#f0f2f5] text-center`}>
+                      <TrendingUp className="mx-auto text-green-500 mb-2" size={32} />
+                      <p className="text-[10px] font-black uppercase text-slate-400">Growth</p>
+                      <h4 className="text-3xl font-black mt-2 text-slate-900">+12%</h4>
+                   </div>
+                </div>
+
+                <div className={`p-8 rounded-[3rem] ${neumorphicInset} bg-white/50`}>
+                   <h4 className="text-lg font-black text-slate-900 mb-6">Historical Point Timeline</h4>
+                   <div className="space-y-6">
+                      {contributions.map((c, idx) => (
+                        <div key={c.id} className="flex gap-6 relative">
+                           {idx !== contributions.length - 1 && <div className="absolute left-[23px] top-12 bottom-[-24px] w-[2px] bg-indigo-100" />}
+                           <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center ${c.isApproved ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                              <Award size={20} />
+                           </div>
+                           <div className="pb-8">
+                              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{formatDateDMY(c.date)}</p>
+                              <h5 className="text-md font-black text-slate-900 mt-1">{c.title}</h5>
+                              <p className="text-sm text-slate-500 mt-2 line-clamp-2">{c.content}</p>
+                              <div className="mt-4 flex items-center gap-3">
+                                 <span className="px-3 py-1 rounded-xl bg-slate-100 text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                                   {c.isApproved ? 'Approved' : 'Pending'}
+                                 </span>
+                                 {c.isApproved && <span className="text-sm font-black text-indigo-600">+{c.points} Growth Points</span>}
+                              </div>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'profile' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h3 className="text-2xl font-black text-slate-900 mb-8">Personal Records</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <div className="space-y-6">
+                      <div className="group">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2">National ID (CNIC)</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
+                            <Shield className="text-indigo-500" size={20} />
+                            <p className="text-sm font-bold text-slate-900">{profile?.cnic || 'Not provided'}</p>
+                         </div>
+                      </div>
+                      <div className="group">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2">Date of Birth</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
+                            <Calendar className="text-indigo-500" size={20} />
+                            <p className="text-sm font-bold text-slate-900">{profile?.dob ? formatDateDMY(profile.dob) : 'Not provided'}</p>
+                         </div>
+                      </div>
+                      <div className="group">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2">Home Address</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-start gap-4`}>
+                            <MapPin className="text-indigo-500 mt-1" size={20} />
+                            <p className="text-sm font-bold text-slate-900 leading-relaxed">{profile?.address || 'No address registered in database.'}</p>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-6">
+                      <div className="group">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2">Employee Role</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
+                            <Briefcase className="text-indigo-500" size={20} />
+                            <p className="text-sm font-bold text-slate-900">{profile?.designation || 'Staff'}</p>
+                         </div>
+                      </div>
+                      <div className="group">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2">Work Schedule</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
+                            <Clock className="text-indigo-500" size={20} />
+                            <p className="text-sm font-bold text-slate-900">{profile?.dutyStartTime || '09:00'} - {profile?.dutyEndTime || '17:00'}</p>
+                         </div>
+                      </div>
+                      <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-indigo-50 border border-indigo-100 flex flex-col items-center justify-center text-center`}>
+                         <Award className="text-indigo-600 mb-3" size={40} />
+                         <p className="text-md font-black text-indigo-900">Certified Staff Member</p>
+                         <p className="text-[10px] font-bold text-indigo-500 uppercase mt-1">Verified by HQ Administration</p>
+                         <button className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase bg-white px-4 py-2 rounded-xl shadow-sm border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all">
+                           <Download size={14} /> Download ID Card
+                         </button>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            )}
+
           </div>
-        )}
+        </div>
       </div>
+      
+      {/* Footer Branding */}
+      <div className="mt-20 py-12 border-t border-white/20 text-center">
+         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">Powered by KhanHub Intelligence System</p>
+      </div>
+
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-in-from-bottom-4 { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation: fade-in 0.5s ease-out, slide-in-from-bottom-4 0.5s ease-out; }
+      `}</style>
     </div>
   );
 }

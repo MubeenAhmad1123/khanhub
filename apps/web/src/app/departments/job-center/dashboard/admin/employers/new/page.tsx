@@ -23,7 +23,7 @@ export default function RegisterEmployerPage() {
   // Auth & UI State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
   // SECTION 1: Login Credentials
@@ -65,6 +65,7 @@ export default function RegisterEmployerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     
     // Validate required fields
     if (!loginId || !loginPassword || !companyName || !industry || !address || 
@@ -79,18 +80,18 @@ export default function RegisterEmployerPage() {
     }
 
     setSubmitting(true);
+    setSubmitStatus('processing');
     setError('');
 
+    let employerDocId: string | null = null;
     try {
       // 1. Upload logo if selected
       let logoUrl = '';
       if (logoFile) {
-        setSubmitStatus('Uploading logo...');
         logoUrl = await uploadToCloudinary(logoFile, 'Khan Hub/jobcenter/employers');
       }
 
       // 2. Create employer document in Firestore
-      setSubmitStatus('Creating employer record...');
       const employerData: Omit<Employer, 'id'> = {
         companyName,
         industry,
@@ -111,9 +112,9 @@ export default function RegisterEmployerPage() {
       };
 
       const employerRef = await addDoc(collection(db, 'jobcenter_employers'), employerData);
+      employerDocId = employerRef.id;
 
       // 3. Create employer login account
-      setSubmitStatus('Creating employer login...');
       const result = await createJobCenterUserServer(
         loginId.toUpperCase(),
         loginPassword,
@@ -128,19 +129,28 @@ export default function RegisterEmployerPage() {
           await deleteDoc(doc(db, 'jobcenter_employers', employerRef.id));
         } catch {}
 
+        setSubmitStatus('error');
         setError(`Registration failed: ${result.error}. Please choose a different Employer Login ID.`);
         toast.error('Login account creation failed');
-        setSubmitting(false);
         return;
       }
 
-      setSubmitStatus('Done!');
+      setSubmitStatus('success');
       toast.success('Employer registered successfully ✓');
-      router.push(`/departments/job-center/dashboard/admin/employers/${employerRef.id}`);
+      setTimeout(() => {
+        router.push(`/departments/job-center/dashboard/admin/employers/${employerRef.id}`);
+      }, 1500);
     } catch (err: any) {
       console.error(err);
+      if (employerDocId) {
+        try {
+          await deleteDoc(doc(db, 'jobcenter_employers', employerDocId));
+        } catch {}
+      }
+      setSubmitStatus('error');
       setError(err?.message || 'Something went wrong');
       toast.error('Submission failed');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -273,9 +283,13 @@ export default function RegisterEmployerPage() {
                     </>
                   )}
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                <input ref={fileRef} type="file" accept="image/webp" className="hidden" onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
                   setLogoFile(file);
                   setLogoPreview(URL.createObjectURL(file));
                 }} />
@@ -331,17 +345,31 @@ export default function RegisterEmployerPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
+                  submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                  submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                  'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-900/10'
+                }`}
               >
                 {submitting ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span className="animate-pulse">{submitStatus}</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Registering...</span>
+                  </>
+                ) : submitStatus === 'success' ? (
+                  <>
+                    <Shield size={20} className="text-emerald-200" />
+                    <span>Employer Registered</span>
+                  </>
+                ) : submitStatus === 'error' ? (
+                  <>
+                    <X size={20} className="text-rose-200" />
+                    <span>Retry Sync</span>
                   </>
                 ) : (
                   <>
-                    <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Complete Registration
+                    <Save size={20} />
+                    <span>Complete Registration</span>
                   </>
                 )}
               </button>

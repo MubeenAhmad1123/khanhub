@@ -3,12 +3,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { doc, onSnapshot, collection, limit, orderBy, query, where, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, limit, orderBy, query, where, Timestamp, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+import { formatDateDMY, toDate } from '@/lib/utils';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
+
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 import { formatPKR } from '@/lib/hq/superadmin/format';
-import { formatDateDMY } from '@/lib/utils';
+
+
 import { ArrowLeft, User, Calendar, MapPin, Phone, ShieldCheck, Heart, Info, Database } from 'lucide-react';
 
 export default function SuperadminSpimsStudentProfilePage({ params }: { params: { id: string } }) {
@@ -26,28 +31,53 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
 
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
-    setLoading(true);
-    const unsub1 = onSnapshot(doc(db, 'spims_students', studentId), (snap) => {
-      setStudent(snap.exists() ? ({ id: snap.id, ...snap.data() } as any) : null);
-      setLoading(false);
-    });
 
-    const unsub2 = onSnapshot(
-      query(
-        collection(db, 'spims_transactions'),
-        where('studentId', '==', studentId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      ),
-      (snap) => setTx(snap.docs.map((d) => ({ id: d.id, ...d.data() } as any))),
-      () => {}
-    );
+    async function loadData() {
+      setLoading(true);
+      try {
+        // Fetch Student Profile
+        const studentSnap = await getDoc(doc(db, 'spims_students', studentId));
+        if (studentSnap.exists()) {
+          setStudent({ id: studentSnap.id, ...studentSnap.data() });
+        }
 
-    return () => {
-      unsub1();
-      unsub2();
-    };
+        // Fetch Transactions (Cached 60s)
+        const cacheKey = `spims_tx_${studentId}`;
+        const cachedTx = getCached<any[]>(cacheKey);
+        let txList = [];
+
+        if (cachedTx) {
+          txList = cachedTx;
+        } else {
+          const q = query(
+            collection(db, 'spims_transactions'),
+            where('studentId', '==', studentId),
+            limit(50)
+          );
+          const txSnap = await getDocs(q);
+          txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setCached(cacheKey, txList, 60);
+        }
+
+        // Client-side sort
+        txList.sort((a: any, b: any) => {
+          const tA = toDate(a.createdAt || a.date).getTime();
+          const tB = toDate(b.createdAt || b.date).getTime();
+          return tB - tA;
+        });
+
+
+        setTx(txList);
+      } catch (err) {
+        console.error('Error loading student data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
   }, [session, studentId]);
+
 
   const totals = useMemo(() => {
     const approved = tx.filter((t) => String(t.status) === 'approved');
@@ -119,7 +149,7 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                 <h1 className="text-4xl md:text-5xl font-black text-black dark:text-white uppercase tracking-tighter truncate">
                   {student?.name || 'SUBJECT NODE'}
                 </h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-black dark:text-black mt-2 italic">
                   Command Authorization Level Alpha • SPIMS Architecture
                 </p>
               </div>
@@ -131,20 +161,20 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
             <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Liabilities</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-2">Liabilities</div>
               <div className="text-xl font-black text-black dark:text-white tracking-tighter">{formatPKR(remaining)}</div>
             </div>
             <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Total Cleared</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-2">Total Cleared</div>
               <div className="text-xl font-black text-black dark:text-white tracking-tighter">{formatPKR(totals.totalApproved)}</div>
             </div>
             <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Queue Count</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-2">Queue Count</div>
               <div className="text-xl font-black text-black dark:text-white tracking-tighter">{totals.pendingCount}</div>
             </div>
             <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">ID Fragment</div>
-              <div className="text-[10px] font-black font-mono text-gray-400 dark:text-gray-500 break-all">{studentId.substring(0, 16)}...</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-2">ID Fragment</div>
+              <div className="text-[10px] font-black font-mono text-black dark:text-black break-all">{studentId.substring(0, 16)}...</div>
             </div>
           </div>
 
@@ -161,23 +191,23 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
               </div>
               <div className="space-y-6 text-sm">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Authorized Guardian</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black">Authorized Guardian</span>
                   <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['fatherName', 'guardianName'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Registry ID (CNIC)</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black">Registry ID (CNIC)</span>
                   <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['cnic', 'cnicNo'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Chrono Data (DOB/Age)</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black">Chrono Data (DOB/Age)</span>
                   <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['dob', 'age'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Gender Allocation</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black">Gender Allocation</span>
                   <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['gender'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Node Status</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black">Node Status</span>
                   <span className="font-black text-black dark:text-white uppercase mt-1 tracking-wider">{getVal(['status', 'isActive'])}</span>
                 </div>
               </div>
@@ -194,38 +224,38 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
               <div className="space-y-6 text-sm">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                    <Calendar size={18} className="text-gray-400" />
+                    <Calendar size={18} className="text-black" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Enrollment Sequence</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Enrollment Sequence</span>
                     <span className="font-black text-black dark:text-white uppercase">{getVal(['admissionDate', 'createdAt'])}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                    <Phone size={18} className="text-gray-400" />
+                    <Phone size={18} className="text-black" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Comm Node</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Comm Node</span>
                     <span className="font-black text-black dark:text-white uppercase">{getVal(['phone', 'contactNumber', 'contact'])}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                    <MapPin size={18} className="text-gray-400" />
+                    <MapPin size={18} className="text-black" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Geo Location</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Geo Location</span>
                     <span className="font-black text-black dark:text-white uppercase text-[11px] line-clamp-2">{getVal(['address'])}</span>
                   </div>
                 </div>
                 <div className="pt-6 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 gap-4">
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Department</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Department</span>
                     <span className="font-black text-black dark:text-white uppercase">SPIMS</span>
                   </div>
                   <div className="flex flex-col text-right">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Classification</span>
+                    <span className="text-[9px] font-black text-black uppercase tracking-widest mb-0.5">Classification</span>
                     <span className="font-black text-black dark:text-white uppercase">{getVal(['course', 'class'])}</span>
                   </div>
                 </div>
@@ -244,7 +274,7 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                 </div>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Observations & Remarks</p>
               </div>
-              <p className="text-[13px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest whitespace-pre-wrap leading-[2] italic">
+              <p className="text-[13px] font-black text-black dark:text-black uppercase tracking-widest whitespace-pre-wrap leading-[2] italic">
                 {getVal(['notes', 'remarks'])}
               </p>
             </div>
@@ -261,7 +291,7 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {additionalFields.map(([key, val]) => (
                     <div key={key} className="flex flex-col bg-white dark:bg-black p-4 rounded-2xl border border-gray-50 dark:border-white/5 shadow-sm">
-                      <span className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest truncate" title={key}>{key}</span>
+                      <span className="text-[9px] font-black text-black dark:text-black uppercase tracking-widest truncate" title={key}>{key}</span>
                       <span className="font-black text-[10px] text-black dark:text-white uppercase mt-1.5 break-all">{renderValue(val)}</span>
                     </div>
                   ))}
@@ -274,7 +304,7 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
           <div className="mt-12">
             <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tighter mb-8 px-2">Ledger Stream</h2>
             {!tx.length ? (
-              <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-12 text-center text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest italic shadow-inner">
+              <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-12 text-center text-black dark:text-black text-[10px] font-black uppercase tracking-widest italic shadow-inner">
                 Zero authenticated activities logged in fragment stream.
               </div>
             ) : (
@@ -293,21 +323,21 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                           <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
                             isApproved ? 'bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white' :
                             isRejected ? 'bg-rose-500 text-white' :
-                            'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-white/10'
+                            'bg-gray-100 dark:bg-white/10 text-black dark:text-black border border-gray-100 dark:border-white/10'
                           }`}>
                             {String(t.status || 'Syncing')}
                           </span>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 flex flex-wrap items-center gap-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black flex flex-wrap items-center gap-4">
                           <span>{dateStr}</span>
                           {t.receiptNo && <span className="text-black dark:text-white opacity-40">FRAGMENT #{t.receiptNo}</span>}
                           {t.cashierName && <span className="italic">Authorized By: {t.cashierName.toUpperCase()}</span>}
                         </p>
-                        {t.notes && <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-gray-300 dark:text-gray-600 line-clamp-1 italic">Memo: {t.notes}</p>}
+                        {t.notes && <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-black dark:text-black line-clamp-1 italic">Memo: {t.notes}</p>}
                       </div>
                       <div className="shrink-0 sm:text-right flex flex-col items-start sm:items-end">
                         <p className="text-2xl font-black text-black dark:text-white tracking-tighter">{formatPKR(Number(t.amount || 0))}</p>
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-1">Value Clearance</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-black dark:text-black mt-1">Value Clearance</p>
                       </div>
                     </div>
                   )

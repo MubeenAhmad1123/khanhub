@@ -2,11 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, Timestamp, collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { Loader2, ArrowLeft, Heart, Calendar, User, Phone, MapPin, ShieldCheck, Info, Database } from 'lucide-react';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+import { formatDateDMY, toDate } from '@/lib/utils';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { formatDateDMY } from '@/lib/utils';
+
 import { formatPKR } from '@/lib/hq/superadmin/format';
 import { EmptyState } from '@/components/hq/superadmin/DataState';
 
@@ -33,13 +36,43 @@ export default function HqRehabPatientProfilePage() {
       setLoading(true);
       setError(null);
       try {
+        // Fetch Patient
         const snap = await getDoc(doc(db, 'rehab_patients', patientId));
         if (!snap.exists()) {
           setPatient(null);
           setError('Patient not found.');
+          setLoading(false);
           return;
         }
         setPatient({ id: snap.id, ...snap.data() });
+
+        // Fetch Transactions (Cached 60s)
+        const cacheKey = `rehab_tx_${patientId}`;
+        const cachedTx = getCached<any[]>(cacheKey);
+        let txList = [];
+
+        if (cachedTx) {
+          txList = cachedTx;
+        } else {
+          const q = query(
+            collection(db, 'rehab_transactions'),
+            where('patientId', '==', patientId),
+            limit(50)
+          );
+          const txSnap = await getDocs(q);
+          txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setCached(cacheKey, txList, 60);
+        }
+
+        // Client-side sort
+        txList.sort((a: any, b: any) => {
+          const tA = toDate(a.createdAt || a.date).getTime();
+          const tB = toDate(b.createdAt || b.date).getTime();
+          return tB - tA;
+        });
+
+
+        setTx(txList);
       } catch (e: any) {
         console.error('[HQ Superadmin] load patient error:', e);
         setError(e?.message || 'Failed to load patient.');
@@ -48,27 +81,9 @@ export default function HqRehabPatientProfilePage() {
       }
     };
 
-    void run();
-
-    // Also get transactions
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'rehab_transactions'),
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      ),
-      (snap) => setTx(snap.docs.map((d) => ({ id: d.id, ...d.data() } as any))),
-      (err) => {
-        // Only log if necessary, it might fail if index is building but we fallback gracefully
-        console.warn('Tx fetch error or index building:', err);
-      }
-    );
-
-    return () => {
-      unsub();
-    };
+    run();
   }, [sessionLoading, session, router, patientId]);
+
 
   const totals = useMemo(() => {
     const approved = tx.filter((t) => String(t.status) === 'approved');
@@ -79,15 +94,18 @@ export default function HqRehabPatientProfilePage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
-        <Loader2 className="w-10 h-10 animate-spin text-black dark:text-white" />
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin text-indigo-600 mx-auto mb-6" />
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic animate-pulse">Synchronizing Patient Matrix...</p>
+        </div>
       </div>
     );
   }
 
   if (!patient && error) {
     return (
-      <div className="min-h-screen bg-white dark:bg-black p-8 flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-screen bg-[#FCFBF8] p-8 flex items-center justify-center">
         <EmptyState title="Access Restricted" message={error} />
       </div>
     );
@@ -116,181 +134,191 @@ export default function HqRehabPatientProfilePage() {
   const additionalFields = patient ? Object.entries(patient).filter(([k]) => !explicitKeys.includes(k)) : [];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white py-12 px-4 md:px-8 transition-colors duration-300">
-      <div className="max-w-5xl mx-auto space-y-10">
+    <div className="min-h-screen bg-[#FCFBF8] text-gray-900 py-20 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto space-y-12">
         <button
           type="button"
           onClick={() => router.back()}
-          className="min-h-[44px] inline-flex items-center gap-3 text-black dark:text-white bg-white dark:bg-black border border-gray-100 dark:border-white/10 px-6 py-2 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-sm hover:scale-105 active:scale-95"
+          className="group inline-flex items-center gap-4 text-gray-400 hover:text-indigo-600 transition-all font-black text-[10px] uppercase tracking-[0.3em]"
         >
-          <ArrowLeft size={16} /> REVERT TO DIRECTORY
+          <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:-translate-x-1 transition-all">
+            <ArrowLeft size={16} /> 
+          </div>
+          Return to Registry
         </button>
 
-        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-          <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-[1.5rem] bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl transition-transform hover:rotate-6">
-                <Heart size={40} />
+        <div className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] relative overflow-hidden">
+          {/* Header Section */}
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-10 mb-16 pb-16 border-b border-gray-50">
+            <div className="flex items-center gap-10">
+              <div className="w-24 h-24 rounded-[2rem] bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-200 transition-transform hover:scale-105 duration-500">
+                <Heart size={44} strokeWidth={2.5} />
               </div>
               <div className="min-w-0">
-                <h1 className="text-4xl md:text-5xl font-black text-black dark:text-white uppercase tracking-tighter truncate">
+                <h1 className="text-5xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-4">
                   {patient?.name || 'SUBJECT NODE'}
                 </h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">
-                  Command Authorization Level Alpha • Rehab Architecture
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic">
+                  Premium Rehab Infrastructure • Authorization Alpha
                 </p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-3 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
-              <ShieldCheck size={18} /> Authenticated Secure Access
+            <div className="inline-flex items-center gap-4 bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-sm border border-indigo-100">
+              <ShieldCheck size={20} /> Verified Secure Node
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Total Cleared</div>
-              <div className="text-xl font-black text-black dark:text-white tracking-tighter">{formatPKR(totals.totalApproved)}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-16">
+            <div className="rounded-[2.5rem] border border-gray-100 bg-gray-50/30 p-10 shadow-sm transition-all hover:scale-[1.02]">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4">Financial Clearance</div>
+              <div className="text-2xl font-black text-indigo-600 tracking-tighter">{formatPKR(totals.totalApproved)}</div>
             </div>
-            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Queue Count</div>
-              <div className="text-xl font-black text-black dark:text-white tracking-tighter">{totals.pendingCount}</div>
+            <div className="rounded-[2.5rem] border border-gray-100 bg-gray-50/30 p-10 shadow-sm transition-all hover:scale-[1.02]">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4">Pending Tasks</div>
+              <div className="text-2xl font-black text-amber-500 tracking-tighter">{totals.pendingCount}</div>
             </div>
-            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white sm:col-span-2">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">ID Fragment</div>
-              <div className="text-[10px] font-black font-mono text-gray-400 dark:text-gray-500 break-all">{patientId}</div>
+            <div className="rounded-[2.5rem] border border-gray-100 bg-gray-50/30 p-10 shadow-sm transition-all hover:scale-[1.02] sm:col-span-2">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4">Registry Hash (ID)</div>
+              <div className="text-[11px] font-black font-mono text-gray-600 break-all bg-white/50 px-4 py-2 rounded-xl border border-gray-50">{patientId}</div>
             </div>
           </div>
 
           {patient && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               
               {/* Identity Info */}
-              <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
-                    <Info size={16} />
+              <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/40">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+                    <Info size={18} />
                   </div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Identity Matrix</p>
+                  <p className="text-[12px] font-black uppercase tracking-[0.3em] text-gray-900">Identity Profile</p>
                 </div>
-                <div className="space-y-6 text-sm">
+                <div className="space-y-8">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Authorized Guardian</span>
-                    <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['fatherName', 'guardianName'])}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-2">Guardian Authority</span>
+                    <span className="font-black text-gray-900 uppercase text-lg">{getVal(['fatherName', 'guardianName'])}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Registry ID (CNIC)</span>
-                    <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['cnic', 'cnicNo'])}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-2">Registry CNIC</span>
+                    <span className="font-black text-gray-900 uppercase text-lg">{getVal(['cnic', 'cnicNo'])}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Chrono Data (DOB/Age)</span>
-                    <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['dob', 'age'])}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-2">Temporal Data</span>
+                    <span className="font-black text-gray-900 uppercase text-lg">{getVal(['dob', 'age'])}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Gender Allocation</span>
-                    <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['gender'])}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-2">Gender Class</span>
+                    <span className="font-black text-gray-900 uppercase text-lg">{getVal(['gender'])}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Node Status</span>
-                    <span className="font-black text-black dark:text-white uppercase mt-1 tracking-wider">{getVal(['status', 'isActive'])}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-2">Live Status</span>
+                    <div className="inline-flex items-center gap-3">
+                       <div className={`w-2.5 h-2.5 rounded-full ${patient.isActive !== false ? 'bg-indigo-600' : 'bg-rose-600'} animate-pulse`} />
+                       <span className="font-black text-gray-900 uppercase tracking-widest">{getVal(['status', 'isActive'])}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Admission & Contact Info */}
-              <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
-                    <User size={16} />
+              <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/40">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+                    <User size={18} />
                   </div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Lifecycle & Contact</p>
+                  <p className="text-[12px] font-black uppercase tracking-[0.3em] text-gray-900">Logistics & Comms</p>
                 </div>
-                <div className="space-y-6 text-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                      <Calendar size={18} className="text-gray-400" />
+                <div className="space-y-8">
+                  <div className="flex items-center gap-6 group">
+                    <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 group-hover:bg-indigo-50 transition-colors">
+                      <Calendar size={22} className="text-indigo-600" />
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Enrollment Sequence</span>
-                      <span className="font-black text-black dark:text-white uppercase">{getVal(['admissionDate', 'createdAt'])}</span>
+                    <div>
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Inception Node</span>
+                      <span className="font-black text-gray-900 uppercase text-base">{getVal(['admissionDate', 'createdAt'])}</span>
                     </div>
                   </div>
                   {patient.isActive === false && (
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                        <Calendar size={18} className="text-rose-400" />
+                    <div className="flex items-center gap-6 group">
+                      <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0 border border-rose-100">
+                        <Calendar size={22} className="text-rose-600" />
                       </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Termination Sequence (Discharge)</span>
-                        <span className="font-black text-black dark:text-white uppercase">{getVal(['dischargeDate'])}</span>
+                      <div>
+                        <span className="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-1">Termination Node</span>
+                        <span className="font-black text-rose-600 uppercase text-base">{getVal(['dischargeDate'])}</span>
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                      <Phone size={18} className="text-gray-400" />
+                  <div className="flex items-center gap-6 group">
+                    <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 group-hover:bg-indigo-50 transition-colors">
+                      <Phone size={22} className="text-indigo-600" />
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Comm Node</span>
-                      <span className="font-black text-black dark:text-white uppercase">{getVal(['phone', 'contactNumber', 'contact', 'emergencyContact'])}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-                      <MapPin size={18} className="text-gray-400" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Geo Location</span>
-                      <span className="font-black text-black dark:text-white uppercase text-[11px] line-clamp-2">{getVal(['address'])}</span>
+                    <div>
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Communication Protocol</span>
+                      <span className="font-black text-gray-900 uppercase text-base">{getVal(['phone', 'contactNumber', 'contact', 'emergencyContact'])}</span>
                     </div>
                   </div>
-                  <div className="pt-6 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Department</span>
-                      <span className="font-black text-black dark:text-white uppercase">REHAB</span>
+                  <div className="flex items-center gap-6 group">
+                    <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 group-hover:bg-indigo-50 transition-colors">
+                      <MapPin size={22} className="text-indigo-600" />
                     </div>
-                    <div className="flex flex-col text-right">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Node Class</span>
-                      <span className="font-black text-black dark:text-white uppercase">INPATIENT</span>
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Geospatial Data</span>
+                      <span className="font-black text-gray-900 uppercase text-sm line-clamp-2">{getVal(['address'])}</span>
                     </div>
                   </div>
-                  <div className="bg-black dark:bg-white p-4 rounded-2xl">
-                    <span className="text-[9px] font-black text-white/40 dark:text-black/40 uppercase tracking-widest block mb-1">Authorization Fragment</span>
-                    <span className="font-black text-white dark:text-black uppercase break-all">{getVal(['inpatientNumber', 'outpatientNumber'])}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Responsible Node</span>
-                    <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['assignedTo', 'doctor', 'staffName'])}</span>
+
+                  <div className="pt-10 border-t border-gray-50 flex flex-col gap-6">
+                    <div className="flex justify-between items-center bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                       <div>
+                         <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-1">Department</span>
+                         <span className="font-black text-indigo-600 uppercase">REHAB</span>
+                       </div>
+                       <div className="text-right">
+                         <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-1">Node Class</span>
+                         <span className="font-black text-gray-900 uppercase">INPATIENT</span>
+                       </div>
+                    </div>
+                    <div className="bg-gray-900 p-8 rounded-3xl shadow-xl">
+                      <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.4em] block mb-3 italic">Authorization Signature</span>
+                      <span className="font-black text-white uppercase text-lg tracking-widest block font-mono">{getVal(['inpatientNumber', 'outpatientNumber'])}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-3 block">Primary Physician Node</span>
+                      <span className="font-black text-gray-900 uppercase text-lg">{getVal(['assignedTo', 'doctor', 'staffName'])}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Notes Section */}
-              <div className="md:col-span-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
-                    <Heart size={16} />
+              <div className="md:col-span-2 bg-indigo-600 rounded-[3rem] p-12 md:p-16 shadow-2xl shadow-indigo-200">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md text-white flex items-center justify-center">
+                    <Heart size={24} strokeWidth={2.5} />
                   </div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Clinical Observations & Remarks</p>
+                  <p className="text-[14px] font-black uppercase tracking-[0.4em] text-white">Clinical Intelligence & Remarks</p>
                 </div>
-                <p className="text-[13px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest whitespace-pre-wrap leading-[2] italic">
-                  {getVal(['diagnosis', 'addictionType', 'notes', 'remarks'])}
+                <p className="text-xl md:text-2xl font-black text-white uppercase tracking-tight leading-[1.6] italic">
+                  "{getVal(['diagnosis', 'addictionType', 'notes', 'remarks'])}"
                 </p>
               </div>
 
               {/* Dynamic Database Record Dump */}
               {additionalFields.length > 0 && (
-                <div className="md:col-span-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-8 mt-4 shadow-sm">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
-                      <Database size={16} />
+                <div className="md:col-span-2 bg-gray-50/50 border border-gray-100 rounded-[3rem] p-12 md:p-16">
+                  <div className="flex items-center gap-4 mb-12">
+                    <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center shadow-lg">
+                      <Database size={18} />
                     </div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Residual Database Fragments</p>
+                    <p className="text-[12px] font-black uppercase tracking-[0.3em] text-gray-900">Extended Schema Fragments</p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {additionalFields.map(([key, val]) => (
-                      <div key={key} className="flex flex-col bg-white dark:bg-black p-4 rounded-2xl border border-gray-50 dark:border-white/5 shadow-sm">
-                        <span className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest truncate" title={key}>{key}</span>
-                        <span className="font-black text-[10px] text-black dark:text-white uppercase mt-1.5 break-all">{renderValue(val)}</span>
+                      <div key={key} className="flex flex-col bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md group">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate mb-3 group-hover:text-indigo-600" title={key}>{key}</span>
+                        <span className="font-black text-sm text-gray-900 uppercase break-all">{renderValue(val)}</span>
                       </div>
                     ))}
                   </div>
@@ -300,43 +328,47 @@ export default function HqRehabPatientProfilePage() {
           )}
 
           {/* Payment History */}
-          <div className="mt-12">
-            <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tighter mb-8 px-2">Ledger Stream</h2>
+          <div className="mt-24">
+            <div className="flex items-end gap-6 mb-12 px-2">
+               <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tighter">Financial Ledger</h2>
+               <div className="h-0.5 bg-gray-100 flex-1 mb-3 rounded-full" />
+            </div>
+            
             {!tx.length ? (
-              <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-12 text-center text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest italic shadow-inner">
-                Zero authenticated activities logged in fragment stream.
+              <div className="bg-gray-50 border border-dashed border-gray-200 rounded-[3rem] p-24 text-center">
+                <p className="text-[12px] font-black uppercase tracking-[0.5em] text-gray-400 italic">No historical activities found in ledger stream</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {tx.map((t) => {
                   const dateStr = t.createdAt ? renderValue(t.createdAt) : 'Unknown Date';
                   const isApproved = String(t.status) === 'approved';
                   const isRejected = String(t.status) === 'rejected';
                   return (
-                    <div key={t.id} className="group rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 hover:shadow-2xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6 hover:scale-[1.01]">
+                    <div key={t.id} className="group rounded-[2.5rem] border border-gray-100 bg-white p-10 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-8 hover:scale-[1.01] hover:border-indigo-100">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-4 mb-2">
-                          <p className="truncate text-lg font-black text-black dark:text-white uppercase tracking-tight group-hover:translate-x-1 transition-transform">
+                        <div className="flex items-center gap-6 mb-4">
+                          <p className="truncate text-2xl font-black text-gray-900 uppercase tracking-tight group-hover:translate-x-1 transition-transform">
                             {String(t.transactionType || t.categoryName || t.category || t.type || 'Activity Node')}
                           </p>
-                          <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
-                            isApproved ? 'bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white' :
-                            isRejected ? 'bg-rose-500 text-white' :
-                            'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-white/10'
+                          <span className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-sm border ${
+                            isApproved ? 'bg-indigo-600 text-white border-indigo-600' :
+                            isRejected ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                            'bg-gray-50 text-gray-400 border-gray-100'
                           }`}>
                             {String(t.status || 'Syncing')}
                           </span>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 flex flex-wrap items-center gap-4">
-                          <span>{dateStr}</span>
-                          {t.receiptNo && <span className="text-black dark:text-white opacity-40">FRAGMENT #{t.receiptNo}</span>}
-                          {t.cashierName && <span className="italic">Authorized By: {t.cashierName.toUpperCase()}</span>}
-                        </p>
-                        {t.notes && <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-gray-300 dark:text-gray-600 line-clamp-1 italic">Memo: {t.notes}</p>}
+                        <div className="flex flex-wrap items-center gap-6 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                          <span className="flex items-center gap-2"><Calendar size={12} /> {dateStr}</span>
+                          {t.receiptNo && <span className="text-gray-900/60 bg-gray-50 px-3 py-1 rounded-lg">HASH #{t.receiptNo}</span>}
+                          {t.cashierName && <span className="italic flex items-center gap-2"><ShieldCheck size={12} /> Authority: {t.cashierName.toUpperCase()}</span>}
+                        </div>
+                        {t.notes && <p className="mt-6 text-[11px] font-black uppercase tracking-[0.1em] text-gray-600 bg-gray-50 p-4 rounded-xl border-l-4 border-indigo-600 line-clamp-2 italic">Memo: {t.notes}</p>}
                       </div>
                       <div className="shrink-0 sm:text-right flex flex-col items-start sm:items-end">
-                        <p className="text-2xl font-black text-black dark:text-white tracking-tighter">{formatPKR(Number(t.amount || 0))}</p>
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-1">Value Clearance</p>
+                        <p className={`text-4xl font-black tracking-tighter ${isApproved ? 'text-indigo-600' : 'text-gray-900'}`}>{formatPKR(Number(t.amount || 0))}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mt-2">Cleared Assets</p>
                       </div>
                     </div>
                   )

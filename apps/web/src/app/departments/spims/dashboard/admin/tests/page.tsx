@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SPIMS_COURSES } from '@/types/spims';
-import { subscribeAdminTests, createSpimsTest, deleteSpimsTest, type SpimsTest, type SpimsTestScope } from '@/lib/spims/tests';
+import { subscribeAdminTests, deleteSpimsTest, type SpimsTest, type SpimsTestScope } from '@/lib/spims/tests';
+import { announceSpimsTestServer } from '@/app/hq/actions/spims';
 
 export default function SpimsAdminTestsPage() {
   const router = useRouter();
@@ -53,23 +54,27 @@ export default function SpimsAdminTestsPage() {
     if (!canCreate) return;
     setCreating(true);
     try {
-      await createSpimsTest({
+      const result = await announceSpimsTestServer({
         title: title.trim(),
         scope,
         course: scope === 'course_session' ? course : null,
         session: scope === 'course_session' ? cohortSession.trim() : null,
         studentId: scope === 'student' ? studentId.trim() : null,
         note: note.trim() || null,
-        createdBy: session?.customId || null,
-        scheduledAt: null,
-      } as any);
-      setTitle('');
-      setNote('');
-      setStudentId('');
-      toast.success('Test announced');
+        createdBy: session?.customId || 'Admin',
+      });
+
+      if (result.success) {
+        setTitle('');
+        setNote('');
+        setStudentId('');
+        toast.success(`Test announced to ${result.notifiedCount} students`);
+      } else {
+        throw new Error(result.error);
+      }
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || 'Failed');
+      toast.error(e?.message || 'Failed to announce test');
     } finally {
       setCreating(false);
     }

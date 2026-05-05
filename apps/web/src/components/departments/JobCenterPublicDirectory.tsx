@@ -15,8 +15,11 @@ import {
   ChevronRight,
   User,
   Globe,
-  Check
+  Check,
+  Building,
+  X
 } from 'lucide-react';
+import Link from 'next/link';
 import { 
   fetchPublicSeekers, 
   fetchPublicEmployers, 
@@ -31,13 +34,25 @@ interface Props {
     secondary: string;
     light: string;
   };
+  previewMode?: boolean;
 }
 
-export default function JobCenterPublicDirectory({ theme }: Props) {
+function getCompleteness(s: PublicJobSeeker) {
+  let score = 0;
+  if (s.photoUrl) score += 10;
+  if (s.skills && s.skills.length > 0) score += s.skills.length * 2;
+  if (s.experience && s.experience.length > 0) score += 5;
+  if (s.education && s.education.length > 0) score += 5;
+  if (s.jobInterests && s.jobInterests.length > 0) score += s.jobInterests.length * 2;
+  return score;
+}
+
+export default function JobCenterPublicDirectory({ theme, previewMode = false }: Props) {
   const [view, setView] = useState<'seekers' | 'companies'>('seekers');
   const [seekers, setSeekers] = useState<PublicJobSeeker[]>([]);
   const [companies, setCompanies] = useState<PublicEmployer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProfile, setSelectedProfile] = useState<PublicJobSeeker | PublicEmployer | null>(null);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,10 +91,10 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
     // Experience Filter logic
     let matchesExp = true;
     if (selectedExp !== 'all') {
-      const years = parseInt(s.experience || '0');
-      if (selectedExp === '<1') matchesExp = years < 1;
-      else if (selectedExp === '1-3') matchesExp = years >= 1 && years <= 3;
-      else if (selectedExp === '3+') matchesExp = years > 3;
+      const expCount = s.experience?.length || 0;
+      if (selectedExp === '<1') matchesExp = expCount < 1;
+      else if (selectedExp === '1-3') matchesExp = expCount >= 1 && expCount <= 3;
+      else if (selectedExp === '3+') matchesExp = expCount > 3;
     }
 
     // Status Filter
@@ -102,6 +117,15 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
 
     return matchesSearch && matchesIndustry && matchesHiring;
   });
+
+  // Calculate Display Arrays (incorporating preview mode logic)
+  const displaySeekers = previewMode 
+    ? [...filteredSeekers].sort((a, b) => getCompleteness(b) - getCompleteness(a)).slice(0, 4)
+    : filteredSeekers;
+
+  const displayCompanies = previewMode
+    ? [...filteredCompanies].slice(0, 4)
+    : filteredCompanies;
 
   const handleContact = (item: PublicJobSeeker | PublicEmployer, type: 'seeker' | 'employer') => {
     const phone = '923006395220';
@@ -164,6 +188,7 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
       </div>
 
       {/* ── FILTERS ── */}
+      {!previewMode && (
       <div className="bg-white p-4 rounded-3xl border-2 border-neutral-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
@@ -249,14 +274,16 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
           )}
         </div>
       </div>
+      )}
 
       {/* ── GRID ── */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-8">
         {view === 'seekers' ? (
-          filteredSeekers.map(s => (
+          displaySeekers.map(s => (
             <div 
               key={s.id} 
-              className="group bg-white rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+              onClick={() => setSelectedProfile(s)}
+              className="cursor-pointer group bg-white rounded-2xl sm:rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
             >
               {/* ID Badge */}
               <div className="absolute top-4 left-4 z-10 bg-white/70 backdrop-blur-md px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-900 border border-white/50 shadow-sm flex items-center gap-2">
@@ -291,7 +318,7 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Interests</p>
                   <div className="flex flex-wrap gap-2 mb-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
-                    {s.jobInterests.slice(0, 3).map(interest => (
+                    {(s.jobInterests || []).slice(0, 3).map(interest => (
                       <span key={interest} className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
                         {interest}
                       </span>
@@ -300,81 +327,87 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
                 </div>
               </div>
 
-              <div className="p-7 flex-1 flex flex-col bg-gradient-to-b from-white to-neutral-50/50">
+              <div className="p-4 sm:p-7 flex-1 flex flex-col bg-gradient-to-b from-white to-neutral-50/50">
                 <div className="mb-4">
-                  <h3 className="text-2xl font-black text-neutral-900 mb-1 leading-tight tracking-tight flex items-center gap-2">
+                  <h3 className="text-lg sm:text-2xl font-black text-neutral-900 mb-1 leading-tight tracking-tight flex items-center gap-1.5 sm:gap-2 line-clamp-1">
                     {s.name}
-                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
-                      <Check className="w-3 h-3 text-white" strokeWidth={4} />
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-blue-500 flex items-center justify-center shadow-sm flex-shrink-0">
+                      <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" strokeWidth={4} />
                     </div>
                   </h3>
-                  <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-wide">
-                    <GraduationCap className="w-4 h-4 text-primary-500" style={{ color: theme.primary }} />
-                    <span className="truncate">{s.education}</span>
+                  <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-neutral-400 uppercase tracking-wide">
+                    <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-500 flex-shrink-0" style={{ color: theme.primary }} />
+                    <span className="truncate">
+                      {s.education && s.education.length > 0
+                        ? (typeof s.education[0] === 'object' ? s.education[0].degree : String(s.education[0]))
+                        : 'N/A'}
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-5 mb-8">
+                <div className="space-y-4 sm:space-y-5 mb-6 sm:mb-8 flex-1">
                   <div>
-                    <span className="text-[10px] font-black uppercase text-neutral-300 tracking-[0.2em] block mb-3">Professional Skills</span>
-                    <div className="flex flex-wrap gap-2">
-                      {s.skills.slice(0, 4).map(skill => (
-                        <span key={skill} className="px-3 py-1.5 bg-white text-neutral-600 text-[10px] font-black rounded-xl border border-neutral-100 shadow-sm group-hover:border-primary-100 transition-colors">
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase text-neutral-300 tracking-[0.2em] block mb-2 sm:mb-3">Skills</span>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      {(s.skills || []).slice(0, 3).map(skill => (
+                        <span key={skill} className="px-2 py-1 sm:px-3 sm:py-1.5 bg-white text-neutral-600 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl border border-neutral-100 shadow-sm group-hover:border-primary-100 transition-colors">
                           {skill}
                         </span>
                       ))}
-                      {s.skills.length > 4 && (
-                        <span className="px-3 py-1.5 bg-neutral-100 text-neutral-400 text-[10px] font-black rounded-xl">
-                          +{s.skills.length - 4}
+                      {(s.skills || []).length > 3 && (
+                        <span className="px-2 py-1 sm:px-3 sm:py-1.5 bg-neutral-100 text-neutral-400 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl">
+                          +{(s.skills || []).length - 3}
                         </span>
                       )}
                     </div>
                   </div>
                   
-                  {s.experience && (
-                    <div className="p-5 rounded-2xl border transition-all duration-300 bg-neutral-100 border-neutral-200 group-hover:bg-white group-hover:border-primary-100">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Briefcase size={16} className="text-primary-500" style={{ color: theme.primary }} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Work Experience</span>
+                  {s.experience && s.experience.length > 0 && (
+                    <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 bg-neutral-100 border-neutral-200 group-hover:bg-white group-hover:border-primary-100">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                        <Briefcase size={14} className="text-primary-500 sm:w-4 sm:h-4" style={{ color: theme.primary }} />
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Experience</span>
                       </div>
-                      <div className="text-xs text-neutral-700 font-bold leading-relaxed">
-                        {/^\d+$/.test(s.experience) ? (
-                          <span className="text-sm font-black text-neutral-900">
-                             {s.experience} Years Professional Experience
-                          </span>
-                        ) : (
-                          <span className="italic text-neutral-600">&ldquo;{s.experience}&rdquo;</span>
-                        )}
+                      <div className="text-[10px] sm:text-xs text-neutral-700 font-bold leading-relaxed line-clamp-2">
+                        {(s.experience || []).map((exp: any, idx: number) => (
+                          <div key={idx} className={idx > 0 ? "mt-1 pt-1 border-t border-neutral-200/50" : ""}>
+                            {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => handleContact(s, 'seeker')}
-                  className="mt-auto w-full flex items-center justify-center gap-3 py-4.5 rounded-[1.5rem] bg-neutral-900 text-white text-sm font-black uppercase tracking-widest hover:bg-black hover:shadow-2xl hover:shadow-neutral-400/30 active:scale-95 transition-all duration-300"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleContact(s, 'seeker');
+                  }}
+                  className="mt-auto w-full flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4.5 rounded-xl sm:rounded-[1.5rem] bg-neutral-900 text-white text-[10px] sm:text-sm font-black uppercase tracking-widest hover:bg-black hover:shadow-2xl hover:shadow-neutral-400/30 active:scale-95 transition-all duration-300"
                 >
-                  <MessageSquare className="w-5 h-5 text-neutral-400" />
-                  Contact Admin
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400" />
+                  Contact
                 </button>
               </div>
             </div>
           ))
         ) : (
-          filteredCompanies.map(c => (
+          displayCompanies.map(c => (
             <div 
               key={c.id} 
-              className="group bg-white rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col"
+              onClick={() => setSelectedProfile(c)}
+              className="cursor-pointer group bg-white rounded-2xl sm:rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col"
             >
-              <div className="relative h-56 w-full bg-neutral-50 flex items-center justify-center p-12 transition-colors group-hover:bg-white">
+              <div className="relative h-40 sm:h-56 w-full bg-neutral-50 flex items-center justify-center p-8 sm:p-12 transition-colors group-hover:bg-white">
                 {/* Hiring Status Badge */}
                 <div className={cn(
-                  "absolute top-4 right-4 z-10 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-lg",
+                  "absolute top-3 right-3 sm:top-4 sm:right-4 z-10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest border shadow-lg",
                   (c.openJobsCount || 0) > 0 
                     ? "bg-indigo-500 border-indigo-400 text-white" 
                     : "bg-zinc-100 border-zinc-200 text-zinc-400"
                 )}>
-                  {(c.openJobsCount || 0) > 0 ? `Now Hiring (${c.openJobsCount} Vacancies)` : 'Fully Staffed'}
+                  {(c.openJobsCount || 0) > 0 ? `Hiring (${c.openJobsCount})` : 'Fully Staffed'}
                 </div>
 
                 {c.logoUrl ? (
@@ -388,7 +421,7 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
                   </div>
                 ) : (
                   <div 
-                    className="w-24 h-24 rounded-3xl flex items-center justify-center text-4xl font-black shadow-2xl transition-transform duration-700 group-hover:rotate-12"
+                    className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl flex items-center justify-center text-2xl sm:text-4xl font-black shadow-2xl transition-transform duration-700 group-hover:rotate-12"
                     style={{ backgroundColor: theme.light, color: theme.primary }}
                   >
                     {c.companyName[0]}
@@ -397,39 +430,46 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-neutral-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
 
-              <div className="p-8 flex-1 flex flex-col bg-gradient-to-b from-white to-neutral-50/50">
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-3 py-1 bg-primary-50 text-primary-600 text-[10px] font-black uppercase tracking-[0.1em] rounded-full border border-primary-100/50" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary, borderColor: `${theme.primary}20` }}>
+              <div className="p-4 sm:p-8 flex-1 flex flex-col bg-gradient-to-b from-white to-neutral-50/50">
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <span className="px-2 py-1 sm:px-3 sm:py-1 bg-primary-50 text-primary-600 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] rounded-full border border-primary-100/50 line-clamp-1" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary, borderColor: `${theme.primary}20` }}>
                       {c.industry}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-black text-neutral-900 leading-tight flex items-center gap-2">
+                  <h3 className="text-lg sm:text-2xl font-black text-neutral-900 leading-tight flex items-center gap-1.5 sm:gap-2 line-clamp-1">
                     {c.companyName}
-                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
-                      <Check className="w-3 h-3 text-white" strokeWidth={4} />
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-blue-500 flex items-center justify-center shadow-sm flex-shrink-0">
+                      <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" strokeWidth={4} />
                     </div>
                   </h3>
                 </div>
                 
-                <p className="text-sm font-medium text-neutral-500 line-clamp-3 mb-8 leading-relaxed">
+                <p className="text-xs sm:text-sm font-medium text-neutral-500 line-clamp-2 sm:line-clamp-3 mb-6 sm:mb-8 leading-relaxed">
                   {c.description || `${c.companyName} is a leading partner in the ${c.industry} sector, committed to excellence and professional growth.`}
                 </p>
 
-                <div className="grid grid-cols-2 gap-4 mb-8 mt-auto">
-                    <div className="flex flex-col gap-1 p-3 bg-white rounded-2xl border border-neutral-100 shadow-sm">
-                        <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Company Size</span>
-                        <div className="flex items-center gap-2 text-xs font-bold text-neutral-700">
-                          <Users size={12} className="text-neutral-400" />
-                          {c.companySize || 'N/A'}
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-6 sm:mb-8 mt-auto">
+                    <div className="flex flex-col gap-1 p-2 sm:p-3 bg-white rounded-xl sm:rounded-2xl border border-neutral-100 shadow-sm">
+                        <span className="text-[8px] sm:text-[9px] font-black text-neutral-300 uppercase tracking-widest">Size</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-neutral-700 truncate">
+                          <Users size={12} className="text-neutral-400 flex-shrink-0" />
+                          <span className="truncate">{c.companySize || 'N/A'}</span>
                         </div>
                     </div>
-                    {c.website && (
-                      <div className="flex flex-col gap-1 p-3 bg-white rounded-2xl border border-neutral-100 shadow-sm">
-                        <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Website</span>
-                        <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 min-w-0">
+                    {c.website ? (
+                      <div className="flex flex-col gap-1 p-2 sm:p-3 bg-white rounded-xl sm:rounded-2xl border border-neutral-100 shadow-sm">
+                        <span className="text-[8px] sm:text-[9px] font-black text-neutral-300 uppercase tracking-widest">Web</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-neutral-700 min-w-0">
                           <Globe size={12} className="text-neutral-400 flex-shrink-0" />
                           <span className="truncate">{c.website.replace(/^https?:\/\//, '')}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1 p-2 sm:p-3 bg-white rounded-xl sm:rounded-2xl border border-neutral-100 shadow-sm opacity-50">
+                        <span className="text-[8px] sm:text-[9px] font-black text-neutral-300 uppercase tracking-widest">Web</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-neutral-700">
+                           —
                         </div>
                       </div>
                     )}
@@ -437,10 +477,10 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
 
                 <button
                   onClick={() => handleContact(c, 'employer')}
-                  className="w-full flex items-center justify-center gap-3 py-4.5 rounded-[1.5rem] bg-neutral-900 text-white text-sm font-black uppercase tracking-widest hover:bg-black hover:shadow-2xl hover:shadow-neutral-400/30 active:scale-95 transition-all duration-300"
+                  className="w-full flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4.5 rounded-xl sm:rounded-[1.5rem] bg-neutral-900 text-white text-[10px] sm:text-sm font-black uppercase tracking-widest hover:bg-black hover:shadow-2xl hover:shadow-neutral-400/30 active:scale-95 transition-all duration-300"
                 >
-                  <MessageSquare className="w-5 h-5 text-neutral-400" />
-                  Request Connection
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400" />
+                  Connect
                 </button>
               </div>
             </div>
@@ -449,13 +489,235 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
       </div>
 
       {/* ── EMPTY STATE ── */}
-      {((view === 'seekers' && filteredSeekers.length === 0) || (view === 'companies' && filteredCompanies.length === 0)) && (
+      {((view === 'seekers' && displaySeekers.length === 0) || (view === 'companies' && displayCompanies.length === 0)) && (
         <div className="text-center py-20 bg-neutral-50 rounded-3xl border-2 border-dashed border-neutral-200">
           <div className="w-16 h-16 bg-neutral-200 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="text-xl font-bold text-neutral-900">No results found</h3>
           <p className="text-neutral-500">Try adjusting your search or filters.</p>
+        </div>
+      )}
+
+      {/* ── PREVIEW MODE SEE ALL BUTTON ── */}
+      {previewMode && (
+        <div className="flex justify-center mt-12">
+          <Link
+            href="/departments/job-placement/directory"
+            className="flex items-center gap-3 px-8 py-4 rounded-full bg-neutral-900 text-white font-bold hover:bg-black hover:shadow-xl hover:scale-105 transition-all group"
+          >
+            See All {view === 'seekers' ? 'Candidates' : 'Companies'}
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+      )}
+
+      {/* ── PROFILE MODAL ── */}
+      {selectedProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProfile(null)}>
+          <div 
+            className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedProfile(null)}
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/5 hover:bg-black/10 rounded-full flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5 text-neutral-600" />
+            </button>
+
+            <div className="p-8 sm:p-12">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 mb-8 text-center sm:text-left">
+                <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-[2rem] bg-neutral-100 overflow-hidden shadow-lg flex-shrink-0">
+                  {'name' in selectedProfile ? (
+                    selectedProfile.photoUrl ? (
+                      <Image
+                        src={selectedProfile.photoUrl}
+                        alt={selectedProfile.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-neutral-300">
+                        <User size={64} strokeWidth={1} />
+                      </div>
+                    )
+                  ) : (
+                    selectedProfile.logoUrl ? (
+                      <Image
+                        src={selectedProfile.logoUrl}
+                        alt={selectedProfile.companyName}
+                        fill
+                        className="object-contain p-4"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-neutral-300">
+                        <Building size={64} strokeWidth={1} />
+                      </div>
+                    )
+                  )}
+                </div>
+                
+                <div className="flex-1 mt-2">
+                  <div className="inline-block px-4 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-black uppercase tracking-widest rounded-full mb-4">
+                    {'name' in selectedProfile ? (
+                      selectedProfile.isEmployed ? 'Placed / Hired' : 'Actively Looking'
+                    ) : (
+                      `${selectedProfile.openJobsCount} Open Positions`
+                    )}
+                  </div>
+                  <h2 className="text-3xl sm:text-4xl font-black text-neutral-900 mb-2">
+                    {'name' in selectedProfile ? selectedProfile.name : selectedProfile.companyName}
+                  </h2>
+                  <div className="flex items-center justify-center sm:justify-start gap-3 text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">
+                    <span className="flex items-center gap-1.5">
+                      {'name' in selectedProfile ? (
+                        <>
+                          <GraduationCap size={16} style={{ color: theme.primary }} /> 
+                          {selectedProfile.education?.[0] || 'N/A'}
+                        </>
+                      ) : (
+                        <>
+                          <Briefcase size={16} style={{ color: theme.primary }} /> 
+                          {selectedProfile.industry}
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <div className="text-sm font-medium text-neutral-500">
+                    <span className="font-bold text-neutral-900">ID:</span> {'name' in selectedProfile ? (selectedProfile.seekerNumber || `S-${selectedProfile.id.slice(-4).toUpperCase()}`) : `C-${selectedProfile.id.slice(-4).toUpperCase()}`}
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-neutral-100 mb-8" />
+
+              <div className="space-y-8">
+                {'name' in selectedProfile ? (
+                  <>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Briefcase className="w-5 h-5" style={{ color: theme.primary }} />
+                        Experience & Availability
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                          <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
+                          <div className="font-bold text-neutral-900">
+                            {selectedProfile.experience?.length ? (
+                            (selectedProfile.experience || []).map((exp: any, i: number) => (
+                                <div key={i} className={i > 0 ? "mt-1" : ""}>
+                                  • {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
+                                </div>
+                              ))
+                            ) : 'Not specified'}
+                          </div>
+                        </div>
+                        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                          <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Availability</p>
+                          <p className="font-bold text-neutral-900">{selectedProfile.availability || 'Not specified'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Cpu className="w-5 h-5" style={{ color: theme.primary }} />
+                        Professional Skills
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(selectedProfile.skills || []).map((skill: string) => (
+                          <span key={skill} className="px-4 py-2 bg-neutral-100 text-neutral-700 text-[10px] font-black rounded-xl">
+                            {skill}
+                          </span>
+                        ))}
+                        {(!selectedProfile.skills || selectedProfile.skills.length === 0) && (
+                          <span className="text-neutral-400 italic">No skills listed</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Search className="w-5 h-5" style={{ color: theme.primary }} />
+                        Job Interests
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(selectedProfile.jobInterests || []).map((interest: string) => (
+                          <span key={interest} className="px-4 py-2 border-2 border-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl">
+                            {interest}
+                          </span>
+                        ))}
+                        {(!selectedProfile.jobInterests || selectedProfile.jobInterests.length === 0) && (
+                          <span className="text-neutral-400 italic">No interests listed</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <Building className="w-5 h-5" style={{ color: theme.primary }} />
+                        About Company
+                      </h4>
+                      <div className="p-6 bg-neutral-50 rounded-2xl border border-neutral-100">
+                        <p className="text-neutral-700 leading-relaxed">
+                          {selectedProfile.description || "No description provided."}
+                        </p>
+                        <div className="mt-6 flex flex-wrap gap-6">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Industry</p>
+                            <p className="font-bold text-neutral-900">{selectedProfile.industry}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Size</p>
+                            <p className="font-bold text-neutral-900">{selectedProfile.companySize || "N/A"}</p>
+                          </div>
+                          {selectedProfile.website && (
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Website</p>
+                              <a href={selectedProfile.website} target="_blank" rel="noopener noreferrer" className="font-bold text-primary-600 hover:underline flex items-center gap-1">
+                                {selectedProfile.website.replace(/^https?:\/\//, '')}
+                                <ExternalLink size={12} />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 mb-4 flex items-center gap-2">
+                        <User className="w-5 h-5" style={{ color: theme.primary }} />
+                        Contact Person
+                      </h4>
+                      <div className="p-6 bg-neutral-50 rounded-2xl border border-neutral-100">
+                        <p className="font-black text-lg text-neutral-900">{selectedProfile.contactPerson.name}</p>
+                        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">{selectedProfile.contactPerson.position || "Representative"}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-10 pt-8 border-t border-neutral-100 flex justify-end gap-4">
+                <button
+                  onClick={() => setSelectedProfile(null)}
+                  className="px-6 py-3 rounded-xl font-bold text-neutral-500 hover:bg-neutral-100 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => handleContact(selectedProfile, 'name' in selectedProfile ? 'seeker' : 'employer')}
+                  className="px-8 py-3 rounded-xl bg-neutral-900 text-white font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Contact Admin for Connect
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

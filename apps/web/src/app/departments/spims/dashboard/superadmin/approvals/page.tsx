@@ -60,6 +60,7 @@ export default function ApprovalsPage() {
             amount: Number(data.amount) || 0,
             status: data.status || 'pending',
             cashierId: data.cashierId || '',
+            studentId: data.studentId || null,
             patientId: data.patientId || null,
             patientName: data.patientName || null,
             date: data.date,  // keep as Firestore Timestamp for display
@@ -122,6 +123,7 @@ export default function ApprovalsPage() {
             approvedBy: data.approvedBy || '',
             rejectedBy: data.rejectedBy || '',
             rejectReason: data.rejectReason || '',
+            studentId: data.studentId || null,
             patientId: data.patientId || null,
             patientName: data.patientName || null,
             createdAt,
@@ -160,7 +162,7 @@ export default function ApprovalsPage() {
       if (txSnap.exists()) {
         const raw = txSnap.data() as Record<string, unknown>;
         const feePaymentId = raw.feePaymentId as string | undefined;
-        const studentEntityId = raw.patientId as string | undefined;
+        const studentEntityId = (raw.studentId || raw.patientId) as string | undefined;
         if (feePaymentId && studentEntityId) {
           try {
             await updateDoc(doc(db, 'spims_fees', feePaymentId), { status: 'approved' });

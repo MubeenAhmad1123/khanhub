@@ -16,6 +16,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 import DailySheetTab from '@/components/hospital/patient-profile/DailySheetTab';
 import ProgressTab from '@/components/hospital/patient-profile/ProgressTab';
@@ -493,6 +494,24 @@ export default function PatientDetailPage() {
     }
   };
 
+  const handleRejoin = async () => {
+    if (!window.confirm("Are you sure you want to rejoin this patient?")) return;
+    try {
+      setDeactivating(true);
+      await updateDoc(doc(db, 'hospital_patients', patientId), { 
+        isActive: true,
+        rejoinDate: Timestamp.now()
+      });
+      toast.success('Patient rejoined successfully ✓');
+      fetchData();
+    } catch (error) {
+      console.error("Rejoin error", error);
+      toast.error('Rejoin failed');
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   const handleDischarge = async () => {
     if (!window.confirm("Are you sure you want to discharge this patient?")) return;
     try {
@@ -859,11 +878,15 @@ export default function PatientDetailPage() {
                       <input
                         ref={photoInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/webp"
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
+                          if (file.type !== 'image/webp') {
+                            toast.error('Only WebP images are allowed');
+                            return;
+                          }
                           setPhotoFile(file);
                           setPhotoPreview(URL.createObjectURL(file));
                         }}
@@ -956,11 +979,15 @@ export default function PatientDetailPage() {
                 <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
                 <p className="text-sm text-gray-500 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
                 <button 
-                  onClick={handleDeactivate} 
+                  onClick={patient.isActive !== false ? handleDeactivate : handleRejoin} 
                   disabled={deactivating}
-                  className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  className={`bg-white border px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto ${
+                    patient.isActive !== false 
+                      ? 'border-red-200 text-red-600 hover:bg-red-50' 
+                      : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                  }`}
                 >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
+                  {deactivating ? 'Processing...' : (patient.isActive !== false ? 'Deactivate Patient' : 'Rejoin Patient')}
                 </button>
               </div>
             </div>
@@ -1411,8 +1438,16 @@ export default function PatientDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Select File *</label>
                 <input
                   type="file"
-                  accept="video/*,image/*,.pdf"
-                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                  accept="video/*,image/webp,.pdf"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+                      toast.error('Only WebP images are allowed');
+                      return;
+                    }
+                    setSelectedFile(file);
+                  }}
                   className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 outline-none"
                   required
                 />
@@ -1460,18 +1495,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
                   <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(paymentDate)}
-                    onChange={e => setPaymentDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date"
+                    value={paymentDate}
+                    onChange={setPaymentDate}
                   />
                 </div>
               </div>
@@ -1503,19 +1531,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
                   <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(payDate)}
-                    onChange={e => setPayDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date *"
+                    value={payDate}
+                    onChange={setPayDate}
                   />
                 </div>
               </div>
@@ -1557,19 +1577,11 @@ export default function PatientDetailPage() {
                   placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'} 
                 />
               </div>
-              <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(canteenDate)}
-                  onChange={e => setCanteenDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Transaction Date *"
+                  value={canteenDate}
+                  onChange={setCanteenDate}
                 />
               </div>
               <button 
@@ -1618,19 +1630,11 @@ export default function PatientDetailPage() {
                   <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(vDate)}
-                  onChange={e => setVDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Visit Date *"
+                  value={vDate}
+                  onChange={setVDate}
                 />
               </div>
               <div className="space-y-1">

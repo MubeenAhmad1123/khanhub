@@ -72,111 +72,140 @@ export default function SuperadminSettingsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 bg-white dark:bg-black min-h-screen">
-        <InlineLoading label="Syncing HQ Parameters…" />
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
+        <InlineLoading label="Synchronizing Parameters..." />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-10 min-h-screen bg-white dark:bg-black transition-colors duration-300">
-      <div className="mb-10">
-        <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">System Parameters</h1>
-        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Department architecture • Protocol thresholds • Global notifications</p>
-      </div>
-
-      <div className="mt-8 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-sm">
-        <h2 className="text-sm font-black text-black dark:text-white uppercase tracking-widest mb-6">Department Matrix</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {deptEntries.map(([k, v]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => toggleDept(k)}
-              className={`h-14 rounded-2xl border px-6 text-left text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-sm ${
-                v
-                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-[1.02] z-10'
-                  : 'bg-white dark:bg-black text-gray-300 dark:text-gray-600 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span>{k}</span>
-                <span className="opacity-40">{v ? 'ENABLED' : 'OFFLINE'}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-6 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-sm">
-        <h2 className="text-sm font-black text-black dark:text-white uppercase tracking-widest mb-6">Approval Governance</h2>
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Require cryptographic proof above amount (PKR)</label>
-          <div className="mt-4 rounded-2xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-6 py-4 transition-all focus-within:border-black dark:focus-within:border-white/40">
-            <input
-              type="number"
-              value={settings.approvalThresholds?.requireProofOverPkr ?? 5000}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  approvalThresholds: { ...(s.approvalThresholds || { requireProofOverPkr: 5000 }), requireProofOverPkr: Number(e.target.value || 0) },
-                }))
-              }
-              className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none"
-            />
+    <div className="min-h-screen bg-[#FCFBF8] text-gray-900 py-20 px-8">
+      <div className="mx-auto max-w-4xl space-y-12">
+        <div className="flex items-center gap-6 mb-16">
+          <div className="w-20 h-20 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-indigo-100 transition-transform hover:scale-105 duration-500">
+            <div className="w-10 h-10 border-4 border-white/30 rounded-full border-t-white animate-[spin_3s_linear_infinite]" />
+          </div>
+          <div>
+            <h1 className="text-6xl font-black tracking-tighter text-gray-900 uppercase leading-none">Settings</h1>
+            <p className="mt-3 text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic pl-1">Global Architecture Control Matrix</p>
           </div>
         </div>
-      </div>
 
-      <div className="mt-6 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-sm">
-        <h2 className="text-sm font-black text-black dark:text-white uppercase tracking-widest mb-6">Surveillance Alerts</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {(Object.entries(settings.notificationPrefs || {}) as Array<
-            [keyof NonNullable<HqSettings['notificationPrefs']>, boolean]
-          >).map(([k, v]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() =>
-                setSettings((s) => ({
-                  ...s,
-                  notificationPrefs: { ...(s.notificationPrefs || {}), [k]: !(s.notificationPrefs || {})[k] },
-                }))
-              }
-              className={`h-14 rounded-2xl border px-6 text-left text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-sm ${
-                v
-                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
-                  : 'bg-white dark:bg-black text-gray-300 dark:text-gray-600 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span>{k.replace(/([A-Z])/g, ' $1')}</span>
-                <span className="opacity-40">{v ? 'ACTIVE' : 'MUTED'}</span>
-              </div>
-            </button>
-          ))}
+        <div className="rounded-[3rem] border border-gray-100 bg-white p-12 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.12)]">
+          <h2 className="text-[12px] font-black text-gray-900 uppercase tracking-[0.3em] mb-10 flex items-center gap-4">
+            <span className="w-2 h-2 rounded-full bg-indigo-600" />
+            Department Access Matrix
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {deptEntries.map(([k, v]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => toggleDept(k)}
+                className={`group h-16 rounded-2xl border px-8 text-left text-[11px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden ${
+                  v
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-100 scale-[1.02]'
+                    : 'bg-gray-50 text-gray-400 border-gray-100 hover:border-indigo-200 hover:text-indigo-600'
+                }`}
+              >
+                <div className="flex items-center justify-between relative z-10">
+                  <span>{k}</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${v ? 'bg-white/20' : 'bg-gray-200 group-hover:bg-indigo-100'}`}>
+                    <div className={`w-2 h-2 rounded-full ${v ? 'bg-white animate-pulse' : 'bg-gray-400 group-hover:bg-indigo-600'}`} />
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="mt-6 rounded-[2.5rem] border border-black dark:border-white bg-black dark:bg-white p-10 shadow-2xl">
-        <h2 className="text-sm font-black text-white dark:text-black uppercase tracking-[0.2em]">Commit State</h2>
-        <p className="mt-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest italic">A descriptive change note is mandatory for audit compliance.</p>
-        <div className="mt-6 rounded-2xl border border-white/10 dark:border-black/10 bg-white/5 dark:bg-black/5 px-6 py-4 transition-all focus-within:border-white dark:focus-within:border-black">
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="ENTER AUTHORIZED CHANGE NOTE..."
-            className="w-full bg-transparent text-sm font-black text-white dark:text-black outline-none placeholder:text-gray-600 dark:placeholder:text-gray-400 uppercase tracking-widest text-[11px]"
-          />
+        <div className="rounded-[3rem] border border-gray-100 bg-white p-12 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.12)]">
+          <h2 className="text-[12px] font-black text-gray-900 uppercase tracking-[0.3em] mb-10 flex items-center gap-4">
+            <span className="w-2 h-2 rounded-full bg-indigo-600" />
+            Governance Thresholds
+          </h2>
+          <div className="space-y-6">
+            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 italic block mb-4">Cryptographic proof requirement boundary (PKR)</label>
+            <div className="relative group">
+               <div className="absolute inset-y-0 left-8 flex items-center pointer-events-none">
+                 <span className="text-gray-400 font-black text-lg">₨</span>
+               </div>
+               <input
+                type="number"
+                value={settings.approvalThresholds?.requireProofOverPkr ?? 5000}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    approvalThresholds: { ...(s.approvalThresholds || { requireProofOverPkr: 5000 }), requireProofOverPkr: Number(e.target.value || 0) },
+                  }))
+                }
+                className="w-full h-20 pl-16 pr-8 rounded-[2rem] bg-gray-50 border border-gray-100 text-2xl font-black text-gray-900 outline-none focus:ring-8 focus:ring-indigo-600/5 transition-all"
+              />
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          disabled={saving || !note.trim()}
-          onClick={save}
-          className="mt-6 inline-flex h-16 w-full items-center justify-center rounded-2xl bg-white dark:bg-black text-[11px] font-black uppercase tracking-[0.3em] text-black dark:text-white disabled:opacity-30 active:scale-95 transition-all shadow-xl"
-        >
-          {saving ? 'UPDATING CORE...' : 'COMMIT CHANGES'}
-        </button>
+
+        <div className="rounded-[3rem] border border-gray-100 bg-white p-12 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.12)]">
+          <h2 className="text-[12px] font-black text-gray-900 uppercase tracking-[0.3em] mb-10 flex items-center gap-4">
+            <span className="w-2 h-2 rounded-full bg-indigo-600" />
+            Surveillance & Intel Alerts
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {(Object.entries(settings.notificationPrefs || {}) as Array<
+              [keyof NonNullable<HqSettings['notificationPrefs']>, boolean]
+            >).map(([k, v]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() =>
+                  setSettings((s) => ({
+                    ...s,
+                    notificationPrefs: { ...(s.notificationPrefs || {}), [k]: !(s.notificationPrefs || {})[k] },
+                  }))
+                }
+                className={`h-16 rounded-2xl border px-8 text-left text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                  v
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-100'
+                    : 'bg-gray-50 text-gray-400 border-gray-100 hover:border-indigo-200 hover:text-indigo-600'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{k.replace(/([A-Z])/g, ' $1')}</span>
+                  <span className={`text-[8px] px-3 py-1 rounded-full ${v ? 'bg-white/20' : 'bg-gray-200'}`}>{v ? 'ACTIVE' : 'MUTED'}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[3.5rem] bg-gray-900 p-12 md:p-16 shadow-2xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+          <div className="relative z-10">
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Commit Vector</h2>
+            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] italic mb-10">Verification note required for audit synchronization</p>
+            
+            <div className="space-y-8">
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="ENTER AUTHORIZED CHANGE NOTE..."
+                className="w-full h-20 px-10 rounded-[2rem] bg-white/5 border border-white/10 text-[11px] font-black text-white uppercase tracking-[0.3em] outline-none focus:ring-8 focus:ring-indigo-500/20 transition-all placeholder:text-white/20"
+              />
+              
+              <button
+                type="button"
+                disabled={saving || !note.trim()}
+                onClick={save}
+                className="w-full h-20 rounded-[2rem] bg-indigo-600 text-white text-[12px] font-black uppercase tracking-[0.5em] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-indigo-500/20 disabled:opacity-20 flex items-center justify-center gap-6 group/btn"
+              >
+                {saving ? 'Synchronizing Core...' : 'Push Configuration Changes'}
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover/btn:rotate-12 transition-all">
+                  <div className="w-4 h-4 border-2 border-white rounded-full border-t-transparent animate-spin" />
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

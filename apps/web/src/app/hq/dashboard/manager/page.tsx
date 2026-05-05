@@ -8,10 +8,87 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
-  ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon
+  ArrowRight, Loader2, AlertTriangle, TrendingUp,
+  ChevronRight, KeyRound, Calendar, Send, Activity
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
+
+const DEPARTMENT_IMAGES = [
+  { src: '/logo-circle.webp', alt: 'Khan Hub', duration: 4000 },
+  { src: '/images/education-circle.webp', alt: 'Education Department', duration: 2500 },
+  { src: '/images/enterprises-circle.webp', alt: 'Enterprises', duration: 2500 },
+  { src: '/images/institute-health-sciences-circle.webp', alt: 'Institute of Health Sciences', duration: 2500 },
+  { src: '/images/job-circle.webp', alt: 'Job Department', duration: 2500 },
+  { src: '/images/marketing-circle.webp', alt: 'Marketing', duration: 2500 },
+  { src: '/images/medical-center-circle.webp', alt: 'Medical Center', duration: 2500 },
+  { src: '/images/prosthetic-circle.webp', alt: 'Prosthetic Department', duration: 2500 },
+  { src: '/images/rehab-circle.webp', alt: 'Rehabilitation', duration: 2500 },
+  { src: '/images/residential-circle.webp', alt: 'Residential', duration: 2500 },
+  { src: '/images/skill-circle.webp', alt: 'Skill Development', duration: 2500 },
+  { src: '/images/sukoon-circle.webp', alt: 'Sukoon', duration: 2500 },
+  { src: '/images/surgical-repair-circle.webp', alt: 'Surgical Repair', duration: 2500 },
+  { src: '/images/surgical-services-circle.webp', alt: 'Surgical Services', duration: 2500 },
+  { src: '/images/transport-circle.webp', alt: 'Transport', duration: 2500 },
+  { src: '/images/travel-and-tour-circle.webp', alt: 'Travel and Tour', duration: 2500 },
+  { src: '/images/welfare-organization-circle.webp', alt: 'Welfare Organization', duration: 2500 },
+];
+
+const ImageCarousel = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % DEPARTMENT_IMAGES.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-4">
+      <div 
+        className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto lg:w-72 lg:h-72 flex-shrink-0 transition-all duration-300 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-100 shadow-sm"
+        style={{
+          transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
+          transformStyle: 'preserve-3d'
+        }}
+      >
+        {DEPARTMENT_IMAGES.map((img, index) => (
+          <div
+            key={img.src}
+            className={`absolute inset-0 transition-opacity duration-300 rounded-full overflow-hidden flex items-center justify-center ${
+              index === currentIndex ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <Image
+              src={img.src}
+              alt={img.alt}
+              fill
+              className="object-contain rounded-full"
+              sizes="(max-width: 640px) 192px, 256px"
+              priority
+            />
+          </div>
+        ))}
+      </div>
+      
+      {/* Pagination Dots */}
+      <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-xs mx-auto">
+        {DEPARTMENT_IMAGES.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              index === currentIndex ? 'w-4 bg-indigo-600' : 'w-1.5 bg-gray-300 hover:bg-gray-400'
+            }`}
+            aria-label={`Go to image ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 function timeAgo(dateInput: any): string {
   if (!dateInput) return 'N/A';
@@ -51,25 +128,25 @@ export default function ManagerOverviewPage() {
     urgentApprovals: 0,
   });
   const [deptStats, setDeptStats] = useState<Record<string, { present: number, absent: number, leave: number, total: number }>>({});
-  const [activities, setActivities] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const isDark = mounted && resolvedTheme === 'dark';
 
   const [allStaff, setAllStaff] = useState<any[]>([]);
   const [attMap, setAttMap] = useState<Map<string, string>>(new Map());
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const getMs = (dateInput: any): number => {
-    if (!dateInput) return 0;
-    if (dateInput?.seconds) return dateInput.seconds * 1000;
-    if (dateInput instanceof Date) return dateInput.getTime();
-    const parsed = new Date(dateInput).getTime();
-    return isNaN(parsed) ? 0 : parsed;
-  };
+  // Broadcast Modal State
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({
+    dept: 'hq' as StaffDept,
+    title: '',
+    time: '10:00',
+    date: new Date().toISOString().split('T')[0],
+    location: 'Main Hall'
+  });
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -77,7 +154,7 @@ export default function ManagerOverviewPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'manager') {
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
       router.push('/hq/login');
       return;
     }
@@ -91,48 +168,17 @@ export default function ManagerOverviewPage() {
         const today = new Date().toISOString().split('T')[0];
         const now = Date.now();
 
-        // 1. Fetch Staff (All 7 Departments) - Handle diverse collection schemas
-        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        // 1. Fetch Staff (All 7 Departments)
+        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
         
-        const staffQueries: any[] = [];
-        
-        depts.forEach(d => {
-          // Main staff collection (Unified in _users)
-          staffQueries.push({ dept: d, q: query(collection(db, getDeptCollection(d)), where('isActive', '==', true)) });
+        // 1. Fetch Staff & Attendance via Optimized Batched Layer
+        const { listStaffCards } = await import('@/lib/hq/superadmin/staff');
+        const allStaffDocs = await listStaffCards({
+          dept: 'all',
+          status: 'active',
+          role: 'personnel',
+          fullEnrichment: false
         });
-
-        const staffSnaps = await Promise.all(staffQueries.map(sq => getDocs(sq.q)));
-        // Exclude superadmin as per user requirements
-        const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor'];
-
-        let allStaffDocs: any[] = [];
-        const seenStaffIds = new Set<string>();
-        
-        staffSnaps.forEach((s, idx) => {
-          const dept = staffQueries[idx].dept;
-          s.docs.forEach(doc => {
-            const data = doc.data() as any;
-            const role = String(data.role || '').toLowerCase();
-            
-            // Only include legitimate staff roles (excluding superadmin)
-            if (STAFF_ROLES.includes(role) && role !== 'superadmin') {
-              const id = doc.id;
-              if (!seenStaffIds.has(id)) {
-                seenStaffIds.add(id);
-                allStaffDocs.push({ 
-                  ...data,
-                  id, 
-                  department: dept
-                });
-              }
-            }
-          });
-        });
-
-        // 2. Fetch Attendance (All 7 Departments)
-        const attSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
-        );
 
         const attendanceMap = new Map<string, string>();
         let presentCount = 0;
@@ -145,61 +191,42 @@ export default function ManagerOverviewPage() {
           dStats[d] = { present: 0, absent: 0, leave: 0, total: 0 };
         });
 
-        // Count staff per department
         allStaffDocs.forEach(s => {
           const dept = (s.dept as string) || 'hq';
           if (dStats[dept]) dStats[dept].total++;
+          
+          if (s.isPresentToday) {
+            presentCount++;
+            if (dStats[dept]) dStats[dept].present++;
+            attendanceMap.set(s.id, 'present');
+          } else if (s.status === 'inactive') {
+            absentCount++;
+            if (dStats[dept]) dStats[dept].absent++;
+            attendanceMap.set(s.id, 'absent');
+          }
         });
 
-        attSnaps.forEach((snap, i) => {
-          const dept = depts[i];
-          snap.docs.forEach(d => {
-            const data = d.data();
-            const key = data.staffId || d.id;
-            attendanceMap.set(key, data.status);
-            
-            if (data.status === 'present') {
-              presentCount++;
-              if (dStats[dept]) dStats[dept].present++;
-            } else if (data.status === 'absent') {
-              absentCount++;
-              if (dStats[dept]) dStats[dept].absent++;
-            } else if (data.status && (data.status.includes('leave'))) {
-              leaveCount++;
-              if (dStats[dept]) dStats[dept].leave++;
-            }
-          });
-        });
-
-        setDeptStats(dStats);
-
-        // 3. Fetch Contributions (Pending)
+        // 3. Fetch Contributions (Limited to save quota)
         const contribSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))))
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false), limit(5))).catch(err => {
+            console.warn(`Permission denied for ${d} contributions:`, err);
+            return { docs: [] } as any;
+          }))
         );
 
         let allContribs: any[] = [];
         contribSnaps.forEach((snap, i) => {
           const d = depts[i];
-          const docs = snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
+          const docs = snap.docs
+            .map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }))
+            .filter((c: any) => c.content && c.content.trim() !== '');
           allContribs = [...allContribs, ...docs];
         });
 
-        // Fetch Recent Audit Log for activities
-        const auditSnap = await getDocs(query(collection(db, 'hq_audit'), limit(10)));
-        const auditActivities = auditSnap.docs.map(d => ({
-          id: d.id,
-          ...(d.data() as any),
-          type: 'audit'
-        }));
-
-        setActivities(auditActivities.sort((a: any, b: any) => getMs(b.createdAt || b.timestamp || b.at) - getMs(a.createdAt || a.timestamp || a.at)));
-
-        // Fetch Staff Names for the recent list
         const staffMap: Record<string, string> = {};
         allStaffDocs.forEach(s => {
-          staffMap[s.id] = s.name || s.displayName || 'Staff Member';
-          if (s.loginUserId) staffMap[s.loginUserId] = s.name || s.displayName || 'Staff Member';
+          staffMap[s.id] = s.name || 'Staff Member';
+          if (s.staffId) staffMap[s.staffId] = s.name || 'Staff Member';
         });
 
         const recentContribs = allContribs.sort((a, b) => {
@@ -213,20 +240,14 @@ export default function ManagerOverviewPage() {
           staffName: staffMap[c.staffId] || staffMap[c.userId] || 'Staff'
         }));
 
-        const pendingCount = allContribs.length;
-        const urgent = allContribs.filter(p => {
-          if (!p.createdAt?.seconds) return false;
-          return (now - (p.createdAt.seconds * 1000)) > 48 * 60 * 60 * 1000;
-        });
-
         setStats({
           totalStaff,
           presentToday: presentCount,
           absentToday: absentCount,
           leaveToday: leaveCount,
           notMarkedToday: totalStaff - presentCount - absentCount - leaveCount,
-          pendingApprovals: pendingCount,
-          urgentApprovals: urgent.length,
+          pendingApprovals: allContribs.length,
+          urgentApprovals: allContribs.filter(p => (now - ((p.createdAt?.seconds || 0) * 1000)) > 48 * 60 * 60 * 1000).length,
         });
 
         setAllStaff(allStaffDocs);
@@ -243,63 +264,115 @@ export default function ManagerOverviewPage() {
     fetchData();
   }, [session]);
 
+  const handleBroadcastMeeting = async () => {
+    if (!broadcastForm.title) return;
+    setSendingBroadcast(true);
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      
+      // Filter staff for the selected department
+      const deptStaff = allStaff.filter(s => s.department === broadcastForm.dept);
+      
+      const notifications = deptStaff.map(s => addDoc(collection(db, 'staff_notifications'), {
+        recipientId: s.id,
+        title: `ALL STAFF MEETING: ${broadcastForm.title}`,
+        body: `General department meeting for ${broadcastForm.dept} scheduled on ${broadcastForm.date} at ${broadcastForm.time}. Location: ${broadcastForm.location}`,
+        type: 'meeting',
+        dept: broadcastForm.dept,
+        relatedId: 'broadcast',
+        isRead: false,
+        createdAt: serverTimestamp()
+      }));
+
+      await Promise.all(notifications);
+      
+      // Also add to special tasks for everyone? Maybe too noisy. Just notifications is enough for "ALL STAFF".
+      
+      alert(`Broadcast sent to ${deptStaff.length} staff members in ${broadcastForm.dept}`);
+      setShowBroadcast(false);
+      setBroadcastForm({ ...broadcastForm, title: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send broadcast');
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
+
   if (sessionLoading || loading || !mounted) {
     return (
-      <div className={`min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950`}>
-        <Loader2 className={`w-8 h-8 animate-spin text-gray-400 dark:text-zinc-500`} />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white`}>
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent">Manager Overview</h1>
-          <p className="text-gray-500 text-sm font-medium mt-1">Global Departmental Oversight & Real-time Metrics</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <Link 
-            href="/hq/dashboard/manager/reports/daily"
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-lg hover:-translate-y-1 ${
-              isDark ? 'bg-zinc-100 text-black hover:bg-white' : 'bg-gray-900 text-white hover:bg-black shadow-gray-200'
-            }`}
-          >
-            <TrendingUp size={18} /> Generate Today's Report
-          </Link>
-          <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
-            </div>
-            <div className="w-px h-4 bg-gray-200" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+    <div className="min-h-screen bg-gray-50/50 text-gray-900 p-4 md:p-8 space-y-8 font-sans">
+      {/* Header Section with Carousel */}
+      <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div className="flex-1 space-y-4 text-center lg:text-left order-2 lg:order-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-2">
+            <Activity size={14} />
+            <span>Managerial Command Center</span>
           </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+            Global Departmental Oversight
+          </h1>
+          <p className="text-gray-500 max-w-xl mx-auto lg:mx-0">
+            Real-time operational metrics and performance intelligence across all institutional divisions.
+          </p>
+          
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
+            <button 
+              onClick={() => setShowBroadcast(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all hover:bg-indigo-700 hover:shadow-md hover:scale-105 active:scale-95"
+            >
+              <Calendar size={18} /> Broadcast Meeting
+            </button>
+            <Link 
+              href="/hq/dashboard/manager/reports/daily"
+              className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-all hover:bg-gray-50 hover:shadow-sm hover:border-gray-300"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live Connection</span>
+              </div>
+              <div className="w-px h-4 bg-gray-200" />
+              <span className="text-gray-500">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Carousel implementation like mobile view */}
+        <div className="order-1 lg:order-2 flex justify-center w-full lg:w-auto relative z-10">
+           <ImageCarousel />
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={18} />} color="bg-blue-500/10 text-blue-500" onClick={() => setSelectedMetric('total')} />
-        <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" onClick={() => setSelectedMetric('present')} />
-        <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" onClick={() => setSelectedMetric('absent')} />
-        <StatCard isDark={isDark} label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={18} />} color="bg-amber-500/10 text-amber-500" onClick={() => setSelectedMetric('leave')} />
-        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-zinc-500" onClick={() => setSelectedMetric('notMarked')} />
-        <StatCard isDark={isDark} label="Pending Tasks" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
+        <StatCard label="Total Staff" value={stats.totalStaff} icon={<Users size={20} />} color="bg-indigo-50" textColor="text-indigo-600" onClick={() => setSelectedMetric('total')} />
+        <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-emerald-50" textColor="text-emerald-600" onClick={() => setSelectedMetric('present')} />
+        <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-rose-50" textColor="text-rose-600" onClick={() => setSelectedMetric('absent')} />
+        <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-amber-50" textColor="text-amber-600" onClick={() => setSelectedMetric('leave')} />
+        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-gray-100" textColor="text-gray-600" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-blue-50" textColor="text-blue-600" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
 
       {/* Metric Detail View */}
       {selectedMetric && (
-        <div className={`animate-in slide-in-from-top duration-500 p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-gray-100 shadow-xl'}`}>
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-                {selectedMetric === 'notMarked' ? 'Unmarked Attendance' : 
-                 selectedMetric === 'present' ? 'Present Staff' :
-                 selectedMetric === 'absent' ? 'Absent Staff' :
-                 selectedMetric === 'leave' ? 'Staff on Leave' : 'Staff List'}
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500'}`}>
+              <h2 className="text-xl font-bold flex items-center gap-3 text-gray-900">
+                {selectedMetric === 'notMarked' ? 'Registry Variance' : 
+                 selectedMetric === 'present' ? 'Verified Personnel' :
+                 selectedMetric === 'absent' ? 'Personnel Deficit' :
+                 selectedMetric === 'leave' ? 'Authorized Leave' : 'Personnel Registry'}
+                <span className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">
                   {allStaff.filter(s => {
                     const status = attMap.get(s.id);
                     if (selectedMetric === 'notMarked') return !status;
@@ -307,14 +380,14 @@ export default function ManagerOverviewPage() {
                     if (selectedMetric === 'absent') return status === 'absent';
                     if (selectedMetric === 'leave') return status?.includes('leave');
                     return true;
-                  }).length} Total
+                  }).length} Records
                 </span>
               </h2>
             </div>
-            <button onClick={() => setSelectedMetric(null)} className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-rose-500 transition-colors">Close List</button>
+            <button onClick={() => setSelectedMetric(null)} className="text-xs font-semibold px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-all">Collapse View</button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {allStaff.filter(s => {
               const status = attMap.get(s.id);
               if (selectedMetric === 'notMarked') return !status;
@@ -324,146 +397,65 @@ export default function ManagerOverviewPage() {
               if (selectedMetric === 'total') return true;
               return false;
             }).map(s => (
-              <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
-                <Link 
-                  href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} 
-                  className="flex items-center gap-3 hover:opacity-75 transition-opacity"
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
-                    ${isDark ? 'bg-zinc-700 text-zinc-300' : 'bg-white text-gray-400 shadow-sm'}`}>
+              <div key={s.id} className="p-4 rounded-xl border border-gray-100 bg-white flex items-center justify-between group hover:border-indigo-100 hover:shadow-sm transition-all">
+                <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="flex items-center gap-3 truncate">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
                     {s.name?.[0] || 'S'}
                   </div>
-                  <div>
-                    <p className="text-sm font-black text-blue-500 hover:underline">{s.name}</p>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{s.department}</p>
+                  <div className="truncate">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">{s.department}</p>
                   </div>
                 </Link>
-                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {(!attMap.get(s.id)) && (
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={async () => {
-                          try {
-                            setActionLoading(s.id);
-                            const prefix = getDeptPrefix(s.department as any);
-                            const today = new Date().toISOString().split('T')[0];
-                            const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
-                            await setDoc(doc(db, `${prefix}_attendance`, `${s.id}_${today}`), {
-                              staffId: s.id,
-                              status: 'present',
-                              date: today,
-                              timestamp: serverTimestamp(),
-                              markedBy: session?.name || 'HQ Manager'
-                            }, { merge: true });
-                            const newMap = new Map(attMap);
-                            newMap.set(s.id, 'present');
-                            setAttMap(newMap);
-                            setStats(prev => ({ ...prev, presentToday: prev.presentToday + 1, notMarkedToday: prev.notMarkedToday - 1 }));
-                          } catch (e) {
-                            console.error(e);
-                          } finally {
-                            setActionLoading(null);
-                          }
-                        }}
-                        disabled={actionLoading === s.id}
-                        className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
-                      >
-                        {actionLoading === s.id ? '...' : 'Present'}
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          try {
-                            setActionLoading(s.id);
-                            const prefix = getDeptPrefix(s.department as any);
-                            const today = new Date().toISOString().split('T')[0];
-                            const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
-                            await setDoc(doc(db, `${prefix}_attendance`, `${s.id}_${today}`), {
-                              staffId: s.id,
-                              status: 'absent',
-                              date: today,
-                              timestamp: serverTimestamp(),
-                              markedBy: session?.name || 'HQ Manager'
-                            }, { merge: true });
-                            const newMap = new Map(attMap);
-                            newMap.set(s.id, 'absent');
-                            setAttMap(newMap);
-                            setStats(prev => ({ ...prev, absentToday: prev.absentToday + 1, notMarkedToday: prev.notMarkedToday - 1 }));
-                          } catch (e) {
-                            console.error(e);
-                          } finally {
-                            setActionLoading(null);
-                          }
-                        }}
-                        disabled={actionLoading === s.id}
-                        className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
-                      >
-                        {actionLoading === s.id ? '...' : 'Absent'}
-                      </button>
-                    </div>
-                  )}
-                  {attMap.get(s.id) && (
-                    <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${attMap.get(s.id) === 'present' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {attMap.get(s.id)}
-                    </span>
-                  )}
-                  <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
-                    <ArrowRight size={14} />
-                  </Link>
-                </div>
+                <ChevronRight size={16} className="text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Analytics & Reports Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Department Breakdown Report */}
-        <div className={`lg:col-span-2 rounded-[2.5rem] p-8 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
-          <div className="flex items-center justify-between mb-10">
+      {/* Main Analysis Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Department Breakdown */}
+        <div className="lg:col-span-7 bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight italic">Institutional Status Breakdown</h3>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Real-time attendance velocity by department</p>
+              <h3 className="text-xl font-bold text-gray-900">Institutional Velocity</h3>
+              <p className="text-sm text-gray-500 mt-1">Real-time attendance density by division</p>
             </div>
-            <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${isDark ? 'bg-zinc-800 text-zinc-500' : 'bg-gray-50 text-gray-400'}`}>
-              Today Snapshot
+            <div className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">
+              24H Matrix
             </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             {Object.entries(deptStats).map(([dept, data]) => (
               <div key={dept} className="group">
-                <div className="flex items-center justify-between px-2 mb-3">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-500 group-hover:text-blue-500 transition-colors">{dept}</span>
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 opacity-50 group-hover:opacity-100 group-hover:scale-125 transition-all" />
+                    <span className="text-sm font-semibold text-gray-700 uppercase">{dept}</span>
                   </div>
-                  <div className="flex gap-6">
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest leading-none mb-1">Present</span>
-                      <span className="text-sm font-black text-emerald-500">{data.present}</span>
+                  <div className="flex gap-4">
+                    <div className="text-right">
+                      <span className="block text-xs font-medium text-gray-400">Verified</span>
+                      <span className="text-sm font-bold text-gray-900">{data.present}</span>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest leading-none mb-1">Absent</span>
-                      <span className="text-sm font-black text-rose-500">{data.absent}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest leading-none mb-1">Leave</span>
-                      <span className="text-sm font-black text-amber-500">{data.leave}</span>
+                    <div className="text-right">
+                      <span className="block text-xs font-medium text-gray-400">Deficit</span>
+                      <span className="text-sm font-bold text-gray-900">{data.absent}</span>
                     </div>
                   </div>
                 </div>
-                <div className={`h-3 w-full rounded-2xl flex overflow-hidden p-0.5 ${isDark ? 'bg-zinc-800/50' : 'bg-gray-100/50'}`}>
+                <div className="h-3 w-full rounded-full bg-gray-100 overflow-hidden flex">
                   {data.total > 0 ? (
                     <>
-                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 rounded-full mr-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-1000" />
-                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-500 rounded-full mr-0.5 shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all duration-1000" />
-                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.3)] transition-all duration-1000" />
+                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 transition-all duration-1000" />
+                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-400 transition-all duration-1000" />
+                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-300 transition-all duration-1000" />
                     </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                       <span className="text-[8px] font-bold text-gray-400 uppercase italic">No active staff registered</span>
-                    </div>
+                    <div className="w-full h-full flex items-center justify-center bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-medium">Registry Empty</div>
                   )}
                 </div>
               </div>
@@ -471,148 +463,141 @@ export default function ManagerOverviewPage() {
           </div>
         </div>
         
-        {/* Left Column: Quick Actions & Pending List */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Quick Actions */}
-          <section>
-            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Quick Operations</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Operations & Pending */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Priority Operations</h3>
+            <div className="grid grid-cols-1 gap-3">
               {[
-                { href: '/hq/dashboard/manager/staff/attendance', label: 'Mark Attendance', sub: "Daily check-in logs", icon: <CheckCircle className="text-emerald-500" /> },
-                { href: '/hq/dashboard/manager/approvals', label: 'Handle Approvals', sub: 'Contributions & Requests', icon: <FileText className="text-purple-500" /> },
-                { href: '/hq/dashboard/manager/staff', label: 'Global Staff Roster', sub: 'Manage all departments', icon: <Users className="text-blue-500" /> },
-                { href: '/hq/dashboard/manager/users', label: 'User Provisioning', sub: 'Create staff accounts', icon: <ArrowRight className="text-zinc-400" /> }
-              ].map((link, idx) => (
-                <Link key={idx} href={link.href}
-                  className={`flex items-center gap-4 p-5 rounded-3xl border transition-all group hover:shadow-2xl hover:-translate-y-1 ${
-                    isDark ? 'bg-zinc-900/40 border-zinc-800/60 hover:bg-zinc-800' : 'bg-white border-gray-100/80 hover:border-blue-100 shadow-sm'
-                  }`}>
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isDark ? 'bg-zinc-800' : 'bg-gray-50'}`}>
-                    {link.icon}
+                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-indigo-600" /> },
+                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-emerald-600" /> },
+                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-blue-600" /> },
+                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-amber-600" /> }
+              ].map((op, i) => (
+                <Link key={i} href={op.href} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                      {op.icon}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">{op.label}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-black text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>{link.label}</p>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide mt-0.5">{link.sub}</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                  <ChevronRight size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
                 </Link>
               ))}
             </div>
-          </section>
+          </div>
 
-          {/* Pending Items */}
           {pendingList.length > 0 && (
-            <section>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <AlertTriangle size={14} className="text-amber-500" /> Critical Pending Items
-                </h2>
-                <Link href="/hq/dashboard/manager/approvals" className="text-[10px] font-black text-blue-500 hover:underline uppercase tracking-widest">View All</Link>
+            <div className="bg-indigo-950 rounded-3xl p-8 border border-indigo-900 shadow-lg text-white">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Pending Sync</h3>
+                <Link href="/hq/dashboard/manager/approvals" className="text-xs text-indigo-300 hover:text-white transition-colors font-medium">View All</Link>
               </div>
               <div className="space-y-3">
                 {pendingList.map(p => (
-                    <div key={p.id} className={`p-5 rounded-3xl border flex items-center justify-between gap-4 transition-all hover:scale-[1.01] ${
-                      isDark ? 'bg-zinc-900/20 border-zinc-800/40' : 'bg-white border-gray-100/60 shadow-sm'
-                    }`}>
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 bg-gradient-to-br from-purple-500 to-blue-600 text-white uppercase`}>
-                           {p.dept?.[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <p className={`font-black text-sm md:text-base truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{p.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full uppercase">{p.dept}</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-300" />
-                            <p className="text-gray-500 text-[10px] font-bold truncate">By {p.staffName}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className={`font-black text-sm ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>+1 Unit</p>
-                        <p className="text-gray-400 text-[10px] font-bold mt-0.5 italic">{timeAgo(p.createdAt)}</p>
-                      </div>
+                  <div key={p.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between hover:bg-white/10 transition-all cursor-pointer">
+                    <div className="truncate pr-4">
+                      <p className="text-sm font-semibold text-indigo-50 truncate">{p.title}</p>
+                      <p className="text-xs text-indigo-300 mt-1 uppercase tracking-wider">{p.dept} • {p.staffName}</p>
                     </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-medium text-emerald-400">{timeAgo(p.createdAt)}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </section>
+            </div>
           )}
         </div>
+      </div>
 
-        {/* Right Column: Recent Activity Log */}
-        <div className="space-y-8">
-          <section>
-            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">System Activity</h2>
-            <div className={`rounded-[2.5rem] border overflow-hidden ${isDark ? 'bg-zinc-900/30 border-zinc-800' : 'bg-white border-gray-100 shadow-xl'}`}>
-              <div className="p-6 space-y-6">
-                {activities.length > 0 ? activities.map((act, idx) => (
-                  <div key={idx} className="flex gap-4 group">
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
-                        act.action === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : 
-                        act.action === 'user_created' ? 'bg-blue-500/10 text-blue-500' : 'bg-zinc-100 text-zinc-500'
-                      }`}>
-                        {act.action === 'approval' ? <CheckCircle size={14} /> : 
-                         act.action === 'user_created' ? <Users size={14} /> : <Clock size={14} />}
-                      </div>
-                      {idx !== activities.length - 1 && <div className="w-px h-full bg-gray-100 dark:bg-zinc-800 mt-2" />}
-                    </div>
-                    <div className="pb-4">
-                      <p className={`text-xs font-black uppercase tracking-wider mb-0.5 ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>
-                        {act.action?.replace('_', ' ')}
-                      </p>
-                      <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
-                        {act.details?.name || act.details?.customId || 'System task'} processed by {act.performedBy?.split('@')[0] || 'Admin'}
-                      </p>
-                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mt-2 bg-gray-100 dark:bg-zinc-800/50 inline-block px-2 py-0.5 rounded-lg">
-                        {timeAgo(act.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 text-xs font-black italic">No recent activity found</p>
-                  </div>
-                )}
+      {/* Broadcast Modal */}
+      {showBroadcast && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Broadcast Meeting</h2>
+            <p className="text-sm text-gray-500 mb-6">Notify all personnel in a specific division</p>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Target Department</label>
+                <select 
+                  value={broadcastForm.dept}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, dept: e.target.value as any })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                >
+                  {Object.keys(deptStats).map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+                </select>
               </div>
-              <div className={`p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800`}>
-                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest hover:text-blue-500 transition-colors">
-                    View Full Audit Trail
-                 </Link>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Meeting Title</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Monthly Operational Review"
+                  value={broadcastForm.title}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Time</label>
+                  <input 
+                    type="time"
+                    value={broadcastForm.time}
+                    onChange={e => setBroadcastForm({ ...broadcastForm, time: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Location</label>
+                  <input 
+                    type="text"
+                    value={broadcastForm.location}
+                    onChange={e => setBroadcastForm({ ...broadcastForm, location: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setShowBroadcast(false)}
+                  className="flex-1 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleBroadcastMeeting}
+                  disabled={sendingBroadcast || !broadcastForm.title}
+                  className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
+                >
+                  {sendingBroadcast ? 'Sending...' : <><Send size={16} /> Send Signal</>}
+                </button>
               </div>
             </div>
-          </section>
-
-          {/* Quick Tip / Status */}
-          <div className="p-6 rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-500/20">
-            <h3 className="font-black text-sm mb-2">Manager Insight</h3>
-            <p className="text-[11px] leading-relaxed opacity-90 font-medium italic">
-              "Total staff visibility is now optimized across all 7 departments. Ensure all staff members have their unique User IDs for the new Universal Sign-In system."
-            </p>
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 }
 
-function StatCard({ label, value, icon, color, urgent, isDark, onClick }: {
-  label: string; value: number; icon: React.ReactNode; color: string; urgent?: boolean; isDark?: boolean; onClick?: () => void;
-}) {
+function StatCard({ label, value, icon, color, textColor, urgent, onClick }: any) {
   return (
-    <div 
+    <button 
       onClick={onClick}
-      className={`rounded-3xl p-5 border transition-all duration-500 relative overflow-hidden group cursor-pointer ${
-      isDark ? 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800/80 shadow-2xl shadow-black/50' : 'bg-white border-gray-100/80 hover:shadow-2xl shadow-sm'
-    } ${urgent ? 'ring-2 ring-rose-500 ring-offset-2 ring-offset-zinc-950 shadow-rose-900/20' : ''} active:scale-95`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-10 rounded-full -mr-8 -mt-8 ${color.split(' ')[0]}`} />
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-inner ${color}`}>
+      className={`relative flex flex-col p-6 rounded-3xl border border-gray-100 transition-all hover:-translate-y-1 hover:shadow-md bg-white text-left group`}
+    >
+      <div className={`w-12 h-12 rounded-xl ${color} ${textColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
         {icon}
       </div>
-      <p className={`text-4xl font-[1000] tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-60 group-hover:opacity-100 transition-opacity">{label}</p>
-      {urgent && <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />}
-    </div>
+      <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
+      <p className="text-xs font-medium text-gray-500">{label}</p>
+      {urgent && <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
+    </button>
   );
 }
+

@@ -39,9 +39,9 @@ const ActionIcon = ({ type, size = 10 }: { type: string; size?: number }) => {
     case 'login':
       return <div className="p-2 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-sm"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
     case 'rejected':
-      return <div className="p-2 rounded-full bg-gray-200 dark:bg-white/20 text-gray-400 dark:text-gray-500"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
+      return <div className="p-2 rounded-full bg-gray-200 dark:bg-white/20 text-black dark:text-black"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
     default:
-      return <div className="p-2 rounded-full border border-gray-100 dark:border-white/10 text-gray-300 dark:text-gray-700"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
+      return <div className="p-2 rounded-full border border-gray-100 dark:border-white/10 text-black dark:text-black"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
   }
 };
 
@@ -180,16 +180,17 @@ export default function SuperadminAuditPage() {
   })), [filtered]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="min-h-screen bg-[#FCFBF8] dark:bg-black pb-20">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       {/* Retention Settings Modal */}
       {showRetention && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md animate-in zoom-in-95 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black tracking-tight text-black dark:text-white uppercase">Retention Governance</h2>
-              <button onClick={() => setShowRetention(false)} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"><CloseIcon /></button>
+              <button onClick={() => setShowRetention(false)} className="text-black hover:text-black dark:hover:text-white transition-colors"><CloseIcon /></button>
             </div>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mb-8 font-bold italic">Entries older than your selected period will be automatically purged by the system to maintain peak performance.</p>
+            <p className="text-sm text-black dark:text-black mb-8 font-bold italic">Entries older than your selected period will be automatically purged by the system to maintain peak performance.</p>
             
             <div className="space-y-4">
               {[30, 45, 60, 90, null].map(val => (
@@ -200,7 +201,7 @@ export default function SuperadminAuditPage() {
                   className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl border transition-all ${
                     retentionDays === val 
                       ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black' 
-                      : 'border-gray-100 bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500 hover:border-black dark:hover:border-white active:scale-[0.98]'
+                      : 'border-gray-100 bg-gray-50 dark:bg-white/5 text-black dark:text-black hover:border-black dark:hover:border-white active:scale-[0.98]'
                   }`}
                 >
                   <span className="font-black text-xs uppercase tracking-widest">{val ? `${val} Days` : 'Never (Infinite)'}</span>
@@ -211,7 +212,7 @@ export default function SuperadminAuditPage() {
 
             <button 
               onClick={() => setShowRetention(false)}
-              className="mt-8 w-full py-5 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+              className="mt-8 w-full py-5 rounded-2xl border border-gray-100 dark:border-white/5 text-black dark:text-black font-black text-[10px] uppercase tracking-widest hover:bg-white dark:hover:bg-white/5 transition-all"
             >
               Cancel
             </button>
@@ -224,11 +225,11 @@ export default function SuperadminAuditPage() {
         <div>
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase px-2 py-1 border-l-8 border-black dark:border-white">Operation Audit</h1>
-            <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${retentionDays ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-gray-400'}`}>
+            <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${retentionDays ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-black'}`}>
               TTL: {retentionDays ? `${retentionDays} days` : 'Permanent'}
             </div>
           </div>
-          <p className="mt-2 text-[10px] font-black italic text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-4">Global Governance Feed • Real-time Cross-Departmental Surveillance</p>
+          <p className="mt-2 text-[10px] font-black italic text-black dark:text-black uppercase tracking-widest pl-4">Global Governance Feed • Real-time Cross-Departmental Surveillance</p>
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -248,9 +249,9 @@ export default function SuperadminAuditPage() {
           { label: 'Total Logs', value: stats.total, color: 'text-black dark:text-white' },
           { label: 'Filtered Result', value: stats.filtered, color: 'text-black dark:text-white' },
           { label: 'Active Sources', value: dynamicSources.length - 1, color: 'text-black dark:text-white' },
-          { label: 'Last Pulse', value: stats.lastActivity, color: 'text-gray-400 italic' },
+          { label: 'Last Pulse', value: stats.lastActivity, color: 'text-black italic' },
         ].map((s, i) => (
-          <div key={i} className="rounded-3xl border border-gray-100 bg-white p-6 dark:border-white/10 dark:bg-black shadow-sm">
+          <div key={i} className="rounded-[2rem] border border-gray-100 bg-white p-6 dark:border-white/10 dark:bg-black shadow-2xl shadow-gray-200/50">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">{s.label}</p>
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
           </div>
@@ -258,9 +259,9 @@ export default function SuperadminAuditPage() {
       </div>
 
       {/* Filter Section */}
-      <div className="flex flex-col gap-6 p-6 rounded-3xl border border-gray-100 bg-gray-50 dark:bg-white/5 dark:border-white/10">
+      <div className="flex flex-col gap-6 p-8 rounded-[2.5rem] border border-gray-100 bg-white dark:bg-white/5 dark:border-white/10 shadow-2xl shadow-gray-200/40">
         <section>
-          <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2 italic">
+          <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-black flex items-center gap-2 italic">
             <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
             Portal Matrix
           </h3>
@@ -272,7 +273,7 @@ export default function SuperadminAuditPage() {
                 className={`h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm border ${
                   sourceFilter === t
                     ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-105 z-10'
-                    : 'bg-white border-gray-100 text-gray-400 dark:bg-black dark:border-white/5 dark:text-gray-500 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
+                    : 'bg-white border-gray-100 text-black dark:bg-black dark:border-white/5 dark:text-black hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
                 }`}
               >
                 {t}
@@ -283,7 +284,7 @@ export default function SuperadminAuditPage() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           <section>
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2 italic">
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-black flex items-center gap-2 italic">
               <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
               Impact Vector
             </h3>
@@ -295,12 +296,12 @@ export default function SuperadminAuditPage() {
                   className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all gap-2 flex items-center border ${
                     actionType === t
                       ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-lg'
-                      : 'bg-white border-gray-100 text-gray-400 dark:bg-black dark:border-white/5 dark:text-gray-500 hover:border-black dark:hover:border-white'
+                      : 'bg-white border-gray-100 text-black dark:bg-black dark:border-white/5 dark:text-black hover:border-black dark:hover:border-white'
                   }`}
                 >
                   {t}
                   {t !== 'all' && actionCounts[t] !== undefined && (
-                    <span className={`ml-2 px-2 py-0.5 rounded-lg text-[9px] font-black ${actionType === t ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/10 text-gray-400'}`}>
+                    <span className={`ml-2 px-2 py-0.5 rounded-lg text-[9px] font-black ${actionType === t ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/10 text-black'}`}>
                       {actionCounts[t] || 0}
                     </span>
                   )}
@@ -310,7 +311,7 @@ export default function SuperadminAuditPage() {
           </section>
 
           <section>
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2 italic">
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-black flex items-center gap-2 italic">
               <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
               Temporal Boundary
             </h3>
@@ -327,7 +328,7 @@ export default function SuperadminAuditPage() {
                   className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                     dateFilter === b.val
                       ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-lg'
-                      : 'bg-white border-gray-100 text-gray-400 dark:bg-black dark:border-white/5 dark:text-gray-500 hover:border-black dark:hover:border-white'
+                      : 'bg-white border-gray-100 text-black dark:bg-black dark:border-white/5 dark:text-black hover:border-black dark:hover:border-white'
                   }`}
                 >
                   {b.label}
@@ -338,14 +339,14 @@ export default function SuperadminAuditPage() {
         </div>
 
         <div className="relative mt-2 group">
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-black dark:group-focus-within:text-white transition-colors">
+          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-black dark:text-black group-focus-within:text-black dark:group-focus-within:text-white transition-colors">
             <SearchIcon />
           </div>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search activity, entity names, or staff ID..."
-            className="h-16 w-full rounded-[2rem] border border-gray-100 bg-white pl-16 pr-8 text-sm font-black text-black outline-none transition-all placeholder:text-gray-300 dark:border-white/5 dark:bg-black dark:text-white focus:border-black dark:focus:border-white/40 shadow-sm"
+            className="h-16 w-full rounded-[2rem] border border-gray-100 bg-white pl-16 pr-8 text-sm font-black text-black outline-none transition-all placeholder:text-black dark:border-white/5 dark:bg-black dark:text-white focus:border-black dark:focus:border-white/40 shadow-sm"
           />
         </div>
       </div>
@@ -355,21 +356,21 @@ export default function SuperadminAuditPage() {
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center">
             <div className="w-12 h-12 border-4 border-black/10 dark:border-white/10 border-t-black dark:border-t-white rounded-full animate-spin mb-6" />
-            <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em]">Syncing global audit stream...</p>
+            <p className="text-[10px] font-black text-black dark:text-black uppercase tracking-[0.3em]">Syncing global audit stream...</p>
           </div>
         ) : !filtered.length ? (
           <div className="rounded-[2.5rem] border border-dashed border-gray-100 py-32 text-center dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02]">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white dark:bg-black text-gray-200 dark:text-gray-800 mb-6 shadow-sm">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white dark:bg-black text-gray-200 dark:text-black mb-6 shadow-sm">
               <HistoryIcon size={32} />
             </div>
             <h3 className="text-xl font-black text-black dark:text-white uppercase tracking-tight">Dead Silence</h3>
-            <p className="text-gray-400 dark:text-gray-500 text-xs font-black uppercase tracking-widest max-w-xs mx-auto mt-2 italic">Operation sequence empty for selection</p>
+            <p className="text-black dark:text-black text-xs font-black uppercase tracking-widest max-w-xs mx-auto mt-2 italic">Operation sequence empty for selection</p>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between px-2 mb-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Activity stream</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{filtered.length} visible</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Activity stream</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black">{filtered.length} visible</span>
             </div>
             {filtered.map((r) => (
               <div
@@ -394,27 +395,27 @@ export default function SuperadminAuditPage() {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border border-black/5 dark:border-white/5 ${
                         r.source === 'hq' ? 'bg-black dark:bg-white text-white dark:text-black' :
-                        r.source === 'rehab' ? 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400' :
-                        'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500'
+                        r.source === 'rehab' ? 'bg-gray-100 dark:bg-white/10 text-black dark:text-black' :
+                        'bg-gray-50 dark:bg-white/5 text-black dark:text-black'
                       }`}>
                         {r.source}
                       </span>
-                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                        {r.action} by <span className="text-gray-700 dark:text-gray-300">{r.actorName}</span>
+                      <span className="text-[10px] font-bold text-black dark:text-black">
+                        {r.action} by <span className="text-black dark:text-black">{r.actorName}</span>
                       </span>
                       {r.entityLabel && (
-                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                          • for <span className="text-gray-700 dark:text-gray-300">{r.entityLabel}</span>
+                        <span className="text-[10px] font-bold text-black dark:text-black">
+                          • for <span className="text-black dark:text-black">{r.entityLabel}</span>
                         </span>
                       )}
-                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 pl-2">
+                      <span className="text-[10px] font-bold text-black dark:text-black pl-2">
                         {r.whenLabel}
                       </span>
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
                     <div 
-                      className="text-[10px] font-black uppercase text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-help transition-colors"
+                      className="text-[10px] font-black uppercase text-black hover:text-gray-900 dark:hover:text-white cursor-help transition-colors"
                       title={r.whenLabel}
                     >
                       {getRelativeTime(r.whenMs)}
@@ -434,6 +435,7 @@ export default function SuperadminAuditPage() {
           onClose={() => setSelectedAudit(null)} 
         />
       )}
+    </div>
     </div>
   );
 }

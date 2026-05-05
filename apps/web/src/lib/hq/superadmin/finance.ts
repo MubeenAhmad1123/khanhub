@@ -10,10 +10,15 @@ import {
   Timestamp, 
   doc, 
   updateDoc, 
-  getDoc 
+  getDoc,
+  getCountFromServer,
+  getAggregateFromServer,
+  sum
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
+import { getCached, setCached } from '@/lib/queryCache';
+
 
 export type FinanceTab = 'combined' | 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq';
 export type TxType = 'fees' | 'medicine' | 'salary' | 'maintenance' | 'other' | 'session';
@@ -85,6 +90,10 @@ function classifyTxType(t: any): TxType {
  * Defaults to 'approved' but can include pending for real-time collection metrics.
  */
 export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq', days: number, statuses: string[]) {
+  const cacheKey = `finance_recent_${dept}_${days}_${statuses.join('_')}`;
+  const cached = getCached<any[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     let col = '';
     if (dept === 'rehab') col = 'rehab_transactions';
@@ -97,12 +106,12 @@ export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hos
       collection(db, col), 
       where('status', 'in', statuses), 
       orderBy('createdAt', 'desc'), 
-      limit(days * 100)
+      limit(Math.min(days * 50, 200))
     );
 
     const snap = await getDocs(q);
     
-    return snap.docs.map((d: any) => {
+    const data = snap.docs.map((d: any) => {
       const data = d.data();
       return { 
         id: d.id, 
@@ -112,11 +121,14 @@ export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hos
         _approvedDate: data.approvedAt ? toDate(data.approvedAt) : null
       };
     });
+    setCached(cacheKey, data, 60);
+    return data;
   } catch (err) {
     console.warn(`[Finance] Permission or load error for ${dept}:`, err);
     return [];
   }
 }
+
 
 /**
  * Legacy wrapper for backward compatibility.
@@ -125,10 +137,24 @@ export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'h
   return loadRecentTx(dept, days, ['approved']);
 }
 
+async function getCountByDocs(q: any, max = 100): Promise<number> {
+  try {
+    const snap = await getDocs(query(q, limit(max)));
+    return snap.size;
+  } catch (err) {
+    console.error('[Finance] getCountByDocs error:', err);
+    return 0;
+  }
+}
+
 /**
  * Fetches data specifically tailored for the Finance Hub visualization.
  */
 export async function fetchFinanceHubData() {
+  const cacheKey = 'finance_hub_data';
+  const cached = getCached<any[]>(cacheKey);
+  if (cached) return cached;
+
   const now = new Date();
   const today = dayKey(now);
   
@@ -152,7 +178,12 @@ export async function fetchFinanceHubData() {
     else if (d.id === 'hospital') col = 'hospital_transactions';
     else col = 'cashierTransactions';
 
-    const pendingSnap = await getDocs(query(collection(db, col), where('status', '==', 'pending'))).catch(() => ({ size: 0 }));
+    // Use getCountByDocs to save aggregation quota
+    const pendingCount = await getCountByDocs(query(collection(db, col), where('status', '==', 'pending')), 100);
+    
+    // For pending sum, we fetch the actual docs and sum them locally (limited to 100)
+    const pendingSnap = await getDocs(query(collection(db, col), where('status', '==', 'pending'), limit(100))).catch(() => ({ docs: [] }));
+    const pendingAmount = pendingSnap.docs.reduce((s, d) => s + (Number(d.data().amount) || 0), 0);
     
     const income = todayTxs.reduce((acc, t) => (t.type !== 'expense' ? acc + (Number(t.amount) || 0) : acc), 0);
     const expense = todayTxs.reduce((acc, t) => (t.type === 'expense' ? acc + (Number(t.amount) || 0) : acc), 0);
@@ -165,50 +196,33 @@ export async function fetchFinanceHubData() {
       }
     });
 
-    const pendingAmount = 'docs' in pendingSnap 
-      ? (pendingSnap.docs as any[]).reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0)
-      : 0;
-
     return {
       deptId: d.id,
       deptName: d.name,
       totalIncome: income,
       totalExpense: expense,
-      pendingCount: 'size' in pendingSnap ? pendingSnap.size : 0,
+      pendingCount,
       pendingAmount,
       ways,
-      percentOfTotal: 0 // Calculated after all depts are loaded
+      percentOfTotal: 0
     };
   }));
 
   const grandTotal = results.reduce((acc, r) => acc + r.totalIncome, 0);
-  
-  return results.map(r => ({
+  const finalData = results.map(r => ({
     ...r,
     percentOfTotal: grandTotal > 0 ? (r.totalIncome / grandTotal) * 100 : 0
   }));
-}
 
-/**
- * Approves a transaction across any department collection.
- */
-export async function approveTransaction(deptId: string, txId: string) {
-  let col = '';
-  if (deptId === 'rehab') col = 'rehab_transactions';
-  else if (deptId === 'spims') col = 'spims_transactions';
-  else if (deptId === 'job-center') col = 'job_center_transactions';
-  else if (deptId === 'hospital') col = 'hospital_transactions';
-  else col = 'cashierTransactions';
-
-  const txRef = doc(db, col, txId);
-  await updateDoc(txRef, {
-    status: 'approved',
-    approvedAt: Timestamp.now(),
-  });
-  return true;
+  setCached(cacheKey, finalData, 300); // 5 mins
+  return finalData;
 }
 
 export async function fetchFinanceSummary(): Promise<FinanceSummary> {
+  const cacheKey = 'finance_summary';
+  const cached = getCached<FinanceSummary>(cacheKey);
+  if (cached) return cached;
+
   const now = new Date();
   const today = dayKey(now);
   const thisMonth = monthKey(now);
@@ -217,14 +231,13 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = dayKey(yesterday);
 
-  // Load last 40 days to calculate trends, including pending for today's real-time accuracy
   const statuses = ['approved', 'pending', 'pending_cashier'];
   const [rehab, spims, jobcenter, hospital, hq] = await Promise.all([
-    loadRecentTx('rehab', 40, statuses),
-    loadRecentTx('spims', 40, statuses),
-    loadRecentTx('job-center', 40, statuses),
-    loadRecentTx('hospital' as any, 40, statuses),
-    loadRecentTx('hq', 40, statuses)
+    loadRecentTx('rehab', 7, statuses),
+    loadRecentTx('spims', 7, statuses),
+    loadRecentTx('job-center', 7, statuses),
+    loadRecentTx('hospital' as any, 7, statuses),
+    loadRecentTx('hq', 7, statuses)
   ]);
 
   const allTx = [...rehab, ...spims, ...jobcenter, ...hospital, ...hq];
@@ -235,40 +248,34 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   const isToday = (date: Date | null) => date ? dayKey(date) === today : false;
   const isYesterday = (date: Date | null) => date ? dayKey(date) === yesterdayStr : false;
 
-  // Collected Today: Anything approved today OR anything approved that was recorded today
   const collectedToday = sumBy(allTx, (r) => (r.status === 'approved' && isToday(r._approvedDate)) || (r.status === 'approved' && isToday(r._date)));
   const collectedYesterday = sumBy(allTx, (r) => (r.status === 'approved' && isYesterday(r._approvedDate)) || (r.status === 'approved' && isYesterday(r._date)));
   const collectedThisMonth = sumBy(allTx, (r) => r.status === 'approved' && r._date && monthKey(r._date) === thisMonth);
   
   const collectedDailyTrend = collectedYesterday === 0 ? 0 : ((collectedToday - collectedYesterday) / collectedYesterday) * 100;
 
-  // Stats for Pending Today
   const pendingTodayTx = allTx.filter(r => r.status === 'pending' && isToday(r._date));
   const pendingAmountToday = pendingTodayTx.reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
   const pendingCountToday = pendingTodayTx.length;
 
-  const [rehabPending, spimsPending, jcPending, hosPending, hqPending, recPending, rehabPat, spimsStu, jcSeek, hospitalPat] = await Promise.all([
-    getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
-    getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
+  const [rehabPending, spimsPending, jcPending, hosPending, hqPending, recPending, rehabSum, spimsSum, jcSum, hospitalSum] = await Promise.all([
+    getCountByDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))),
+    getCountByDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))),
+    // Use getAggregateFromServer for these only once every 15 mins
+    getAggregateFromServer(collection(db, 'rehab_patients'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
+    getAggregateFromServer(collection(db, 'spims_students'), { t: sum('totalCourseFee') }).then(s => s.data().t).catch(() => 0),
+    getAggregateFromServer(collection(db, 'job_center_seekers'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
+    getAggregateFromServer(collection(db, 'hospital_patients'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
   ]);
 
-  const outstandingTotal = [...rehabPat.docs, ...spimsStu.docs, ...jcSeek.docs, ...hospitalPat.docs].reduce((acc, d: any) => {
-    const data = d.data();
-    return acc + Math.max(0, Number(data.remaining ?? data.amountRemaining ?? 0));
-  }, 0);
-
-  return {
+  const result = {
     collectedToday,
     collectedThisMonth,
-    outstandingTotal,
+    outstandingTotal: Number(rehabSum || 0) + Number(spimsSum || 0) + Number(jcSum || 0) + Number(hospitalSum || 0),
     pendingApprovals: rehabPending + spimsPending + jcPending + hosPending + hqPending,
     pendingAmountToday,
     pendingCountToday,
@@ -277,7 +284,10 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
     collectedDailyTrend,
     collectedMonthlyTrend: 0,
   };
+  setCached(cacheKey, result, 900); // 15 mins for heavy summary
+  return result;
 }
+
 
 // ─── Daily Breakdown for date-filter on Finance page ─────────────────────────
 
@@ -538,10 +548,10 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
 
   // 4. Top Outstanding
   const [rehabEntities, spimsEntities, jcEntities, hospitalEntities] = await Promise.all([
-    tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
-    tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
-    tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
-    tab !== 'hospital' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'hospital' }))),
+    tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
+    tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
+    tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
+    tab !== 'hospital' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'hospital' }))),
   ]);
 
   const top: TopOutstandingRow[] = [...rehabEntities, ...spimsEntities, ...jcEntities, ...hospitalEntities]
@@ -633,4 +643,25 @@ export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDa
     start,
     end
   };
+}
+
+/**
+ * Approves a transaction across any department.
+ */
+export async function approveTransaction(deptId: string, txId: string) {
+  let col = '';
+  if (deptId === 'rehab') col = 'rehab_transactions';
+  else if (deptId === 'spims') col = 'spims_transactions';
+  else if (deptId === 'job-center') col = 'job_center_transactions';
+  else col = 'cashierTransactions';
+
+  const docRef = doc(db, col, txId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) throw new Error('Transaction not found');
+
+  await updateDoc(docRef, {
+    status: 'approved',
+    approvedAt: Timestamp.now(),
+    updatedAt: Timestamp.now()
+  });
 }

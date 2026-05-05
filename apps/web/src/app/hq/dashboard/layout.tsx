@@ -9,18 +9,19 @@ import {
   LogOut, Menu, X, ArrowLeft, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
   Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import type { HqRole, HqSession } from '@/types/hq';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
+import { HqManagerApprovalsNavBadge } from '@/components/hq/HqManagerApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
 import { HqNotificationPermissionBanner } from '@/components/hq/HqNotificationPermissionBanner';
-import { ThemeToggle } from '@/components/hq/ThemeToggle';
+import { Spinner } from '@/components/ui';
 
 const SESSION_KEY = 'hq_session';
-const SESSION_TIMEOUT = 43200000;
+const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
 
 interface NavItem {
   label: string;
@@ -56,25 +57,27 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ROLE_COLORS: Record<HqRole, string> = {
-  superadmin: 'bg-purple-100 text-purple-700',
-  manager: 'bg-blue-100 text-blue-700',
-  cashier: 'bg-amber-100 text-amber-700',
+  superadmin: 'bg-indigo-50 text-indigo-600 border border-indigo-100 font-semibold',
+  manager: 'bg-emerald-50 text-emerald-600 border border-emerald-100 font-semibold',
+  cashier: 'bg-blue-50 text-blue-600 border border-blue-100 font-semibold',
 };
 
 const ROLE_LABELS: Record<HqRole, string> = {
-  superadmin: 'Super Admin',
-  manager: 'Manager',
-  cashier: 'Cashier',
+  superadmin: 'SYSTEM ARCHITECT',
+  manager: 'MANAGER',
+  cashier: 'CASHIER',
 };
 
 // Dept label map for sidebar shortcuts
 const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string; icon: React.ReactNode }> = {
-  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
-  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
-  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
-  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
-  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
-  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
+  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-black',   icon: <Heart size={16} /> },
+  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-black',   icon: <GraduationCap size={16} /> },
+  it:           { label: 'IT',         adminUrl: '/departments/it/dashboard/admin',          color: 'text-black',   icon: <Shield size={16} /> },
+  'social-media': { label: 'Media',    adminUrl: '/departments/social-media/dashboard/admin', color: 'text-black',   icon: <Eye size={16} /> },
+  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-black', icon: <Heart size={16} /> },
+  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-black',  icon: <Heart size={16} /> },
+  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-black',   icon: <Building2 size={16} /> },
+  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-black', icon: <User size={16} /> },
 };
 
 const DEPARTMENT_NAV: Record<string, NavItem[]> = {
@@ -136,7 +139,21 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   // FCM push notifications
   const { permission, isRequesting, requestPermission } = useFcmNotifications(user);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('hq_fcm_banner_dismissed');
+      if (!dismissed) setBannerDismissed(false);
+    }
+  }, []);
+
+  const handleDismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem('hq_fcm_banner_dismissed', 'true');
+  };
+
   const showNotifBanner = mounted && !bannerDismissed && permission === 'default' && !!user;
 
   const normalizeRole = (role: unknown): HqRole | null => {
@@ -146,6 +163,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   };
 
   useEffect(() => {
+    // 1. Session check
     const session = localStorage.getItem(SESSION_KEY);
     if (!session) { router.push('/hq/login'); return; }
 
@@ -158,9 +176,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         return;
       }
       setUser(parsed);
-      setIsChecking(false);
-      setTimeout(() => setMounted(true), 50);
-
+      
       // Detect any active dept sessions (from impersonation)
       const depts = Object.keys(DEPT_INFO).filter(d => {
         try { return !!localStorage.getItem(`${d}_session`); } catch { return false; }
@@ -169,7 +185,33 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     } catch {
       localStorage.removeItem(SESSION_KEY);
       router.push('/hq/login');
+      return;
     }
+
+    // 2. Auth initialization check
+    const unsubAuth = auth.onAuthStateChanged((firebaseUser) => {
+      setAuthInitialized(true);
+      if (firebaseUser) {
+        setIsChecking(false);
+        setTimeout(() => setMounted(true), 50);
+      } else {
+        // Only redirect if we ALSO don't have a local session.
+        // If we have a local session, wait for Firebase to potentially recover it.
+        const localSession = localStorage.getItem(SESSION_KEY);
+        if (!localSession) {
+          console.warn('[HQ Layout] No Firebase user and no local session. Redirecting...');
+          router.push('/hq/login');
+        } else {
+          // If we have a local session but Firebase says null, 
+          // we might be in a mid-initialization state. 
+          // We'll set isChecking to false anyway so the page can at least render based on local state.
+          setIsChecking(false);
+          setTimeout(() => setMounted(true), 50);
+        }
+      }
+    });
+
+    return () => unsubAuth();
   }, [router]);
 
   useEffect(() => {
@@ -183,29 +225,17 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           handleSignOut();
         }
       }
+    }, (err) => {
+      console.warn("Real-time session listener permission issue (likely session expired):", err);
     });
     return () => unsub();
   }, [user]);
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Shield size={24} className="text-purple-500 animate-pulse" />
-          </div>
-        </div>
-        <div className="mt-6 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">
-            Khan Hub HQ
-          </p>
-          <div className="mt-2 flex items-center gap-1 justify-center">
-            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" />
-          </div>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FCFBF8]">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-indigo-600 text-xs font-bold uppercase tracking-widest animate-pulse">Loading HQ Portal...</p>
       </div>
     );
   }
@@ -217,7 +247,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
     : DEPARTMENT_NAV[viewMode] || [];
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('[Logout] Auth signout error:', err);
+    }
     localStorage.removeItem(SESSION_KEY);
     router.push('/hq/login');
   };
@@ -226,18 +261,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
     
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-800">
+      <div className="flex flex-col h-full bg-white text-gray-900 border-r border-gray-100">
         {/* Header / Branding */}
-        <div className="px-6 pt-7 pb-6 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-3 transition-transform hover:rotate-0 bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20">
-              <Shield size={22} strokeWidth={2.5} />
+        <div className="px-6 pt-7 pb-6 border-b border-gray-50 bg-white">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 bg-indigo-600">
+              <Shield size={24} strokeWidth={2.5} />
             </div>
             <div>
               <p className="font-black tracking-tight text-base leading-none">
                 {viewMode === 'hq' ? 'Khan Hub HQ' : DEPT_INFO[viewMode]?.label}
               </p>
-              <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-gray-400 dark:text-gray-500">
+              <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-black/50">
                 {viewMode === 'hq' ? 'Central Console' : 'Management'}
               </p>
             </div>
@@ -248,17 +283,17 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="relative">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 border border-gray-100 text-xs font-black transition-all bg-white hover:bg-gray-50 shadow-sm rounded-xl active:scale-[0.98]"
               >
                 <div className="flex items-center gap-2">
                   <ExternalLink size={14} className="text-purple-500" />
-                  <span>Jump to Portal</span>
+                  <span className="uppercase tracking-tight">Jump to Portal</span>
                 </div>
-                <ChevronLeft size={14} className={`transition-transform duration-200 ${portalOpen ? '-rotate-90' : 'rotate-0'}`} />
+                <ChevronLeft size={14} className={`transition-transform duration-200 text-black ${portalOpen ? '-rotate-90' : 'rotate-0'}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-2xl border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-white dark:bg-gray-800 border-gray-100 dark:border-white/10 shadow-black/10 dark:shadow-black/40">
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 border border-gray-100 shadow-2xl rounded-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-white">
                   {Object.keys(DEPT_INFO).map(dept => {
                     const info = DEPT_INFO[dept];
                     return (
@@ -266,9 +301,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                         key={dept}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50 text-xs font-bold transition-all text-gray-700 uppercase tracking-tight"
                       >
-                        <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 shadow-sm">
+                        <div className="p-1.5 rounded-lg border border-gray-100 bg-white">
                           {React.cloneElement(info.icon as React.ReactElement, { size: 12, className: info.color })}
                         </div>
                         <span>{info.label} Dashboard</span>
@@ -284,13 +319,13 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         {/* Navigation Mode Switcher - Modernized Pill */}
         {role === 'superadmin' && activeDepts.length > 0 && (
           <div className="px-4 pt-5 pb-2">
-            <div className="p-1 rounded-2xl flex items-center gap-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+            <div className="p-1 rounded-2xl bg-gray-50 flex flex-col gap-1">
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
                   viewMode === 'hq'
-                    ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-white shadow-sm dark:shadow-lg'
-                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 HQ Navigator
@@ -299,10 +334,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 <button
                   key={dept}
                   onClick={() => setViewMode(dept)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
                     viewMode === dept
-                      ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-white shadow-sm dark:shadow-lg'
-                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                      ? 'bg-white text-indigo-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
                   }`}
                 >
                   {DEPT_INFO[dept]?.label} View
@@ -312,10 +347,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         )}
 
-        {/* Main Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-hide">
-          <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-gray-600">
-            Menu
+        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto scrollbar-hide">
+          <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-black/40">
+            System Menu
           </p>
           {navItems.map((item, i) => {
             const matches = navItems
@@ -328,21 +362,21 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group ${
+                className={`flex items-center gap-4 px-4 py-3.5 border text-xs font-black transition-all group uppercase tracking-widest rounded-2xl ${
                   isActive
-                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-purple-600 dark:hover:text-white'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-600/20'
+                    : 'text-gray-500 border-transparent hover:border-gray-100 hover:bg-white hover:text-gray-900'
                 }`}
               >
-                <div className={`p-1 rounded-lg transition-colors ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-purple-500'}`}>
-                  {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 2.5 : 2 })}
+                <div className={`p-1 transition-colors ${isActive ? 'text-white' : 'text-black'}`}>
+                  {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 3 : 2 })}
                 </div>
                 <span className="flex-1">{item.label}</span>
                 {item.label === 'Approvals' && viewMode === 'hq' && role === 'superadmin' && (
                   <HqSuperadminApprovalsNavBadge />
                 )}
-                {isActive && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                {item.label === 'Contributions' && viewMode === 'hq' && role === 'manager' && (
+                  <HqManagerApprovalsNavBadge />
                 )}
               </Link>
             );
@@ -350,18 +384,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         </nav>
 
         {/* Bottom Section: Profile & Logout */}
-        <div className="px-4 py-6 mt-auto border-t border-gray-100 dark:border-gray-800">
-          <div className="mb-4 p-3 rounded-2xl flex items-center gap-3 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/5">
+        <div className="px-4 py-6 mt-auto border-t border-gray-50 bg-gray-50/30">
+          <div className="mb-4 p-4 border border-gray-100 flex items-center gap-4 bg-white shadow-sm rounded-2xl">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm bg-indigo-50 text-indigo-600 border border-indigo-100">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold truncate text-gray-900 dark:text-gray-100">{user?.name}</p>
-              <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">{ROLE_LABELS[role]}</p>
+              <p className="text-xs font-black truncate text-black uppercase">{user?.name}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-black/50">{ROLE_LABELS[role]}</p>
             </div>
             <button 
               onClick={handleSignOut}
-              className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+              className="p-2 rounded-lg border border-transparent hover:border-rose-100 transition-all text-gray-400 hover:text-rose-600 hover:bg-rose-50"
               title="Sign Out"
             >
               <LogOut size={16} />
@@ -371,10 +405,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           <div className="flex gap-2">
             <Link 
               href="/"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-gray-800 border border-gray-100 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+              className="w-full flex items-center justify-center gap-3 py-3 border border-gray-100 text-[10px] font-black uppercase tracking-[0.2em] transition-all bg-white text-gray-400 hover:text-rose-600 hover:bg-rose-50 shadow-sm rounded-xl active:scale-[0.98]"
             >
               <ArrowLeft size={14} />
-              Back to Main Portal
+              EXIT TO HUB
             </Link>
           </div>
         </div>
@@ -384,86 +418,86 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-gray-50 dark:bg-gray-950">
-      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800">
+    <div className="min-h-screen flex overflow-x-hidden bg-white">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-gray-100 fixed left-0 top-0 h-screen z-30 bg-white">
         <SidebarContent />
       </aside>
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-40 lg:hidden transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } bg-white dark:bg-gray-900`}>
+      } bg-white border-r border-gray-100`}>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="absolute top-4 right-4 p-2.5 rounded-xl border border-gray-100 text-gray-400 bg-white shadow-sm hover:text-rose-600 hover:border-rose-100 transition-all z-50 active:scale-95"
         >
-          <X size={16} />
+          <X size={18} />
         </button>
         <SidebarContent />
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between bg-white/80 dark:bg-gray-900/80 border-gray-100 dark:border-gray-800">
+        <header className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-2.5 rounded-xl border border-gray-100 bg-white text-gray-900 shadow-sm active:scale-95 transition-all"
             >
-              <Menu size={20} />
+              <Menu size={20} strokeWidth={2.5} />
             </button>
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-2.5 rounded-xl border border-gray-100 bg-white text-gray-600 shadow-sm active:scale-95 transition-all"
               title="Go back"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-purple-600 rounded-lg flex items-center justify-center text-white">
-              <Shield size={14} />
+          
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-indigo-600 flex items-center justify-center text-white rounded-xl shadow-lg shadow-indigo-600/20">
+              <Shield size={18} strokeWidth={2.5} />
             </div>
-            <span className="font-black text-sm text-gray-900 dark:text-white">Khan Hub HQ</span>
           </div>
+
           <div className="flex items-center gap-2">
             {user ? <HqNotificationBell session={user} /> : null}
-            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ROLE_COLORS[role]}`}>
-              {ROLE_LABELS[role]}
-            </span>
+            <div className="w-9 h-9 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-xs font-black text-indigo-600 shadow-sm">
+              {user?.name?.[0]?.toUpperCase()}
+            </div>
           </div>
         </header>
 
-        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-gray-900/80 border-gray-100 dark:border-gray-800">
+        <header className="hidden lg:flex sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-950 dark:hover:text-gray-100"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-100 bg-white text-[10px] font-bold transition-all text-gray-500 hover:text-gray-900 hover:bg-gray-50 shadow-sm rounded-xl active:scale-[0.98]"
               title="Go back"
             >
               <ChevronLeft size={15} />
-              Back
+              BACK
             </button>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
               Khan Hub HQ Portal
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <div className="w-px h-6 bg-gray-100 dark:bg-white/10 mx-1" />
+            <div className="w-px h-6 bg-gray-100 mx-1" />
             {user ? <HqNotificationBell session={user} /> : null}
-            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
+            <span className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest ${ROLE_COLORS[role]} shadow-sm`}>
               {ROLE_LABELS[role]}
             </span>
-            <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-gray-900 dark:text-gray-300 font-black text-sm">
+            <div className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-900 font-bold text-sm shadow-sm bg-white">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
-            <span className="text-gray-900 dark:text-gray-200 text-sm font-black hidden xl:inline">{user?.name}</span>
+            <span className="text-gray-700 text-sm font-bold hidden xl:inline uppercase tracking-tight">{user?.name}</span>
           </div>
         </header>
 
@@ -473,7 +507,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <HqNotificationPermissionBanner
               isRequesting={isRequesting}
               onAllow={requestPermission}
-              onDismiss={() => setBannerDismissed(true)}
+              onDismiss={handleDismissBanner}
             />
           )}
           <div className="p-4 lg:p-8">

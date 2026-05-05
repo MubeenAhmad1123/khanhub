@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
-import { Info, Lock, User as UserIcon, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Info, Lock, User as UserIcon, Loader2, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 export default function SignInPage() {
     const { user, loading, signInWithGoogle } = useAuth();
@@ -20,6 +20,7 @@ export default function SignInPage() {
     // Universal Login States
     const [customId, setCustomId] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // Redirect if already signed in (as regular user, not superadmin)
     useEffect(() => {
@@ -222,13 +223,20 @@ export default function SignInPage() {
                                         <Lock size={18} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                     </div>
                                     <input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="Password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 rounded-2xl py-5 pl-14 pr-5 font-bold text-gray-900 placeholder:text-gray-400 transition-all outline-none"
+                                        className="w-full bg-gray-50 border border-gray-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 rounded-2xl py-5 pl-14 pr-14 font-bold text-gray-900 placeholder:text-gray-400 transition-all outline-none"
                                         required
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-blue-500 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
                                 </div>
                             </div>
 
@@ -260,9 +268,9 @@ export default function SignInPage() {
 
                 {/* Secondary Links */}
                 <div className="mt-8 flex justify-center gap-8">
-                    <Link href="/" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Home</Link>
+                    <Link href="/about" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">About Us</Link>
                     <Link href="/terms" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Terms</Link>
-                    <Link href="/privacy" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Privacy</Link>
+                    <Link href="/privacy-policy" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-colors">Privacy</Link>
                 </div>
             </div>
         </div>

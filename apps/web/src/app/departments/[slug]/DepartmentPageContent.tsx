@@ -100,13 +100,27 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                             )}
 
                             <div className="flex flex-wrap gap-4">
+                                {department.slug === 'job-placement' && (
+                                    <Link 
+                                        href="/departments/job-center/login"
+                                        className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
+                                    >
+                                        <Users className="w-5 h-5 transition-transform group-hover:scale-110" />
+                                        Portal Login
+                                    </Link>
+                                )}
                                 {department.externalUrl ? (
                                     <>
                                         <a
                                             href={department.externalUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
+                                            className={cn(
+                                                "inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all shadow-xl hover:shadow-2xl active:scale-95 group",
+                                                department.slug === 'job-placement' 
+                                                    ? "bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20"
+                                                    : "bg-white text-neutral-900 hover:bg-neutral-50"
+                                            )}
                                         >
                                             <ZoomIn className="w-5 h-5 transition-transform group-hover:scale-110" />
                                             Visit Main Job Portal
@@ -232,7 +246,7 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                 };
 
                                 const portal = portalMap[department.slug];
-                                if (!portal) return null;
+                                if (!portal || department.slug === 'job-placement') return null;
 
                                 return (
                                     <section className={cn(
@@ -265,7 +279,75 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                 );
                             })()}
 
-                            {/* Programs / Courses Section */}
+                             {/* Public Directory for Job Center - Moved Up */}
+                             {department.slug === 'job-placement' && (
+                                <div className="animate-fade-in mb-12">
+                                    <JobCenterPublicDirectory theme={theme} previewMode={true} />
+                                </div>
+                            )}
+
+
+
+                            {/* Campus Gallery */}
+                            {department.gallery && department.gallery.length > 0 && (
+                                <div className="space-y-6 mb-12">
+                                    <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
+                                        Campus Gallery
+                                    </h2>
+                                    {department.gallery.map((section, idx) => (
+                                        <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            {section.images.map((img, iIdx) => (
+                                                <div
+                                                    key={iIdx}
+                                                    className="relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group shimmer cursor-zoom-in border border-neutral-100"
+                                                    onClick={(e) => openLightbox(e, img.url)}
+                                                >
+                                                    <Image
+                                                        src={img.url}
+                                                        alt={img.alt}
+                                                        fill
+                                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <ZoomIn className="w-8 h-8 text-white" />
+                                                    </div>
+                                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                                                        <p className="text-white text-[10px] text-center truncate font-medium">{img.alt}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {department.facilities && department.facilities.length > 0 && (
+                                <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm mb-12">
+                                    <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-6 font-display flex items-center gap-3">
+                                        <div
+                                            className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
+                                            style={{ backgroundColor: theme.light }}
+                                        >
+                                            <MapPin className="w-6 h-6" style={{ color: theme.primary }} />
+                                        </div>
+                                        Our Facilities
+                                    </h2>
+                                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                                        {department.facilities.map((facility, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 hover:shadow-md transition-all"
+                                            >
+                                                <Award className="w-5 h-5 mt-0.5" style={{ color: theme.primary }} />
+                                                <span className="text-neutral-800 font-medium">{facility}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Programs / Courses Section - Moved to bottom of main column */}
                             {department.slug === 'rehabilitation' && department.subDepartments ? (
                                 <div className="space-y-12 animate-fade-in">
                                     <div className="text-center max-w-3xl mx-auto mb-12">
@@ -279,7 +361,6 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
 
                                     {department.subDepartments.map((subDept, idx) => (
                                         <div key={idx} className="space-y-8">
-                                            {/* Mobile-first 2x4 grid, Desktop 4x2 */}
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                                                 {subDept.courses.map((course, cIdx) => (
                                                     <Link
@@ -287,12 +368,10 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                         href={`/departments/${department.slug}/${course.slug}`}
                                                         className="group relative flex flex-col h-full bg-white rounded-2xl border border-neutral-200 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:border-transparent"
                                                     >
-                                                        {/* Gradient Glow on Hover */}
                                                         <div
                                                             className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl -z-10"
                                                             style={{ background: `radial-gradient(circle at 50% 50%, ${theme.primary}33, transparent 70%)` }}
                                                         />
-
                                                         <div className="relative aspect-[4/5] sm:aspect-square w-full overflow-hidden">
                                                             {course.image && (
                                                                 <Image
@@ -304,7 +383,6 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                                 />
                                                             )}
                                                             <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
                                                             <div className="absolute bottom-4 left-4 right-4 text-white">
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -315,7 +393,6 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                                 </h3>
                                                             </div>
                                                         </div>
-
                                                         <div className="p-4 flex-1 flex flex-col bg-white">
                                                             <p className="text-xs sm:text-sm text-neutral-600 line-clamp-2 mb-4">
                                                                 {course.description}
@@ -339,8 +416,6 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                         <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
                                             Our Departments & Courses
                                         </h2>
-
-                                        {/* Course Filter Badges */}
                                         <div className="flex flex-wrap gap-2">
                                             {categories.map((cat) => (
                                                 <button
@@ -361,102 +436,84 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                         </div>
                                     </div>
 
-                                    {filteredSubDepartments && filteredSubDepartments.length > 0 ? (
-                                        filteredSubDepartments.map((subDept, idx) => (
-                                            <div key={idx} className="bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-fade-in">
-                                                <div
-                                                    className="p-4 sm:p-6 text-white"
-                                                    style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }}
-                                                >
-                                                    <h3 className="text-xl sm:text-2xl font-bold font-display">{subDept.title}</h3>
-                                                    {subDept.description && <p className="text-white/80 mt-1">{subDept.description}</p>}
-                                                </div>
+                                    {filteredSubDepartments && filteredSubDepartments.length > 0 && filteredSubDepartments.map((subDept, idx) => (
+                                        <div key={idx} className="bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-fade-in">
+                                            <div
+                                                className="p-4 sm:p-6 text-white"
+                                                style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }}
+                                            >
+                                                <h3 className="text-xl sm:text-2xl font-bold font-display">{subDept.title}</h3>
+                                                {subDept.description && <p className="text-white/80 mt-1">{subDept.description}</p>}
+                                            </div>
 
-                                                <div className="p-4 sm:p-6 grid gap-4">
-                                                    {subDept.courses.map((course, cIdx) => (
-                                                        <div key={cIdx} className="flex flex-col md:flex-row gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:bg-white hover:shadow-md transition-all group relative">
-                                                            {course.image && (
+                                            <div className="p-4 sm:p-6 grid gap-4">
+                                                {subDept.courses.map((course, cIdx) => (
+                                                    <div key={cIdx} className="flex flex-col md:flex-row gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:bg-white hover:shadow-md transition-all group relative">
+                                                        {course.image && (
+                                                            <Link
+                                                                href={department.externalUrl || (course.slug ? `/departments/${department.slug}/${course.slug}` : '#')}
+                                                                target={department.externalUrl ? "_blank" : undefined}
+                                                                rel={department.externalUrl ? "noopener noreferrer" : undefined}
+                                                                className="relative w-full md:w-48 aspect-square rounded-xl overflow-hidden shadow-md flex-shrink-0 shimmer border border-neutral-100 group/img block"
+                                                            >
+                                                                <Image
+                                                                    src={course.image}
+                                                                    alt={course.name}
+                                                                    fill
+                                                                    className="object-cover transition-transform duration-500 group-hover/img:scale-110"
+                                                                    sizes="(max-width: 768px) 100vw, 192px"
+                                                                />
+                                                            </Link>
+                                                        )}
+                                                        <div className="flex-1 flex flex-col justify-between">
+                                                            <div>
                                                                 <Link
                                                                     href={department.externalUrl || (course.slug ? `/departments/${department.slug}/${course.slug}` : '#')}
                                                                     target={department.externalUrl ? "_blank" : undefined}
                                                                     rel={department.externalUrl ? "noopener noreferrer" : undefined}
-                                                                    className="relative w-full md:w-48 aspect-square rounded-xl overflow-hidden shadow-md flex-shrink-0 shimmer border border-neutral-100 group/img block"
+                                                                    className="group/course-link"
                                                                 >
-                                                                    <Image
-                                                                        src={course.image}
-                                                                        alt={course.name}
-                                                                        fill
-                                                                        className="object-cover transition-transform duration-500 group-hover/img:scale-110"
-                                                                        sizes="(max-width: 768px) 100vw, 192px"
-                                                                    />
+                                                                    <h4 className="font-bold text-lg text-neutral-900 group-hover/course-link:text-primary-600 transition-colors">
+                                                                        {course.name}
+                                                                    </h4>
                                                                 </Link>
-                                                            )}
-                                                            <div className="flex-1 flex flex-col justify-between">
-                                                                <div>
-                                                                    <Link
-                                                                        href={department.externalUrl || (course.slug ? `/departments/${department.slug}/${course.slug}` : '#')}
-                                                                        target={department.externalUrl ? "_blank" : undefined}
-                                                                        rel={department.externalUrl ? "noopener noreferrer" : undefined}
-                                                                        className="group/course-link"
-                                                                    >
-                                                                        <h4 className="font-bold text-lg text-neutral-900 group-hover/course-link:text-primary-600 transition-colors">
-                                                                            {course.name}
-                                                                        </h4>
-                                                                    </Link>
-                                                                    <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
-                                                                        <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100">
-                                                                            <Calendar className="w-4 h-4 text-primary-500" /> {course.duration}
+                                                                <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
+                                                                    <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100">
+                                                                        <Calendar className="w-4 h-4 text-primary-500" /> {course.duration}
+                                                                    </span>
+                                                                    {course.degree && (
+                                                                        <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100 font-medium">
+                                                                            <Award className="w-4 h-4 text-amber-500" /> {course.degree}
                                                                         </span>
-                                                                        {course.degree && (
-                                                                            <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100 font-medium">
-                                                                                <Award className="w-4 h-4 text-amber-500" /> {course.degree}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                                    <div>
-                                                                        <div className="text-[10px] font-bold uppercase text-neutral-400 mb-1.5 tracking-widest">Eligibility Criteria</div>
-                                                                        <div className="inline-flex px-3 py-1.5 rounded-lg text-sm font-semibold bg-primary-50 text-primary-700 border border-primary-100">
-                                                                            {course.eligibility}
-                                                                        </div>
-                                                                    </div>
-                                                                    {course.slug && (
-                                                                        <Link
-                                                                            href={department.externalUrl || `/departments/${department.slug}/${course.slug}`}
-                                                                            target={department.externalUrl ? "_blank" : undefined}
-                                                                            rel={department.externalUrl ? "noopener noreferrer" : undefined}
-                                                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border-2 text-sm font-bold transition-all hover:shadow-md active:scale-95 hover:bg-neutral-50"
-                                                                            style={{ borderColor: theme.primary, color: theme.primary }}
-                                                                        >
-                                                                            {department.externalUrl ? "Visit Program" : "View Program"}
-                                                                            <ArrowLeft className="w-4 h-4 rotate-180" />
-                                                                        </Link>
                                                                     )}
                                                                 </div>
                                                             </div>
+                                                            <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                                <div>
+                                                                    <div className="text-[10px] font-bold uppercase text-neutral-400 mb-1.5 tracking-widest">Eligibility Criteria</div>
+                                                                    <div className="inline-flex px-3 py-1.5 rounded-lg text-sm font-semibold bg-primary-50 text-primary-700 border border-primary-100">
+                                                                        {course.eligibility}
+                                                                    </div>
+                                                                </div>
+                                                                {course.slug && (
+                                                                    <Link
+                                                                        href={department.externalUrl || `/departments/${department.slug}/${course.slug}`}
+                                                                        target={department.externalUrl ? "_blank" : undefined}
+                                                                        rel={department.externalUrl ? "noopener noreferrer" : undefined}
+                                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border-2 text-sm font-bold transition-all hover:shadow-md active:scale-95 hover:bg-neutral-50"
+                                                                        style={{ borderColor: theme.primary, color: theme.primary }}
+                                                                    >
+                                                                        {department.externalUrl ? "Visit Program" : "View Program"}
+                                                                        <ArrowLeft className="w-4 h-4 rotate-180" />
+                                                                    </Link>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-neutral-200 animate-fade-in">
-                                            <div className="inline-flex items-center justify-center w-20 h-20 bg-neutral-100 rounded-full mb-6">
-                                                <X className="w-10 h-10 text-neutral-400" />
-                                            </div>
-                                            <h3 className="text-xl font-bold text-neutral-900 mb-2">No programs match this filter</h3>
-                                            <p className="text-neutral-500 mb-8 max-w-sm mx-auto">
-                                                Try selecting a different category or view all programs to see what we offer.
-                                            </p>
-                                            <button
-                                                onClick={() => setActiveTag('all')}
-                                                className="btn-secondary px-8 py-3 rounded-2xl font-bold text-sm"
-                                            >
-                                                View All Programs
-                                            </button>
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
                             ) : (
                                 department.programs && department.programs.length > 0 && (
@@ -544,78 +601,11 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                     </div>
                                 )
                             )}
-
-                            {/* Public Directory for Job Center */}
-                            {department.slug === 'job-placement' && (
-                                <div className="animate-fade-in mt-12">
-                                    <JobCenterPublicDirectory theme={theme} />
-                                </div>
-                            )}
-
-                            {/* Campus Gallery */}
-
-                            {department.gallery && department.gallery.length > 0 && (
-                                <div className="space-y-6">
-                                    <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
-                                        Campus Gallery
-                                    </h2>
-                                    {department.gallery.map((section, idx) => (
-                                        <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                            {section.images.map((img, iIdx) => (
-                                                <div
-                                                    key={iIdx}
-                                                    className="relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group shimmer cursor-zoom-in border border-neutral-100"
-                                                    onClick={(e) => openLightbox(e, img.url)}
-                                                >
-                                                    <Image
-                                                        src={img.url}
-                                                        alt={img.alt}
-                                                        fill
-                                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <ZoomIn className="w-8 h-8 text-white" />
-                                                    </div>
-                                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                                                        <p className="text-white text-[10px] text-center truncate font-medium">{img.alt}</p>
-                                                    </div>
-                                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
-                                                        <ZoomIn className="w-3 h-3 text-neutral-800" />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Facilities */}
-                            {department.facilities && department.facilities.length > 0 && (
-                                <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm">
-                                    <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-6 font-display flex items-center gap-3">
-                                        <div
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
-                                            style={{ backgroundColor: theme.light }}
-                                        >
-                                            <MapPin className="w-6 h-6" style={{ color: theme.primary }} />
-                                        </div>
-                                        Our Facilities
-                                    </h2>
-                                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                                        {department.facilities.map((facility, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 hover:shadow-md transition-all"
-                                            >
-                                                <Award className="w-5 h-5 mt-0.5" style={{ color: theme.primary }} />
-                                                <span className="text-neutral-800 font-medium">{facility}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
+
+
+
+
 
                         {/* Sidebar */}
                         <div className="space-y-6">

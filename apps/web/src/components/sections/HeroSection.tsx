@@ -133,72 +133,75 @@ const ImageCarousel = memo(function ImageCarousel() {
   };
 
   return (
-    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.5 }}
-          className="absolute inset-0"
-        >
-          {!imageErrors.has(currentIndex) ? (
-            <Image
-              src={DEPARTMENT_IMAGES[currentIndex].src}
-              alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
-              fill
-              className="object-contain drop-shadow-2xl"
-              priority={currentIndex === 0}
-              loading={currentIndex === 0 ? "eager" : "lazy"}
-              // @ts-ignore - fetchPriority is supported in Next.js 14+ but might not be in the types yet
-              fetchPriority={currentIndex === 0 ? "high" : "auto"}
-              sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
-              onError={() => handleImageError(currentIndex)}
-              quality={95}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-2xl">
-              <span className="text-slate-400 text-sm">Image unavailable</span>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12 rounded-full flex items-center justify-center">
+      {/* 3D Static Circle Background */}
+      <div 
+        className="w-full h-full rounded-full overflow-hidden relative flex items-center justify-center bg-white sm:bg-[#F0F7FB] border border-neutral-100/60 shadow-lg"
+        style={{
+          transform: 'perspective(1000px) rotateX(10deg) rotateY(-8deg) scale(1.02)',
+          transformStyle: 'preserve-3d',
+          boxShadow: 'inset 0 4px 12px rgba(255,255,255,0.7), inset 0 -4px 12px rgba(0,0,0,0.06), 0 15px 35px -5px rgba(0,0,0,0.08)'
+        }}
+      >
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
 
-      {/* Progress Indicators - Optimized for many images */}
-      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-2 items-center">
-        {DEPARTMENT_IMAGES.length > 8 ? (
-          // Limited dots view for many images (Grouped indicators)
-          [...Array(Math.min(DEPARTMENT_IMAGES.length, 8))].map((_, idx) => {
-            const isCurrent = Math.floor(currentIndex / (DEPARTMENT_IMAGES.length / 8)) === idx;
-            return (
-              <div
-                key={idx}
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full transition-all duration-500",
-                  isCurrent 
-                    ? "bg-primary-500 scale-125 ring-2 ring-primary-500/20" 
-                    : "bg-neutral-300/60"
-                )}
-              />
-            );
-          })
-        ) : (
-          // Standard dots for few images
-          DEPARTMENT_IMAGES.map((_, idx) => (
+        {/* This wrapper ensures the animated image blinks perfectly inside the static 3D circle background without breaking its structure */}
+        <div className="relative w-[92%] h-[92%] rounded-full overflow-hidden flex items-center justify-center bg-white shadow-inner">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full overflow-hidden"
+            >
+              {!imageErrors.has(currentIndex) ? (
+                <Image
+                  src={DEPARTMENT_IMAGES[currentIndex].src}
+                  alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
+                  fill
+                  className="object-cover rounded-full"
+                  priority={currentIndex === 0}
+                  loading={currentIndex === 0 ? "eager" : "lazy"}
+                  // @ts-ignore - fetchPriority is supported in Next.js 14+
+                  fetchPriority={currentIndex === 0 ? "high" : "auto"}
+                  sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
+                  onError={() => handleImageError(currentIndex)}
+                  quality={95}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-full">
+                  <span className="text-slate-400 text-sm">Image unavailable</span>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Progress Indicators - 100% Guaranteed Round Small Dots */}
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 max-w-[280px] sm:max-w-none">
+        {Array.from({ length: Math.ceil(DEPARTMENT_IMAGES.length / 2) }).map((_, idx) => {
+          const isCurrentInGroup = Math.floor(currentIndex / 2) === idx;
+          return (
             <button
               key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={cn(
-                "w-1.5 h-1.5 rounded-full transition-all duration-500",
-                idx === currentIndex 
-                  ? "bg-primary-500 scale-125 ring-2 ring-primary-500/20" 
-                  : "bg-neutral-300/60 hover:bg-neutral-400"
-              )}
-              aria-label={`Go to slide ${idx + 1}`}
+              onClick={() => setCurrentIndex(idx * 2)}
+              className={`rounded-full transition-all duration-300 flex-shrink-0 ${
+                isCurrentInGroup ? 'bg-primary-600 scale-110' : 'bg-neutral-300 hover:bg-primary-300'
+              }`}
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                minWidth: '8px',
+                minHeight: '8px'
+              }}
+              aria-label={`Go to slides ${idx * 2 + 1} and ${idx * 2 + 2}`}
             />
-          ))
-        )}
+          );
+        })}
       </div>
     </div>
   );
@@ -213,6 +216,14 @@ export default function HeroSection() {
   const springConfig = { damping: 25, stiffness: 150 };
   const x = useSpring(useMotionValue(0), springConfig);
   const y = useSpring(useMotionValue(0), springConfig);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile, { passive: true });
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Only enable mouse tracking on desktop
@@ -236,9 +247,10 @@ export default function HeroSection() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [x, y]);
 
+
   return (
     <section
-      className="relative min-h-screen flex items-center overflow-hidden bg-white"
+      className="relative min-h-screen flex items-center w-full overflow-x-hidden overflow-y-clip bg-white"
       itemScope
       itemType="https://schema.org/Organization"
     >
@@ -258,7 +270,7 @@ export default function HeroSection() {
           }}
         />
         <motion.div
-          className="absolute -bottom-40 -left-40 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-success-100/30 rounded-full blur-3xl"
+          className="absolute -bottom-40 -left-40 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary-50/20 rounded-full blur-3xl"
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -364,37 +376,56 @@ export default function HeroSection() {
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 >
                   <div className="absolute inset-0 rounded-full border-2 border-primary-200/30" />
-                  <div className="absolute inset-8 rounded-full border-2 border-success-200/30" />
+                  <div className="absolute inset-8 rounded-full border-2 border-primary-100/20" />
                   <div className="absolute inset-16 rounded-full border-2 border-primary-100/30" />
                 </motion.div>
               </div>
 
-              {/* Optimized Pulsing Glow */}
-              <motion.div
-                className="absolute inset-0 -m-8 sm:-m-12 bg-gradient-to-br from-primary-200/40 via-success-200/40 to-primary-200/40 rounded-full blur-3xl"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.4, 0.6, 0.4],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
+              {/* Optimized Pulsing Glow - Wrapped in circular mask to prevent square blur bleed */}
+              <div className="absolute inset-0 -m-8 sm:-m-12 rounded-full overflow-hidden">
+                <motion.div
+                  className="w-full h-full bg-gradient-to-br from-primary-200/40 via-primary-100/20 to-primary-200/40 blur-3xl"
+                  animate={isMobile ? {
+                    scale: [1, 1.1, 1],
+                    opacity: [0.3, 0.4, 0.3],
+                  } : {
+                    scale: [1, 1.2, 1],
+                    opacity: [0.4, 0.6, 0.4],
+                  }}
+                  transition={{
+                    duration: isMobile ? 6 : 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </div>
 
               {/* Main Logo Carousel with Float Animation */}
               <motion.div
-                animate={{ y: [0, -20, 0] }}
+                animate={isMobile ? { y: [0, -8, 0] } : { y: [0, -20, 0] }}
                 transition={{
-                  duration: 6,
+                  duration: isMobile ? 5 : 6,
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}
                 className="relative z-10"
               >
-                {/* Logo Backdrop */}
-                <div className="absolute inset-0 -m-6 sm:-m-12 bg-white/40 backdrop-blur-[2px] rounded-full border border-white/20 shadow-xl" />
+                {/* Logo Backdrop - Shown only on desktop */}
+                <div className="hidden lg:block absolute inset-0 -m-6 sm:-m-12 rounded-full overflow-hidden bg-white/40 backdrop-blur-[2px] border border-white/20" />
+
+                {/* 3D-like Circle Background - Slightly larger than image - Shown only on desktop */}
+                <motion.div
+                  className="hidden lg:block absolute inset-0 -m-4 sm:-m-8 rounded-full border border-primary-500/20 bg-primary-500/5 shadow-[0_0_50px_rgba(0,94,184,0.1)]"
+                  animate={{
+                    scale: [1, 1.05, 1],
+                    opacity: [0.5, 0.8, 0.5],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
 
                 {/* Image Carousel */}
                 <ImageCarousel />

@@ -16,6 +16,21 @@ export type SpimsSessionLike = {
   role?: string;
 };
 
+const formatCnic = (val: string) => {
+  const digits = val.replace(/\D/g, '').substring(0, 13);
+  let formatted = '';
+  if (digits.length > 0) {
+    formatted = digits.substring(0, 5);
+    if (digits.length > 5) {
+      formatted += '-' + digits.substring(5, 12);
+      if (digits.length > 12) {
+        formatted += '-' + digits.substring(12, 13);
+      }
+    }
+  }
+  return formatted;
+};
+
 function isoFromField(v: unknown): string {
   if (!v) return '';
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
@@ -58,6 +73,7 @@ export default function AdmissionTab({
     try {
       await updateStudent(student.id, {
         rollNo: form.rollNo,
+        studentId: form.studentId,
         name: form.name,
         fatherName: form.fatherName,
         cnic: form.cnic,
@@ -141,6 +157,15 @@ export default function AdmissionTab({
             />
           )}
           {fld(
+            'Student ID',
+            <input
+              disabled={!canEdit}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+              value={form.studentId ?? ''}
+              onChange={(e) => setForm({ ...form, studentId: e.target.value })}
+            />
+          )}
+          {fld(
             'Name',
             <input
               disabled={!canEdit}
@@ -165,7 +190,7 @@ export default function AdmissionTab({
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
               placeholder="00000-0000000-0"
               value={form.cnic ?? ''}
-              onChange={(e) => setForm({ ...form, cnic: e.target.value })}
+              onChange={(e) => setForm({ ...form, cnic: formatCnic(e.target.value) })}
             />
           )}
           {fld(
@@ -199,16 +224,11 @@ export default function AdmissionTab({
           {fld(
             'Date of birth',
             <input
-              type="text"
-              placeholder="DD MM YYYY"
+              type="date"
               disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={formatDateDMY(form.dateOfBirth)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50 cursor-pointer"
+              value={isoFromField(form.dateOfBirth)}
               onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
-              onBlur={(e) => {
-                const parsed = parseDateDMY(e.target.value);
-                if (parsed) setForm({ ...form, dateOfBirth: parsed.toISOString().split('T')[0] });
-              }}
             />
           )}
           {fld(
@@ -343,16 +363,11 @@ export default function AdmissionTab({
           {fld(
             'Admission date',
             <input
-              type="text"
-              placeholder="DD MM YYYY"
+              type="date"
               disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={formatDateDMY(form.admissionDate)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50 cursor-pointer"
+              value={isoFromField(form.admissionDate)}
               onChange={(e) => setForm({ ...form, admissionDate: e.target.value as any })}
-              onBlur={(e) => {
-                const parsed = parseDateDMY(e.target.value);
-                if (parsed) setForm({ ...form, admissionDate: Timestamp.fromDate(parsed) });
-              }}
             />
           )}
           {fld(

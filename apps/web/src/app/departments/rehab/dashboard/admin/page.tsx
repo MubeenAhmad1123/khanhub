@@ -62,12 +62,15 @@ export default function AdminDashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const totalCountSnap = await getCountFromServer(query(
+      // 1. Count Patients by fetching limited slice
+      const totalCountSnap = await getDocs(query(
         collection(db, 'rehab_patients'), 
-        where('isActive', '==', true)
+        where('isActive', '==', true),
+        limit(100)
       ));
-      setTotalPatients(totalCountSnap.data().count);
+      setTotalPatients(totalCountSnap.size);
 
+      // 2. Fetch Recent Patients
       const patientsSnap = await getDocs(query(
         collection(db, 'rehab_patients'), 
         where('isActive', '==', true),
@@ -95,7 +98,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 pb-10 w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#FCFBF8] p-4 md:p-10 space-y-4 md:space-y-6 pb-10 w-full overflow-x-hidden">
 
       {/* Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

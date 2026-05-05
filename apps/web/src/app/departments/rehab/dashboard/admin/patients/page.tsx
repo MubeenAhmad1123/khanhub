@@ -195,6 +195,22 @@ export default function PatientsListPage() {
   };
 
   useEffect(() => {
+    const fetchAllPatientsForSearch = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'rehab_patients'));
+        const allData = snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setAllPatients(allData);
+      } catch (err: any) {
+        console.error('Error fetching all patients for search:', err?.message);
+      }
+    };
+    fetchAllPatientsForSearch();
+  }, []);
+
+  useEffect(() => {
     fetchPatients();
   }, [statusFilter, sortMethod]);
 
@@ -207,7 +223,8 @@ export default function PatientsListPage() {
     }
     const matches = allPatients.filter((p) =>
       (p.name || '').toLowerCase().includes(q) ||
-      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q)
+      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q) ||
+      (p.fatherName || '').toLowerCase().includes(q)
     );
     setSearchResults(matches.slice(0, 10));
     setSearchOpen(true);
@@ -253,7 +270,7 @@ export default function PatientsListPage() {
   const totalOutstanding = 0; // Disabled global sum to save reads. Total outstanding is now viewed per-patient.
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#FDFDFD] p-4 md:p-8 w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -331,7 +348,7 @@ export default function PatientsListPage() {
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        setSearchQuery(p.name || p.inpatientNumber || p.id);
+                        router.push(`/departments/rehab/dashboard/admin/patients/${p.id}`);
                         setSearchOpen(false);
                       }}
                       className="w-full flex items-center gap-4 px-4 py-3 hover:bg-teal-50/50 rounded-2xl transition-all text-left group"

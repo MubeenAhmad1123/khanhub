@@ -1,72 +1,101 @@
+// src/app/departments/hospital/dashboard/profile/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
   doc, getDoc, updateDoc, collection, query, where, getDocs, 
-  addDoc, serverTimestamp, deleteDoc, orderBy, limit 
+  orderBy, limit 
 } from 'firebase/firestore';
 import { 
-  User, Camera, Save, Loader2, Shield, UserCog, 
-  Heart, CheckCircle, Phone, X, Calendar, ClipboardCheck, 
-  Shirt, Award, Plus, Trash2, Clock
+  User, Camera, Loader2, Shield, 
+  CheckCircle, Phone, Calendar, 
+  Shirt, Award, Clock, Target, DollarSign,
+  TrendingUp, Activity, MapPin, Mail, Briefcase,
+  AlertCircle, ChevronRight, Download, Info, Sparkles
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+
+// --- Types ---
+interface AttendanceRecord {
+  id: string;
+  date: string;
+  status: 'present' | 'absent' | 'leave' | 'late';
+  checkInTime?: any;
+  checkOutTime?: any;
+}
+
+interface DutyRecord {
+  id: string;
+  date: string;
+  dutyType: string;
+  status: 'completed' | 'not_done';
+  points: number;
+}
+
+interface DressRecord {
+  id: string;
+  date: string;
+  status: 'yes' | 'no';
+  points: number;
+}
+
+interface SpecialTask {
+  id: string;
+  description: string;
+  status: 'assigned' | 'acknowledged' | 'completed';
+  date: string;
+  points?: number;
+}
+
+interface FineRecord {
+  id: string;
+  amount: number;
+  reason: string;
+  date: string;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Profile Data
   const [profile, setProfile] = useState<any>(null);
-  const [staffDoc, setStaffDoc] = useState<any>(null);
-  const [patientDoc, setPatientDoc] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'special_tasks' | 'attendance' | 'finance' | 'dress' | 'duty' | 'score' | 'profile'>('special_tasks');
   
-  // Tabs for Admin/Staff
-  const [activeTab, setActiveTab] = useState<'attendance'|'duties'|'dress'|'contributions'>('attendance');
-  
-  // Metrics Data
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [duties, setDuties] = useState<any[]>([]);
-  const [dressLogs, setDressLogs] = useState<any[]>([]);
-  const [contributions, setContributions] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [duties, setDuties] = useState<DutyRecord[]>([]);
+  const [dressLogs, setDressLogs] = useState<DressRecord[]>([]);
+  const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
+  const [fines, setFines] = useState<FineRecord[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
 
-  // Contributions State
-  const [isAddingContrib, setIsAddingContrib] = useState(false);
-  const [newContrib, setNewContrib] = useState({ title: '', content: '' });
-  const [submittingContrib, setSubmittingContrib] = useState(false);
+  // Styles
+  const glassStyle = "bg-white/70 backdrop-blur-xl border border-white shadow-[20px_20px_60px_#d1d9e6,-20px_-20px_60px_#ffffff]";
+  const neumorphicOutset = "shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]";
+  const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
 
-  const fetchMetrics = useCallback(async (sId: string, dept: string) => {
+  const fetchMetrics = useCallback(async (sId: string) => {
     try {
-      const prefix = dept === 'hq' ? 'hq' : 'hospital';
-      
-      const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId), limit(1)))
+      const [attSnap, dutySnap, dressSnap, pointsSnap, taskSnap, fineSnap] = await Promise.all([
+        getDocs(query(collection(db, `hospital_attendance`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `hospital_duty_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `hospital_dress_logs`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `hospital_growth_points`), where('staffId', '==', sId), limit(1))),
+        getDocs(query(collection(db, `hospital_special_tasks`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30))),
+        getDocs(query(collection(db, `hospital_fines`), where('staffId', '==', sId), orderBy('date', 'desc'), limit(30)))
       ]);
 
-      // Client-side sorting to avoid composite index requirement
-      const sortByDate = (docs: any[]) => [...docs].sort((a, b) => {
-        const dateA = a.date?.seconds || 0;
-        const dateB = b.date?.seconds || 0;
-        return dateB - dateA;
-      });
-
-      setAttendance(sortByDate(attSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setDuties(sortByDate(dutySnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setDressLogs(sortByDate(dressSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setContributions(sortByDate(contribSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      
-      if (!pointsSnap.empty) {
-        setGrowthPoints(pointsSnap.docs[0].data());
-      }
+      setAttendance(attSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord)));
+      setDuties(dutySnap.docs.map(d => ({ id: d.id, ...d.data() } as DutyRecord)));
+      setDressLogs(dressSnap.docs.map(d => ({ id: d.id, ...d.data() } as DressRecord)));
+      setSpecialTasks(taskSnap.docs.map(d => ({ id: d.id, ...d.data() } as SpecialTask)));
+      setFines(fineSnap.docs.map(d => ({ id: d.id, ...d.data() } as FineRecord)));
+      if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
     } catch (error) {
       console.error("Error fetching metrics:", error);
     }
@@ -81,33 +110,15 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        // 1. User Doc
-        const userSnap = await getDoc(doc(db, 'hospital_users', parsed.uid));
-        if (!userSnap.exists()) {
-          toast.error("User not found");
-          router.push('/departments/hospital/login');
-          return;
-        }
+        const userRef = doc(db, 'hospital_users', parsed.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) { router.push('/departments/hospital/login'); return; }
         const uData = userSnap.data();
         setProfile({ id: userSnap.id, ...uData });
 
-        // 2. Role Data
-        if (parsed.role === 'admin' || parsed.role === 'staff') {
-          // Find staff dock in hospital_staff or hq_staff
-          let sSnap = await getDocs(query(collection(db, 'hospital_staff'), where('loginUserId', '==', parsed.uid)));
-          if (sSnap.empty) {
-            sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
-          }
-          
-          if (!sSnap.empty) {
-            const sd = sSnap.docs[0].data();
-            setStaffDoc({ id: sSnap.docs[0].id, ...sd });
-            fetchMetrics(sSnap.docs[0].id, sd.department || 'hospital');
-          }
-        } else if (parsed.role === 'family' && uData.patientId) {
-          const pSnap = await getDoc(doc(db, 'hospital_patients', uData.patientId));
-          if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
-        }
+        // Use the same doc ID for metrics
+        fetchMetrics(userSnap.id);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load profile");
@@ -118,346 +129,369 @@ export default function ProfilePage() {
     loadProfile();
   }, [router, fetchMetrics]);
 
-  const handleAddContribution = async () => {
-    if (!newContrib.title || !newContrib.content) return toast.error("Fill all fields");
-    if (!staffDoc) return;
-
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const handleUploadPhoto = async (file: File) => {
     try {
-      setSubmittingContrib(true);
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'hospital';
-      await addDoc(collection(db, `${prefix}_contributions`), {
-        staffId: staffDoc.id,
-        title: newContrib.title,
-        content: newContrib.content,
-        isApproved: false,
-        createdAt: serverTimestamp(),
-        date: serverTimestamp()
-      });
-      
-      toast.success("Contribution submitted for approval");
-      setIsAddingContrib(false);
-      setNewContrib({ title: '', content: '' });
-      fetchMetrics(staffDoc.id, staffDoc.department || 'hospital');
-    } catch (error) {
-      toast.error("Failed to submit");
+      setUploadingPhoto(true);
+      const url = await uploadToCloudinary(file, 'Khan Hub/hospital/profile');
+      await updateDoc(doc(db, 'hospital_users', session.uid), { photoUrl: url });
+      setProfile((p: any) => ({ ...p, photoUrl: url }));
+      toast.success('Photo updated');
+    } catch (e) {
+      toast.error('Upload failed');
     } finally {
-      setSubmittingContrib(false);
+      setUploadingPhoto(false);
     }
   };
 
-  const handleDeleteContribution = async (cid: string) => {
-    if (!confirm("Are you sure?")) return;
-    try {
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'hospital';
-      await deleteDoc(doc(db, `${prefix}_contributions`, cid));
-      toast.success("Deleted");
-      fetchMetrics(staffDoc.id, staffDoc.department || 'hospital');
-    } catch (error) {
-      toast.error("Failed to delete");
-    }
-  };
+  const totalEarnings = useMemo(() => {
+    if (!profile?.monthlySalary) return 0;
+    const fineTotal = fines.reduce((acc, f) => acc + (f.amount || 0), 0);
+    return profile.monthlySalary - fineTotal;
+  }, [profile, fines]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-      <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+    <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
+      <div className="animate-spin text-rose-600"><Loader2 size={40} /></div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#FCFBF8] pb-24 text-slate-900 overflow-x-hidden">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10 w-full">
-        <div className="w-full px-4 md:px-8 py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-50 px-4 py-6 md:px-12 bg-[#FCFBF8]/80 backdrop-blur-md border-b border-white">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-100">
-              <User size={24} />
+            <div className={`p-3 rounded-2xl ${glassStyle} text-rose-600`}>
+              <Activity size={28} />
             </div>
             <div>
-              <h1 className="text-xl font-black text-gray-900 tracking-tight">My Profile</h1>
-              <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">{session?.role}</p>
+              <h1 className="text-2xl font-black tracking-tight">Hospital Portal</h1>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Staff Profile • Live</p>
+            </div>
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+            <div className={`px-6 py-3 rounded-2xl ${glassStyle} flex items-center gap-3`}>
+              <Award className="text-amber-500" size={20} />
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Growth Points</p>
+                <p className="text-lg font-black">{profile?.totalGrowthPoints || 0}</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full mt-0 md:mt-8 md:max-w-5xl md:mx-auto md:px-4 space-y-3 md:space-y-8">
-        
-        {/* Basic Info Card */}
-        <div className="bg-white rounded-none md:rounded-[2.5rem] p-6 md:p-8 shadow-sm border-y border-gray-100 w-full flex flex-col items-center">
-          <div className="relative">
-            {profile?.photoUrl ? (
-              <img src={profile.photoUrl} className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50" alt="" />
-            ) : (
-              <div className="w-20 h-20 rounded-2xl mx-auto bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl font-black shadow-inner">
-                {profile?.displayName?.[0]}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Profile Sidebar */}
+        <div className="lg:col-span-4 space-y-8">
+          <div className={`p-8 rounded-[3rem] ${glassStyle} flex flex-col items-center relative overflow-hidden`}>
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-rose-500/5 rounded-full blur-3xl" />
+            
+            <div className="relative group">
+              <div className={`w-32 h-32 rounded-[2.5rem] overflow-hidden ${neumorphicOutset} border-4 border-white/50 relative`}>
+                {profile?.photoUrl ? (
+                  <img src={profile.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-slate-50 flex items-center justify-center text-4xl font-black text-slate-200 uppercase">
+                    {profile?.displayName?.[0]}
+                  </div>
+                )}
+                {uploadingPhoto && (
+                  <div className="absolute inset-0 bg-white/40 flex items-center justify-center backdrop-blur-sm">
+                    <Loader2 className="animate-spin text-rose-600" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <h2 className="text-center text-xl font-black mt-3 text-gray-900">{profile?.displayName}</h2>
-          <span className="mx-auto mt-2 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500">
-            {session?.role}
-          </span>
-          <p className="text-sm font-medium text-gray-500 flex items-center justify-center gap-2 mt-3">
-            <Phone size={14} className="text-emerald-500" /> {profile?.phone || 'No phone provided'}
-          </p>
-        </div>
+              <button 
+                onClick={() => fileRef.current?.click()}
+                className="absolute -bottom-2 -right-2 p-3 rounded-2xl bg-rose-600 text-white shadow-xl hover:scale-110 transition-all active:scale-95"
+              >
+                <Camera size={18} />
+              </button>
+              <input 
+                ref={fileRef} 
+                type="file" 
+                className="hidden" 
+                accept="image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
+                  handleUploadPhoto(file);
+                }} 
+              />
+            </div>
 
-        {/* Role Specific Content */}
-        {session?.role === 'family' ? (
-          <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-emerald-100 w-full">
-            <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
-              <Heart className="text-emerald-500" /> Linked Patient Information
-            </h3>
-            {patientDoc ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <div className="p-4 md:p-6 bg-emerald-50 rounded-2xl border border-emerald-100/50">
-                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Name</p>
-                  <p className="text-sm font-bold text-gray-900">{patientDoc.name}</p>
-                </div>
-                <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
-                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(patientDoc.admissionDate)}</p>
-                </div>
-                <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-start gap-1">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                    {patientDoc.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
+            <h2 className="mt-6 text-2xl font-black text-center">{profile?.displayName}</h2>
+            <p className="text-rose-600 font-black text-[10px] uppercase tracking-widest mt-2">{profile?.designation || 'Healthcare Professional'}</p>
+            
+            <div className="mt-8 w-full space-y-3">
+              <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}>
+                <Mail className="text-slate-300" size={16} />
+                <span className="text-xs font-bold text-slate-600 truncate">{profile?.email}</span>
               </div>
-            ) : (
-              <p className="text-sm text-gray-400 font-medium italic">No patient linked to this account.</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6 md:space-y-8 w-full">
-            {/* Growth Points Summary */}
-            <div className="grid grid-cols-2 gap-3 w-full px-3 md:px-0">
-              {[
-                { label: 'Attendance', val: growthPoints?.attendancePoints || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
-                { label: 'Duties', val: growthPoints?.dutyPoints || 0, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Dress Code', val: growthPoints?.dressCodePoints || 0, color: 'text-orange-600', bg: 'bg-orange-50' },
-                { label: 'Contribs', val: growthPoints?.contributionPoints || 0, color: 'text-purple-600', bg: 'bg-purple-50' },
-              ].map(stat => (
-                <div key={stat.label} className={`rounded-2xl p-4 text-center ${stat.bg} border border-[#F8FAFC] shadow-sm flex flex-col items-center justify-center`}>
-                  <span className={`text-2xl font-black block ${stat.color}`}>{stat.val}</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-gray-600">{stat.label}</span>
-                </div>
-              ))}
-              <div className="col-span-2 rounded-2xl p-4 text-center bg-emerald-500/10 border border-emerald-500/20 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black block text-emerald-600">{growthPoints?.totalPoints || 0}</span>
-                <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-emerald-800">Total Points</span>
+              <div className={`flex items-center gap-4 p-4 rounded-2xl ${neumorphicInset}`}>
+                <Phone className="text-slate-300" size={16} />
+                <span className="text-xs font-bold text-slate-600">{profile?.phone || 'No Phone'}</span>
               </div>
             </div>
 
-            {/* Metric Tabs */}
-            <div className="bg-white rounded-none md:rounded-[2.5rem] shadow-sm border-y border-gray-100 overflow-hidden w-full">
-              <div className="w-full overflow-x-auto scrollbar-none border-b border-gray-50">
-                <div className="flex min-w-max gap-1 p-2 bg-gray-100 rounded-xl mx-4 my-3">
-                  {[
-                    { id: 'attendance', label: 'Attendance', icon: <Calendar size={13}/> },
-                    { id: 'duties', label: 'Duties', icon: <ClipboardCheck size={13}/> },
-                    { id: 'dress', label: 'Dress Code', icon: <Shirt size={13}/> },
-                    { id: 'contributions', label: 'Contribs', icon: <Award size={13}/> },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
-                        activeTab === tab.id 
-                          ? 'bg-white shadow-sm text-emerald-600' 
-                          : 'opacity-40 hover:opacity-70'
-                      }`}
-                    >
-                      <span className="hidden sm:inline">{tab.icon}</span>
-                      {tab.label}
-                    </button>
+            <div className="mt-10 grid grid-cols-2 gap-4 w-full">
+              <div className={`p-4 rounded-3xl ${glassStyle} text-center`}>
+                <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Emp ID</p>
+                <p className="text-md font-black">#{profile?.employeeId || '---'}</p>
+              </div>
+              <div className={`p-4 rounded-3xl ${glassStyle} text-center`}>
+                <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Joined</p>
+                <p className="text-md font-black">{profile?.joiningDate ? formatDateDMY(profile.joiningDate).split('-')[2] : '2024'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Tabs */}
+        <div className="lg:col-span-8 space-y-8">
+          <div className={`p-2 rounded-[2rem] ${glassStyle} flex overflow-x-auto no-scrollbar gap-1`}>
+            {[
+              { id: 'special_tasks', label: 'Tasks', icon: <Target size={18} /> },
+              { id: 'attendance', label: 'Attendance', icon: <Calendar size={18} /> },
+              { id: 'finance', label: 'Finance', icon: <DollarSign size={18} /> },
+              { id: 'duty', label: 'Duty Logs', icon: <Activity size={18} /> },
+              { id: 'dress', label: 'Dress', icon: <Shirt size={18} /> },
+              { id: 'score', label: 'Score', icon: <TrendingUp size={18} /> },
+              { id: 'profile', label: 'Profile', icon: <Info size={18} /> },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-6 py-4 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap
+                  ${activeTab === tab.id 
+                    ? `bg-rose-600 text-white shadow-xl scale-105` 
+                    : `text-slate-400 hover:text-rose-600 hover:bg-rose-50`}`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className={`p-8 md:p-10 rounded-[3.5rem] min-h-[500px] relative overflow-hidden ${glassStyle}`}>
+            
+            {activeTab === 'special_tasks' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Target size={20} /></div>
+                  <h3 className="text-xl font-black">Daily Special Tasks</h3>
+                </div>
+                <div className="space-y-4">
+                  {specialTasks.length > 0 ? specialTasks.map(task => (
+                    <div key={task.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between group transition-transform hover:scale-[1.01]`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${task.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                          {task.status === 'completed' ? <CheckCircle size={20} /> : <Clock size={20} />}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.description || (task as any).task}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{formatDateDMY(task.date)}</p>
+                        </div>
+                      </div>
+                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600 shadow-sm">+{task.points || 0} PTS</div>
+                    </div>
+                  )) : (
+                    <div className="py-20 flex flex-col items-center opacity-30">
+                      <Sparkles size={48} className="text-slate-400 mb-4" />
+                      <p className="font-black uppercase tracking-widest">No Active Tasks</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'attendance' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Calendar size={20} /></div>
+                  <h3 className="text-xl font-black">Attendance History</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {attendance.map(log => (
+                    <div key={log.id} className={`p-5 rounded-[2rem] ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
+                      <div>
+                        <p className="font-bold text-sm text-slate-900">{formatDateDMY(log.date)}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase mt-1">
+                          {log.checkInTime ? toDate(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} - {log.checkOutTime ? toDate(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        </p>
+                      </div>
+                      <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                        log.status === 'present' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                      }`}>
+                        {log.status}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Month Navigator */}
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-50/50 border-b border-gray-50 w-full">
-                <button className="p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-gray-500">←</button>
-                <span className="text-[11px] font-black uppercase tracking-widest text-gray-600">
-                  {formatDateDMY(new Date())}
-                </span>
-                <button className="p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-gray-500">→</button>
-              </div>
-
-              <div className="p-4 md:p-8 w-full">
-                {activeTab === 'attendance' && (
-                  <div className="space-y-4">
-                    {attendance.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                        <span className="text-4xl">📋</span>
-                        <p className="text-sm font-black">No Records Found</p>
-                        <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                      </div>
-                    ) : (
-                      attendance.map(log => (
-                        <div key={log.id} className="flex flex-row items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full">
-                          <div className="flex flex-col gap-1 w-full">
-                            <p className="font-bold text-gray-900 text-sm">{formatDateDMY(log.date)}</p>
-                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{log.day}</p>
-                          </div>
-                          <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
-                            log.status === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {log.status}
-                          </span>
-                        </div>
-                      ))
-                    )}
+            {activeTab === 'finance' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-rose-600 text-white relative overflow-hidden`}>
+                     <DollarSign size={80} className="absolute -right-4 -bottom-4 opacity-10" />
+                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Estimated Payable</p>
+                     <h4 className="text-3xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
                   </div>
-                )}
-
-                {activeTab === 'duties' && (
-                  <div className="space-y-4">
-                    {duties.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                        <span className="text-4xl">📋</span>
-                        <p className="text-sm font-black">No Records Found</p>
-                        <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                      </div>
-                    ) : (
-                      duties.map(log => (
-                        <div key={log.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4 w-full">
-                          <div className="flex-1 w-full">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-xl uppercase tracking-widest">
-                                {formatDateDMY(log.date)}
-                              </span>
-                              <h4 className="font-black text-gray-900 text-sm capitalize">{log.dutyType?.replace(/_/g, ' ')}</h4>
-                            </div>
-                            <p className="text-sm font-medium text-gray-600 leading-relaxed">{log.comment || 'No comments'}</p>
-                          </div>
-                   
-                          <div className={`flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-1 p-3 sm:p-2 w-full sm:w-[90px] rounded-xl sm:rounded-2xl shrink-0 ${log.status === 'completed' ? 'bg-emerald-100/50 text-emerald-600 border border-emerald-100' : 'bg-red-100/50 text-red-600 border border-red-100'}`}>
-                              <span className="text-[9px] font-black uppercase tracking-widest">{log.status}</span>
-                              <span className="text-[11px] font-black text-gray-900 bg-white px-2 py-1 rounded-xl shadow-sm">+{log.points || 0} pts</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                  <div className={`p-8 rounded-[3rem] ${glassStyle} text-slate-900`}>
+                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Deductions</p>
+                     <h4 className="text-3xl font-black mt-2 text-rose-500">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4>
                   </div>
-                )}
-
-                {activeTab === 'dress' && (
-                  <div className="space-y-4">
-                    {dressLogs.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                        <span className="text-4xl">📋</span>
-                        <p className="text-sm font-black">No Records Found</p>
-                        <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                      </div>
-                    ) : (
-                      dressLogs.map(log => (
-                        <div key={log.id} className="flex flex-row items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full">
-                          <div className="flex flex-col gap-1">
-                            <p className="font-bold text-gray-900 text-sm">{formatDateDMY(log.date)}</p>
-                            <p className="text-[11px] font-medium text-gray-500">{log.comment || 'Professional attire'}</p>
+                </div>
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 px-2">Recent Fines</h4>
+                <div className="space-y-3">
+                  {fines.map(fine => (
+                    <div key={fine.id} className={`p-5 rounded-3xl ${neumorphicInset} flex items-center justify-between`}>
+                       <div className="flex items-center gap-4">
+                          <div className="p-2 bg-rose-50 rounded-xl text-rose-500"><AlertCircle size={18} /></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{fine.reason}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase">{formatDateDMY(fine.date)}</p>
                           </div>
-                          <div className="flex flex-col items-end">
-                             <div className="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">+{log.points || 0} pts</div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'contributions' && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-emerald-50 p-4 md:p-6 rounded-2xl border border-emerald-100 gap-4 w-full">
-                      <div className="flex flex-col gap-1">
-                        <h4 className="font-black text-emerald-900 text-sm">Share your contribution</h4>
-                        <p className="text-[11px] text-emerald-600 font-medium">Add records of extra work or achievements</p>
-                      </div>
-                      <button 
-                        onClick={() => setIsAddingContrib(true)}
-                        className="bg-emerald-600 text-white px-6 py-3 sm:py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto shadow-md shadow-emerald-600/20"
-                      >
-                        <Plus size={16} /> New Entry
-                      </button>
+                       </div>
+                       <p className="font-black text-rose-500">- Rs. {fine.amount}</p>
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                    {isAddingContrib && (
-                      <div className="p-4 md:p-6 bg-white border border-emerald-200 rounded-2xl shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2 w-full">
-                        <div className="flex justify-between items-center w-full">
-                          <h4 className="font-black text-[11px] uppercase tracking-widest text-emerald-600">New Contribution</h4>
-                          <button onClick={() => setIsAddingContrib(false)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"><X size={16} /></button>
+            {activeTab === 'duty' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Activity size={20} /></div>
+                  <h3 className="text-xl font-black">Work Logs</h3>
+                </div>
+                <div className="space-y-4">
+                  {duties.map(duty => (
+                    <div key={duty.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${duty.status === 'completed' ? 'bg-teal-50 text-teal-600' : 'bg-slate-50 text-slate-400'}`}>
+                          <Activity size={20} />
                         </div>
-                        <input 
-                           type="text" 
-                           placeholder="Title (e.g. Extra Patient Care)" 
-                           className="w-full px-4 py-3 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900"
-                           value={newContrib.title}
-                           onChange={e => setNewContrib({...newContrib, title: e.target.value})}
-                        />
-                        <textarea 
-                           placeholder="Describe your contribution in detail..." 
-                           className="w-full px-4 py-4 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 outline-none min-h-[120px] leading-relaxed text-gray-900"
-                           value={newContrib.content}
-                           onChange={e => setNewContrib({...newContrib, content: e.target.value})}
-                        />
-                        <button 
-                           onClick={handleAddContribution}
-                           disabled={submittingContrib}
-                           className="w-full bg-emerald-600 text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-50 transition-all font-medium"
-                        >
-                          {submittingContrib ? 'Submitting...' : 'Submit Contribution'}
+                        <div>
+                          <p className="text-sm font-bold capitalize">{duty.dutyType.replace(/_/g, ' ')}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{formatDateDMY(duty.date)}</p>
+                        </div>
+                      </div>
+                      <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{duty.points} PTS</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'dress' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                 <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><Shirt size={20} /></div>
+                  <h3 className="text-xl font-black">Dress Compliance</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dressLogs.map(log => (
+                    <div key={log.id} className={`p-6 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${log.status === 'yes' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-300'}`}>
+                          <Shirt size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">{formatDateDMY(log.date)}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{log.status === 'yes' ? 'Compliant' : 'Non-Compliant'}</p>
+                        </div>
+                      </div>
+                      {log.status === 'yes' && <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-rose-600">+{log.points} PTS</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'score' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><TrendingUp size={20} /></div>
+                  <h3 className="text-xl font-black">Performance Analysis</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#FCFBF8] text-center`}>
+                      <Award className="mx-auto text-amber-500 mb-2" size={32} />
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Total Growth Points</p>
+                      <h4 className="text-3xl font-black mt-2">{profile?.totalGrowthPoints || 0}</h4>
+                   </div>
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#FCFBF8] text-center`}>
+                      <Activity className="mx-auto text-emerald-500 mb-2" size={32} />
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Attendance %</p>
+                      <h4 className="text-3xl font-black mt-2">{Math.floor((attendance.filter(a=>a.status==='present').length / 30) * 100) || 0}%</h4>
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'profile' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-600"><User size={20} /></div>
+                  <h3 className="text-xl font-black">Personal Dossier</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <div className="space-y-6">
+                      <div>
+                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2 tracking-widest">National ID (CNIC)</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
+                            <Shield className="text-rose-500" size={18} />
+                            <p className="text-sm font-bold text-slate-700">{profile?.cnic || 'Not provided'}</p>
+                         </div>
+                      </div>
+                      <div>
+                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2 tracking-widest">Home Address</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-start gap-4`}>
+                            <MapPin className="text-rose-500 mt-1" size={18} />
+                            <p className="text-sm font-bold text-slate-700 leading-relaxed">{profile?.address || 'No address registered.'}</p>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="space-y-6">
+                      <div>
+                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2 tracking-widest">Work Schedule</p>
+                         <div className={`p-5 rounded-[2rem] ${neumorphicInset} bg-white flex items-center gap-4`}>
+                            <Clock className="text-rose-500" size={18} />
+                            <p className="text-sm font-bold text-slate-700">{profile?.dutyStartTime || '09:00'} - {profile?.dutyEndTime || '17:00'}</p>
+                         </div>
+                      </div>
+                      <div className={`p-8 rounded-[2.5rem] ${neumorphicOutset} bg-rose-50/30 border border-rose-100 flex flex-col items-center justify-center text-center`}>
+                        <Award className="text-rose-600 mb-3" size={32} />
+                        <p className="text-xs font-black uppercase tracking-widest text-rose-900">Certified Staff</p>
+                        <button className="mt-4 px-4 py-2 rounded-xl bg-white border border-rose-100 text-[10px] font-black uppercase text-rose-600 shadow-sm hover:bg-rose-600 hover:text-white transition-all">
+                          Download ID Card
                         </button>
                       </div>
-                    )}
-
-                    <div className="space-y-4 w-full">
-                      {contributions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
-                          <span className="text-4xl">📋</span>
-                          <p className="text-sm font-black">No Records Found</p>
-                          <p className="text-[11px] font-medium text-gray-500">Nothing logged for this period</p>
-                        </div>
-                      ) : (
-                        contributions.map(c => (
-                          <div key={c.id} className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 w-full relative group transition-all hover:border-gray-200 flex flex-col">
-                            <div className="flex flex-row justify-between items-start mb-3 gap-4 w-full">
-                              <div className="flex flex-col gap-1 w-full">
-                                <h4 className="font-bold text-gray-900 text-sm">{c.title}</h4>
-                                <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">
-                                  {formatDateDMY(c.date || c.createdAt)}
-                                </p>
-                              </div>
-                              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
-                                <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
-                                  c.isApproved ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                                }`}>
-                                  {c.isApproved ? 'Approved' : 'Pending'}
-                                </span>
-                                {!c.isApproved && (
-                                  <button onClick={() => handleDeleteContribution(c.id)} className="p-2 text-gray-400 hover:text-red-500 bg-white border border-gray-100 hover:border-red-100 rounded-xl transition-colors mt-2 sm:mt-0">
-                                    <Trash2 size={16} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-600 font-medium leading-relaxed mb-4 whitespace-pre-wrap">{c.content}</p>
-                            {c.isApproved && (
-                              <div className="flex items-center justify-center sm:justify-start gap-2 text-emerald-600 font-black text-[9px] uppercase tracking-widest bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100 w-full sm:w-fit mt-auto">
-                                <Award size={14} /> +{c.points || 0} Points Awarded
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+                   </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
+
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-in-from-bottom-4 { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation: fade-in 0.5s ease-out, slide-in-from-bottom-4 0.5s ease-out; }
+      `}</style>
     </div>
   );
 }

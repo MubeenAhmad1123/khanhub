@@ -16,6 +16,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -71,6 +72,7 @@ export default function PatientDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
+    patientId: '',
     diagnosis: '',
     packageAmount: 0,
     photoUrl: '',
@@ -110,6 +112,7 @@ export default function PatientDetailPage() {
   const [payAmt, setPayAmt] = useState('');
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
   const [payNote, setPayNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Canteen Tab State
   const [canteenMonth, setCanteenMonth] = useState(() => {
@@ -236,6 +239,7 @@ export default function PatientDetailPage() {
       });
       setEditForm({
         name: data.name || '',
+        patientId: data.patientId || '',
         diagnosis: data.diagnosis || '',
         packageAmount: data.packageAmount || data.monthlyPackage || 0,
         photoUrl: data.photoUrl || '',
@@ -407,6 +411,8 @@ export default function PatientDetailPage() {
         createdAt: Timestamp.now()
       });
       setShowAddFeeModal(false);
+      setInitialPayment('');
+      setPaymentNote('');
       toast.success('Fee request sent to cashier for approval ✓');
     } catch (error) {
       console.error("Initialize Fee error", error);
@@ -570,6 +576,7 @@ export default function PatientDetailPage() {
 
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         name: editForm.name,
+        patientId: editForm.patientId || null,
         diagnosis: editForm.diagnosis,
         packageAmount: monthlyPkg,
         monthlyPackage: monthlyPkg,
@@ -595,6 +602,7 @@ export default function PatientDetailPage() {
         return { 
           ...prev, 
           name: editForm.name,
+          patientId: editForm.patientId || null,
           diagnosis: editForm.diagnosis,
           packageAmount: monthlyPkg,
           monthlyPackage: monthlyPkg,
@@ -629,6 +637,24 @@ export default function PatientDetailPage() {
     } catch (error) {
       console.error("Deactivate error", error);
       toast.error('Deactivation failed');
+      setDeactivating(false);
+    }
+  };
+
+  const handleRejoin = async () => {
+    if (!window.confirm("Are you sure you want to rejoin this patient?")) return;
+    try {
+      setDeactivating(true);
+      await updateDoc(doc(db, 'rehab_patients', patientId), { 
+        isActive: true,
+        rejoinDate: Timestamp.now()
+      });
+      toast.success('Patient rejoined successfully ✓');
+      fetchData();
+    } catch (error) {
+      console.error("Rejoin error", error);
+      toast.error('Rejoin failed');
+    } finally {
       setDeactivating(false);
     }
   };
@@ -1029,7 +1055,7 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tab Content Areas */}
-        <div className="bg-white dark:bg-gray-900 rounded-b-2xl shadow-sm border border-gray-100 dark:border-white/10 border-t-0 w-full p-4 md:p-6 min-h-[400px] transition-colors duration-300">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 min-h-[400px] transition-colors duration-300">
           
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
@@ -1058,6 +1084,10 @@ export default function PatientDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                     <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
                   </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patient ID</label>
+                    <input type="text" value={editForm.patientId} onChange={e => setEditForm({...editForm, patientId: e.target.value})} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
+                  </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Photo
@@ -1085,11 +1115,15 @@ export default function PatientDetailPage() {
                       <input
                         ref={photoInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/webp"
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
+                          if (file.type !== 'image/webp') {
+                            toast.error('Only WebP images are allowed');
+                            return;
+                          }
                           setPhotoFile(file);
                           setPhotoPreview(URL.createObjectURL(file));
                         }}
@@ -1134,27 +1168,23 @@ export default function PatientDetailPage() {
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
-                   <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
-                      <input 
-                        type="date" 
-                        value={editForm.admissionDate} 
-                        onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
-                        className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
-                      />
-                   </div>
-
-                   {!patient.isActive && (
-                     <div className="md:col-span-2">
-                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discharge Date</label>
-                       <input 
-                         type="date" 
-                         value={editForm.dischargeDate} 
-                         onChange={e => setEditForm({...editForm, dischargeDate: e.target.value})} 
-                         className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                    <div className="md:col-span-2">
+                       <BrutalistCalendar
+                         label="Admission Date"
+                         value={editForm.admissionDate}
+                         onChange={iso => setEditForm({...editForm, admissionDate: iso})}
                        />
-                     </div>
-                   )}
+                    </div>
+
+                    {!patient.isActive && (
+                      <div className="md:col-span-2">
+                        <BrutalistCalendar
+                          label="Discharge Date"
+                          value={editForm.dischargeDate}
+                          onChange={iso => setEditForm({...editForm, dischargeDate: iso})}
+                        />
+                      </div>
+                    )}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
                     <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" />
@@ -1202,6 +1232,12 @@ export default function PatientDetailPage() {
                       {patient.assignedStaffId || 'None'}
                     </span>
                   </div>
+                  <div className="w-full">
+                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient ID</span>
+                    <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5">
+                      {patient.patientId || 'None'}
+                    </span>
+                  </div>
                   <div className="sm:col-span-2 pt-2 w-full">
                     <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
                     <span className="text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block border border-gray-100 dark:border-white/5 w-full break-all">
@@ -1215,11 +1251,15 @@ export default function PatientDetailPage() {
                 <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
                 <button 
-                  onClick={handleDeactivate} 
+                  onClick={patient.isActive !== false ? handleDeactivate : handleRejoin} 
                   disabled={deactivating}
-                  className="bg-white dark:bg-gray-900 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  className={`bg-white dark:bg-gray-900 border px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto ${
+                    patient.isActive !== false 
+                      ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' 
+                      : 'border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                  }`}
                 >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
+                  {deactivating ? 'Processing...' : (patient.isActive !== false ? 'Deactivate Patient' : 'Rejoin Patient')}
                 </button>
               </div>
             </div>
@@ -1673,8 +1713,16 @@ export default function PatientDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Select File *</label>
                 <input
                   type="file"
-                  accept="video/*,image/*,.pdf"
-                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                  accept="video/*,image/webp,.pdf"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+                      toast.error('Only WebP images are allowed');
+                      return;
+                    }
+                    setSelectedFile(file);
+                  }}
                   className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 outline-none"
                   required
                 />
@@ -1722,18 +1770,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
                   <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(paymentDate)}
-                    onChange={e => setPaymentDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPaymentDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date"
+                    value={paymentDate}
+                    onChange={setPaymentDate}
                   />
                 </div>
               </div>
@@ -1765,19 +1806,11 @@ export default function PatientDetailPage() {
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
                   <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    value={formatDateDMY(payDate)}
-                    onChange={e => setPayDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setPayDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                <div className="space-y-1.5">
+                  <BrutalistCalendar
+                    label="Payment Date *"
+                    value={payDate}
+                    onChange={setPayDate}
                   />
                 </div>
               </div>
@@ -1819,19 +1852,11 @@ export default function PatientDetailPage() {
                   placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'} 
                 />
               </div>
-              <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(canteenDate)}
-                  onChange={e => setCanteenDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setCanteenDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Transaction Date *"
+                  value={canteenDate}
+                  onChange={setCanteenDate}
                 />
               </div>
               <button 
@@ -1880,17 +1905,12 @@ export default function PatientDetailPage() {
                   <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(vDate)}
-                  onChange={e => setVDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
-                  }}
- className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+              <div className="space-y-1.5">
+                 <BrutalistCalendar
+                   label="Visit Date *"
+                   value={vDate}
+                   onChange={setVDate}
+                 />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>

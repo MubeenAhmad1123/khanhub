@@ -4,8 +4,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 
@@ -29,30 +31,41 @@ export default function SuperadminSpimsStudentsListPage() {
     if (!session || session.role !== 'superadmin') router.push('/hq/login');
   }, [sessionLoading, session, router]);
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!session || session.role !== 'superadmin') return;
     setLoading(true);
-    const unsub = onSnapshot(
-      query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(500)),
-      (snap) => {
-        setRows(
-          snap.docs.map((d) => {
-            const data = d.data() as any;
-            return {
-              id: d.id,
-              name: String(data.name || '—'),
-              className: data.className || data.class || data.grade,
-              createdAt: data.createdAt,
-              remaining: Number(data.remaining ?? data.amountRemaining ?? 0) || 0,
-            };
-          })
-        );
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
+
+    try {
+      const cacheKey = 'spims_students_list';
+      let studentList = getCached<StudentRow[]>(cacheKey);
+
+      if (!studentList) {
+        const q = query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(100));
+        const snap = await getDocs(q);
+        studentList = snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            name: String(data.name || '—'),
+            className: data.className || data.class || data.grade,
+            createdAt: data.createdAt,
+            remaining: Number(data.remaining ?? data.amountRemaining ?? 0) || 0,
+          };
+        });
+        setCached(cacheKey, studentList, 300); // 5 mins cache
+      }
+      setRows(studentList);
+    } catch (err) {
+      console.error("Error loading SPIMS students:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [session]);
+
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -65,7 +78,7 @@ export default function SuperadminSpimsStudentsListPage() {
       <div className="mx-auto max-w-4xl px-4 sm:px-10">
         <div className="mb-10">
           <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">Subject Directory</h1>
-          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Centralized SPIMS Enrollments • Global Ledger Status</p>
+          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-black italic">Centralized SPIMS Enrollments • Global Ledger Status</p>
         </div>
 
         <div className="mt-8 rounded-[1.5rem] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 focus-within:border-black dark:focus-within:border-white/40 transition-all shadow-sm px-6 py-4">
@@ -73,7 +86,7 @@ export default function SuperadminSpimsStudentsListPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="AUTHORIZE SUBJECT SEARCH..."
-            className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest text-[11px]"
+            className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none placeholder:text-black dark:placeholder:text-black uppercase tracking-widest text-[11px]"
           />
         </div>
 
@@ -100,7 +113,7 @@ export default function SuperadminSpimsStudentsListPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black text-black dark:text-white uppercase tracking-tight group-hover:translate-x-1 transition-transform">{r.name}</p>
-                          <p className="mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{r.className ? `Classification: ${r.className}` : 'Unclassified'}</p>
+                          <p className="mt-1 text-[10px] font-bold text-black dark:text-black uppercase tracking-widest">{r.className ? `Classification: ${r.className}` : 'Unclassified'}</p>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">

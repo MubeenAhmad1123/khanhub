@@ -13,13 +13,13 @@ import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 
 export default function HomePage() {
   return (
-    <>
+    <main className="w-full overflow-x-hidden relative bg-white">
       <HeroSection />
       <MissionSection />
       <DepartmentsSection />
       <SuccessStoriesSection />
       <TestimonialsSection />
       <DonateCTASection />
-    </>
+    </main>
   );
 }

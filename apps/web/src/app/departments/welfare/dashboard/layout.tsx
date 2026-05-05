@@ -1,6 +1,6 @@
 // src/app/departments/welfare/dashboard/layout.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -9,9 +9,10 @@ import {
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import StaffNotifications from '@/components/layout/StaffNotifications';
+
 
 type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin';
 
@@ -69,7 +70,6 @@ const HQ_NAV_ITEMS = [
 export default function WelfareDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: WelfareRole; displayName: string; customId: string; uid: string; childId?: string } | null>(null);
@@ -78,8 +78,20 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
 
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  const handleSignOut = useCallback(() => {
+    localStorage.removeItem('welfare_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession?.role === 'superadmin') {
+           router.push('/hq/dashboard/superadmin');
+           return;
+        }
+      } catch(e) {}
+    }
+    router.push('/departments/welfare/login');
+  }, [router]);
 
   useEffect(() => {
     setMounted(true);
@@ -106,24 +118,10 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
 
     if (!session) { router.push('/departments/welfare/login'); return; }
 
-    const performAuthCheck = async () => {
+    const performAuthCheck = () => {
       try {
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
-
-        const loginTime = localStorage.getItem('welfare_login_time');
-        if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
-          handleSignOut();
-          return;
-        }
-
-        if (parsed.role !== 'superadmin') {
-          const userDoc = await getDoc(doc(db, 'welfare_users', parsed.uid));
-          if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
-            handleSignOut();
-            return;
-          }
-        }
 
         setUser(parsed);
         setIsChecking(false);
@@ -133,14 +131,22 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
     };
 
     performAuthCheck();
-  }, [router]);
+  }, [router, handleSignOut]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'welfare_users', user.uid), (snap) => {
+      if (!snap.exists()) {
+        handleSignOut();
+        return;
+      }
       const data = snap.data();
+      if (data?.isActive === false || data?.role !== user.role) {
+        handleSignOut();
+        return;
+      }
       if (data?.forceLogoutAt) {
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('welfare_login_time');
@@ -151,29 +157,20 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
       }
     });
     return () => unsub();
-  }, [user]);
-
-  const handleSignOut = () => {
-    localStorage.removeItem('welfare_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-           router.push('/hq/dashboard/superadmin');
-           return;
-        }
-      } catch(e) {}
-    }
-    router.push('/departments/welfare/login');
-  };
+  }, [user, handleSignOut]);
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading...</p>
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0A0A0A] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div className="space-y-2 text-center">
+            <p className="text-amber-600 dark:text-amber-400 text-sm font-black uppercase tracking-[0.3em] animate-pulse">Initializing</p>
+            <p className="text-gray-400 text-[10px] font-medium uppercase tracking-widest">Welfare Protocol v2.0</p>
+          </div>
         </div>
       </div>
     );
@@ -188,71 +185,69 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+      <div className="flex flex-col h-full bg-white/50 dark:bg-black/50 backdrop-blur-xl border-r border-gray-200/50 dark:border-white/5">
         {/* Header */}
-        <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className="p-8">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
-            className="flex items-center gap-2 text-gray-400 hover:text-amber-600 text-[10px] font-bold mb-4 transition-colors group uppercase tracking-widest"
+            className="flex items-center gap-2 text-gray-400 hover:text-amber-600 text-[10px] font-bold mb-8 transition-all group uppercase tracking-widest"
           >
-            <ArrowLeft size={10} className="group-hover:-translate-x-1 transition-transform" />
-            {viewMode === 'hq' ? 'Back to HQ' : 'Back to Home'}
+            <div className="w-6 h-6 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-amber-500/50 transition-colors">
+              <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
+            </div>
+            {viewMode === 'hq' ? 'Return to Nexus' : 'Main Hub'}
           </Link>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
-              viewMode === 'hq' ? 'bg-indigo-600 shadow-indigo-200' : 'bg-amber-500 shadow-amber-200'
+          <div className="flex items-center gap-4 mb-8">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all duration-500 ${
+              viewMode === 'hq' ? 'bg-gradient-to-br from-indigo-500 to-purple-600 rotate-3' : 'bg-gradient-to-br from-amber-400 to-rose-500 -rotate-3'
             }`}>
-              {viewMode === 'hq' ? <Shield size={20} /> : <Heart size={20} />}
+              {viewMode === 'hq' ? <Shield size={24} /> : <Heart size={24} />}
             </div>
             <div>
-              <p className="font-black text-sm leading-none tracking-tight">
-                {viewMode === 'hq' ? 'HQ Navigator' : 'Welfare Portal'}
+              <p className="font-black text-lg leading-tight tracking-tight dark:text-white">
+                {viewMode === 'hq' ? 'HQ Admin' : 'Welfare'}
               </p>
-              <p className="text-gray-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
-                {viewMode === 'hq' ? 'Central' : 'Department'}
+              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                {viewMode === 'hq' ? 'System Core' : 'Life Support'}
               </p>
             </div>
           </div>
 
           {/* Jump Portal */}
           {isHqAdmin && (
-            <div className="relative mb-4">
+            <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
-                  darkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-white hover:border-amber-200'
-                }`}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all group"
               >
-                <div className="flex items-center gap-2">
-                  <ExternalLink size={14} className="text-amber-500" />
-                  <span className="text-[11px] font-black uppercase tracking-tight">Jump to Portal</span>
+                <div className="flex items-center gap-3">
+                  <ExternalLink size={14} className="text-amber-500 group-hover:rotate-12 transition-transform" />
+                  <span className="text-[11px] font-black uppercase tracking-tight dark:text-gray-200">Switch Grid</span>
                 </div>
-                <ChevronLeft size={14} className={`text-gray-400 transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
+                <ChevronLeft size={14} className={`text-gray-400 transition-transform duration-300 ${portalOpen ? '-rotate-90' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className={`absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border shadow-2xl p-2 animate-in fade-in zoom-in-95 ${
-                  darkMode ? 'bg-gray-800 border-white/10' : 'bg-white border-gray-100'
-                }`}>
-                  <div className="grid grid-cols-1 gap-1">
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-3xl border border-gray-200 dark:border-white/10 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-2xl shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
+                  <div className="space-y-1.5">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
                         key={key}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all group ${
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
                           pathname.includes(key)
-                            ? (darkMode ? 'bg-white/10 text-white' : 'bg-amber-50 text-amber-700')
-                            : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-600 hover:text-amber-600')
+                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                            : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-amber-500 text-white' : (darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100')
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 group-hover:bg-amber-500/10'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>
-                        <span className="text-xs font-bold">{info.label}</span>
+                        <span className="text-xs font-black uppercase tracking-tight">{info.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -263,47 +258,29 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
 
           {/* Nav Switcher */}
           {isHqAdmin && (
-            <div className={`flex p-1 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-gray-100'}`}>
+            <div className="flex p-1.5 bg-gray-100/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/5 mb-8">
               <button
                 onClick={() => setViewMode('dept')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-amber-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? 'bg-white dark:bg-white/10 shadow-sm text-amber-600 dark:text-amber-400' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                DEPT
+                LOCAL
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-amber-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? 'bg-white dark:bg-white/10 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                HQ
+                CORE
               </button>
             </div>
           )}
         </div>
 
-        {/* User */}
-        <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-xl flex items-center justify-center text-gray-500 font-black text-xs">
-              {user?.displayName?.[0]?.toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[13px] font-bold truncate">{user?.displayName}</p>
-              <p className="text-[10px] font-medium text-gray-400 truncate">{user?.customId}</p>
-            </div>
-          </div>
-          <div className="mt-3 flex">
-            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>
-              {role && ROLE_LABELS[role] ? ROLE_LABELS[role] : ''}
-            </span>
-          </div>
-        </div>
-
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar font-bold">
+        <nav className="flex-1 px-6 space-y-2 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -311,27 +288,48 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all group ${
-                  isActive ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-500 hover:text-amber-600')
+                className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-amber-500/10 to-transparent text-amber-600 dark:text-amber-400' 
+                    : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/50 dark:hover:bg-white/5'
                 }`}
               >
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />}
+                {isActive && (
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-amber-500 rounded-r-full shadow-[0_0_12px_rgba(245,158,11,0.5)]" />
+                )}
+                <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-amber-500' : ''}`}>
+                  {item.icon}
+                </div>
+                <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.label}</span>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Bottom */}
-        <div className={`p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <button onClick={toggleDark} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold mb-1 ${darkMode ? 'text-yellow-400' : 'text-gray-500 hover:bg-gray-100'}`}>
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            {darkMode ? 'Light' : 'Dark'}
-          </button>
-          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50">
-            <LogOut size={16} />
-            Sign Out
+        {/* User & Bottom */}
+        <div className="p-8 space-y-6">
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-white dark:to-gray-300 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-xl">
+              {user?.displayName?.[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+              <div className="flex items-center gap-2 mt-1">
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                 <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{user?.customId}</p>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleSignOut} 
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-[11px] font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 transition-all group"
+          >
+            <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
+            DISCONNECT
           </button>
         </div>
       </div>
@@ -339,41 +337,83 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
   };
 
   return (
-    <div className={`min-h-screen flex overflow-x-hidden ${darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
-      <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+    <div className={`min-h-screen flex bg-[#FDFDFD] dark:bg-[#050505] text-black dark:text-white transition-colors duration-500 font-sans`}>
+      {/* Sidebar Desktop */}
+      <aside className={`hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30`}>
         <SidebarContent />
       </aside>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 lg:hidden animate-in fade-in duration-500" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      )}
 
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100">
-          <X size={16} />
+      <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
+      } bg-white dark:bg-[#0A0A0A] shadow-2xl`}>
+        <button 
+          onClick={() => setSidebarOpen(false)} 
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white z-50 hover:rotate-90 transition-all"
+        >
+          <X size={18} />
         </button>
         <SidebarContent />
       </aside>
 
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400"><Menu size={20} /></button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center text-white"><Shield size={14} /></div>
-            <span className="font-black text-sm">Welfare Portal</span>
+      {/* Main Content Area */}
+      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+        {/* Background Decorative Elements */}
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
+
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 py-4 flex items-center justify-between">
+          <button 
+            onClick={() => setSidebarOpen(true)} 
+            className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="flex flex-col items-center">
+            <span className="font-black text-xs uppercase tracking-[0.2em] dark:text-white">Welfare Grid</span>
+            <span className="text-[8px] font-bold text-amber-500 uppercase tracking-widest mt-0.5">Secure Protocol</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-amber-500/20">
+            {user?.displayName?.[0]}
+          </div>
         </header>
 
-        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Khan Hub Welfare Portal</div>
-          <div className="flex items-center gap-3">
-             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
-             <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
-             <span className="text-sm font-bold">{user?.displayName}</span>
+        {/* Desktop Header */}
+        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FDFDFD]/80 dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-12 py-6 items-center justify-between">
+          <div className="flex flex-col">
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-gray-400">Khan Hub Network</h2>
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">Welfare Department Portal</p>
+          </div>
+          
+          <div className="flex items-center gap-8">
+             {user?.uid && <StaffNotifications uid={user.uid} dept="welfare" />}
+             
+             <div className="h-8 w-px bg-gray-200 dark:bg-white/10" />
+
+             <div className="flex items-center gap-4 pl-2">
+                <div className="flex flex-col items-end">
+                   <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+                   <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-amber-500/20">
+                      {role && ROLE_LABELS[role]}
+                   </span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
+                   {user?.displayName?.[0]}
+                </div>
+             </div>
           </div>
         </header>
 
-        <main className={`flex-1 p-4 lg:p-8 transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="max-w-6xl mx-auto">{children}</div>
+        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <div className="max-w-7xl mx-auto relative">{children}</div>
         </main>
       </div>
     </div>

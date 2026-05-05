@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { resetPortalUserPassword } from '@/app/hq/actions/resetPortalUserPassword';
 import { logoutPortalUser } from '@/app/hq/actions/logoutPortalUser';
 import { LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type CredentialUser = {
   id: string;
@@ -187,92 +188,96 @@ export default function HqPasswordsPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <Loader2 className="w-10 h-10 animate-spin text-black dark:text-white" />
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-indigo-600" strokeWidth={3} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black overflow-x-hidden w-full max-w-full transition-colors duration-500 pb-20 text-black dark:text-white">
-      <div className="max-w-full mx-auto px-4 md:px-8 pt-10">
+    <div className="min-h-screen bg-[#FCFBF8] text-gray-900 py-20 px-8">
+      <div className="mx-auto max-w-[1400px] space-y-12">
         
         {/* Back Navigation */}
         <Link 
           href="/hq/dashboard/superadmin" 
-          className="inline-flex items-center gap-2 mb-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 hover:text-black dark:hover:text-white transition-all hover:gap-3"
+          className="group inline-flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 hover:text-indigo-600 transition-all"
         >
-          <ArrowLeft size={14} />
+          <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-all">
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+          </div>
           Back to Command Hub
         </Link>
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-10 mb-12">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black text-black dark:text-white flex items-center gap-4 uppercase tracking-tight">
-              <div className="p-4 rounded-[1.5rem] bg-black dark:bg-white text-white dark:text-black shadow-xl">
-                <Shield className="w-8 h-8 md:w-10 md:h-10" />
-              </div>
-              Credential Hub
-            </h1>
-            <p className="mt-4 font-black text-[10px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">
-              Global Authorization Control System
-            </p>
-          </div>
-
-          <div className="px-8 py-5 rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black flex flex-col md:flex-row items-center gap-4 text-center md:text-left shadow-sm">
-            <Lock className="w-5 h-5 text-rose-500 shrink-0" />
+        {/* Header Section */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-12 mb-20">
+          <div className="flex items-center gap-8">
+            <div className="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-indigo-100 relative overflow-hidden group">
+              <Shield className="text-white relative z-10 group-hover:scale-110 transition-transform" size={44} strokeWidth={2.5} />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Security Protocol Active</p>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Extraction of sensitive data is restricted</p>
+              <h1 className="text-6xl font-black tracking-tighter text-gray-900 uppercase leading-none">Security</h1>
+              <p className="mt-3 text-[11px] font-black uppercase tracking-[0.6em] text-gray-400 pl-1 italic">
+                Centralized Credential Matrix
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-6 p-4 bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-rose-500 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-900">Protocol Active</p>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Extraction restriction engaged</p>
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="p-6 md:p-10 rounded-[3rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black mb-10 flex flex-col gap-6 shadow-sm">
-          <div className="flex flex-col lg:flex-row items-center gap-6">
-            <div className="relative group w-full lg:max-w-xl">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={20} />
-              <input 
-                type="text"
-                placeholder="SEARCH CREDENTIAL SEQUENCE..."
-                className="w-full border border-gray-100 dark:border-white/10 rounded-[2rem] pl-16 pr-8 py-5 outline-none font-black text-[11px] transition-all bg-gray-50 dark:bg-white/5 text-black dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest shadow-sm focus:border-black dark:focus:border-white/40"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex-1 w-full lg:w-auto">
-              <div className="flex flex-wrap gap-2 p-2 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                {roleOptions.map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setActiveRole(f)}
-                    className={`px-5 py-2.5 rounded-[1.5rem] text-[9px] whitespace-nowrap font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
-                      activeRole === f
-                        ? 'bg-black text-white dark:bg-white dark:text-black border-black transform scale-105 z-10'
-                        : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
-                    }`}
-                  >
-                    {f === 'all' ? 'All Roles' : f}
-                  </button>
-                ))}
-              </div>
+        {/* Search & Filter Matrix */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
+          <div className="lg:col-span-5 relative group">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="SEARCH CREDENTIAL NODE..."
+              className="w-full h-24 pl-20 pr-10 rounded-[3rem] border border-gray-100 bg-white text-base font-bold text-gray-900 outline-none focus:ring-8 focus:ring-indigo-600/5 transition-all shadow-2xl shadow-gray-200/50 uppercase tracking-widest placeholder:text-gray-300"
+            />
+            <div className="absolute left-8 top-1/2 -translate-y-1/2 text-gray-300">
+              <Search size={32} strokeWidth={3} />
             </div>
           </div>
+          
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-x-auto no-scrollbar">
+              {roleOptions.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setActiveRole(f)}
+                  className={cn(
+                    "px-8 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                    activeRole === f 
+                      ? 'bg-indigo-600 text-white shadow-xl scale-105' 
+                      : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
+                  )}
+                >
+                  {f === 'all' ? 'All Roles' : f}
+                </button>
+              ))}
+            </div>
 
-          <div className="w-full">
-            <div className="flex flex-wrap gap-2 p-2 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-x-auto no-scrollbar">
               {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'job-center', 'welfare'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setActivePortal(p)}
-                  className={`px-5 py-2.5 rounded-[1.5rem] text-[9px] whitespace-nowrap font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
-                    activePortal === p
-                      ? 'bg-black text-white dark:bg-white dark:text-black border-black transform scale-105 z-10'
-                      : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
-                  }`}
+                  className={cn(
+                    "px-8 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                    activePortal === p 
+                      ? 'bg-gray-900 text-white shadow-xl scale-105' 
+                      : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'
+                  )}
                 >
                   {p === 'all' ? 'All Portals' : PORTAL_LABELS[p]}
                 </button>
@@ -281,181 +286,172 @@ export default function HqPasswordsPage() {
           </div>
         </div>
 
-        {/* Desktop Credentials Table */}
-        <div className="hidden md:block rounded-[3rem] border border-gray-100 dark:border-white/10 overflow-hidden bg-white dark:bg-black shadow-2xl">
-          <div className="overflow-x-auto w-full scrollbar-none">
-            <table className="min-w-[700px] w-full text-left border-collapse">
-              <thead>
-                <tr className="text-[10px] font-black uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-gray-400 dark:text-gray-500 italic">
-                  <th className="px-10 py-8">Operator Node</th>
-                  <th className="px-10 py-8 text-center">Portal</th>
-                  <th className="px-10 py-8 text-center">Security Rank</th>
-                  <th className="px-10 py-8">Access ID</th>
-                  <th className="px-10 py-8">Encryption Key</th>
-                  <th className="px-10 py-8 text-right">Protocol</th>
+        {/* Credentials Grid (Desktop) */}
+        <div className="hidden xl:block rounded-[3rem] border border-gray-100 bg-white overflow-hidden shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)]">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50 border-b border-gray-100">
+                <th className="px-12 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Operator Identity</th>
+                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic text-center">Domain</th>
+                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic text-center">Rank</th>
+                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Security ID</th>
+                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Encryption Key</th>
+                <th className="px-12 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic text-right">Directives</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map(u => (
+                <tr key={u.id} className="group hover:bg-indigo-50/20 transition-colors">
+                  <td className="px-12 py-8">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-2xl bg-gray-900 text-white flex items-center justify-center font-black text-xl shadow-lg group-hover:scale-110 transition-transform">
+                        {u.name.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xl font-black text-gray-900 uppercase tracking-tighter">{u.name}</span>
+                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1 opacity-60 group-hover:opacity-100 transition-opacity">Active Node</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-10 py-8 text-center">
+                    <span className="px-6 py-2 bg-gray-100 rounded-full text-[10px] font-black text-gray-900 uppercase tracking-[0.2em]">
+                      {PORTAL_LABELS[u.portal]}
+                    </span>
+                  </td>
+                  <td className="px-10 py-8 text-center">
+                    <span className="px-6 py-2 bg-indigo-50 border border-indigo-100 rounded-full text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="px-10 py-8">
+                    <div className="flex items-center gap-3 font-black text-[11px] text-gray-900 uppercase tracking-widest">
+                      <Shield size={16} className="text-gray-300" />
+                      {u.customId}
+                    </div>
+                  </td>
+                  <td className="px-10 py-8">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 font-mono text-base font-black tracking-[0.2em] text-gray-900 bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100">
+                        {visiblePasswords[u.id] ? u.password : '••••••••••••'}
+                      </div>
+                      <button
+                        onClick={() => togglePassword(u.id)}
+                        className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all active:scale-95 shadow-sm"
+                      >
+                        {visiblePasswords[u.id] ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-12 py-8 text-right">
+                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                      <button
+                        onClick={() => copyToClipboard(u.id, u.customId, u.password)}
+                        className={cn(
+                          "h-14 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg active:scale-95",
+                          copiedId === u.id
+                            ? 'bg-emerald-500 text-white shadow-emerald-100'
+                            : 'bg-indigo-600 text-white shadow-indigo-100 hover:scale-105'
+                        )}
+                      >
+                        {copiedId === u.id ? <Check size={16} strokeWidth={4} /> : <Copy size={16} strokeWidth={3} />}
+                        {copiedId === u.id ? 'Secured' : 'Extract'}
+                      </button>
+                      <button
+                        onClick={() => handleLogout(u)}
+                        disabled={loggingOutId === u.id}
+                        className="h-14 px-6 rounded-2xl border border-rose-100 bg-rose-50 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-100 transition-all flex items-center gap-3 disabled:opacity-50"
+                      >
+                        {loggingOutId === u.id ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} strokeWidth={3} />}
+                        Revoke
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(u)}
+                        disabled={resettingId === u.id}
+                        className="h-14 px-6 rounded-2xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center min-w-[100px] disabled:opacity-50"
+                      >
+                        {resettingId === u.id ? <Loader2 size={16} className="animate-spin" /> : 'Override'}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                {filtered.map(u => (
-                  <tr key={u.id}>
-                    <td className="px-10 py-6">
-                      <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 rounded-[1.25rem] flex items-center justify-center font-black text-sm bg-black dark:bg-white text-white dark:text-black shadow-sm">
-                          {u.name.charAt(0)}
-                        </div>
-                        <span className="text-base font-black text-black dark:text-white uppercase tracking-tight">{u.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-10 py-6 text-center">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                        {PORTAL_LABELS[u.portal]}
-                      </span>
-                    </td>
-                    <td className="px-10 py-6 text-center">
-                      <span className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-black dark:text-white">
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-10 py-6">
-                      <div className="flex items-center gap-3 font-black text-[10px] text-gray-400 uppercase tracking-widest">
-                        <Shield size={14} className="opacity-40" />
-                        {u.customId}
-                      </div>
-                    </td>
-                    <td className="px-10 py-6">
-                      <div className="flex items-center gap-4 group">
-                        <span className="font-mono text-sm font-black tracking-widest text-black dark:text-white bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-xl border border-gray-100 dark:border-white/5">
-                          {visiblePasswords[u.id] ? u.password : '••••••••••••'}
-                        </span>
-                        <button
-                          onClick={() => togglePassword(u.id)}
-                          className="p-3 rounded-2xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
-                        >
-                          {visiblePasswords[u.id] ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-10 py-6 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <button
-                          onClick={() => copyToClipboard(u.id, u.customId, u.password)}
-                          className={`inline-flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
-                            copiedId === u.id
-                              ? 'bg-black text-white dark:bg-white dark:text-black'
-                              : 'bg-black text-white dark:bg-white dark:text-black hover:scale-105'
-                          }`}
-                        >
-                          {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
-                          {copiedId === u.id ? 'Secured' : 'Extract'}
-                        </button>
-                        <button
-                          onClick={() => handleLogout(u)}
-                          disabled={loggingOutId === u.id}
-                          className="px-6 py-4 rounded-2xl border border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-                        >
-                          {loggingOutId === u.id ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={14} />}
-                          Logout
-                        </button>
-                        <button
-                          onClick={() => handleResetPassword(u)}
-                          disabled={resettingId === u.id}
-                          className="px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[10px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
-                        >
-                          {resettingId === u.id ? <Loader2 size={16} className="animate-spin" /> : 'Reset'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
           
           {filtered.length === 0 && (
-            <div className={`p-20 text-center ${darkMode ? 'bg-white/[0.02]' : 'bg-slate-50/50'}`}>
-              <p className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Access Denied: No Matching Nodes</p>
+            <div className="py-40 text-center">
+              <p className="text-xl font-black uppercase tracking-[0.5em] text-gray-200">No Authorized Nodes Found</p>
             </div>
           )}
         </div>
 
-        {/* Mobile Credentials List */}
-        <div className="md:hidden flex flex-col gap-4">
+        {/* Mobile View (Grid) */}
+        <div className="xl:hidden grid grid-cols-1 md:grid-cols-2 gap-8">
           {filtered.map((u) => (
-            <div key={u.id} className="p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-[1.25rem] flex items-center justify-center font-black text-sm bg-black dark:bg-white text-white dark:text-black shadow-sm shrink-0">
+            <div key={u.id} className="p-10 rounded-[3.5rem] border border-gray-100 bg-white shadow-2xl shadow-gray-200/50 flex flex-col gap-10">
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 rounded-[2rem] bg-gray-900 text-white flex items-center justify-center font-black text-3xl shadow-xl">
                   {u.name.charAt(0)}
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-black text-black dark:text-white uppercase tracking-tight">{u.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{PORTAL_LABELS[u.portal]}</span>
-                    <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{u.role}</span>
+                <div>
+                  <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">{u.name}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-full">{u.role}</span>
+                    <span className="px-4 py-1.5 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-full">{PORTAL_LABELS[u.portal]}</span>
                   </div>
                 </div>
               </div>
               
-              <div className="flex flex-col gap-3 p-4 rounded-[1.5rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Access ID</span>
-                  <div className="flex items-center gap-2 font-black text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-widest">
-                    <Shield size={12} className="opacity-40" />
-                    {u.customId}
-                  </div>
-                </div>
-                <div className="h-px w-full bg-gray-100 dark:bg-white/5" />
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Key</span>
-                  <div className="flex items-center gap-2 group">
-                    <span className="font-mono text-xs font-black tracking-widest text-black dark:text-white">
-                      {visiblePasswords[u.id] ? u.password : '••••••••'}
-                    </span>
-                    <button
-                      onClick={() => togglePassword(u.id)}
-                      className="p-2 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
-                    >
-                      {visiblePasswords[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
+              <div className="space-y-4">
+                <div className="p-6 rounded-[2rem] bg-gray-50 border border-gray-100">
+                   <div className="flex items-center justify-between mb-4">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Security ID</span>
+                     <span className="text-[12px] font-black uppercase tracking-widest text-gray-900">{u.customId}</span>
+                   </div>
+                   <div className="h-px bg-gray-200 w-full mb-4" />
+                   <div className="flex items-center justify-between gap-4">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Encryption Key</span>
+                     <div className="flex items-center gap-3">
+                       <span className="font-mono font-black text-gray-900">
+                         {visiblePasswords[u.id] ? u.password : '••••••••'}
+                       </span>
+                       <button onClick={() => togglePassword(u.id)} className="text-gray-400 hover:text-indigo-600 transition-colors">
+                         {visiblePasswords[u.id] ? <EyeOff size={18} /> : <Eye size={18} />}
+                       </button>
+                     </div>
+                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => copyToClipboard(u.id, u.customId, u.password)}
-                  className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
-                    copiedId === u.id
-                      ? 'bg-black text-white dark:bg-white dark:text-black'
-                      : 'bg-black text-white dark:bg-white dark:text-black hover:scale-105'
-                  }`}
+                  className={cn(
+                    "h-16 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg",
+                    copiedId === u.id ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white'
+                  )}
                 >
-                  {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
-                  {copiedId === u.id ? 'Secured' : 'Extract'}
+                  {copiedId === u.id ? <Check size={18} /> : <Copy size={18} />}
+                  {copiedId === u.id ? 'Done' : 'Extract'}
                 </button>
                 <button
                   onClick={() => handleLogout(u)}
                   disabled={loggingOutId === u.id}
-                  className="flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-[9px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-50"
+                  className="h-16 rounded-[1.5rem] border border-rose-100 bg-rose-50 text-[10px] font-black uppercase tracking-widest text-rose-600 flex items-center justify-center gap-3"
                 >
-                  {loggingOutId === u.id ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
-                  Logout
+                  {loggingOutId === u.id ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
+                  Revoke
                 </button>
                 <button
                   onClick={() => handleResetPassword(u)}
                   disabled={resettingId === u.id}
-                  className="col-span-2 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[9px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
+                  className="col-span-2 h-16 rounded-[1.5rem] bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
                 >
-                  {resettingId === u.id ? <Loader2 size={14} className="animate-spin" /> : 'Reset Password'}
+                  {resettingId === u.id ? <Loader2 size={18} className="animate-spin" /> : 'Reset Password'}
                 </button>
               </div>
             </div>
           ))}
-          {filtered.length === 0 && (
-            <div className={`p-10 rounded-[2rem] text-center border border-gray-100 dark:border-white/10 ${darkMode ? 'bg-white/[0.02]' : 'bg-slate-50/50'}`}>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">No Matching Nodes</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

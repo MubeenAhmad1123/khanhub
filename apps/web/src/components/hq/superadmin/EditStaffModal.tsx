@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { StaffProfile, updateStaffProfile } from '@/lib/hq/superadmin/staff';
-import { X, Save, Loader2, User, Mail, Phone, MapPin, CreditCard, Shield } from 'lucide-react';
+import { X, Save, Loader2, User, Mail, Phone, MapPin, CreditCard, Shield, Clock } from 'lucide-react';
 
 interface EditStaffModalProps {
   staff: StaffProfile;
@@ -23,6 +23,8 @@ export function EditStaffModal({ staff, onClose, onSuccess }: EditStaffModalProp
     customId: staff.customId || '',
     isActive: staff.isActive,
     photoUrl: staff.photoUrl || '',
+    dutyStartTime: staff.dutyStartTime || '09:00',
+    dutyEndTime: staff.dutyEndTime || '18:00',
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -155,6 +157,27 @@ export function EditStaffModal({ staff, onClose, onSuccess }: EditStaffModalProp
                   placeholder="https://..."
                 />
               </div>
+            </div>
+
+            {/* Duty Timing */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Duty Start Time</label>
+              <input
+                type="time"
+                className="w-full rounded-2xl border border-gray-100 bg-gray-50 py-3 px-4 text-sm font-bold text-gray-900 outline-none focus:border-orange-500 focus:bg-white transition-all dark:bg-white/5 dark:border-white/10 dark:text-white dark:focus:border-orange-500"
+                value={form.dutyStartTime}
+                onChange={e => setForm(f => ({ ...f, dutyStartTime: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Duty End Time</label>
+              <input
+                type="time"
+                className="w-full rounded-2xl border border-gray-100 bg-gray-50 py-3 px-4 text-sm font-bold text-gray-900 outline-none focus:border-orange-500 focus:bg-white transition-all dark:bg-white/5 dark:border-white/10 dark:text-white dark:focus:border-orange-500"
+                value={form.dutyEndTime}
+                onChange={e => setForm(f => ({ ...f, dutyEndTime: e.target.value }))}
+              />
             </div>
 
             {/* Address */}

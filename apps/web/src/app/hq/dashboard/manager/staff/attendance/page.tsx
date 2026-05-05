@@ -205,7 +205,7 @@ export default function AttendanceMarkingPage() {
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-        <Loader2 className={`w-8 h-8 animate-spin ${darkMode ? 'text-teal-500' : 'text-gray-800'}`} />
+        <Loader2 className={`w-8 h-8 animate-spin ${darkMode ? 'text-teal-500' : 'text-black'}`} />
       </div>
     );
   }
@@ -225,7 +225,7 @@ export default function AttendanceMarkingPage() {
                 </div>
                 <h1 className="text-2xl font-black tracking-tight">Staff Attendance</h1>
               </div>
-              <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] ml-11">
+              <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] ml-11">
                 {formatDateDMY(new Date())}
               </p>
             </div>
@@ -233,7 +233,7 @@ export default function AttendanceMarkingPage() {
             <div className="flex items-center gap-4">
                <div className={`rounded-2xl p-3 flex items-center gap-4 border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}>
                   <div className="text-right">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Marked</p>
+                    <p className="text-[9px] font-black text-black uppercase tracking-widest">Marked</p>
                     <p className="text-lg font-black">{markedCount} / {staffList.length}</p>
                   </div>
                   <div className={`w-px h-8 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`} />
@@ -256,7 +256,7 @@ export default function AttendanceMarkingPage() {
         <div className={`rounded-[2.5rem] p-6 mb-8 border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex flex-col lg:flex-row gap-6 items-center">
              <div className="flex-1 w-full relative">
-                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} size={18} />
+                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-black' : 'text-black'}`} size={18} />
                 <input 
                   type="text" 
                   placeholder="Search by Name or ID..."
@@ -271,7 +271,7 @@ export default function AttendanceMarkingPage() {
              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                 <select 
                   className={`flex-1 lg:flex-none rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer ${
-                    darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-gray-50 text-gray-700'
+                    darkMode ? 'bg-gray-800 border-gray-700 text-black' : 'bg-gray-50 text-black'
                   }`}
                   value={deptFilter}
                   onChange={e => setDeptFilter(e.target.value)}
@@ -305,12 +305,12 @@ export default function AttendanceMarkingPage() {
           <div className="flex items-center justify-between px-6 mb-2">
              <button 
                onClick={toggleSelectAll}
-               className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-teal-500 transition-colors"
+               className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-black hover:text-teal-500 transition-colors"
              >
                {selectedIds.size === filteredStaff.length && filteredStaff.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
                {selectedIds.size === filteredStaff.length ? 'Deselect All' : `Select All (${filteredStaff.length})`}
              </button>
-             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Status & Timing</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-black">Status & Timing</p>
           </div>
 
           {filteredStaff.map(s => {
@@ -330,7 +330,7 @@ export default function AttendanceMarkingPage() {
                 <div className="flex items-center gap-4 flex-1">
                   <button 
                     onClick={() => toggleSelect(s.id)}
-                    className={`transition-colors ${isSelected ? 'text-teal-500' : 'text-gray-300 dark:text-gray-600'}`}
+                    className={`transition-colors ${isSelected ? 'text-teal-500' : 'text-black dark:text-black'}`}
                   >
                     {isSelected ? <CheckSquare size={22} /> : <Square size={22} />}
                   </button>
@@ -340,7 +340,7 @@ export default function AttendanceMarkingPage() {
                       <img src={s.photoUrl} className="w-12 h-12 rounded-2xl object-cover" />
                     ) : (
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black ${
-                        darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400'
+                        darkMode ? 'bg-gray-800 text-black' : 'bg-gray-100 text-black'
                       }`}>
                         {s.name?.[0]}
                       </div>
@@ -355,11 +355,11 @@ export default function AttendanceMarkingPage() {
                   <div>
                     <h3 className="font-black text-sm">{s.name}</h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{s.employeeId || 'NO-ID'}</span>
+                      <span className="text-[9px] font-black text-black uppercase tracking-widest">{s.employeeId || 'NO-ID'}</span>
                       <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tight ${
                         s.department === 'rehab' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
                         s.department === 'spims' ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
-                        'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                        'bg-gray-100 text-black dark:bg-gray-800 dark:text-black'
                       }`}>
                         {s.department}
                       </span>
@@ -378,7 +378,7 @@ export default function AttendanceMarkingPage() {
                            ? st === 'present' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 
                              st === 'absent' ? 'bg-red-500 text-white shadow-md shadow-red-500/20' : 
                              'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-                           : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                           : 'text-black hover:text-black dark:hover:text-gray-200'
                        }`}
                      >
                        {st}
@@ -389,7 +389,7 @@ export default function AttendanceMarkingPage() {
                 {/* Timings */}
                 <div className="flex items-center gap-2">
                    <div className="relative group/time">
-                      <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black" />
                       <input 
                         type="time" 
                         value={rec.arrivalTime}
@@ -398,10 +398,10 @@ export default function AttendanceMarkingPage() {
                           darkMode ? 'bg-gray-800 border-gray-700 focus:border-teal-500' : 'bg-white border-gray-100 focus:border-teal-500'
                         }`}
                       />
-                      <span className="absolute -top-4 left-2 text-[8px] font-black text-gray-400 uppercase tracking-widest opacity-0 group-hover/time:opacity-100 transition-opacity">Arrival</span>
+                      <span className="absolute -top-4 left-2 text-[8px] font-black text-black uppercase tracking-widest opacity-0 group-hover/time:opacity-100 transition-opacity">Arrival</span>
                    </div>
                    <div className="relative group/time">
-                      <ChevronRight size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <ChevronRight size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black" />
                       <input 
                         type="time" 
                         value={rec.departureTime}
@@ -410,7 +410,7 @@ export default function AttendanceMarkingPage() {
                           darkMode ? 'bg-gray-800 border-gray-700 focus:border-teal-500' : 'bg-white border-gray-100 focus:border-teal-500'
                         }`}
                       />
-                      <span className="absolute -top-4 left-2 text-[8px] font-black text-gray-400 uppercase tracking-widest opacity-0 group-hover/time:opacity-100 transition-opacity">Departure</span>
+                      <span className="absolute -top-4 left-2 text-[8px] font-black text-black uppercase tracking-widest opacity-0 group-hover/time:opacity-100 transition-opacity">Departure</span>
                    </div>
                 </div>
               </div>
@@ -421,9 +421,9 @@ export default function AttendanceMarkingPage() {
             <div className={`rounded-[3rem] py-24 border-2 border-dashed flex flex-col items-center justify-center text-center ${
               darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'
             }`}>
-              <Users className="text-gray-300 dark:text-gray-700 mb-4" size={48} />
+              <Users className="text-black dark:text-black mb-4" size={48} />
               <h3 className="text-lg font-black">No Staff Found</h3>
-              <p className="text-gray-400 text-sm mt-1">Try a different search or department filter.</p>
+              <p className="text-black text-sm mt-1">Try a different search or department filter.</p>
             </div>
           )}
         </div>
@@ -435,7 +435,7 @@ export default function AttendanceMarkingPage() {
            darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
          }`}>
             <div className="px-4">
-               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Marked Progress</p>
+               <p className="text-[10px] font-black text-black uppercase tracking-widest">Marked Progress</p>
                <p className="font-black text-teal-500">{markedCount} of {staffList.length} staff members</p>
             </div>
             <button 

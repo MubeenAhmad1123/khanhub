@@ -68,9 +68,17 @@ export interface JobSeeker {
   phone?: string | null;
 
   // Education & Skills
-  education: string;               // e.g. "Matric", "Masters in CS"
+  education: {
+    degree: string;
+    institution: string;
+    year: string;
+  }[];
   skills: string[];                // e.g. ["Driving", "Tailoring", "React"]
-  experience?: string | null;             // summary of work history
+  experience: {
+    title: string;
+    company: string;
+    duration: string;
+  }[];
   
   // Job Preferences
   jobInterests: string[];          // what are they looking for?

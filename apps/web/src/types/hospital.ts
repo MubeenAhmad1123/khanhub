@@ -525,7 +525,7 @@ export const HOSPITAL_SPECIFIC_CATEGORIES = [
 
 // ─── HOSPITAL CASHIER META TYPES ─────────────────────────────────────────────
 
-export type HospitalTxCategory = 'lab_test' | 'operation' | 'opd_reception' | 'staff_salary' | 'utilities' | 'maintenance' | 'other_income' | 'other_expense';
+export type HospitalTxCategory = 'lab_test' | 'operation' | 'operation_theater' | 'opd_reception' | 'indoor_patient' | 'staff_salary' | 'utilities' | 'maintenance' | 'other_income' | 'other_expense';
 
 export interface LabTestMeta {
   patientName: string;

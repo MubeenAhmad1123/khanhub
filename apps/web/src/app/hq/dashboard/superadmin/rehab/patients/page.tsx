@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -98,56 +98,58 @@ export default function HqRehabPatientsPage() {
   }, [searchQuery, allPatients]);
 
   if (sessionLoading) return (
-    <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
-      <Loader2 className="animate-spin text-black dark:text-white" />
+    <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
+      <Loader2 className="animate-spin text-indigo-600" size={40} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white py-12 px-4 md:px-10 transition-colors duration-300">
+    <div className="min-h-screen bg-[#FCFBF8] text-gray-900 py-20 px-4 md:px-10 transition-colors duration-500">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 mb-12">
-          <div>
-            <h1 className="text-4xl font-black text-black dark:text-white uppercase tracking-tighter flex items-center gap-4">
-              <Activity className="text-black dark:text-white" size={40} />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 mb-20">
+          <div className="space-y-6">
+            <h1 className="text-6xl font-black text-gray-900 uppercase tracking-tighter leading-none flex items-center gap-8">
+              <div className="p-5 rounded-[2.5rem] bg-white shadow-2xl shadow-gray-200/50 border border-gray-100 text-indigo-600">
+                <Activity size={48} strokeWidth={2.5} />
+              </div>
               Rehab Registry
             </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">Clinical Command Hub • Patient Metadata • Financial Integrity</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 mt-2 italic ml-2">Clinical Command Hub • Patient Metadata • Financial Integrity</p>
           </div>
-          <div className="flex items-center gap-4 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-2xl shadow-xl">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Hq Sovereignty Access</span>
-            <ShieldCheck size={20} />
+          <div className="flex items-center gap-4 bg-white border border-gray-100 text-indigo-600 px-10 py-5 rounded-[2rem] shadow-2xl shadow-gray-200/50">
+            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Hq Sovereignty Access</span>
+            <ShieldCheck size={24} strokeWidth={2.5} />
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-            <div className="relative w-full sm:w-96">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-16">
+          <div className="flex flex-col sm:flex-row items-center gap-6 w-full lg:w-auto">
+            <div className="relative w-full sm:w-[32rem] group">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery && setSearchOpen(true)}
                   placeholder="AUTHORIZE SUBJECT SEARCH..."
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-12 py-4 text-black dark:text-white text-[11px] font-black uppercase tracking-widest outline-none focus:border-black dark:focus:border-white transition-all shadow-sm placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                  className="w-full bg-white border border-gray-100 rounded-[2rem] pl-16 pr-14 py-6 text-gray-900 text-[11px] font-black uppercase tracking-[0.2em] outline-none focus:border-indigo-600 transition-all shadow-2xl shadow-gray-200/50 placeholder:text-gray-200"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                    className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300 hover:text-rose-600 transition-colors"
                   >
-                    <X size={16} />
+                    <X size={20} />
                   </button>
                 )}
               </div>
 
               {searchOpen && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-4 bg-white border border-gray-100 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
                   {searchResults.map((p) => (
                     <button
                       key={p.id}
@@ -156,14 +158,14 @@ export default function HqRehabPatientsPage() {
                         setSearchQuery(p.name || p.inpatientNumber || p.id);
                         setSearchOpen(false);
                       }}
-                      className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left border-b border-gray-100 dark:border-white/5 last:border-0"
+                      className="w-full flex items-center gap-6 px-8 py-6 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0 group/item"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-xs">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm transition-transform group-hover/item:scale-110">
                         {String(p.name || '?')[0]?.toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-black dark:text-white text-sm font-black uppercase tracking-tight">{p.name}</p>
-                        <p className="text-gray-400 dark:text-gray-500 text-[9px] font-black uppercase tracking-widest">
+                        <p className="text-gray-900 text-sm font-black uppercase tracking-tight group-hover/item:text-indigo-600 transition-colors">{p.name}</p>
+                        <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mt-1">
                           {p.inpatientNumber || p.patientId || p.id}
                         </p>
                       </div>
@@ -176,10 +178,10 @@ export default function HqRehabPatientsPage() {
                 <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
               )}
             </div>
-            <div className="relative group w-full sm:w-56">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors" size={18} />
+            <div className="relative group w-full sm:w-64">
+              <Filter className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
               <select 
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-10 py-4 outline-none font-black text-[10px] uppercase tracking-widest text-black dark:text-white transition-all appearance-none cursor-pointer"
+                className="w-full bg-white border border-gray-100 rounded-[2rem] pl-14 pr-10 py-6 outline-none font-black text-[10px] uppercase tracking-[0.3em] text-gray-900 transition-all appearance-none cursor-pointer shadow-2xl shadow-gray-200/50 focus:border-indigo-600"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -189,27 +191,27 @@ export default function HqRehabPatientsPage() {
               </select>
             </div>
           </div>
-          <div className="bg-white dark:bg-black px-6 py-3 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-end">
-            <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-1">Subject Population</p>
-            <p className="text-2xl font-black text-black dark:text-white tracking-tighter">{patients.length}</p>
+          <div className="bg-white px-10 py-5 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 flex flex-col items-end">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] mb-2">Subject Population</p>
+            <p className="text-3xl font-black text-gray-900 tracking-tighter leading-none">{patients.length}</p>
           </div>
         </div>
 
         {/* Patients Table */}
-        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div className="bg-white border border-gray-100 rounded-[3rem] overflow-hidden shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)]">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10">
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Subject Profile</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Clinical Vector</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Admittance</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Operational Status</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Responsible Node</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]"></th>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-10 py-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Subject Profile</th>
+                  <th className="px-10 py-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Clinical Vector</th>
+                  <th className="px-10 py-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Admittance</th>
+                  <th className="px-10 py-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Operational Status</th>
+                  <th className="px-10 py-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Responsible Node</th>
+                  <th className="px-10 py-8 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+              <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-20 text-center">
@@ -223,124 +225,136 @@ export default function HqRehabPatientsPage() {
                   </tr>
                 ) : (
                   filteredPatients.map((patient) => (
-                    <>
+                    <React.Fragment key={patient.id}>
                       <tr 
-                        key={patient.id} 
                         onClick={() => handleExpand(patient.id)}
-                        className={`cursor-pointer transition-all ${expandedPatient === patient.id ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-gray-50 dark:hover:bg-white/5 shadow-sm hover:translate-x-1'}`}
+                        className={`cursor-pointer transition-all duration-300 ${expandedPatient === patient.id ? 'bg-indigo-50/30' : 'hover:bg-gray-50/50'}`}
                       >
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-[1rem] bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black shadow-lg">
+                        <td className="px-10 py-8">
+                          <div className="flex items-center gap-6">
+                            <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100 text-indigo-600 flex items-center justify-center font-black shadow-lg shadow-gray-200/30 group-hover:scale-110 transition-transform">
                               {patient.name.charAt(0)}
                             </div>
                             <div>
-                              <p className="font-black text-black dark:text-white uppercase tracking-tight">{patient.name}</p>
-                              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{patient.age || 'Unknown'} CYCLES</p>
+                              <p className="font-black text-gray-900 uppercase tracking-tight text-base">{patient.name}</p>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">{patient.age || 'Unknown'} CYCLES</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className="text-[11px] font-black text-black dark:text-white flex items-center gap-3 uppercase tracking-tighter">
-                            <Activity size={16} className="text-black dark:text-white" />
+                        <td className="px-10 py-8">
+                          <span className="text-[11px] font-black text-gray-700 flex items-center gap-3 uppercase tracking-tight">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                              <Activity size={14} />
+                            </div>
                             {patient.addictionType || patient.diagnosis || 'Undefined'}
                           </span>
                         </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest">
-                            <Calendar size={16} />
+                        <td className="px-10 py-8">
+                          <div className="flex items-center gap-3 text-[11px] text-gray-500 font-black uppercase tracking-widest">
+                            <Calendar size={16} className="text-gray-300" />
                             {formatDateDMY(patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : patient.admissionDate)}
                           </div>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
+                        <td className="px-10 py-8">
+                          <span className={`inline-flex items-center gap-2 px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
                             patient.isActive !== false 
-                              ? 'bg-black dark:bg-white text-white dark:text-black' 
-                              : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500'
+                              ? 'bg-indigo-600 text-white' 
+                              : 'bg-gray-100 text-gray-400'
                           }`}>
                             {patient.isActive !== false ? 'Active Node' : 'Decommissioned'}
                           </span>
                         </td>
-                        <td className="px-8 py-6">
-                          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3 italic">
-                            <User size={16} />
+                        <td className="px-10 py-8">
+                          <p className="text-[11px] font-black text-gray-700 uppercase tracking-widest flex items-center gap-3 italic">
+                            <User size={16} className="text-gray-300" />
                             {staffMap[patient.assignedStaffId] || 'Unassigned'}
                           </p>
                         </td>
-                        <td className="px-8 py-6 text-right">
-                          {expandedPatient === patient.id ? <ChevronUp size={24} className="text-black dark:text-white" /> : <ChevronDown size={24} className="text-gray-300 dark:text-gray-700" />}
+                        <td className="px-10 py-8 text-right">
+                          <div className={`p-2 rounded-xl transition-colors ${expandedPatient === patient.id ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-400'}`}>
+                            {expandedPatient === patient.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                          </div>
                         </td>
                       </tr>
                       {expandedPatient === patient.id && (
                         <tr>
-                          <td colSpan={6} className="px-12 py-12 bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10 animate-in slide-in-from-top-4 duration-500 overflow-hidden">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                          <td colSpan={6} className="px-14 py-16 bg-gray-50/50 border-b border-gray-100 animate-in fade-in slide-in-from-top-8 duration-700">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
                               {/* Medical Info */}
-                              <div className="space-y-6">
-                                <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                                  <Stethoscope size={18} />
+                              <div className="space-y-8">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-xl bg-white shadow-xl shadow-gray-200/50 flex items-center justify-center text-indigo-600">
+                                    <Stethoscope size={18} />
+                                  </div>
                                   Clinical Summary
                                 </h4>
-                                <div className="bg-white dark:bg-black p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm space-y-6 transition-all hover:scale-[1.02]">
+                                <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 space-y-8 transition-all hover:scale-[1.02]">
                                   <div>
-                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-2">Diagnosis Vector</p>
-                                    <p className="text-xs font-black text-black dark:text-white uppercase leading-relaxed italic">{patient.diagnosis || 'No clinical records documented'}</p>
+                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.3em] mb-4">Diagnosis Vector</p>
+                                    <p className="text-sm font-black text-gray-900 uppercase leading-relaxed italic tracking-tight">{patient.diagnosis || 'No clinical records documented'}</p>
                                   </div>
-                                  <div className="pt-4 border-t border-gray-50 dark:border-white/5">
-                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-2">Monthly Commitment</p>
-                                    <p className="text-lg font-black text-black dark:text-white tracking-widest">RS. {Number(patient.packageAmount).toLocaleString()}</p>
+                                  <div className="pt-8 border-t border-gray-50">
+                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.3em] mb-4">Monthly Commitment</p>
+                                    <p className="text-2xl font-black text-indigo-600 tracking-tighter">RS. {Number(patient.packageAmount).toLocaleString()}</p>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Fee Summary */}
-                              <div className="space-y-6">
-                                <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                                  <Wallet size={18} />
+                              <div className="space-y-8">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-xl bg-white shadow-xl shadow-gray-200/50 flex items-center justify-center text-indigo-600">
+                                    <Wallet size={18} />
+                                  </div>
                                   Financial Ledger
                                 </h4>
-                                <div className="bg-white dark:bg-black p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02]">
-                                  <div className="pb-6 mb-6 border-b border-gray-50 dark:border-white/5 flex flex-col gap-4">
+                                <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 transition-all hover:scale-[1.02]">
+                                  <div className="pb-8 mb-8 border-b border-gray-50 flex flex-col gap-6">
                                     <div className="flex justify-between items-center">
-                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Outstanding Dues</p>
-                                      <p className={`text-xl font-black tracking-tighter ${patient.remaining > 0 ? 'text-black dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
+                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.3em]">Outstanding Dues</p>
+                                      <p className={`text-2xl font-black tracking-tighter ${patient.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                                         RS. {(patient.remaining || 0).toLocaleString()}
                                       </p>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Canteen Balance</p>
-                                      <p className={`text-xl font-black tracking-tighter ${(patient.canteenBalance || 0) < 0 ? 'text-black dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
+                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.3em]">Canteen Balance</p>
+                                      <p className={`text-2xl font-black tracking-tighter ${(patient.canteenBalance || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                                         RS. {(patient.canteenBalance || 0).toLocaleString()}
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-6">
+                                  <div className="grid grid-cols-2 gap-8">
                                     <div>
-                                      <p className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1">Total Billed</p>
-                                      <p className="text-xs font-black text-black dark:text-white opacity-40 uppercase">RS. {(patient.totalDues || 0).toLocaleString()}</p>
+                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.3em] mb-2">Total Billed</p>
+                                      <p className="text-xs font-black text-gray-900 uppercase tracking-tight">RS. {(patient.totalDues || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="text-right">
-                                      <p className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1">Total Liquidated</p>
-                                      <p className="text-xs font-black text-black dark:text-white uppercase tracking-widest">RS. {(patient.totalReceived || 0).toLocaleString()}</p>
+                                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.3em] mb-2">Total Liquidated</p>
+                                      <p className="text-xs font-black text-indigo-600 uppercase tracking-tight">RS. {(patient.totalReceived || 0).toLocaleString()}</p>
                                     </div>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Quick Actions */}
-                              <div className="space-y-6">
-                                <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                                  <Info size={18} />
+                              <div className="space-y-8">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-xl bg-white shadow-xl shadow-gray-200/50 flex items-center justify-center text-indigo-600">
+                                    <Info size={18} />
+                                  </div>
                                   Administrative Flow
                                 </h4>
-                                <div className="space-y-3">
-                                  <button onClick={() => router.push(`/hq/dashboard/superadmin/rehab/patients/${patient.id}`)} className="w-full flex items-center justify-between p-4 bg-white dark:bg-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black rounded-2xl border border-gray-100 dark:border-white/10 transition-all group shadow-sm active:scale-95">
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Inspect Archive</span>
-                                    <History size={16} className="opacity-40 group-hover:opacity-100" />
+                                <div className="space-y-4">
+                                  <button 
+                                    onClick={() => router.push(`/hq/dashboard/superadmin/rehab/patients/${patient.id}`)} 
+                                    className="w-full flex items-center justify-between px-8 py-6 bg-white hover:bg-indigo-600 hover:text-white rounded-[1.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 transition-all group active:scale-95"
+                                  >
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Inspect Archive</span>
+                                    <History size={20} className="text-gray-300 group-hover:text-white transition-colors" />
                                   </button>
-                                  <button className="w-full flex items-center justify-between p-4 bg-white dark:bg-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black rounded-2xl border border-gray-100 dark:border-white/10 transition-all group shadow-sm active:scale-95">
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Export Clinical Node</span>
-                                    <FileText size={16} className="opacity-40 group-hover:opacity-100" />
+                                  <button className="w-full flex items-center justify-between px-8 py-6 bg-white hover:bg-gray-900 hover:text-white rounded-[1.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 transition-all group active:scale-95">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Export Clinical Node</span>
+                                    <FileText size={20} className="text-gray-300 group-hover:text-white transition-colors" />
                                   </button>
                                 </div>
                               </div>
@@ -348,7 +362,7 @@ export default function HqRehabPatientsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </tbody>

@@ -12,6 +12,17 @@ export default function HospitalLoginPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const hospitalSessionStr = localStorage.getItem('hospital_session');
+    if (hospitalSessionStr) {
+      try {
+        const hospitalSession = JSON.parse(hospitalSessionStr);
+        if (hospitalSession && hospitalSession.role) {
+          router.push('/departments/hospital/dashboard');
+          return;
+        }
+      } catch (e) {}
+    }
+
     const hqSessionStr = localStorage.getItem('hq_session');
     if (hqSessionStr) {
       try {

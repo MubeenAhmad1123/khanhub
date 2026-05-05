@@ -7,9 +7,14 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
+  limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
+
+
 import { Loader2, TrendingUp, Wallet } from 'lucide-react';
 import type { SpimsFeePayment, SpimsStudent } from '@/types/spims';
 import { formatDateDMY, toDate } from '@/lib/utils';
@@ -23,30 +28,62 @@ export default function FinanceSummaryTab({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'spims_fees'),
-      where('studentId', '==', student.id),
-      orderBy('date', 'desc')
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setRows(
-          snap.docs.map((d) => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const cacheKey = `spims_transactions_summary_${student.id}`;
+        const cached = getCached<any[]>(cacheKey);
+        let list: any[] = [];
+
+        if (cached) {
+          list = cached;
+        } else {
+          const q = query(
+            collection(db, 'spims_transactions'),
+            where('patientId', '==', student.id),
+            limit(100)
+          );
+          const snap = await getDocs(q);
+          list = snap.docs.map((d) => {
             const x = d.data();
             return {
               id: d.id,
               ...x,
               date: x.date?.toDate ? x.date.toDate() : x.date,
-            } as SpimsFeePayment;
-          })
-        );
+            };
+          });
+          setCached(cacheKey, list, 60);
+        }
+
+        // Map transactions to SpimsFeePayment type for summary calculations
+        const feeRecords = list
+          .filter(tx => tx.category === 'fee' || tx.feePaymentId)
+          .map(tx => ({
+            id: tx.id,
+            amount: tx.amount,
+            date: tx.date,
+            status: tx.status,
+            type: tx.feePaymentType || 'monthly',
+          } as SpimsFeePayment));
+
+        // Client-side sort by date desc
+        feeRecords.sort((a, b) => {
+          const tA = toDate(a.date).getTime();
+          const tB = toDate(b.date).getTime();
+          return tB - tA;
+        });
+
+        setRows(feeRecords);
+      } catch (err) {
+        console.error('Error loading finance summary:', err);
+      } finally {
         setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
+      }
+    }
+
+    loadData();
   }, [student.id]);
+
 
   const { totalPaid, remaining, monthlyPaidCurrentMonth, monthlyRemaining } = useMemo(() => {
     const approved = rows.filter((r) => r.status === 'approved');

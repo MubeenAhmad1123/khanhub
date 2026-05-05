@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui';
 
 export default function AdmitPatientPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function AdmitPatientPage() {
   // Auth & UI State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
 
@@ -41,6 +42,7 @@ export default function AdmitPatientPage() {
   const [maritalStatus, setMaritalStatus] = useState('');
   const [children, setChildren] = useState('0');
   const [address, setAddress] = useState('');
+  const [patientId, setPatientId] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
 
@@ -101,6 +103,7 @@ export default function AdmitPatientPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName || 
@@ -116,14 +119,14 @@ export default function AdmitPatientPage() {
       return;
     }
 
-    setSubmitting(true);
-    setError('');
-
     try {
+      setSubmitting(true);
+      setSubmitStatus('processing');
+      setError('');
+
       // 1. Upload photo if selected
       let photoUrl = null;
       if (photoFile) {
-        setSubmitStatus('Uploading photo...');
         photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/rehab/patients');
       }
 
@@ -132,9 +135,9 @@ export default function AdmitPatientPage() {
       const dailyRateValue = Math.round(monthlyPackageValue / 30);
 
       // 2. Create patient document in Firestore
-      setSubmitStatus('Creating patient record...');
       const patientRef = await addDoc(collection(db, 'rehab_patients'), {
         name,
+        patientId: patientId.trim() || null,
         fatherName,
         age: Number(age),
         dateOfBirth: dateOfBirth || null,
@@ -148,11 +151,11 @@ export default function AdmitPatientPage() {
         guardianFatherName: guardianFatherName || null,
         guardianRelation,
         guardianPhone,
-        contactNumber: guardianPhone, // used by AdmissionTab profile editor
+        contactNumber: guardianPhone,
         guardianCnic: guardianCnic || null,
         admissionDate: Timestamp.fromDate(new Date(admissionDate)),
         monthlyPackage: monthlyPackageValue,
-        packageAmount: monthlyPackageValue, // Legacy support
+        packageAmount: monthlyPackageValue,
         dailyRate: dailyRateValue,
         reasonsForAdmission,
         conditionOnAdmission: conditionOnAdmission || null,
@@ -164,7 +167,6 @@ export default function AdmitPatientPage() {
       });
 
       // 3. Create family login account linked to this patient
-      setSubmitStatus('Creating family login...');
       const result = await createRehabUserServer(
         loginId.toUpperCase(),
         loginPassword,
@@ -174,25 +176,28 @@ export default function AdmitPatientPage() {
       );
 
       if (!result.success) {
-        // Roll back the patient doc if the login account could not be created.
-        // This prevents "half-created" records from confusing future logins.
+        // Roll back the patient doc
         try {
           await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
         } catch {}
 
         setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
+        setSubmitStatus('error');
         toast.error('Login account creation failed');
-        setSubmitting(false);
         return;
       }
 
-      setSubmitStatus('Done!');
+      setSubmitStatus('success');
       toast.success('Patient admitted successfully ✓');
-      router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      setTimeout(() => {
+        router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      }, 1500);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Something went wrong');
+      setSubmitStatus('error');
       toast.error('Submission failed');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -242,10 +247,14 @@ export default function AdmitPatientPage() {
             {/* SECTION 1: Login Credentials */}
             <div className="space-y-4">
               <SectionHeader icon={Shield} title="Login Credentials" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
                   <input required placeholder="e.g. REHAB-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient ID (Serial Number) *</label>
+                  <input required placeholder="e.g. 58" className={inputStyle} value={patientId} onChange={e => setPatientId(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>
@@ -276,21 +285,12 @@ export default function AdmitPatientPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    className={inputStyle}
-                    value={formatDateDMY(dateOfBirth)}
-                    onChange={e => setDateOfBirth(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) {
-                        const iso = parsed.toISOString().split('T')[0];
-                        setDateOfBirth(iso);
-                        setAge(calculateAge(iso));
-                      }
+                  <BrutalistCalendar
+                    label="Date of Birth *"
+                    value={dateOfBirth}
+                    onChange={(iso) => {
+                      setDateOfBirth(iso);
+                      setAge(calculateAge(iso));
                     }}
                   />
                 </div>
@@ -363,9 +363,13 @@ export default function AdmitPatientPage() {
                     </>
                   )}
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                <input ref={fileRef} type="file" accept="image/webp" className="hidden" onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
                   setPhotoFile(file);
                   setPhotoPreview(URL.createObjectURL(file));
                 }} />
@@ -427,18 +431,10 @@ export default function AdmitPatientPage() {
               <SectionHeader icon={Calendar} title="Admission Details" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    className={inputStyle}
-                    value={formatDateDMY(admissionDate)}
-                    onChange={e => setAdmissionDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setAdmissionDate(parsed.toISOString().split('T')[0]);
-                    }}
+                  <BrutalistCalendar
+                    label="Admission Date *"
+                    value={admissionDate}
+                    onChange={(iso) => setAdmissionDate(iso)}
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
@@ -490,17 +486,31 @@ export default function AdmitPatientPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
+                  submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                  submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                  'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-900/10'
+                }`}
               >
                 {submitting ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span className="animate-pulse">{submitStatus}</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Admitting...</span>
+                  </>
+                ) : submitStatus === 'success' ? (
+                  <>
+                    <Shield size={20} className="text-emerald-200" />
+                    <span>Patient Admitted</span>
+                  </>
+                ) : submitStatus === 'error' ? (
+                  <>
+                    <AlertTriangle size={20} className="text-rose-200" />
+                    <span>Retry Sync</span>
                   </>
                 ) : (
                   <>
-                    <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Admit Patient
+                    <Save size={20} />
+                    <span>Admit Patient</span>
                   </>
                 )}
               </button>

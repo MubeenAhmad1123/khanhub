@@ -43,18 +43,18 @@
   --color-error-800: #8e0000;
   --color-error-900: #6a0000;
 
-  /* Colors - Neutral (Light Gray #F5F5F5 + Professional Grays) */
-  --color-neutral-50: #fafafa;
-  --color-neutral-100: #F5F5F5;
-  --color-neutral-200: #eeeeee;
-  --color-neutral-300: #e0e0e0;
-  --color-neutral-400: #bdbdbd;
-  --color-neutral-500: #9e9e9e;
-  --color-neutral-600: #757575;
-  --color-neutral-700: #616161;
-  --color-neutral-800: #424242;
-  --color-neutral-900: #212121;
-  --color-neutral-950: #0a0a0a;
+  /* Colors - Neutral (High Contrast Brutalist) */
+  --color-neutral-50: #FFFFFF;
+  --color-neutral-100: #FDFCF7; /* Creamy white base */
+  --color-neutral-200: #F5F5F5;
+  --color-neutral-300: #D4D4D4;
+  --color-neutral-400: #000000; /* Force black from here up */
+  --color-neutral-500: #000000;
+  --color-neutral-600: #000000;
+  --color-neutral-700: #000000;
+  --color-neutral-800: #000000;
+  --color-neutral-900: #000000;
+  --color-neutral-950: #000000;
 
   /* Aliasing gray to neutral for compatibility with existing code */
   --color-gray-50: var(--color-neutral-50);
@@ -99,8 +99,6 @@
   --shadow-primary-md: 0 4px 16px rgba(0, 94, 184, 0.12);
   --shadow-primary-lg: 0 8px 32px rgba(0, 94, 184, 0.16);
 
-  /* Dark Mode Configuration for v4 - Class-based */
-  --variant-dark: .dark &;
 
   --shadow-success-sm: 0 2px 8px rgba(40, 167, 69, 0.08);
   --shadow-success-md: 0 4px 16px rgba(40, 167, 69, 0.12);
@@ -162,6 +160,12 @@
     }
   }
 
+  @keyframes logoFlip {
+    0% { transform: perspective(1000px) rotateY(0deg); }
+    40%, 60% { transform: perspective(1000px) rotateY(180deg); }
+    100% { transform: perspective(1000px) rotateY(360deg); }
+  }
+
   @keyframes shimmer {
     0% {
       background-position: -1000px 0;
@@ -172,30 +176,21 @@
     }
   }
 
-  /* ─── Monochromatic System Tokens (Light) ─── */
-  --surface-default: #ffffff;
-  --surface-subtle: #fafafa;
-  --surface-overlay: rgba(255, 255, 255, 0.9);
-  --border-subtle: #f1f1f1;
+  /* ─── Monochromatic System Tokens (Light-Only) ─── */
+  --surface-default: #FCFBF4; /* Creamy Background */
+  --surface-subtle: #F5F4EA;
+  --surface-overlay: rgba(252, 251, 244, 0.9);
+  --border-subtle: #E8E7DC;
   --text-primary: #000000;
-  --text-secondary: #6b7280;
-  --tooltip-bg: #ffffff;
+  --text-secondary: #262626;
+  --tooltip-bg: #FCFBF4;
 }
 
-.dark {
-  color-scheme: dark;
-  --surface-default: #000000;
-  --surface-subtle: rgba(255, 255, 255, 0.05);
-  --surface-overlay: rgba(0, 0, 0, 0.9);
-  --border-subtle: rgba(255, 255, 255, 0.1);
-  --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --tooltip-bg: #000000;
-}
+/* Removed .dark overrides to enforce light-only theme */
 
 .shimmer {
   animation: shimmer 2s infinite linear;
-  background: linear-gradient(to right, #f6f7f8 4%, #edeef1 25%, #f6f7f8 36%);
+  background: linear-gradient(to right, #F5F4EA 4%, #E8E7DC 25%, #F5F4EA 36%);
   background-size: 1000px 100%;
 }
 
@@ -210,7 +205,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-neutral-200);
+  background-color: #D6D3C1;
   border-radius: var(--radius-full);
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -218,37 +213,23 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-neutral-300);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: #BDB9A2;
 }
 
 /* ─── Base Reset ─── */
 @layer base {
   html {
     scroll-behavior: smooth;
-    transition: color 0.3s, background-color 0.3s;
+    /* No transitions to keep it snappy as requested */
   }
 
   body {
     font-family: var(--font-body);
-    background-color: var(--color-white);
-    color: var(--color-neutral-900);
+    background-color: var(--surface-default);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: color 0.3s, background-color 0.3s;
     font-feature-settings: 'kern' 1, 'liga' 1;
-  }
-
-  .dark body {
-    background-color: var(--color-black);
-    color: var(--color-gray-100);
   }
 
   h1,
@@ -258,11 +239,7 @@
   h5,
   h6 {
     font-family: var(--font-display);
-    color: var(--color-neutral-900);
-  }
-
-  .dark :is(h1, h2, h3, h4, h5, h6) {
-    color: var(--color-white);
+    color: #000000;
   }
 
   * {
@@ -270,14 +247,10 @@
     border-color: var(--color-neutral-200);
   }
 
-  .dark * {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
   input,
   textarea,
   select {
-    @apply bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm transition-all;
+    @apply bg-white border border-neutral-200 rounded-xl px-4 py-2 text-sm transition-all;
   }
 }
 
@@ -294,10 +267,6 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: var(--color-neutral-200);
     border-radius: 20px;
-  }
-
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--color-neutral-800);
   }
 }
 
@@ -468,6 +437,10 @@
 
   .animate-bounce-subtle {
     animation: bounceSubtle 2s ease-in-out infinite;
+  }
+
+  .animate-logo-flip {
+    animation: logoFlip 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
   /* Professional spacing utilities */

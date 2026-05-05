@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -12,17 +13,13 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, Settings, CheckCircle
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 import RegistrationTab from '@/components/job-center/seeker-profile/RegistrationTab';
-import ActivityLogTab from '@/components/job-center/seeker-profile/ActivityLogTab';
-import CareerProgressTab from '@/components/job-center/seeker-profile/CareerProgressTab';
-import JobTrainingTab from '@/components/job-center/seeker-profile/JobTrainingTab';
-import SupportRecordTab from '@/components/job-center/seeker-profile/SupportRecordTab';
 
 export default function SeekerDetailPage() {
   const router = useRouter();
@@ -39,7 +36,10 @@ export default function SeekerDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'activity' | 'progress' | 'training' | 'support' | 'fees' | 'meetings' | 'videos'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'registration' | 'actions' | 'finance'>('profile');
+  const [financeRecords, setFinanceRecords] = useState<any[]>([]);
+  const [loadingFinance, setLoadingFinance] = useState(false);
+
   const [meetings, setMeetings] = useState<any[]>([]);
   const [showAddMeetingModal, setShowAddMeetingModal] = useState(false);
   const [isSavingMeeting, setIsSavingMeeting] = useState(false);
@@ -65,6 +65,9 @@ export default function SeekerDetailPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [startingSalary, setStartingSalary] = useState('');
+  const [mOutcome, setMOutcome] = useState('Pending');
+  const [isUpdatingRegFee, setIsUpdatingRegFee] = useState(false);
 
   // Photo Upload State
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -150,6 +153,17 @@ export default function SeekerDetailPage() {
       setPhotoPreview(data.photoUrl || '');
       setVideos(vids.docs.map(v => ({ id: v.id, ...v.data() })));
       setMeetings(meets.docs.map(v => ({ id: v.id, ...v.data() })));
+
+      // 1.5 Finance Records
+      setLoadingFinance(true);
+      const financeSnap = await getDocs(query(
+        collection(db, 'jobcenter_finance'),
+        where('seekerId', '==', seekerId),
+        orderBy('createdAt', 'desc')
+      ));
+      setFinanceRecords(financeSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoadingFinance(false);
+
 
       const now = new Date();
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -380,7 +394,7 @@ export default function SeekerDetailPage() {
         ...prev, 
         ...updatedData
       }));
-      setEditForm(prev => ({ ...prev, photoUrl }));
+      setEditForm((prev: any) => ({ ...prev, photoUrl }));
       setPhotoFile(null);
       setIsEditing(false);
       toast.success('Profile updated');
@@ -422,14 +436,46 @@ export default function SeekerDetailPage() {
 
     try {
       setDeactivating(true);
+      const salary = Number(startingSalary) || 0;
+      const commission = salary * 0.3;
+
       await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
         isActive: false,
         status: 'placed',
         placementDate: Timestamp.now(),
         placementCompany: employer.companyName,
-        employerId: employer.id
+        employerId: employer.id,
+        startingSalary: salary,
+        placementCommission: commission
       });
-      toast.success('Seeker marked as Placed ✓');
+
+      // Create commission transaction
+      const setupSnap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
+      const setupData = setupSnap.data() as any;
+      const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
+
+      if (commission > 0 && cashierCustomId) {
+        await addDoc(collection(db, 'jobcenter_transactions'), {
+          type: 'income',
+          amount: commission,
+          category: 'commission_30_percent',
+          categoryName: '30% Placement Commission',
+          departmentCode: 'job-center',
+          departmentName: 'Job Center',
+          seekerId: seekerId,
+          seekerName: seeker?.name || '',
+          status: 'pending_cashier',
+          cashierId: cashierCustomId,
+          description: `Commission for placement at ${employer.companyName}`,
+          date: Timestamp.now(),
+          transactionDate: Timestamp.now(),
+          createdBy: session.uid,
+          createdByName: session?.displayName || 'Job Center Admin',
+          createdAt: Timestamp.now()
+        });
+      }
+
+      toast.success('Seeker marked as Placed & Commission Logged ✓');
       setShowPlacementModal(false);
       router.push('/departments/job-center/dashboard/admin/seekers');
     } catch (error) {
@@ -481,7 +527,7 @@ export default function SeekerDetailPage() {
     try {
       await deleteDoc(doc(db, 'jobcenter_videos', videoId));
       toast.success('Deleted');
-      setVideos(prev => prev.filter(v => v.id !== videoId));
+      setVideos((prev: any[]) => prev.filter(v => v.id !== videoId));
     } catch (error) {
       console.error("Delete error", error);
       toast.error('Failed to delete');
@@ -502,7 +548,8 @@ export default function SeekerDetailPage() {
         representativeName: mName,
         organization: mOrganization,
         phone: mPhone,
-        purpose: mPurpose || null,
+        purpose: mPurpose || 'Interview',
+        outcome: mOutcome || 'Pending',
         notes: mNotes || null,
         date: Timestamp.fromDate(new Date(`${mDate}T00:00:00`)),
         loggedBy: session.uid,
@@ -548,7 +595,8 @@ export default function SeekerDetailPage() {
         representativeName: mName,
         organization: mOrganization,
         phone: mPhone,
-        purpose: mPurpose || null,
+        purpose: mPurpose || 'Interview',
+        outcome: mOutcome || 'Pending',
         notes: mNotes || null,
         date: Timestamp.fromDate(new Date(`${mDate}T00:00:00`)),
         updatedAt: Timestamp.now(),
@@ -565,6 +613,69 @@ export default function SeekerDetailPage() {
       toast.error('Failed to update meeting');
     } finally {
       setIsUpdatingMeeting(false);
+    }
+  };
+
+  const toggleRegistrationFee = async () => {
+    if (isUpdatingRegFee) return;
+    try {
+      setIsUpdatingRegFee(true);
+      const newStatus = !seeker.isRegistrationPaid;
+      
+      await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
+        isRegistrationPaid: newStatus
+      });
+
+      if (newStatus) {
+        // Create 1000 PKR transaction
+        const setupSnap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
+        const setupData = setupSnap.data() as any;
+        const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
+
+        if (cashierCustomId) {
+          await addDoc(collection(db, 'jobcenter_transactions'), {
+            type: 'income',
+            amount: 1000,
+            category: 'seeker_fee',
+            categoryName: 'Registration Fee (1000)',
+            departmentCode: 'job-center',
+            departmentName: 'Job Center',
+            seekerId: seekerId,
+            seekerName: seeker?.name || '',
+            status: 'pending_cashier',
+            cashierId: cashierCustomId,
+            description: `Registration Fee for ${seeker.name}`,
+            date: Timestamp.now(),
+            transactionDate: Timestamp.now(),
+            createdBy: session.uid,
+            createdByName: session?.displayName || 'Job Center Admin',
+            createdAt: Timestamp.now()
+          });
+          toast.success('Registration Fee Logged & Sent to Cashier ✓');
+        }
+      }
+
+      setSeeker((prev: any) => ({ ...prev, isRegistrationPaid: newStatus }));
+      toast.success(newStatus ? 'Marked as Paid' : 'Marked as Unpaid');
+    } catch (error) {
+      console.error("Reg fee toggle error", error);
+      toast.error('Failed to update status');
+    } finally {
+      setIsUpdatingRegFee(false);
+    }
+  };
+
+  const handleUpdateFinanceStatus = async (recordId: string, newStatus: string) => {
+    try {
+      setLoadingFinance(true);
+      await updateDoc(doc(db, 'jobcenter_finance', recordId), { status: newStatus });
+      setFinanceRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: newStatus } : r));
+      toast.success(`Transaction marked as ${newStatus.toUpperCase()}`);
+    } catch (error) {
+      console.error("Update finance status error", error);
+      toast.error('Failed to update status');
+    } finally {
+      setLoadingFinance(false);
     }
   };
 
@@ -597,7 +708,13 @@ export default function SeekerDetailPage() {
           
           <div className="relative z-10">
             {seeker.photoUrl ? (
-              <img src={seeker.photoUrl} alt={seeker.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+              <Image 
+                src={seeker.photoUrl} 
+                alt={seeker.name} 
+                width={128}
+                height={128}
+                className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" 
+              />
             ) : (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
                 {seeker.name.charAt(0).toUpperCase()}
@@ -606,16 +723,27 @@ export default function SeekerDetailPage() {
           </div>
           
           <div className="relative z-10 flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{seeker.name}</h1>
-            <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
-              <span className="flex items-center justify-center gap-1 text-orange-700 font-medium bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
-                Registered: {formatDateDMY(seeker.registrationDate || seeker.admissionDate?.toDate?.() || seeker.admissionDate)}
-              </span>
-              <span className={`flex items-center justify-center gap-1 font-bold px-3 py-1 rounded-full shadow-sm border ${
-                seeker.status === 'placed' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-700 border-orange-100'
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{seeker.name}</h1>
+            <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">{seeker.jobTitle || 'Active Job Seeker'}</p>
+            
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+              <button 
+                onClick={toggleRegistrationFee}
+                disabled={isUpdatingRegFee}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-2 ${
+                  seeker.isRegistrationPaid 
+                  ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' 
+                  : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                }`}
+              >
+                <DollarSign size={14} />
+                Reg. Fee: {seeker.isRegistrationPaid ? 'Paid' : 'Unpaid'}
+              </button>
+              <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 ${
+                seeker.isActive ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-gray-50 border-gray-200 text-gray-400'
               }`}>
                 {seeker.status?.toUpperCase() || 'ACTIVE'}
-              </span>
+              </div>
             </div>
             {seeker.diagnosis && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
@@ -623,6 +751,38 @@ export default function SeekerDetailPage() {
                 {seeker.diagnosis}
               </p>
             )}
+
+            <div className="mt-4 flex justify-center">
+              <Link 
+                href={`/departments/job-center/dashboard/admin/employers/${seekerId}/edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg active:scale-95"
+              >
+                <Settings className="w-3 h-3" />
+                Advanced Edit
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Quick Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Interviews</p>
+            <p className="text-xl font-black text-gray-900">{meetings.length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Status</p>
+            <p className={`text-xl font-black ${
+              seeker.status === 'hired' || seeker.status === 'placed' ? 'text-green-600' :
+              seeker.status === 'interviewing' ? 'text-blue-600' :
+              seeker.status === 'blacklisted' ? 'text-red-600' : 'text-orange-600'
+            }`}>
+              {seeker.status ? seeker.status.replace('_', ' ').toUpperCase() : 'ACTIVE'}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Reg. Status</p>
+            <p className="text-xl font-black text-gray-900">{seeker.isRegistrationPaid ? 'PAID' : 'PENDING'}</p>
           </div>
         </div>
 
@@ -646,61 +806,22 @@ export default function SeekerDetailPage() {
             <ClipboardList className="w-4 h-4" /> Registration
           </button>
           <button
-            onClick={() => setActiveTab('activity')}
+            onClick={() => setActiveTab('actions')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'activity' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'actions' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Activity className="w-4 h-4" /> Activity Log
+            <Settings className="w-4 h-4" /> Actions & Interviews
           </button>
           <button
-            onClick={() => setActiveTab('progress')}
+            onClick={() => setActiveTab('finance')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'progress' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'finance' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <TrendingUp className="w-4 h-4" /> Career Progress
+            <DollarSign className="w-4 h-4" /> Finance
           </button>
-          <button
-            onClick={() => setActiveTab('training')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'training' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Brain className="w-4 h-4" /> Job Training
-          </button>
-          <button
-            onClick={() => setActiveTab('support')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'support' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Heart className="w-4 h-4" /> Support Log
-          </button>
-          <button
-            onClick={() => setActiveTab('fees')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'fees' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <DollarSign className="w-4 h-4" /> Financials
-          </button>
-          <button
-            onClick={() => setActiveTab('videos')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'videos' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Video className="w-4 h-4" /> Portfolio ({videos.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('meetings')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'meetings' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Users className="w-4 h-4" /> Meeting Log
-          </button>
+
           </div>
         </div>
 
@@ -744,10 +865,12 @@ export default function SeekerDetailPage() {
                         className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all overflow-hidden flex-shrink-0"
                       >
                         {photoPreview ? (
-                          <img 
+                          <Image 
                             src={photoPreview} 
-                            className="w-full h-full object-cover" 
                             alt="Preview"
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover" 
                           />
                         ) : (
                           <>
@@ -761,11 +884,15 @@ export default function SeekerDetailPage() {
                       <input
                         ref={photoInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/webp"
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
+                          if (file.type !== 'image/webp') {
+                            toast.error('Only WebP images are allowed');
+                            return;
+                          }
                           setPhotoFile(file);
                           setPhotoPreview(URL.createObjectURL(file));
                         }}
@@ -871,314 +998,264 @@ export default function SeekerDetailPage() {
             <RegistrationTab seeker={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
           )}
 
-          {/* TAB: ACTIVITY LOG */}
-          {activeTab === 'activity' && (
-            <ActivityLogTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: CAREER PROGRESS */}
-          {activeTab === 'progress' && (
-            <CareerProgressTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: JOB TRAINING */}
-          {activeTab === 'training' && (
-            <JobTrainingTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: SUPPORT */}
-          {activeTab === 'support' && (
-            <SupportRecordTab seekerId={seekerId} session={session} />
-          )}
-
-          {/* TAB: FEES */}
-          {activeTab === 'fees' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => changeMonth(-1)} 
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronLeft size={20} className="text-gray-400" />
-                  </button>
-                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
-                    {formatDateDMY(new Date(feeMonth + '-01'))}
-                  </span>
-                  <button onClick={() => changeMonth(1)}
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronRight size={20} className="text-gray-400" />
-                  </button>
+          {/* TAB: ACTIONS & INTERVIEWS */}
+          {activeTab === 'actions' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              {/* Status Management Card */}
+              <div className="bg-orange-50 border border-orange-100 p-6 rounded-[2rem] shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                     <Activity size={20} />
+                   </div>
+                   <div>
+                     <h3 className="text-lg font-black text-gray-900">Status Management</h3>
+                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mt-0.5">Update Seeker Employment Stage</p>
+                   </div>
                 </div>
-                {feeRecord && !isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPayAmt('');
-                      setPayDate(new Date().toISOString().split('T')[0]);
-                      setPayNote('');
-                      setShowAddPaymentModal(true);
-                    }}
-                    className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-600 shadow-sm transition-all active:scale-95"
-                  >
-                    <Plus size={14} /> Add Payment
-                  </button>
-                )}
-              </div>
-              
-              {!feeRecord ? (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <DollarSign className="w-8 h-8 text-gray-300" />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Select Current Status</label>
+                    <select 
+                      value={seeker.status || 'active'}
+                      onChange={async (e) => {
+                        const newStatus = e.target.value;
+                        if (newStatus === 'placed') {
+                          handlePlacement();
+                          return;
+                        }
+                        try {
+                          setLoading(true);
+                          await updateDoc(doc(db, 'jobcenter_seekers', seekerId), { status: newStatus });
+                          setSeeker((prev: any) => ({ ...prev, status: newStatus }));
+                          toast.success(`Status updated to ${newStatus.toUpperCase()}`);
+                        } catch (err) {
+                          toast.error('Failed to update status');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                    >
+                      <option value="active">LOOKING FOR JOB</option>
+                      <option value="training">IN TRAINING</option>
+                      <option value="interviewing">INTERVIEWING</option>
+                      <option value="hired">HIRED (MANUAL)</option>
+                      <option value="placed">PLACED (VIA PORTAL)</option>
+                      <option value="on_hold">ON HOLD</option>
+                      <option value="blacklisted">BLACKLISTED</option>
+                    </select>
                   </div>
-                  <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    You can initialize a fee record manually with the seeker's fixed placement package or registration amount.
-                  </p>
-                  {!isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPackageAmt(seeker.packageAmount?.toString() || '');
-                      setInitialPayment('');
-                      setPaymentNote('');
-                      setShowAddFeeModal(true);
-                    }}
-                    className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-orange-600 transition shadow-lg shadow-orange-100"
-                  >
-                    <Plus size={16} /> Initialize Fee Record
-                  </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-8 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div className="bg-white border border-gray-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Placement Package</div>
-                      <div className="text-2xl font-black text-gray-900">PKR {feeRecord.packageAmount.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-green-50 border border-green-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">Total Paid</div>
-                      <div className="text-2xl font-black text-green-700">PKR {feeRecord.amountPaid.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-red-500 font-black uppercase tracking-widest mb-1">Remaining</div>
-                      <div className="text-2xl font-black text-red-700">PKR {feeRecord.amountRemaining.toLocaleString()}</div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-orange-500 h-full transition-all duration-700 ease-out"
-                      style={{ width: `${Math.min(100, Math.max(0, (feeRecord.amountPaid / feeRecord.packageAmount) * 100))}%` }}
-                    />
-                  </div>
-
-                  {feeRecord.amountRemaining <= 0 && (
-                     <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100 font-bold text-sm flex items-center gap-2">
-                       <Shield className="w-5 h-5" /> PAID IN FULL
-                     </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                      <h3 className="text-lg font-black text-gray-900">Payment History</h3>
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{feeRecord.payments?.length || 0} Entries</span>
-                    </div>
-                    
-                    {!feeRecord.payments || feeRecord.payments.length === 0 ? (
-                      <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                        <p className="text-gray-400 text-sm font-medium">No payments recorded for this month.</p>
+                  <div className="flex items-end">
+                    {seeker.status === 'placed' && (
+                      <div className="w-full p-3 bg-green-100 border border-green-200 rounded-xl text-green-700 text-xs font-bold flex items-center gap-2">
+                        <CheckCircle size={14} /> Official Placement: {seeker.placementCompany || 'Unknown'}
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3">
-                        {feeRecord.payments
-                          ?.sort((a: any, b: any) => {
-                            const aT = a.date?.toDate?.()?.getTime() || new Date(a.date).getTime();
-                            const bT = b.date?.toDate?.()?.getTime() || new Date(b.date).getTime();
-                            return bT - aT;
-                          })
-                          .map((p: any) => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-orange-100 transition-colors">
-                            <div className="flex-1">
-                              <p className="font-black text-gray-900">
-                                PKR {Number(p.amount).toLocaleString('en-PK')}
-                              </p>
-                              {p.note && (
-                                <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
-                              )}
-                              <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Verified by {p.cashierId}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-700 font-bold">
-                                {formatDateDMY(p.date?.toDate?.() ? p.date.toDate() : p.date)}
-                              </p>
-                              <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
-                                APPROVED
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                    )}
+                    {seeker.status === 'active' && (
+                      <div className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 text-xs font-bold flex items-center gap-2">
+                        <Users size={14} /> Active seeker available for interviews.
                       </div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
-
-
-          {/* TAB: VIDEOS */}
-          {activeTab === 'videos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <Video className="w-6 h-6 text-orange-600" />
-                  <h2 className="text-xl font-bold text-gray-800">Files & Portfolio</h2>
-                </div>
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" /> Upload
-                </button>
               </div>
 
-              {videos.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
-                  <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No files uploaded yet</p>
+              {/* Interview Log Section */}
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Users size={20} />
+                    </div>
+                    <h2 className="text-xl font-black text-gray-900">Interview Log</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAddMeetingModal(true)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 w-full sm:w-auto"
+                  >
+                    <Plus size={16} /> Log New Interview
+                  </button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {videos.map(vid => {
-                    const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
-                    const isImage = vid.fileType?.startsWith('image/');
-                    const isPdf = vid.fileType === 'application/pdf';
 
-                    return (
-                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-orange-300 transition-colors shadow-sm relative">
-                        {session?.role === 'superadmin' && (
-                          <button
-                            onClick={() => handleDeleteVideo(vid.id)}
-                            className="absolute top-2 right-2 z-20 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
-                          {isImage ? (
-                            <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
-                          ) : isPdf ? (
-                            <FileText className="w-10 h-10 text-gray-600 z-0" />
-                          ) : (
-                            <Video className="w-10 h-10 text-gray-600 z-0" />
+                {meetings.length === 0 ? (
+                  <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                    <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No interviews recorded yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {meetings.map((meeting: any) => (
+                      <div key={meeting.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-orange-900/5 hover:border-orange-100 transition-all group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4">
+                           <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
+                              <span>{formatDateDMY(meeting.date?.toDate?.() ? meeting.date.toDate() : meeting.date)}</span>
+                           </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                          <div className="space-y-1 pr-16">
+                            <div className="flex items-center gap-2">
+                               <h4 className="font-black text-gray-900 text-xl tracking-tight">{meeting.representativeName}</h4>
+                               <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{meeting.organization}</span>
+                               {meeting.outcome && (
+                                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner ${
+                                   meeting.outcome === 'Hired' ? 'bg-green-100 text-green-700' : 
+                                   meeting.outcome === 'Rejected' ? 'bg-red-100 text-red-700' : 
+                                   meeting.outcome === 'Shortlisted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                                 }`}>
+                                   {meeting.outcome}
+                                 </span>
+                               )}
+                            </div>
+                            <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
+                              <span className="flex items-center gap-1.5"><Phone size={14} className="text-orange-500" /> {meeting.phone}</span>
+                              {meeting.purpose && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {meeting.purpose}</span>}
+                            </div>
+                          </div>
+
+                          {meeting.notes && (
+                            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
+                              <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Interview Notes</div>
+                              "{meeting.notes}"
+                            </div>
                           )}
                           
-                          <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-orange-600 transform scale-90 group-hover:scale-100 transition-transform">
-                              <Play className="w-5 h-5 ml-1" />
-                            </div>
-                          </a>
-                        </div>
-                        <div className="p-4">
-                          <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
-                          <div className="flex items-center justify-between mt-2">
-                             <p className="text-xs text-gray-500">
-                              {formatDateDMY(vid.createdAt)}
-                            </p>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                              isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                            }`}>
-                              {isVideo ? 'Video' : isPdf ? 'Document' : 'Image'}
-                            </span>
+                          <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Staff ID: {meeting.loggedBy}</p>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditMeetingModal(meeting);
+                                    setMName(meeting.representativeName);
+                                    setMOrganization(meeting.organization);
+                                    setMPhone(meeting.phone);
+                                    setMPurpose(meeting.purpose || '');
+                                    setMNotes(meeting.notes || '');
+                                    setMDate(meeting.date?.toDate?.() ? meeting.date.toDate().toISOString().split('T')[0] : meeting.date);
+                                  }}
+                                  className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-2 rounded-xl transition"
+                                >
+                                  Edit Record
+                                </button>
+                              </div>
                           </div>
-                          <p className="text-[10px] text-gray-400 mt-2 truncate">Uploaded by staff ({vid.uploadedBy})</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-
-          {/* TAB: MEETINGS */}
-          {activeTab === 'meetings' && (
-            <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
-                    <Users size={20} />
-                  </div>
-                  <h2 className="text-xl font-black text-gray-900">Meeting & Interview Log</h2>
+          {/* TAB: FINANCE */}
+          {activeTab === 'finance' && (
+            <div className="space-y-8 w-full">
+              <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Financial Ledger</h3>
+                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mt-0.5">Registration & Commission Tracking</p>
                 </div>
-                <button
-                  onClick={() => setShowAddMeetingModal(true)}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 w-full sm:w-auto"
-                >
-                  <Plus size={16} /> Log New Meeting
-                </button>
               </div>
 
-              {meetings.length === 0 ? (
-                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
-                  <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                  <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No meetings recorded yet</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Registration Status</p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xl font-black ${seeker.isRegistrationPaid ? 'text-green-600' : 'text-red-600'}`}>
+                      {seeker.isRegistrationPaid ? 'PAID' : 'PENDING'}
+                    </p>
+                    <button 
+                      onClick={toggleRegistrationFee}
+                      disabled={isUpdatingRegFee}
+                      className="text-[10px] font-black text-orange-600 hover:underline uppercase tracking-widest"
+                    >
+                      Toggle
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {meetings.map((meeting: any) => (
-                    <div key={meeting.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-orange-900/5 hover:border-orange-100 transition-all group relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4">
-                         <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
-                            <span>{formatDateDMY(meeting.date?.toDate?.() ? meeting.date.toDate() : meeting.date)}</span>
-                         </div>
-                      </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Paid (ledger)</p>
+                  <p className="text-xl font-black text-gray-900">
+                    ₨{financeRecords.filter(r => r.status === 'paid').reduce((sum, r) => sum + (Number(r.amount) || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pending Balance</p>
+                  <p className="text-xl font-black text-orange-600">
+                    ₨{financeRecords.filter(r => r.status === 'pending').reduce((sum, r) => sum + (Number(r.amount) || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
 
-                      <div className="flex flex-col gap-4">
-                        <div className="space-y-1 pr-16">
-                          <div className="flex items-center gap-2">
-                             <h4 className="font-black text-gray-900 text-xl tracking-tight">{meeting.representativeName}</h4>
-                             <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{meeting.organization}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
-                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-orange-500" /> {meeting.phone}</span>
-                            {meeting.purpose && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {meeting.purpose}</span>}
-                          </div>
-                        </div>
-
-                        {meeting.notes && (
-                          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
-                            <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Meeting Notes</div>
-                            "{meeting.notes}"
-                          </div>
-                        )}
-                        
-                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Staff: {meeting.loggedBy}</p>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditMeetingModal(meeting);
-                                  setMName(meeting.representativeName);
-                                  setMOrganization(meeting.organization);
-                                  setMPhone(meeting.phone);
-                                  setMPurpose(meeting.purpose || '');
-                                  setMNotes(meeting.notes || '');
-                                  setMDate(meeting.date?.toDate?.() ? meeting.date.toDate().toISOString().split('T')[0] : meeting.date);
-                                }}
-                                className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-2 rounded-xl transition"
+              <div className="space-y-4">
+                <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest">Transaction History</h4>
+                {loadingFinance ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                  </div>
+                ) : financeRecords.length === 0 ? (
+                  <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl py-12 text-center">
+                    <DollarSign className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-400 font-bold">No financial records found for this seeker.</p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {financeRecords.map((record) => (
+                          <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-gray-900">
+                                {record.createdAt?.toDate ? formatDateDMY(record.createdAt.toDate().toISOString().split('T')[0]) : 'N/A'}
+                              </p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-gray-700">{record.type?.replace('_', ' ').toUpperCase() || 'GENERAL'}</p>
+                              {record.description && <p className="text-[10px] text-gray-400 font-medium">{record.description}</p>}
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-black text-gray-900">₨{Number(record.amount).toLocaleString()}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                                record.status === 'paid' ? 'bg-green-100 text-green-700' : 
+                                record.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {record.status || 'PENDING'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <select 
+                                value={record.status || 'pending'}
+                                onChange={(e) => handleUpdateFinanceStatus(record.id, e.target.value)}
+                                className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-orange-500"
                               >
-                                Edit
-                              </button>
-                            </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                                <option value="pending">PENDING</option>
+                                <option value="paid">PAID</option>
+                                <option value="rejected">REJECTED</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
 
         </div>
       </div>
@@ -1214,8 +1291,16 @@ export default function SeekerDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Select File *</label>
                 <input
                   type="file"
-                  accept="video/*,image/*,.pdf"
-                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                  accept="video/*,image/webp,.pdf"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+                      toast.error('Only WebP images are allowed');
+                      return;
+                    }
+                    setSelectedFile(file);
+                  }}
                   className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 outline-none"
                   required
                 />
@@ -1478,20 +1563,42 @@ export default function SeekerDetailPage() {
                 <p className="text-xs text-orange-700 font-bold leading-relaxed mb-3">
                   Select the company where <span className="underline decoration-orange-300 decoration-2">{seeker.name}</span> has been officially hired.
                 </p>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">Registered Employers</label>
-                  <select
-                    required
-                    value={selectedEmployerId}
-                    onChange={e => setSelectedEmployerId(e.target.value)}
-                    className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-700 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm appearance-none"
-                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23f97316\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                  >
-                    <option value="">Choose a company...</option>
-                    {employers.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.companyName}</option>
-                    ))}
-                  </select>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">Registered Employers</label>
+                    <select
+                      required
+                      value={selectedEmployerId}
+                      onChange={e => setSelectedEmployerId(e.target.value)}
+                      className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-700 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm appearance-none"
+                      style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23f97316\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
+                    >
+                      <option value="">Choose a company...</option>
+                      {employers.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.companyName}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">Starting Salary (Monthly)</label>
+                      <input 
+                        required 
+                        type="number" 
+                        value={startingSalary} 
+                        onChange={e => setStartingSalary(e.target.value)}
+                        className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="PKR"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1.5">30% Commission</label>
+                      <div className="w-full bg-orange-100/50 border border-orange-200 rounded-xl px-4 py-3.5 text-sm font-black text-orange-700">
+                        ₨{(Number(startingSalary) * 0.3).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

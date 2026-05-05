@@ -98,7 +98,10 @@ export default function SocialMediaSidebar() {
   const [dockedEdge, setDockedEdge] = useState<Edge>('right');
   const [isDragging, setIsDragging] = useState(false);
 
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const W = window.innerWidth;
     const isMobile = W < 1024;
     const TOGGLE_SIZE = 56;
@@ -248,6 +251,8 @@ export default function SocialMediaSidebar() {
   const isRight = dockedEdge === 'right';
   const isBottom = dockedEdge === 'bottom';
   const isTop = dockedEdge === 'top';
+
+  if (!mounted) return null;
 
   return (
     <div

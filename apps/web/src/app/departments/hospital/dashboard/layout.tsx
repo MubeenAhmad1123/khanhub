@@ -1,32 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  LayoutDashboard, 
-  Users, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X, 
-  ChevronRight,
-  Bell,
-  Search,
-  Activity,
-  UserCircle,
-  ShieldCheck,
-  ClipboardList,
-  FileText,
-  CreditCard,
-  ShoppingBag,
   Sun,
-  Moon
+  Moon,
+  PhoneCall,Search,
+  LayoutDashboard, ShieldCheck, FileText, Activity, ClipboardList, UserCircle, Menu, X, LogOut, ChevronRight, GraduationCap, Heart, Building2, Shield, ArrowLeft, ExternalLink, Calculator, TrendingUp
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { useTheme } from 'next-themes';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { HospitalRole } from '@/types/hospital';
+import StaffNotifications from '@/components/layout/StaffNotifications';
 
 interface NavItem {
   title: string;
@@ -37,19 +23,23 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { title: 'Overview', href: '/departments/hospital/dashboard/admin', icon: LayoutDashboard, roles: ['admin'] },
+  { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['admin'] },
   { title: 'SuperAdmin', href: '/departments/hospital/dashboard/superadmin', icon: ShieldCheck, roles: ['superadmin'] },
   { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
+  { title: 'My Profile', href: '/departments/hospital/dashboard/profile', icon: UserCircle, roles: ['admin', 'staff', 'superadmin'] },
   { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/patient', icon: UserCircle, roles: ['family'] },
 ];
 
-const ROLE_COLORS: Record<HospitalRole, string> = {
+const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-emerald-500',
   staff: 'bg-blue-500',
   family: 'bg-purple-500',
   cashier: 'bg-orange-500',
-  superadmin: 'bg-rose-500'
+  superadmin: 'bg-rose-500',
+  worker: 'bg-indigo-500',
+  receptionist: 'bg-indigo-500'
 };
 
 export default function HospitalDashboardLayout({
@@ -59,18 +49,25 @@ export default function HospitalDashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem('hospital_session');
+      localStorage.removeItem('hospital_login_time');
+      router.push('/departments/hospital/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  }, [router]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -102,14 +99,7 @@ export default function HospitalDashboardLayout({
         }
 
         const parsed = JSON.parse(sessionData);
-        // Verify user still exists and is active
-        const userDoc = await getDoc(doc(db, 'hospital_users', parsed.uid));
-        if (!userDoc.exists() || !userDoc.data().isActive) {
-          handleSignOut();
-          return;
-        }
-
-        setUser({ uid: userDoc.id, ...userDoc.data() });
+        setUser(parsed);
       } catch (error) {
         console.error('Session check error:', error);
         router.push('/departments/hospital/login');
@@ -119,211 +109,218 @@ export default function HospitalDashboardLayout({
     };
 
     checkSession();
-  }, [router]);
+  }, [router, handleSignOut]);
 
   useEffect(() => {
-    if (!user || !user.uid) return;
+    if (!user || !user.uid || !user.role) return;
     if (user.role === 'superadmin') return;
 
     const unsub = onSnapshot(doc(db, 'hospital_users', user.uid), (snap) => {
+      if (!snap.exists()) {
+        handleSignOut();
+        return;
+      }
       const data = snap.data();
+      const dbRole = (data?.role || '').toLowerCase();
+      const sRole = (user?.role || '').toLowerCase();
+      if (data?.isActive === false || (dbRole && sRole && dbRole !== sRole)) {
+        handleSignOut();
+        return;
+      }
       if (data?.forceLogoutAt) {
         const logoutTime = new Date(data.forceLogoutAt).getTime();
         const loginTimeStr = localStorage.getItem('hospital_login_time');
         const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
-        if (logoutTime > loginTime) {
+        if (loginTime > 0 && logoutTime > loginTime) {
           handleSignOut();
         }
       }
     });
     return () => unsub();
-  }, [user]);
+  }, [user, handleSignOut]);
 
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut();
-      localStorage.removeItem('hospital_session');
-      localStorage.removeItem('hospital_login_time');
-      router.push('/departments/hospital/login');
-    } catch (error) {
-      console.error('Sign out error:', error);
+  const userRole = (user?.role || '').toLowerCase();
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (!user) return false;
+    const itemRoles = item.roles.map(r => r.toLowerCase());
+    
+    // Exact match:
+    if (itemRoles.includes(userRole)) return true;
+
+    // Special fallback mappings for worker / receptionist roles
+    if (userRole === 'worker' || userRole === 'receptionist') {
+      if (itemRoles.includes('staff')) return true;
+      if (item.title === 'Leads & CRM') return true;
     }
-  };
-
-  const filteredNavItems = NAV_ITEMS.filter(item => 
-    user && item.roles.includes(user.role as HospitalRole)
-  );
+    return false;
+  });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 dark:text-gray-400 font-medium animate-pulse">Syncing Hospital Portal...</p>
+      <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 border-4 border-rose-500/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="text-rose-700 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Medical Node...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-black text-slate-900 dark:text-white transition-colors duration-300">
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-white dark:bg-black border-b border-slate-200 dark:border-white/5 px-4 h-16 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-            <Activity className="w-5 h-5 text-white" />
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-white/80 backdrop-blur-xl border-r border-gray-200/40">
+      {/* Header */}
+      <div className="p-8">
+        <div className="flex items-center gap-4 mb-12">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl -rotate-3 transition-transform hover:rotate-0 duration-500">
+            <Activity size={24} />
           </div>
-          <span className="font-bold text-slate-900 dark:text-white">Hospital Portal</span>
+          <div>
+            <h1 className="font-black text-lg leading-tight tracking-tight text-gray-900 uppercase">Hospital</h1>
+            <p className="text-rose-600/70 text-[10px] font-bold uppercase tracking-widest mt-0.5">Nexus Healthcare</p>
+          </div>
         </div>
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
-        >
-          {isSidebarOpen ? <X /> : <Menu />}
-        </button>
-      </header>
 
-      <div className="flex relative min-h-[calc(100-4rem)] lg:min-h-screen">
-        {/* Sidebar Backdrop */}
-        {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside className={`
-          fixed lg:sticky top-0 left-0 z-50
-          w-72 h-screen bg-white dark:bg-black border-r border-slate-200 dark:border-white/5
-          transition-transform duration-300 ease-in-out
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}>
-          <div className="flex flex-col h-full">
-            {/* Logo Section */}
-            <div className="p-6 hidden lg:block">
-              <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
-                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-none">
-                  <Activity className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-slate-900 dark:text-white leading-none">Hospital</h1>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-1">Khan Hub Ecosystem</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
-              <div className="mb-4">
-                <p className="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">Main Menu</p>
-                {filteredNavItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                        ${isActive 
-                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-none' 
-                          : 'text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-emerald-400'}
-                      `}
-                    >
-                      <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'group-hover:text-emerald-600'}`} />
-                      <span className="font-medium">{item.title}</span>
-                      {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* Quick Actions / Status */}
-              <div className="pt-4 border-t border-slate-100 dark:border-white/5">
-                <p className="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">Account Status</p>
-                <div className="mx-2 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
-                      {(user?.role?.[0] || 'U').toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.displayName}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-gray-400 font-medium capitalize">{user?.role} Portal</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 w-full" />
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-600">Active</span>
-                  </div>
-                </div>
-              </div>
-            </nav>
-
-            {/* Bottom Actions */}
-            <div className="p-4 border-t border-slate-100 dark:border-white/5 space-y-2">
-              <Link 
-                href="/departments/hospital/dashboard/settings"
-                className="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl transition-all"
+        {/* Navigation */}
+        <nav className="space-y-2">
+          {filteredNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsSidebarOpen(false)}
+                className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-rose-50 to-transparent text-rose-700 font-black' 
+                    : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50/50'
+                }`}
               >
-                <Settings className="w-5 h-5 text-slate-400" />
-                <span className="font-medium">Settings</span>
+                {isActive && (
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-rose-500 rounded-r-full shadow-[0_0_12px_rgba(244,63,94,0.5)]" />
+                )}
+                <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-rose-500' : ''}`}>
+                  <item.icon size={20} />
+                </div>
+                <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.title}</span>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                )}
               </Link>
-              <button
-                onClick={toggleDark}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${darkMode ? 'text-yellow-400 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-50'}`}
-              >
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-                <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Sign Out</span>
-              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="mt-auto p-8 space-y-6">
+        {/* User Card */}
+        <div className="flex items-center gap-4 px-2">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center text-white font-black text-sm shadow-xl">
+            {user?.displayName?.[0]?.toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black truncate text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
+            <div className="flex items-center gap-2 mt-1">
+               <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+               <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{user?.role} node</p>
             </div>
           </div>
-        </aside>
+        </div>
 
-        {/* Main Content Area */}
-        <main className="flex-1 min-w-0 overflow-x-hidden">
-          {/* Top Bar for Desktop */}
-          <div className="hidden lg:flex items-center justify-between px-8 py-4 bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60 dark:border-white/5">
-            <div className="flex items-center gap-4 bg-slate-100/50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-white/5 w-96">
-              <Search className="w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search anything..." 
-                className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium text-slate-900 dark:text-white"
-              />
+        <button 
+          onClick={handleSignOut} 
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50 text-[11px] font-black text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all group"
+        >
+          <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
+          DISCONNECT
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex bg-[#FAFAFB] text-black transition-colors duration-500 font-sans">
+      {/* Sidebar Desktop */}
+      <aside className="hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-md z-40 lg:hidden animate-in fade-in duration-500" 
+          onClick={() => setIsSidebarOpen(false)} 
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
+      } bg-white shadow-2xl`}>
+        <button 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black z-50 hover:rotate-90 transition-all"
+        >
+          <X size={18} />
+        </button>
+        <SidebarContent />
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+        {/* Background Decorative Elements */}
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
+
+        {/* Top Header */}
+        <header className="sticky top-0 z-20 bg-white/70 lg:bg-[#FAFAFB]/70 backdrop-blur-xl border-b border-gray-100 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setIsSidebarOpen(true)} 
+              className="lg:hidden w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center text-black"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="hidden lg:flex flex-col">
+              <h2 className="text-xs font-black uppercase tracking-[0.4em] text-rose-700 leading-none">Medical Grid</h2>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Central Hospital Terminal</p>
             </div>
             
-            <div className="flex items-center gap-4">
-              <button className="relative p-2.5 text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-black" />
-              </button>
-              
-              <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2" />
-              
-              <div className="flex items-center gap-3 pl-2">
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.displayName}</p>
-                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{user?.role}</p>
-                </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg dark:shadow-none ${ROLE_COLORS[user?.role as HospitalRole || 'staff']}`}>
-                  {(user?.displayName?.[0] || 'U').toUpperCase()}
-                </div>
-              </div>
+            <div className="hidden lg:block h-8 w-px bg-gray-200/60" />
+
+            <div className="relative group hidden md:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-rose-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Search patient records..." 
+                className="bg-gray-100/40 border border-gray-200/50 focus:border-rose-500/30 rounded-2xl pl-12 pr-6 py-2.5 text-xs font-medium w-80 outline-none transition-all"
+              />
             </div>
           </div>
+          
+          <div className="flex items-center gap-4 lg:gap-8">
+             {user?.uid && <StaffNotifications uid={user.uid} dept="hospital" />}
+             
+             <div className="hidden lg:block h-8 w-px bg-gray-200/60" />
 
-          {/* Page Content */}
-          <div className="p-4 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+             <div className="flex items-center gap-4">
+                <div className="hidden sm:flex flex-col items-end">
+                   <p className="text-xs font-black text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
+                   <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-600 text-[8px] font-black uppercase tracking-wider mt-1 border border-rose-500/20">
+                      {user?.role}
+                   </span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center text-gray-900 font-black text-sm shadow-sm">
+                   {user?.displayName?.[0]}
+                </div>
+             </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <div className="max-max-7xl mx-auto relative">
             {children}
           </div>
         </main>

@@ -35,7 +35,7 @@ function getAdminApp(): App {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { recipientId, recipientUid, title, body: notifBody, type, actionUrl } = body;
+    const { recipientId, recipientUid, title, body: notifBody, type, actionUrl, imageUrl, icon, tag } = body;
     const targetUserId = recipientUid || recipientId;
 
     if (!targetUserId || !title || !notifBody) {
@@ -54,16 +54,46 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: 'No registered devices for this user', successCount: 0 });
     }
 
-    const payload = {
-      notification: { title, body: notifBody },
+    const payload: any = {
+      notification: { 
+        title, 
+        body: notifBody,
+        ...(imageUrl ? { imageUrl } : {}),
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          icon: icon || 'stock_ticker_update',
+          color: '#EA580C',
+          sound: 'default',
+          tag: tag || type,
+          imageUrl: imageUrl,
+        }
+      },
+      webpush: {
+        headers: { Urgency: 'high' },
+        notification: {
+          icon: icon || '/icons/icon-192x192.png',
+          image: imageUrl,
+          badge: '/icons/badge-72x72.png',
+          tag: tag || type,
+          renotify: true,
+          requireInteraction: true,
+        },
+        fcmOptions: {
+          link: actionUrl || '/hq/dashboard'
+        }
+      },
       data: {
         type: type || 'default',
         route: actionUrl || '/hq/dashboard',
         title,
         body: notifBody,
+        ...(imageUrl ? { image: imageUrl } : {}),
       },
       tokens,
     };
+
 
     const response = await messaging.sendEachForMulticast(payload);
 

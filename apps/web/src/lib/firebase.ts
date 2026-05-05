@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from 'firebase/firestore';
 import { browserLocalPersistence, getAuth, GoogleAuthProvider, setPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -13,15 +18,22 @@ const firebaseConfig = {
 
 // Prevent duplicate Firebase app initialization
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app);
+
+// Initialize Firestore with persistent cache (replacing deprecated enableIndexedDbPersistence)
+export const db = typeof window !== 'undefined' 
+  ? initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    })
+  : getFirestore(app);
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Ensure auth persists across tabs/browser restarts (prevents HQ session from
-// getting cleared on new tabs before Auth rehydrates).
+// Setup Auth persistence
 if (typeof window !== 'undefined') {
   setPersistence(auth, browserLocalPersistence).catch((err) => {
-    // Persistence can fail in restricted environments (e.g. blocked storage).
-    console.warn('[firebase] setPersistence failed', err);
+    console.warn('[Auth] setPersistence failed', err);
   });
 }

@@ -7,8 +7,10 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
+  limit,
   addDoc,
+
   updateDoc,
   doc,
   getDoc,
@@ -16,10 +18,15 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCached, setCached } from '@/lib/queryCache';
+
+
+
 import { Plus, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { SpimsFeePayment, SpimsFeePaymentType, SpimsStudent } from '@/types/spims';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, toDate } from '@/lib/utils';
+
 import type { SpimsSessionLike } from './AdmissionTab';
 
 export default function FeeRecordTab({
@@ -44,34 +51,74 @@ export default function FeeRecordTab({
   const readOnlyStudent = role === 'student';
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'spims_fees'),
-      where('studentId', '==', student.id),
-      orderBy('date', 'asc')
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list: SpimsFeePayment[] = snap.docs.map((d) => {
-          const x = d.data();
-          return {
-            id: d.id,
-            ...x,
-            date: x.date?.toDate ? x.date.toDate() : x.date,
-            createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : x.createdAt,
-          } as SpimsFeePayment;
+    async function loadData() {
+      setLoading(true);
+      try {
+        const cacheKey = `spims_transactions_record_${student.id}`;
+        const cached = getCached<any[]>(cacheKey);
+        let list: any[] = [];
+
+        if (cached) {
+          list = cached;
+        } else {
+          // Query transactions for this student
+          const q = query(
+            collection(db, 'spims_transactions'),
+            where('patientId', '==', student.id),
+            limit(100)
+          );
+          const snap = await getDocs(q);
+          list = snap.docs.map((d) => {
+            const x = d.data();
+            return {
+              id: d.id,
+              ...x,
+              date: x.date?.toDate ? x.date.toDate() : x.date,
+              createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : x.createdAt,
+            };
+          });
+          setCached(cacheKey, list, 60);
+        }
+
+        // Filter for fee-related entries and map to SpimsFeePayment type
+        const feeRecords = list
+          .filter(tx => tx.category === 'fee' || tx.feePaymentId)
+          .map(tx => ({
+            id: tx.id,
+            studentId: tx.studentId || tx.patientId,
+            studentName: tx.patientName || student.name,
+            course: student.course,
+            session: student.session,
+            date: tx.date,
+            amount: tx.amount,
+            remaining: tx.remaining || 0,
+            receivedBy: tx.receivedBy || tx.createdByName || 'HQ',
+            type: tx.feePaymentType || 'monthly',
+            note: tx.description || tx.note,
+            status: tx.status,
+            createdAt: tx.createdAt,
+            linkedTransactionId: tx.id
+          } as SpimsFeePayment));
+
+        // Client-side sort by date asc
+        feeRecords.sort((a, b) => {
+          const tA = toDate(a.date).getTime();
+          const tB = toDate(b.date).getTime();
+          return tA - tB;
         });
-        setRows(list);
-        setLoading(false);
-      },
-      (err) => {
-        console.error(err);
+
+        setRows(feeRecords);
+      } catch (err) {
+        console.error('Error loading fee records:', err);
         toast.error('Could not load fee records');
+      } finally {
         setLoading(false);
       }
-    );
-    return () => unsub();
-  }, [student.id]);
+    }
+
+    loadData();
+  }, [student.id, student.name, student.course, student.session]);
+
 
   const { totalReceived, displayRemaining } = useMemo(() => {
     const approved = rows.filter((r) => r.status === 'approved');
@@ -133,6 +180,7 @@ export default function FeeRecordTab({
         categoryName: 'Student Fee',
         departmentCode: 'spims',
         departmentName: 'SPIMS College',
+        studentId: student.id,
         patientId: student.id,
         patientName: student.name,
         status: 'pending_cashier',

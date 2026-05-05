@@ -39,7 +39,12 @@ export async function uploadToCloudinary(
     let actualType = resourceType;
     if (actualType === 'auto') {
         if (file.type.startsWith('video/')) actualType = 'video';
-        else if (file.type.startsWith('image/')) actualType = 'image';
+        else if (file.type.startsWith('image/')) {
+            if (file.type !== 'image/webp') {
+                throw new Error('Only .webp image format is allowed for security and optimization.');
+            }
+            actualType = 'image';
+        }
         else if (file.type === 'application/pdf') actualType = 'image'; // PDF viewing works best as image resource layer
         else actualType = 'raw';
     }

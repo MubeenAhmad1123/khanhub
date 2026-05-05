@@ -12,12 +12,29 @@ import { db } from '@/lib/firebase';
 import { createStudent, firestoreDate } from '@/lib/spims/students';
 import { createSpimsStudentUserServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { SPIMS_COURSES, type SpimsStudentStatus } from '@/types/spims';
+import { BrutalistCalendar } from '@/components/ui';
+
+const formatCnic = (val: string) => {
+  const digits = val.replace(/\D/g, '').substring(0, 13);
+  let formatted = '';
+  if (digits.length > 0) {
+    formatted = digits.substring(0, 5);
+    if (digits.length > 5) {
+      formatted += '-' + digits.substring(5, 12);
+      if (digits.length > 12) {
+        formatted += '-' + digits.substring(12, 13);
+      }
+    }
+  }
+  return formatted;
+};
 
 export default function NewSpimsStudentPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [showPw, setShowPw] = useState(false);
 
   const [loginId, setLoginId] = useState('');
@@ -42,6 +59,7 @@ export default function NewSpimsStudentPage() {
   const [percentage, setPercentage] = useState('');
 
   const [rollNo, setRollNo] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [course, setCourse] = useState<string>(() => SPIMS_COURSES[0] || '');
   const [session, setSession] = useState('');
   const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -69,6 +87,7 @@ export default function NewSpimsStudentPage() {
   }, [router]);
 
   const submit = async () => {
+    if (submitting) return;
     if (!loginId.trim() || !loginPassword || loginPassword.length < 6) {
       toast.error('Login ID and password (6+ chars) required');
       return;
@@ -78,13 +97,14 @@ export default function NewSpimsStudentPage() {
       return;
     }
     const pkg = Number(totalPackage) || 0;
-    const initReceived = 0;
 
-    setSubmitting(true);
-    let studentDocId: string | null = null;
     try {
-      studentDocId = await createStudent({
+      setSubmitting(true);
+      setSubmitStatus('processing');
+      
+      const studentDocId = await createStudent({
         rollNo: rollNo.trim(),
+        studentId: studentId.trim(),
         name: name.trim(),
         fatherName: fatherName.trim(),
         cnic: cnic.trim(),
@@ -134,20 +154,19 @@ export default function NewSpimsStudentPage() {
         try {
           await deleteDoc(doc(db, 'spims_students', studentDocId));
         } catch {}
+        setSubmitStatus('error');
         toast.error(authRes.error || 'Could not create login');
-        setSubmitting(false);
         return;
       }
 
-      toast.success('Student admitted');
-      router.push(`/departments/spims/dashboard/admin/students/${studentDocId}`);
+      setSubmitStatus('success');
+      toast.success('Student admitted ✓');
+      setTimeout(() => {
+        router.push(`/departments/spims/dashboard/admin/students/${studentDocId}`);
+      }, 1500);
     } catch (e: any) {
       console.error(e);
-      if (studentDocId) {
-        try {
-          await deleteDoc(doc(db, 'spims_students', studentDocId));
-        } catch {}
-      }
+      setSubmitStatus('error');
       toast.error(e?.message || 'Failed');
     } finally {
       setSubmitting(false);
@@ -222,12 +241,18 @@ export default function NewSpimsStudentPage() {
                 </div>
               </div>
               <Field label="Roll Number (optional)" value={rollNo} onChange={setRollNo} placeholder="e.g. 2024-001" />
+              <Field label="Student ID" value={studentId} onChange={setStudentId} placeholder="e.g. SPIMS-STU-001" />
             </div>
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest pt-4">Personal</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Name" value={name} onChange={setName} />
               <Field label="Father name" value={fatherName} onChange={setFatherName} />
-              <Field label="CNIC" value={cnic} onChange={setCnic} placeholder="00000-0000000-0" />
+              <Field 
+                label="CNIC" 
+                value={cnic} 
+                onChange={(v) => setCnic(formatCnic(v))} 
+                placeholder="00000-0000000-0" 
+              />
               <Field label="Contact" value={contact} onChange={setContact} />
               <Field label="Father contact" value={fatherContact} onChange={setFatherContact} />
               <Field label="Student occupation (optional)" value={studentOcc} onChange={setStudentOcc} />
@@ -324,7 +349,7 @@ export default function NewSpimsStudentPage() {
           {step < 3 ? (
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-black"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-black active:scale-95 transition-all"
               onClick={() => setStep((s) => Math.min(3, s + 1))}
             >
               Next <ChevronRight size={16} />
@@ -333,11 +358,34 @@ export default function NewSpimsStudentPage() {
             <button
               type="button"
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D9E75] text-white text-sm font-black disabled:opacity-50"
+              className={`inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-2xl disabled:opacity-50 ${
+                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                'bg-[#1D9E75] text-white shadow-emerald-900/10'
+              }`}
               onClick={submit}
             >
-              {submitting ? <Loader2 className="animate-spin w-4 h-4" /> : <Save size={16} />}
-              Submit admission
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin w-4 h-4" />
+                  <span>ADMITTING...</span>
+                </>
+              ) : submitStatus === 'success' ? (
+                <>
+                  <Save size={16} className="text-emerald-200" />
+                  <span>STUDENT ADMITTED</span>
+                </>
+              ) : submitStatus === 'error' ? (
+                <>
+                  <ChevronRight size={16} className="text-rose-200" />
+                  <span>RETRY SYNC</span>
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  <span>SUBMIT ADMISSION</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -361,20 +409,11 @@ function Field({
 }) {
   if (type === 'date') {
     return (
-      <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{label}</label>
-        <input
-          type="text"
-          placeholder="DD MM YYYY"
-          className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
-          value={formatDateDMY(value)}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={(e) => {
-            const parsed = parseDateDMY(e.target.value);
-            if (parsed) onChange(parsed.toISOString().split('T')[0]);
-          }}
-        />
-      </div>
+      <BrutalistCalendar
+        label={label}
+        value={value}
+        onChange={onChange}
+      />
     );
   }
 

@@ -144,7 +144,7 @@ export const FinancePipesOverlay: React.FC<FinancePipesOverlayProps> = ({
         id,
         source: { x: startX, y: startY },
         target: { x: endX, y: endY },
-        color: index % 2 === 0 ? '#22d3ee' : '#8b5cf6', // Cyan and Violet alternates
+        color: '#000000', 
         delay: index * 0.4
       };
     }).filter(Boolean) as PipeProps[];

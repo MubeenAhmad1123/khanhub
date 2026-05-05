@@ -12,8 +12,9 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDeptCollection, type StaffDept } from './staff';
 
-export type Portal = 'hq' | 'rehab' | 'spims';
+export type Portal = StaffDept;
 
 export type PortalUserRow = {
   id: string;
@@ -50,8 +51,8 @@ export function subscribePortalUsers(
   onData: (rows: PortalUserRow[]) => void,
   onError?: (err: unknown) => void
 ) {
-  const col = portal === 'hq' ? 'hq_users' : portal === 'rehab' ? 'rehab_users' : 'spims_users';
-  const q = query(collection(db, col), orderBy('createdAt', 'desc'), limit(500));
+  const col = getDeptCollection(portal);
+  const q = query(collection(db, col), orderBy('createdAt', 'desc'), limit(100));
   return onSnapshot(
     q,
     (snap) => onData(snap.docs.map((d) => normalizeUser(portal, d.id, d.data()))),
@@ -60,22 +61,21 @@ export function subscribePortalUsers(
 }
 
 export async function toggleUserActive(portal: Portal, uid: string, isActive: boolean) {
-  const col = portal === 'hq' ? 'hq_users' : portal === 'rehab' ? 'rehab_users' : 'spims_users';
+  const col = getDeptCollection(portal);
   await updateDoc(doc(db, col, uid), { isActive });
 }
 
 export async function fetchUserProfile(portal: Portal, uid: string): Promise<PortalUserRow | null> {
-  const col = portal === 'hq' ? 'hq_users' : portal === 'rehab' ? 'rehab_users' : 'spims_users';
+  const col = getDeptCollection(portal);
   const snap = await getDoc(doc(db, col, uid));
   if (!snap.exists()) return null;
   return normalizeUser(portal, uid, snap.data());
 }
 
 export async function listCashiersForFeeRequests(): Promise<Array<{ uid: string; name: string; customId?: string }>> {
-  const snap = await getDocs(query(collection(db, 'hq_users'), orderBy('createdAt', 'desc')));
+  const snap = await getDocs(query(collection(db, 'hq_users'), orderBy('createdAt', 'desc'), limit(100)));
   return snap.docs
     .map((d) => ({ uid: d.id, ...d.data() } as any))
     .filter((u) => String(u.role || '').toLowerCase() === 'cashier' && u.isActive !== false)
     .map((u) => ({ uid: u.uid, name: String(u.name || 'Cashier'), customId: u.customId }));
 }
-

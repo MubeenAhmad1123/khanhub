@@ -10,11 +10,16 @@ import {
   query,
   where,
   orderBy,
+  limit,
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore';
+
+
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
+import { getCached, setCached } from '@/lib/queryCache';
+
 import type { SpimsStudent, SpimsFeePayment, SpimsFeeTrackerRecord } from '@/types/spims';
 
 export function firestoreDate(val: Date | string): Timestamp {
@@ -42,9 +47,17 @@ export async function getStudent(id: string): Promise<SpimsStudent | null> {
 }
 
 export async function listStudents(): Promise<SpimsStudent[]> {
-  const snap = await getDocs(collection(db, 'spims_students'));
-  return snap.docs.map((d) => mapStudent(d.id, d.data() as Record<string, unknown>));
+  const cacheKey = 'spims_students_list';
+  const cached = getCached<SpimsStudent[]>(cacheKey);
+  if (cached) return cached;
+
+  const q = query(collection(db, 'spims_students'), limit(100)); // Default limit for list
+  const snap = await getDocs(q);
+  const students = snap.docs.map((d) => mapStudent(d.id, d.data() as Record<string, unknown>));
+  setCached(cacheKey, students, 180); // 3 min cache
+  return students;
 }
+
 
 export type CreateStudentInput = Omit<SpimsStudent, 'id' | 'createdAt' | 'updatedAt' | 'totalReceived' | 'remaining'> & {
   totalReceived?: number;
@@ -137,13 +150,17 @@ export async function updateStudent(id: string, data: Partial<SpimsStudent>): Pr
 }
 
 export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayment[]> {
+  const cacheKey = `spims_fees_${studentId}`;
+  const cached = getCached<SpimsFeePayment[]>(cacheKey);
+  if (cached) return cached;
+
   const q = query(
     collection(db, 'spims_fees'),
     where('studentId', '==', studentId),
-    orderBy('date', 'desc')
+    limit(50) // Limit tx history
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => {
+  const fees = snap.docs.map((d) => {
     const row = d.data();
     return {
       id: d.id,
@@ -152,7 +169,18 @@ export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayme
       createdAt: row.createdAt?.toDate ? row.createdAt.toDate() : row.createdAt,
     } as SpimsFeePayment;
   });
+
+  // Client-side sort by date desc
+  fees.sort((a, b) => {
+    const tA = toDate(a.date).getTime();
+    const tB = toDate(b.date).getTime();
+    return tB - tA;
+  });
+
+  setCached(cacheKey, fees, 60); // 1 min cache for finance
+  return fees;
 }
+
 
 export function buildFeeTrackerRecord(
   student: SpimsStudent,

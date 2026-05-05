@@ -2,15 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ═══════════════════════════════════════════════════════════
-    //  SHARED HELPERS  (job platform — do not modify)
-    // ═══════════════════════════════════════════════════════════
+    // ── Global System Admin Override ──────────────────
+    // Ensures the root admin always has full access regardless of specific collection rules.
+    match /{document=**} {
+      allow read, write: if isSystemAdmin();
+    }
 
     function isAuth() {
       return request.auth != null;
-    }
-    function isDiscoveryQuery() {
-      return request.query.limit != null && request.query.limit <= 1;
     }
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
@@ -70,12 +69,19 @@ service cloud.firestore {
     // ── Notifications ─────────────────────────────────
     match /notifications/{notifId} {
       allow read: if isAuth()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (
+          resource.data.userId == request.auth.uid 
+          || resource.data.userId == hqCustomId()
+          || isAdmin() 
+          || isHqTier1()
+          || isRehabAdminOrAbove()
+          || isSpimsAdminOrAbove()
+        );
       allow create: if isAuth();
       allow update: if isAuth()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (resource.data.userId == request.auth.uid || isAdmin() || isHqSuperOrManager());
       allow delete: if isAuth()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (resource.data.userId == request.auth.uid || isAdmin() || isHqSuperOrManager());
     }
 
     // ── Payments ──────────────────────────────────────
@@ -141,6 +147,28 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ── IT PORTAL HELPERS ─────────────────────────────
+    function isItAuth() {
+      return isAuth() && exists(/databases/$(database)/documents/it_users/$(request.auth.uid));
+    }
+    function itRole() {
+      return get(/databases/$(database)/documents/it_users/$(request.auth.uid)).data.role;
+    }
+    function isItAdminOrManager() {
+      return isItAuth() && (itRole() == 'admin' || itRole() == 'manager' || itRole() == 'superadmin');
+    }
+
+    // ── SOCIAL MEDIA PORTAL HELPERS ───────────────────
+    function isMediaAuth() {
+      return isAuth() && exists(/databases/$(database)/documents/media_users/$(request.auth.uid));
+    }
+    function mediaRole() {
+      return get(/databases/$(database)/documents/media_users/$(request.auth.uid)).data.role;
+    }
+    function isMediaAdminOrManager() {
+      return isMediaAuth() && (mediaRole() == 'admin' || mediaRole() == 'manager' || mediaRole() == 'superadmin');
+    }
+
     // ── Admin Settings ────────────────────────────────
     match /adminSettings/{doc} {
       allow read, write: if isAdmin();
@@ -183,18 +211,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isRehabAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid)) ||
+        isHqTier1()
+      );
     }
     function rehabRole() {
-      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isRehabRole(role) {
       return isRehabAuth() && rehabRole() == role;
     }
     function isRehabAdminOrAbove() {
-      return isRehabAuth()
-        && (rehabRole() == 'admin' || rehabRole() == 'superadmin');
+      let role = rehabRole();
+      return isRehabAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isRehabSuperAdmin() {
       return isRehabRole('superadmin');
@@ -251,7 +282,8 @@ service cloud.firestore {
     match /rehab_patients/{patientId} {
       allow read: if isRehabAdminOrAbove()
         || isRehabRole('cashier')
-        || (isRehabRole('family') && rehabPatientId() == patientId);
+        || (isRehabRole('family') && rehabPatientId() == patientId)
+        || isHqTier1();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -264,8 +296,9 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
-        || isHqSuperAdmin();
-      allow create, update: if isRehabRole('cashier') || isRehabSuperAdmin() || isHqSuperAdmin();
+        || isHqTier1();
+      allow create, update: if isRehabRole('cashier') || isRehabSuperAdmin() || isHqTier1()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
       allow delete: if isRehabSuperAdmin();
     }
 
@@ -273,7 +306,8 @@ service cloud.firestore {
     match /rehab_canteen/{docId} {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
       allow create, update: if isRehabRole('cashier') || isRehabSuperAdmin();
       allow delete: if isRehabSuperAdmin();
     }
@@ -292,16 +326,17 @@ service cloud.firestore {
     // Superadmin approves/rejects (update). Cashier forwards requests (update).
     // Nobody deletes transactions — full audit trail.
     match /rehab_transactions/{docId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier') || isHqSuperAdmin();
+      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier') || isHqTier1();
       allow create: if isRehabRole('cashier')
         || isRehabSuperAdmin()
+        || isHqCashier()
         || (isRehabAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isRehabSuperAdmin()
-        || isHqSuperAdmin()
+        || isHqSuperOrManager()
         || (
-          isRehabRole('cashier')
+          (isRehabRole('cashier') || isHqCashier())
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -309,10 +344,14 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     // ── Staff profiles ─────────────────────────────────
@@ -322,7 +361,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || isRehabRole('cashier')
         || (isRehabRole('staff') && rehabStaffId() == staffId)
-        || isHqSuperOrManager();
+        || isHqTier1();
       allow create, update: if isRehabAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isRehabSuperAdmin() || isHqSuperOrManager();
     }
@@ -367,7 +406,8 @@ service cloud.firestore {
     // Admin/superadmin can read and write all.
     match /rehab_videos/{docId} {
       allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -377,7 +417,8 @@ service cloud.firestore {
     // Admin/superadmin can read and write all.
     match /rehab_visits/{docId} {
       allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -410,6 +451,22 @@ service cloud.firestore {
         || (isOwnStaffRecord(resource.data.staffId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']));
       allow delete: if false;
+    }
+
+    // ── Leads & CRM Collections ────────────────────────
+    // Access restricted to HQ and Kashmala (Receptionist)
+    match /leads/{leadId} {
+      allow read, write: if isAuth() && (
+        isHqTier1()
+        || request.auth.uid == '5mHY2l3o6NhGDji4CysY' // Kashmala Nazar (Receptionist)
+      );
+    }
+
+    match /hq_lead_responses/{responseId} {
+      allow read, write: if isAuth() && (
+        isHqTier1()
+        || request.auth.uid == '5mHY2l3o6NhGDji4CysY' // Kashmala Nazar (Receptionist)
+      );
     }
 
     // ── Staff fines ────────────────────────────────────
@@ -465,18 +522,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isSpimsAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/spims_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/spims_users/$(request.auth.uid)) ||
+        isHqTier1()
+      );
     }
     function spimsRole() {
-      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/spims_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isSpimsRole(role) {
       return isSpimsAuth() && spimsRole() == role;
     }
     function isSpimsAdminOrAbove() {
-      return isSpimsAuth()
-        && (spimsRole() == 'admin' || spimsRole() == 'superadmin');
+      let role = spimsRole();
+      return isSpimsAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isSpimsSuperAdmin() {
       return isSpimsRole('superadmin');
@@ -515,7 +575,8 @@ service cloud.firestore {
     match /spims_students/{studentId} {
       allow read: if isSpimsAdminOrAbove()
         || isSpimsRole('cashier')
-        || (isSpimsRole('student') && spimsStudentId() == studentId);
+        || (isSpimsRole('student') && spimsStudentId() == studentId)
+        || isHqTier1();
       allow create, update: if isSpimsAdminOrAbove();
       allow delete: if isSpimsSuperAdmin();
     }
@@ -524,15 +585,17 @@ service cloud.firestore {
       allow read: if isSpimsAdminOrAbove()
         || (isSpimsRole('cashier'))
         || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId)
-        || isHqSuperAdmin();
+        || isHqTier1();
       allow create: if isSpimsAdminOrAbove() || isSpimsRole('cashier');
-      allow update: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isSpimsSuperAdmin() || isHqSuperAdmin();
+      allow update: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isSpimsSuperAdmin() || isHqTier1()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
       allow delete: if isSpimsSuperAdmin();
     }
 
     match /spims_student_documents/{docId} {
       allow read: if isSpimsAdminOrAbove()
-        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId)
+        || isHqTier1();
       allow create, update, delete: if isSpimsAdminOrAbove();
     }
 
@@ -552,17 +615,38 @@ service cloud.firestore {
     }
 
     match /spims_transactions/{docId} {
-      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqSuperAdmin();
-      allow create: if isSpimsRole('cashier') || isSpimsSuperAdmin();
-      allow update: if isSpimsSuperAdmin() || isHqSuperAdmin();
-      allow delete: if false;
+      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqTier1();
+      allow create: if isSpimsRole('cashier')
+        || isSpimsSuperAdmin()
+        || isHqCashier()
+        || (isSpimsAdminOrAbove() && request.resource.data.status == 'pending_cashier');
+      allow update: if isSpimsSuperAdmin() || isHqSuperOrManager()
+        || (
+          (isSpimsRole('cashier') || isHqCashier())
+          && resource.data.status == 'pending_cashier'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
+          ])
+        );
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /spims_staff/{staffId} {
       allow read: if isSpimsAdminOrAbove()
         || isSpimsRole('cashier')
         || (isSpimsRole('staff') && spimsStaffId() == staffId)
-        || isHqSuperOrManager();
+        || isHqTier1();
       allow create, update: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSpimsSuperAdmin() || isHqSuperOrManager();
     }
@@ -652,30 +736,65 @@ service cloud.firestore {
     //  Uses hq_users collection (doc ID = Firebase Auth uid) 
     // ═══════════════════════════════════════════════════════════ 
 
-    function isHqAuth() { 
-      return request.auth != null 
-        && exists(/databases/$(database)/documents/hq_users/$(request.auth.uid)); 
-    } 
-    function hqRole() { 
-      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role; 
-    } 
-    function hqCustomId() {
-      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
+    function isDiscoveryQuery() {
+      return request.query != null && 'limit' in request.query && request.query.limit <= 50;
     }
+
+    function isSystemAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'khanhubnetwork@gmail.com' 
+        || request.auth.uid == '9DsNf4WS3bM6Ps2pkiMnuZZPCRE2'
+        || request.auth.uid == 'zOZHk8xzM8aCeoV4dhLg31cRD943'
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════ 
+    //  HQ HELPERS (Core Identity)
+    //  Uses hq_users collection (doc ID = Firebase Auth uid) 
+    // ═══════════════════════════════════════════════════════════ 
+
+    function isHqAuth() { 
+      return request.auth != null && (
+        isSystemAdmin()
+        || request.auth.token.role != null
+        || exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
+      ); 
+    } 
+
+    function getHqUser() {
+      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data;
+    }
+
+    function hqRole() { 
+      return request.auth == null ? '' :
+             isSystemAdmin() ? 'superadmin' : 
+             ('role' in request.auth.token ? request.auth.token.role : getHqUser().get('role', ''));
+    } 
+
+    function hqCustomId() {
+      return request.auth == null ? '' :
+             isSystemAdmin() ? 'SYSTEM_ADMIN' : 
+             ('customId' in request.auth.token ? request.auth.token.customId : getHqUser().get('customId', ''));
+    }
+
     function isHqRole(role) { 
-      return isHqAuth() && hqRole() == role; 
+      return hqRole() == role; 
     } 
+
     function isHqSuperAdmin() { 
-      return isHqRole('superadmin'); 
+      return hqRole() == 'superadmin'; 
     } 
+
     function isHqCashier() { 
-      return isHqRole('cashier'); 
+      return hqRole() == 'cashier'; 
     } 
+
     function isHqSuperOrManager() { 
-      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager'); 
+      return hqRole() == 'superadmin' || hqRole() == 'manager'; 
     } 
+
     function isHqTier1() { 
-      return isHqAuth() && hqRole() in ['superadmin', 'manager', 'cashier']; 
+      return hqRole() == 'superadmin' || hqRole() == 'manager' || hqRole() == 'cashier'; 
     } 
 
     // ═══════════════════════════════════════════════════════════ 
@@ -697,12 +816,17 @@ service cloud.firestore {
     //  - superadmin/manager can update users (e.g. isActive)
     //  - owner can update limited profile fields only
     match /hq_users/{docId} {
-      allow read: if (isHqAuth() && (request.auth.uid == docId || isHqTier1()))
-        || isDiscoveryQuery();
+      allow read: if (
+        request.auth != null && (
+          request.auth.uid == docId 
+          || request.auth.token.get('role', '') in ['superadmin', 'manager', 'cashier']
+          || isSystemAdmin()
+        )
+      ) || isDiscoveryQuery();
       allow create, delete: if false;
       allow update: if isHqSuperOrManager()
         || (
-          isHqAuth()
+          request.auth != null
           && request.auth.uid == docId
           && request.resource.data.diff(resource.data)
               .affectedKeys()
@@ -710,7 +834,7 @@ service cloud.firestore {
         );
 
       match /fcmTokens/{tokenId} {
-        allow read, write: if isHqAuth() && request.auth.uid == docId;
+        allow read, write: if request.auth != null && request.auth.uid == docId;
       }
     }
 
@@ -766,10 +890,33 @@ service cloud.firestore {
     // hq_notifications — in-app notifications for HQ users
     match /hq_notifications/{docId} {
       allow read: if isHqAuth()
-        && resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
+        && (
+          isHqSuperOrManager()
+          || resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        );
       allow create: if isHqAuth();
       allow update: if isHqAuth()
-        && resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        && (
+          isHqSuperOrManager()
+          || resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
+    // staff_notifications — in-app notifications for staff members
+    match /staff_notifications/{docId} {
+      allow read: if isAuth() 
+        && (
+          resource.data.recipientId == request.auth.uid
+          || isHqSuperOrManager()
+        );
+      allow create: if isAuth();
+      allow update: if isAuth() 
+        && (
+          resource.data.recipientId == request.auth.uid
+          || isHqSuperOrManager()
+        )
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
       allow delete: if false;
     }
@@ -794,6 +941,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /cashierTransactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqTier1();
+      allow update: if isHqSuperOrManager();
+      allow delete: if false;
+    }
+
     // hq_growth_points — points system for HQ staff
     match /hq_growth_points/{docId} { 
       allow read: if isHqSuperOrManager() 
@@ -807,13 +961,14 @@ service cloud.firestore {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     // hq_fees — global fee records (direct HQ collections)
     match /hq_fees/{docId} {
       allow read: if isHqSuperOrManager() || isHqCashier();
-      allow create, update: if isHqCashier() || isHqSuperAdmin();
+      allow create, update: if isHqCashier() || isHqSuperAdmin()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
       allow delete: if isHqSuperAdmin();
     }
 
@@ -830,13 +985,47 @@ service cloud.firestore {
       allow read, create, update, delete: if isHqSuperOrManager(); 
     } 
 
+    // ── IT & Social Media (Integrated) ───────────────
+    match /it_users/{uid} {
+      allow read: if (isAuth() && (request.auth.uid == uid || isItAdminOrManager()))
+        || isHqTier1() || isDiscoveryQuery();
+      allow create, delete: if isItAdminOrManager() || isHqSuperOrManager();
+      allow update: if (isAuth() && request.auth.uid == uid)
+        || isItAdminOrManager() || isHqSuperOrManager();
+    }
+    match /media_users/{uid} {
+      allow read: if (isAuth() && (request.auth.uid == uid || isMediaAdminOrManager() || isItAdminOrManager()))
+        || isHqTier1() || isDiscoveryQuery();
+      allow create, delete: if isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
+      allow update: if (isAuth() && request.auth.uid == uid)
+        || isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
+    }
+
+    match /it_staff/{docId} {
+      allow read: if isItAdminOrManager() || isHqTier1();
+      allow write: if isItAdminOrManager() || isHqSuperOrManager();
+    }
+    match /media_staff/{docId} {
+      allow read: if isMediaAdminOrManager() || isItAdminOrManager() || isHqTier1();
+      allow write: if isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
+    }
+    
+    match /{collectionId}/{docId} {
+      allow read: if (collectionId.matches('^it_.*') && (isItAdminOrManager() || isHqTier1()))
+        || (collectionId.matches('^media_.*') && (isMediaAdminOrManager() || isItAdminOrManager() || isHqTier1()));
+      allow write: if (collectionId.matches('^it_.*') && (isItAdminOrManager() || isHqSuperOrManager()))
+        || (collectionId.matches('^media_.*') && (isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager()));
+    }
+
     // ── Future departments staff-management (manager/superadmin only) ────────
     // Any new department that follows naming:
     //   {dept}_staff, {dept}_attendance, {dept}_duty_logs
     // is automatically manageable from HQ by manager/superadmin/cashier.
     match /{collectionId}/{docId} {
-      allow read: if (isHqTier1()
-        && (
+      allow read: if (
+        isHqTier1()
+        || (isAuth() && (docId == request.auth.uid || (resource != null && (resource.data.get('staffId', '') == request.auth.uid || resource.data.get('loginUserId', '') == request.auth.uid))))
+      ) && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
           || collectionId.matches('^[a-z0-9_-]+_duty_logs$')
@@ -852,8 +1041,12 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
-        )) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
-      allow create, update: if (isHqSuperOrManager() || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$')))
+        ) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
+      allow create, update: if (
+        isHqSuperOrManager() 
+        || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$'))
+        || (isAuth() && request.resource.data.staffId == request.auth.uid && collectionId.matches('^[a-z0-9_-]+_contributions$'))
+      )
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
@@ -921,18 +1114,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isHospitalAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/hospital_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/hospital_users/$(request.auth.uid))
+        || isHqTier1()
+      );
     }
     function hospitalRole() {
-      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isHospitalRole(role) {
       return isHospitalAuth() && hospitalRole() == role;
     }
     function isHospitalAdminOrAbove() {
-      return isHospitalAuth()
-        && (hospitalRole() == 'admin' || hospitalRole() == 'superadmin');
+      let role = hospitalRole();
+      return isHospitalAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isHospitalSuperAdmin() {
       return isHospitalRole('superadmin');
@@ -970,7 +1166,8 @@ service cloud.firestore {
     match /hospital_patients/{patientId} {
       allow read: if isHospitalAdminOrAbove()
         || isHospitalRole('cashier')
-        || (isHospitalRole('patient') && hospitalPatientId() == patientId);
+        || (isHospitalRole('patient') && hospitalPatientId() == patientId)
+        || isHqTier1();
       allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isHospitalSuperAdmin();
     }
@@ -978,20 +1175,24 @@ service cloud.firestore {
     match /hospital_fees/{docId} {
       allow read: if isHospitalAdminOrAbove()
         || (isHospitalRole('cashier'))
-        || (isHospitalRole('patient') && hospitalPatientId() == resource.data.patientId);
-      allow write: if isHospitalRole('cashier') || isHospitalSuperAdmin();
+        || (isHospitalRole('patient') && hospitalPatientId() == resource.data.patientId)
+        || isHqTier1();
+      allow write: if isHospitalRole('cashier') || isHospitalSuperAdmin()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
 
     match /hospital_transactions/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHospitalRole('cashier');
+      allow read: if isHospitalAdminOrAbove() || isHospitalRole('cashier') || isHqTier1();
       allow create: if isHospitalRole('cashier')
         || isHospitalSuperAdmin()
+        || isHqCashier()
         || (isHospitalAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isHospitalSuperAdmin()
+        || isHqSuperOrManager()
         || (
-          isHospitalRole('cashier')
+          (isHospitalRole('cashier') || isHqCashier())
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -999,17 +1200,21 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /hospital_staff/{staffId} {
       allow read: if isHospitalAdminOrAbove()
         || isHospitalRole('cashier')
         || (isHospitalRole('staff') && hospitalStaffId() == staffId)
-        || isHqSuperOrManager();
+        || isHqTier1();
       allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isHospitalSuperAdmin() || isHqSuperOrManager();
     }
@@ -1050,18 +1255,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isSukoonAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/sukoon_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/sukoon_users/$(request.auth.uid))
+        || isHqTier1()
+      );
     }
     function sukoonRole() {
-      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/sukoon_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isSukoonRole(role) {
       return isSukoonAuth() && sukoonRole() == role;
     }
     function isSukoonAdminOrAbove() {
-      return isSukoonAuth()
-        && (sukoonRole() == 'admin' || sukoonRole() == 'superadmin');
+      let role = sukoonRole();
+      return isSukoonAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isSukoonSuperAdmin() {
       return isSukoonRole('superadmin');
@@ -1100,7 +1308,8 @@ service cloud.firestore {
     match /sukoon_clients/{clientId} {
       allow read: if isSukoonAdminOrAbove()
         || isSukoonRole('cashier')
-        || (isSukoonRole('client') && sukoonClientId() == clientId);
+        || (isSukoonRole('client') && sukoonClientId() == clientId)
+        || isHqTier1();
       allow create, update: if isSukoonAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSukoonSuperAdmin();
     }
@@ -1108,20 +1317,24 @@ service cloud.firestore {
     match /sukoon_fees/{docId} {
       allow read: if isSukoonAdminOrAbove()
         || (isSukoonRole('cashier'))
-        || (isSukoonRole('client') && sukoonClientId() == resource.data.clientId);
-      allow write: if isSukoonRole('cashier') || isSukoonSuperAdmin();
+        || (isSukoonRole('client') && sukoonClientId() == resource.data.clientId)
+        || isHqTier1();
+      allow update: if isSukoonRole('cashier') || isSukoonSuperAdmin() || isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow create: if isSukoonRole('cashier') || isSukoonSuperAdmin();
     }
 
     match /sukoon_transactions/{docId} {
-      allow read: if isSukoonAdminOrAbove() || isSukoonRole('cashier');
+      allow read: if isSukoonAdminOrAbove() || isSukoonRole('cashier') || isHqTier1();
       allow create: if isSukoonRole('cashier')
         || isSukoonSuperAdmin()
+        || isHqCashier()
         || (isSukoonAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isSukoonSuperAdmin()
         || (
-          isSukoonRole('cashier')
+          (isSukoonRole('cashier') || isHqCashier())
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1129,17 +1342,21 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /sukoon_staff/{staffId} {
       allow read: if isSukoonAdminOrAbove()
         || isSukoonRole('cashier')
         || (isSukoonRole('staff') && sukoonStaffId() == staffId)
-        || isHqSuperOrManager();
+        || isHqTier1();
       allow create, update: if isSukoonAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSukoonSuperAdmin() || isHqSuperOrManager();
     }
@@ -1180,18 +1397,21 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isWelfareAuth() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/welfare_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/welfare_users/$(request.auth.uid))
+        || isHqTier1()
+      );
     }
     function welfareRole() {
-      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.role;
+      let path = /databases/$(database)/documents/welfare_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isWelfareRole(role) {
       return isWelfareAuth() && welfareRole() == role;
     }
     function isWelfareAdminOrAbove() {
-      return isWelfareAuth()
-        && (welfareRole() == 'admin' || welfareRole() == 'superadmin');
+      let role = welfareRole();
+      return isWelfareAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
     }
     function isWelfareSuperAdmin() {
       return isWelfareRole('superadmin');
@@ -1229,14 +1449,16 @@ service cloud.firestore {
     match /welfare_children/{childId} {
       allow read: if isWelfareAdminOrAbove()
         || isWelfareRole('cashier')
-        || (isWelfareRole('child') && welfareChildId() == childId);
+        || (isWelfareRole('child') && welfareChildId() == childId)
+        || isHqTier1();
       allow create, update: if isWelfareAdminOrAbove();
       allow delete: if isWelfareSuperAdmin();
     }
 
     match /welfare_donors/{donorId} {
       allow read: if isWelfareAdminOrAbove()
-        || isWelfareRole('cashier');
+        || isWelfareRole('cashier')
+        || isHqTier1();
       allow create, update: if isWelfareAdminOrAbove();
       allow delete: if isWelfareSuperAdmin();
     }
@@ -1244,20 +1466,25 @@ service cloud.firestore {
     match /welfare_fees/{docId} {
       allow read: if isWelfareAdminOrAbove()
         || (isWelfareRole('cashier'))
-        || (isWelfareRole('child') && welfareChildId() == resource.data.childId);
-      allow write: if isWelfareRole('cashier') || isWelfareSuperAdmin();
+        || (isWelfareRole('child') && welfareChildId() == resource.data.childId)
+        || isHqTier1();
+      allow update: if isWelfareRole('cashier') || isWelfareSuperAdmin() || isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow create: if isWelfareRole('cashier') || isWelfareSuperAdmin();
     }
 
     match /welfare_transactions/{docId} {
-      allow read: if isWelfareAdminOrAbove() || isWelfareRole('cashier');
+      allow read: if isWelfareAdminOrAbove() || isWelfareRole('cashier') || isHqTier1();
       allow create: if isWelfareRole('cashier')
         || isWelfareSuperAdmin()
+        || isHqCashier()
         || (isWelfareAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isWelfareSuperAdmin()
+        || isHqSuperOrManager()
         || (
-          isWelfareRole('cashier')
+          (isWelfareRole('cashier') || isHqCashier())
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1265,17 +1492,21 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /welfare_staff/{staffId} {
       allow read: if isWelfareAdminOrAbove()
         || isWelfareRole('cashier')
         || (isWelfareRole('staff') && welfareStaffId() == staffId)
-        || isHqSuperOrManager();
+        || isHqTier1();
       allow create, update: if isWelfareAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isWelfareSuperAdmin() || isHqSuperOrManager();
     }
@@ -1420,7 +1651,8 @@ service cloud.firestore {
       allow read: if resource.data.isActive == true 
         || isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
-        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId);
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
+        || isHqTier1();
       allow create, update: if isJobCenterAdminOrAbove();
       allow delete: if isJobCenterSuperAdmin();
     }
@@ -1429,7 +1661,8 @@ service cloud.firestore {
       allow read: if resource.data.isActive == true 
         || isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
-        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId);
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
+        || isHqTier1();
       allow create, update: if isJobCenterAdminOrAbove();
       allow delete: if isJobCenterSuperAdmin();
     }
@@ -1453,27 +1686,33 @@ service cloud.firestore {
     match /job_center_fees/{docId} {
       allow read: if isJobCenterAdminOrAbove()
         || (isJobCenterRole('cashier'))
-        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId);
-      allow write: if isJobCenterRole('cashier') || isJobCenterSuperAdmin();
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId)
+        || isHqTier1();
+      allow write: if isJobCenterRole('cashier') || isJobCenterSuperAdmin()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
 
     match /jobcenter_fees/{docId} {
       allow read: if isJobCenterAdminOrAbove()
         || (isJobCenterRole('cashier'))
-        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId);
-      allow write: if isJobCenterRole('cashier') || isJobCenterSuperAdmin();
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId)
+        || isHqTier1();
+      allow write: if isJobCenterRole('cashier') || isJobCenterSuperAdmin()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
 
     match /job_center_transactions/{docId} {
-      allow read: if isJobCenterAdminOrAbove() || isJobCenterRole('cashier');
+      allow read: if isJobCenterAdminOrAbove() || isJobCenterRole('cashier') || isHqTier1();
       allow create: if isJobCenterRole('cashier')
         || isJobCenterSuperAdmin()
+        || isHqCashier()
         || (isJobCenterAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isJobCenterSuperAdmin()
+        || isHqSuperOrManager()
         || (
-          isJobCenterRole('cashier')
+          (isJobCenterRole('cashier') || isHqCashier())
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1481,10 +1720,14 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /jobcenter_transactions/{docId} {
@@ -1507,14 +1750,14 @@ service cloud.firestore {
             'cashierForwardedByName'
           ])
         );
-      allow delete: if false;
+      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
     match /job_center_staff/{staffId} {
       allow read: if isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('staff') && jobCenterStaffId() == staffId)
-        || isHqSuperOrManager();
+        || isHqTier1();
       allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isJobCenterSuperAdmin() || isHqSuperOrManager();
     }
@@ -1591,7 +1834,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1599,14 +1842,19 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /hospital_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /hospital_patients/{patientId} {
       allow read: if isHqTier1();
@@ -1614,7 +1862,7 @@ service cloud.firestore {
       allow update: if isHqSuperOrManager();
     }
     match /hospital_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
     }
@@ -1640,7 +1888,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1648,14 +1896,19 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /sukoon_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /sukoon_clients/{clientId} {
       allow read: if isHqTier1();
@@ -1663,7 +1916,7 @@ service cloud.firestore {
       allow update: if isHqSuperOrManager();
     }
     match /sukoon_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
     }
@@ -1689,7 +1942,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1697,14 +1950,19 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /welfare_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /welfare_children/{childId} {
       allow read: if isHqTier1();
@@ -1717,7 +1975,7 @@ service cloud.firestore {
       allow update: if isHqSuperOrManager();
     }
     match /welfare_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
     }
@@ -1743,7 +2001,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1751,7 +2009,11 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
@@ -1762,7 +2024,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1770,19 +2032,25 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /job_center_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /jobcenter_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /job_center_seekers/{seekerId} {
       allow read: if isHqTier1();
@@ -1795,12 +2063,12 @@ service cloud.firestore {
       allow update: if isHqSuperOrManager();
     }
     match /job_center_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
     }
     match /jobcenter_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
     }
@@ -1841,7 +2109,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1849,14 +2117,19 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /rehab_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /rehab_patients/{patientId} {
       allow read: if isHqTier1();
@@ -1865,7 +2138,7 @@ service cloud.firestore {
       allow delete: if isHqSuperOrManager();
     }
     match /rehab_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if isHqSuperOrManager();
@@ -1894,7 +2167,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1902,14 +2175,19 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /spims_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /spims_students/{studentId} {
       allow read: if isHqTier1();
@@ -1918,7 +2196,7 @@ service cloud.firestore {
       allow delete: if isHqSuperOrManager();
     }
     match /spims_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if isHqSuperOrManager();
@@ -1952,7 +2230,7 @@ service cloud.firestore {
         || (
           isHqCashier()
           && resource.data.status == 'pending_cashier'
-          && request.resource.data.status == 'pending'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'proofUrl',
@@ -1960,14 +2238,19 @@ service cloud.firestore {
             'proofRequired',
             'cashierForwardedAt',
             'cashierForwardedBy',
-            'cashierForwardedByName'
+            'cashierForwardedByName',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
           ])
         );
     }
     match /hospital_fees/{docId} {
       allow read: if isHqTier1();
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
     match /hospital_patients/{patientId} {
       allow read: if isHqTier1();
@@ -1976,7 +2259,7 @@ service cloud.firestore {
       allow delete: if isHqSuperOrManager();
     }
     match /hospital_staff/{staffId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if isHqSuperOrManager();
@@ -2069,16 +2352,12 @@ service cloud.firestore {
     //  JOB CENTER PORTAL COLLECTIONS (NEW)
     // ═══════════════════════════════════════════════════════════
 
-    function jobCenterUserDoc() {
-      return get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data;
-    }
-    
     function isJobCenterAdmin() {
-      return isJobCenterAuth() && (jobCenterUserDoc().role == 'admin' || jobCenterUserDoc().role == 'superadmin');
+      return isJobCenterAdminOrAbove();
     }
     
     function isJobCenterStaff() {
-      return isJobCenterAuth() && (jobCenterUserDoc().role == 'staff' || isJobCenterAdmin());
+      return isJobCenterAuth() && (jobCenterRole() == 'staff' || isJobCenterAdmin());
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -2091,43 +2370,63 @@ service cloud.firestore {
     }
 
     match /jobcenter_seekers/{seekerId} {
-      allow read: if isJobCenterAuth();
-      allow create, update: if isJobCenterAdmin();
-      allow delete: if isJobCenterAdmin();
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
+        || isJobCenterRole('cashier')
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
+        || isHqTier1();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdminOrAbove();
     }
 
     match /jobcenter_employers/{employerId} {
-      allow read: if isJobCenterAuth();
-      allow create, update: if isJobCenterAdmin();
-      allow delete: if isJobCenterAdmin();
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
+        || isHqTier1();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdminOrAbove();
     }
 
     match /jobcenter_jobs/{jobId} {
       allow read: if true; // Public or seeker access
-      allow create, update: if isJobCenterAdmin() || (isJobCenterAuth() && jobCenterUserDoc().role == 'employer');
+      allow create, update: if isJobCenterAdmin() || (isJobCenterAuth() && jobCenterRole() == 'employer');
       allow delete: if isJobCenterAdmin();
     }
 
     match /jobcenter_transactions/{docId} {
-      allow read: if isJobCenterAuth();
-      allow create: if isJobCenterStaff();
-      allow update: if isJobCenterAdmin();
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create: if isJobCenterStaff() || isHqCashier() || isHqSuperOrManager();
+      allow update: if isJobCenterAdmin() || isHqSuperOrManager();
     }
 
     match /jobcenter_attendance/{docId} {
-      allow read: if isJobCenterAuth();
-      allow write: if isJobCenterStaff();
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create, update: if isJobCenterStaff() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdmin();
     }
 
+    match /jobcenter_meetings/{docId} {
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create: if isJobCenterStaff() || isHqSuperOrManager();
+      allow update: if isJobCenterStaff() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_finance/{docId} {
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create: if isJobCenterStaff() || isHqSuperOrManager() || isHqCashier();
+      allow update: if isJobCenterAdmin() || isHqSuperOrManager() || isHqCashier();
+      allow delete: if isJobCenterAdmin();
+    }
     match /jobcenter_daily_activities/{docId} {
-      allow read: if isJobCenterAuth();
-      allow write: if isJobCenterStaff();
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow write: if isJobCenterStaff() || isHqSuperOrManager();
     }
 
     match /jobcenter_contributions/{docId} {
-      allow read: if isJobCenterAuth();
-      allow create: if isJobCenterStaff();
-      allow update, delete: if isJobCenterAdmin();
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow create: if isJobCenterStaff() || isHqCashier() || isHqSuperOrManager();
+      allow update, delete: if isJobCenterAdmin() || isHqSuperOrManager();
     }
 
     match /jobcenter_audit/{docId} {
@@ -2141,16 +2440,11 @@ service cloud.firestore {
       allow update, delete: if isJobCenterAdmin();
     }
 
-    match /jobcenter_meetings/{docId} {
-      allow read: if isJobCenterAuth();
-      allow create, update: if isJobCenterStaff();
-      allow delete: if isJobCenterAdmin();
+    match /jobcenter_staff/{docId} {
+      allow read: if isJobCenterAuth() || isHqTier1();
+      allow write: if isJobCenterAdmin() || isHqSuperOrManager();
     }
 
-    match /jobcenter_staff/{docId} {
-      allow read: if isJobCenterAuth();
-      allow write: if isJobCenterAdmin();
-    }
 
   }
 }

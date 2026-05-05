@@ -4,13 +4,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, addDoc, Timestamp, doc, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, getDocs, query, orderBy, limit, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createWelfareUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
 import { Child } from '@/types/welfare';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Phone, MapPin, 
-  Eye, EyeOff, Shield, Banknote, Search
+  Eye, EyeOff, Shield, Banknote, Search, X
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -20,7 +20,7 @@ export default function RegisterDonorPage() {
   // Auth & UI State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
   // SECTION 1: Login Credentials (Optional for portal access)
@@ -89,6 +89,7 @@ export default function RegisterDonorPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     
     // Validate required fields
     if (!fullName || !contactNumber) {
@@ -114,10 +115,11 @@ export default function RegisterDonorPage() {
     }
 
     setSubmitting(true);
+    setSubmitStatus('processing');
     setError('');
 
+    let donorDocId: string | null = null;
     try {
-      setSubmitStatus('Generating Donor ID...');
       const { serial, number } = await generateDonorNumber();
       
       let linkedChildName = '';
@@ -126,7 +128,6 @@ export default function RegisterDonorPage() {
         if (child) linkedChildName = child.name;
       }
 
-      setSubmitStatus('Creating donor record...');
       const donorData: any = {
         serialNumber: serial,
         donorNumber: number,
@@ -149,9 +150,9 @@ export default function RegisterDonorPage() {
       };
 
       const docRef = await addDoc(collection(db, 'welfare_donors'), donorData);
+      donorDocId = docRef.id;
 
       if (enableLogin) {
-        setSubmitStatus('Creating portal access...');
         const result = await createWelfareUserServer(
           loginId.toUpperCase(),
           loginPassword,
@@ -162,20 +163,32 @@ export default function RegisterDonorPage() {
         );
 
         if (!result.success) {
-          setError(`Account created, but portal login failed: ${result.error}.`);
-          toast.success('Donor created without login access');
-          router.push(`/departments/welfare/dashboard/admin/donors`);
+          try {
+            await deleteDoc(doc(db, 'welfare_donors', docRef.id));
+          } catch {}
+          setSubmitStatus('error');
+          setError(`Registration failed: ${result.error}. Please choose a different Login ID.`);
+          toast.error('Login account creation failed');
           return;
         }
       }
 
-      setSubmitStatus('Done!');
+      setSubmitStatus('success');
       toast.success('Donor registered successfully ✓');
-      router.push(`/departments/welfare/dashboard/admin/donors`);
+      setTimeout(() => {
+        router.push(`/departments/welfare/dashboard/admin/donors`);
+      }, 1500);
     } catch (err: any) {
       console.error(err);
+      if (donorDocId) {
+        try {
+          await deleteDoc(doc(db, 'welfare_donors', donorDocId));
+        } catch {}
+      }
+      setSubmitStatus('error');
       setError(err?.message || 'Something went wrong');
       toast.error('Submission failed');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -366,20 +379,37 @@ export default function RegisterDonorPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
+                  submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                  submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                  'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-900/10'
+                }`}
               >
                 {submitting ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span className="animate-pulse">{submitStatus}</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Registering...</span>
+                  </>
+                ) : submitStatus === 'success' ? (
+                  <>
+                    <Shield size={20} className="text-emerald-200" />
+                    <span>Donor Registered</span>
+                  </>
+                ) : submitStatus === 'error' ? (
+                  <>
+                    <X size={20} className="text-rose-200" />
+                    <span>Retry Sync</span>
                   </>
                 ) : (
                   <>
-                    <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Register Donor
+                    <Save size={20} />
+                    <span>Register Donor</span>
                   </>
                 )}
               </button>
+              <Link href="/departments/welfare/dashboard/admin/donors" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors tracking-widest">
+                Cancel Registration
+              </Link>
             </div>
 
           </form>

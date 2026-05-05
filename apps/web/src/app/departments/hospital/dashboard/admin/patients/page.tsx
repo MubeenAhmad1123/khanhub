@@ -10,9 +10,11 @@ import {
 import { 
   FileText, Search, Filter, Calendar, Loader2, 
   ArrowLeft, Download, CheckCircle, AlertCircle, X, 
-  ArrowUpRight, ArrowDownRight, Clock
+  ArrowUpRight, ArrowDownRight, Clock, ArrowUp, ArrowDown
 } from 'lucide-react';
-import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate, cn } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
+import { CsvExportButton } from '@/components/shared/CsvExportButton';
 
 const CATEGORY_OPTIONS = [
   { value: 'all', label: 'All Categories' },
@@ -52,6 +54,7 @@ export default function TransactionRecordsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   useEffect(() => {
     const sessionData = localStorage.getItem('hospital_session');
@@ -123,9 +126,29 @@ export default function TransactionRecordsPage() {
   };
 
   const filteredBySearch = transactions.filter(tx => 
-    (tx.patientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tx.patientName || tx.otherMeta?.paidTo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (tx.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const sortedTransactions = [...filteredBySearch].sort((a, b) => {
+    let aVal: any = a[sortConfig.key];
+    let bVal: any = b[sortConfig.key];
+
+    if (sortConfig.key === 'date') {
+      aVal = toDate(a.date).getTime();
+      bVal = toDate(b.date).getTime();
+    } else if (sortConfig.key === 'amount') {
+      aVal = Number(a.amount || 0);
+      bVal = Number(b.amount || 0);
+    } else if (sortConfig.key === 'patientName') {
+      aVal = (a.patientName || a.otherMeta?.paidTo || '').toLowerCase();
+      bVal = (b.patientName || b.otherMeta?.paidTo || '').toLowerCase();
+    }
+
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20 w-full overflow-x-hidden">
@@ -150,6 +173,20 @@ export default function TransactionRecordsPage() {
               <Download className="w-4 h-4" />
               Export PDF
             </button>
+
+            <CsvExportButton 
+              filename={`Hospital_Transactions_${dateFrom}_to_${dateTo}.csv`}
+              rows={sortedTransactions.map(tx => ({
+                Date: formatDateDMY(tx.date),
+                Time: toDate(tx.date).toLocaleTimeString(),
+                Service: CATEGORY_LABELS[tx.category] || tx.category || 'N/A',
+                Patient: tx.patientName || tx.otherMeta?.paidTo || 'N/A',
+                Details: getDetails(tx),
+                Amount: tx.amount,
+                Type: tx.type.toUpperCase(),
+                Status: tx.status.toUpperCase()
+              }))}
+            />
           </div>
         </div>
 
@@ -159,39 +196,21 @@ export default function TransactionRecordsPage() {
             {/* Date From */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date From</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input 
-                  type="text" 
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(dateFrom)}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  onBlur={(e) => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 outline-none transition-all"
-                />
-              </div>
+              <BrutalistCalendar
+                value={dateFrom}
+                onChange={(iso) => setDateFrom(iso)}
+                className="bg-slate-50 border-slate-100 rounded-2xl"
+              />
             </div>
 
             {/* Date To */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date To</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input 
-                  type="text" 
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(dateTo)}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  onBlur={(e) => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 outline-none transition-all"
-                />
-              </div>
+              <BrutalistCalendar
+                value={dateTo}
+                onChange={(iso) => setDateTo(iso)}
+                className="bg-slate-50 border-slate-100 rounded-2xl"
+              />
             </div>
 
             {/* Category */}
@@ -258,17 +277,49 @@ export default function TransactionRecordsPage() {
             <div className="overflow-x-auto w-full">
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="bg-slate-50/50">
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Date & Time</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Service Type</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Patient/Entity</th>
+                   <tr className="bg-slate-50/50">
+                    <th 
+                      className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => setSortConfig({ key: 'date', direction: sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'asc' : 'desc' })}
+                    >
+                      <div className="flex items-center gap-2">
+                        Date & Time
+                        {sortConfig.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => setSortConfig({ key: 'category', direction: sortConfig.key === 'category' && sortConfig.direction === 'desc' ? 'asc' : 'desc' })}
+                    >
+                      <div className="flex items-center gap-2">
+                        Service Type
+                        {sortConfig.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => setSortConfig({ key: 'patientName', direction: sortConfig.key === 'patientName' && sortConfig.direction === 'desc' ? 'asc' : 'desc' })}
+                    >
+                      <div className="flex items-center gap-2">
+                        Patient/Entity
+                        {sortConfig.key === 'patientName' && (sortConfig.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                      </div>
+                    </th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Details</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Amount</th>
+                    <th 
+                      className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => setSortConfig({ key: 'amount', direction: sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'asc' : 'desc' })}
+                    >
+                      <div className="flex items-center justify-end gap-2">
+                        Amount
+                        {sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                      </div>
+                    </th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 text-slate-700">
-                  {filteredBySearch.map((tx) => (
+                   {sortedTransactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-slate-50/80 transition-all group">
                       <td className="px-8 py-6">
                         <div className="flex flex-col">

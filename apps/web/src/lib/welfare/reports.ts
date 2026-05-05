@@ -1,7 +1,14 @@
 import { getTransactionsByDateRange } from './transactions';
 import type { Transaction } from '@/types/welfare';
+import { getCached, setCached } from '@/lib/queryCache';
+
+const CACHE_TTL = 120; // 2 minutes for reports
 
 export async function generateMonthlyReport(year: number, month: number) {
+  const cacheKey = `welfare_report_${year}_${month}`;
+  const cached = getCached<any>(cacheKey);
+  if (cached) return cached;
+
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 0, 23, 59, 59, 999);
   
@@ -16,7 +23,7 @@ export async function generateMonthlyReport(year: number, month: number) {
     return acc;
   }, {} as Record<string, number>);
 
-  return {
+  const result = {
     period: `${year}-${month.toString().padStart(2, '0')}`,
     totalIncome: income,
     totalExpenses: expenses,
@@ -24,4 +31,8 @@ export async function generateMonthlyReport(year: number, month: number) {
     categoryBreakdown,
     transactionCount: approved.length
   };
+
+  setCached(cacheKey, result, CACHE_TTL);
+  return result;
 }
+

@@ -16,6 +16,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { JobSeeker } from '@/types/job-center';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 export default function RegisterSeekerPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function RegisterSeekerPage() {
   // Auth & UI State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
   // SECTION 1: Login Credentials
@@ -39,8 +40,15 @@ export default function RegisterSeekerPage() {
   const [age, setAge] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');
-  const [education, setEducation] = useState('');
-  const [experience, setExperience] = useState('');
+  
+  // Education builder
+  const [educationList, setEducationList] = useState<{ degree: string; institution: string; year: string }[]>([]);
+  const [newEdu, setNewEdu] = useState({ degree: '', institution: '', year: '' });
+  
+  // Experience builder
+  const [experienceList, setExperienceList] = useState<{ title: string; company: string; duration: string }[]>([]);
+  const [newExp, setNewExp] = useState({ title: '', company: '', duration: '' });
+  
   const [maritalStatus, setMaritalStatus] = useState('');
   const [address, setAddress] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -85,6 +93,41 @@ export default function RegisterSeekerPage() {
     setSkills(skills.filter(s => s !== skill));
   };
 
+  const addEdu = () => {
+    if (newEdu.degree.trim() && newEdu.institution.trim()) {
+      setEducationList([...educationList, { ...newEdu }]);
+      setNewEdu({ degree: '', institution: '', year: '' });
+    } else {
+      toast.error('Degree and Institution are required');
+    }
+  };
+
+  const removeEdu = (index: number) => {
+    setEducationList(educationList.filter((_, i) => i !== index));
+  };
+
+  const addExp = () => {
+    if (newExp.title.trim() && newExp.company.trim()) {
+      setExperienceList([...experienceList, { ...newExp }]);
+      setNewExp({ title: '', company: '', duration: '' });
+    } else {
+      toast.error('Job Title and Company are required');
+    }
+  };
+
+  const removeExp = (index: number) => {
+    setExperienceList(experienceList.filter((_, i) => i !== index));
+  };
+
+  const formatCnic = (val: string) => {
+    const digits = val.replace(/\D/g, '').substring(0, 13);
+    let res = '';
+    if (digits.length > 0) res += digits.substring(0, 5);
+    if (digits.length > 5) res += '-' + digits.substring(5, 12);
+    if (digits.length > 12) res += '-' + digits.substring(12, 13);
+    return res;
+  };
+
   const addJobType = () => {
     if (jobTypeInput.trim() && !preferredJobTypes.includes(jobTypeInput.trim())) {
       setPreferredJobTypes([...preferredJobTypes, jobTypeInput.trim()]);
@@ -98,13 +141,14 @@ export default function RegisterSeekerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
 
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName ||
       !age || !dateOfBirth || !gender || !maritalStatus || !address ||
-      !phone || !cnic) {
-      setError('Please fill all required fields');
-      toast.error('Missing required fields');
+      !phone || !cnic || educationList.length === 0) {
+      setError('Please fill all required fields and add at least one education record');
+      toast.error('Missing required fields or education');
       return;
     }
     if (loginPassword.length < 6) {
@@ -113,18 +157,18 @@ export default function RegisterSeekerPage() {
     }
 
     setSubmitting(true);
+    setSubmitStatus('processing');
     setError('');
 
+    let seekerDocId: string | null = null;
     try {
       // 1. Upload photo if selected
       let photoUrl = '';
       if (photoFile) {
-        setSubmitStatus('Uploading photo...');
         photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/jobcenter/seekers');
       }
 
       // 2. Generate Seeker Number
-      setSubmitStatus('Generating Seeker ID...');
       const seekersQuery = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(1));
       const seekersSnap = await getDocs(seekersQuery);
       const lastSeeker = seekersSnap.docs[0]?.data();
@@ -132,7 +176,6 @@ export default function RegisterSeekerPage() {
       const seekerNumber = `JC-S-${String(nextSerial).padStart(3, '0')}`;
 
       // 3. Create seeker document in Firestore
-      setSubmitStatus('Creating Job Seeker record...');
       const seekerData: Omit<JobSeeker, 'id'> = {
         name,
         fatherName,
@@ -140,8 +183,8 @@ export default function RegisterSeekerPage() {
         age: Number(age),
         dateOfBirth,
         gender: gender as any,
-        education: education || '',
-        experience: experience || '',
+        education: educationList,
+        experience: experienceList,
         maritalStatus: maritalStatus as any,
         address,
         photoUrl: photoUrl || null,
@@ -158,39 +201,48 @@ export default function RegisterSeekerPage() {
         createdAt: Timestamp.now(),
       } as unknown as JobSeeker;
 
-    const seekerRef = await addDoc(collection(db, 'jobcenter_seekers'), seekerData);
+      const seekerRef = await addDoc(collection(db, 'jobcenter_seekers'), seekerData);
+      seekerDocId = seekerRef.id;
 
-    // 3. Create seeker login account
-    setSubmitStatus('Creating seeker login...');
-    const result = await createJobCenterUserServer(
-      loginId.toUpperCase(),
-      loginPassword,
-      'seeker',
-      name,
-      seekerRef.id
-    );
+      // 3. Create seeker login account
+      const result = await createJobCenterUserServer(
+        loginId.toUpperCase(),
+        loginPassword,
+        'seeker',
+        name,
+        seekerRef.id
+      );
 
-    if (!result.success) {
-      try {
-        await deleteDoc(doc(db, 'jobcenter_seekers', seekerRef.id));
-      } catch { }
+      if (!result.success) {
+        try {
+          await deleteDoc(doc(db, 'jobcenter_seekers', seekerRef.id));
+        } catch { }
 
-      setError(`Registration failed: ${result.error}. Please choose a different Seeker Login ID.`);
-      toast.error('Login account creation failed');
+        setSubmitStatus('error');
+        setError(`Registration failed: ${result.error}. Please choose a different Seeker Login ID.`);
+        toast.error('Login account creation failed');
+        return;
+      }
+
+      setSubmitStatus('success');
+      toast.success('Job Seeker registered successfully ✓');
+      setTimeout(() => {
+        router.push(`/departments/job-center/dashboard/admin/seekers/${seekerRef.id}`);
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      if (seekerDocId) {
+        try {
+          await deleteDoc(doc(db, 'jobcenter_seekers', seekerDocId));
+        } catch { }
+      }
+      setSubmitStatus('error');
+      setError(err?.message || 'Something went wrong');
+      toast.error('Submission failed');
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    setSubmitStatus('Done!');
-    toast.success('Job Seeker registered successfully ✓');
-    router.push(`/departments/job-center/dashboard/admin/seekers/${seekerRef.id}`);
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || 'Something went wrong');
-    toast.error('Submission failed');
-    setSubmitting(false);
-  }
-};
+  };
 
 if (loading) {
   return (
@@ -286,7 +338,7 @@ return (
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Age *</label>
                 <input required type="number" min="1" max="120" placeholder="Age" className={inputStyle} value={age} onChange={e => setAge(e.target.value)} />
@@ -297,20 +349,6 @@ return (
                   <option value="">Select</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Education *</label>
-                <select required className={inputStyle} value={education} onChange={e => setEducation(e.target.value)}>
-                  <option value="">Select</option>
-                  <option value="None">None</option>
-                  <option value="Primary">Primary</option>
-                  <option value="Middle">Middle</option>
-                  <option value="Matric">Matric</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Graduate">Graduate</option>
-                  <option value="Post-Graduate">Post-Graduate</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
@@ -327,24 +365,22 @@ return (
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  className={inputStyle}
-                  value={formatDateDMY(dateOfBirth)}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  onBlur={(e) => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setDateOfBirth(parsed.toISOString().split('T')[0]);
-                  }}
+              <div className="space-y-1.5 col-span-full">
+                <BrutalistCalendar
+                  label="Date of Birth *"
+                  value={dateOfBirth}
+                  onChange={setDateOfBirth}
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">CNIC Number *</label>
-                <input required placeholder="XXXXX-XXXXXXX-X" className={inputStyle} value={cnic} onChange={e => setCnic(e.target.value)} />
+                <input 
+                  required 
+                  placeholder="XXXXX-XXXXXXX-X" 
+                  className={inputStyle} 
+                  value={cnic} 
+                  onChange={e => setCnic(formatCnic(e.target.value))} 
+                />
               </div>
             </div>
 
@@ -368,12 +404,16 @@ return (
                   </>
                 )}
               </div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setPhotoFile(file);
-                setPhotoPreview(URL.createObjectURL(file));
-              }} />
+                <input ref={fileRef} type="file" accept="image/webp" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== 'image/webp') {
+                    toast.error('Only WebP images are allowed');
+                    return;
+                  }
+                  setPhotoFile(file);
+                  setPhotoPreview(URL.createObjectURL(file));
+                }} />
               <div>
                 <p className="text-sm font-bold text-gray-700">Profile Photo</p>
                 <p className="text-[10px] text-gray-400 mt-0.5 uppercase font-bold tracking-tight">JPG, PNG up to 5MB</p>
@@ -388,11 +428,85 @@ return (
           <div className="space-y-4 mt-8">
             <SectionHeader icon={Briefcase} title="Career Profile" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Total Experience (Years)</label>
-                <input placeholder="e.g. 5 Years" className={inputStyle} value={experience} onChange={e => setExperience(e.target.value)} />
+            <div className="space-y-1.5 mt-4">
+              <label className="text-xs font-bold text-gray-500 uppercase px-1">Education Background *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  placeholder="Degree (e.g. Matric)"
+                  className={inputStyle}
+                  value={newEdu.degree}
+                  onChange={e => setNewEdu({ ...newEdu, degree: e.target.value })}
+                />
+                <input
+                  placeholder="Institution"
+                  className={inputStyle}
+                  value={newEdu.institution}
+                  onChange={e => setNewEdu({ ...newEdu, institution: e.target.value })}
+                />
+                <div className="flex gap-2">
+                  <input
+                    placeholder="Year"
+                    className={inputStyle}
+                    value={newEdu.year}
+                    onChange={e => setNewEdu({ ...newEdu, year: e.target.value })}
+                  />
+                  <button type="button" onClick={addEdu} className="bg-blue-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">Add</button>
+                </div>
               </div>
+              <div className="space-y-2 mt-3">
+                {educationList.length === 0 && <p className="text-xs text-gray-400 italic px-1">No education records added yet</p>}
+                {educationList.map((e, idx) => (
+                  <div key={idx} className="bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100 flex items-center justify-between group">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-indigo-900">{e.degree}</span>
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{e.institution} • {e.year}</span>
+                    </div>
+                    <button type="button" onClick={() => removeEdu(idx)} className="text-indigo-400 hover:text-red-500 transition-colors p-2"><X size={16} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5 mt-6">
+              <label className="text-xs font-bold text-gray-500 uppercase px-1">Professional Experience</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  placeholder="Job Title"
+                  className={inputStyle}
+                  value={newExp.title}
+                  onChange={e => setNewExp({ ...newExp, title: e.target.value })}
+                />
+                <input
+                  placeholder="Company"
+                  className={inputStyle}
+                  value={newExp.company}
+                  onChange={e => setNewExp({ ...newExp, company: e.target.value })}
+                />
+                <div className="flex gap-2">
+                  <input
+                    placeholder="Duration"
+                    className={inputStyle}
+                    value={newExp.duration}
+                    onChange={e => setNewExp({ ...newExp, duration: e.target.value })}
+                  />
+                  <button type="button" onClick={addExp} className="bg-blue-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">Add</button>
+                </div>
+              </div>
+              <div className="space-y-2 mt-3">
+                {experienceList.length === 0 && <p className="text-xs text-gray-400 italic px-1">No experience records added yet</p>}
+                {experienceList.map((exp, idx) => (
+                  <div key={idx} className="bg-amber-50/50 p-3 rounded-2xl border border-amber-100 flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-amber-900">{exp.title}</span>
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">{exp.company} • {exp.duration}</span>
+                    </div>
+                    <button type="button" onClick={() => removeExp(idx)} className="text-amber-400 hover:text-red-500 transition-colors p-2"><X size={16} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Expected Salary (PKR)</label>
                 <div className="relative">
@@ -466,17 +580,31 @@ return (
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
+                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-900/10'
+              }`}
             >
               {submitting ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span className="animate-pulse">{submitStatus}</span>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Registering...</span>
+                </>
+              ) : submitStatus === 'success' ? (
+                <>
+                  <Shield size={20} className="text-emerald-200" />
+                  <span>Seeker Registered</span>
+                </>
+              ) : submitStatus === 'error' ? (
+                <>
+                  <X size={20} className="text-rose-200" />
+                  <span>Retry Sync</span>
                 </>
               ) : (
                 <>
-                  <Save size={18} className="group-hover:scale-110 transition-transform" />
-                  Complete Registration
+                  <Save size={20} />
+                  <span>Complete Registration</span>
                 </>
               )}
             </button>

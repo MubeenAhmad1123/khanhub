@@ -56,6 +56,7 @@ export async function awardStaffPoint(
     await db.collection(pointsCol).add({
       staffId: uid,
       date,
+      month: date.substring(0, 7), // YYYY-MM for historical queries
       category,
       points: 1,
       createdAt: new Date(),

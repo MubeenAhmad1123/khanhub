@@ -84,7 +84,7 @@ export default function CategoryManagementPage() {
         <div className="flex items-center justify-between border-b border-black dark:border-white pb-8">
           <div>
             <h1 className="text-4xl font-black uppercase tracking-tighter">Category Hub</h1>
-            <p className="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">Global Transaction Taxonomy • System Registry</p>
+            <p className="text-black dark:text-black text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">Global Transaction Taxonomy • System Registry</p>
           </div>
           <button onClick={() => setShowForm(!showForm)} className="bg-black dark:bg-white text-white dark:text-black font-black text-[10px] uppercase tracking-[0.2em] px-10 py-5 rounded-[2rem] transition-all flex items-center gap-3 shadow-2xl active:scale-95 hover:scale-105">
             <Plus size={18} /> Orchestrate
@@ -95,12 +95,12 @@ export default function CategoryManagementPage() {
           <div className="animate-in slide-in-from-top-4 duration-500 bg-gray-50 dark:bg-white/5 border border-black dark:border-white p-10 rounded-[2.5rem] space-y-8 shadow-2xl">
             <h3 className="text-black dark:text-white font-black text-xs uppercase tracking-[0.2em] italic underline decoration-2 underline-offset-8">New Classification Sequence</h3>
             <div className="space-y-6">
-              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Identity Label</label>
+              <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest ml-1">Identity Label</label>
               <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="E.G. ADMISSION_FEE_PROTOCOL" className="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 text-black dark:text-white text-sm font-black uppercase tracking-widest outline-none focus:border-black dark:focus:border-white/40 transition-all shadow-sm" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Flow Direction</label>
+                <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest ml-1">Flow Direction</label>
                 <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as any }))} className="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 text-black dark:text-white text-sm font-black uppercase tracking-widest outline-none [color-scheme:light] dark:[color-scheme:dark]">
                   <option value="income">Inflow (Income)</option>
                   <option value="expense">Outflow (Expense)</option>
@@ -108,7 +108,7 @@ export default function CategoryManagementPage() {
                 </select>
               </div>
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Node Scope</label>
+                <label className="text-[10px] font-black text-black dark:text-black uppercase tracking-widest ml-1">Node Scope</label>
                 <select value={form.departmentScope} onChange={e => setForm(f => ({ ...f, departmentScope: e.target.value as any }))} className="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 text-black dark:text-white text-sm font-black uppercase tracking-widest outline-none [color-scheme:light] dark:[color-scheme:dark]">
                   <option value="all">Global Matrix</option>
                   <option value="rehab">Rehab Node Only</option>
@@ -119,7 +119,7 @@ export default function CategoryManagementPage() {
             <div className="flex flex-col gap-6 pt-4 border-t border-black/5 dark:border-white/5">
               {[{ key: 'requiresProof', label: 'EVIDENCE_MANDATORY_FLAG' }, { key: 'requiresEntityLink', label: 'ENTITY_SYNCHRONIZATION_REQUIRED' }].map(opt => (
                 <label key={opt.key} className="flex items-center justify-between group cursor-pointer">
-                  <span className="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] group-hover:text-black dark:group-hover:text-white transition-colors">{opt.label}</span>
+                  <span className="text-black dark:text-black text-[10px] font-black uppercase tracking-[0.2em] group-hover:text-black dark:group-hover:text-white transition-colors">{opt.label}</span>
                   <div onClick={() => setForm(f => ({ ...f, [opt.key]: !f[opt.key as keyof typeof f] }))} className={`w-14 h-7 rounded-full transition-all duration-300 flex items-center px-1 border-2 ${form[opt.key as keyof typeof form] ? 'bg-black dark:bg-white border-black dark:border-white' : 'bg-transparent border-gray-200 dark:border-white/10'}`}>
                     <div className={`w-4 h-4 rounded-full transition-all duration-300 ${form[opt.key as keyof typeof form] ? 'bg-white dark:bg-black translate-x-7' : 'bg-gray-200 dark:bg-white/10 translate-x-0'}`} />
                   </div>
@@ -136,7 +136,7 @@ export default function CategoryManagementPage() {
           {categories.length === 0 ? (
             <div className="flex flex-col items-center py-32 gap-6">
               <Tag className="text-gray-200 dark:text-white/10" size={64} />
-              <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.4em]">Empty Taxonomy Node</p>
+              <p className="text-black font-black text-[10px] uppercase tracking-[0.4em]">Empty Taxonomy Node</p>
             </div>
           ) : (
             <div className="divide-y divide-black/5 dark:divide-white/5">
@@ -145,20 +145,20 @@ export default function CategoryManagementPage() {
                   <div className="flex items-center gap-6">
                     <div className={`w-3 h-3 rounded-full shadow-sm transition-all duration-500 group-hover:scale-150 ${cat.isActive ? 'bg-black dark:bg-white' : 'bg-gray-200 dark:bg-white/10'}`} />
                     <div>
-                      <p className={`text-xl font-black uppercase tracking-tight transition-all ${cat.isActive ? 'text-black dark:text-white' : 'text-gray-300 dark:text-white/10 italic line-through'}`}>{cat.label}</p>
+                      <p className={`text-xl font-black uppercase tracking-tight transition-all ${cat.isActive ? 'text-black dark:text-white' : 'text-black dark:text-white/10 italic line-through'}`}>{cat.label}</p>
                       <div className="flex items-center gap-4 mt-3">
                         <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg border-2 ${
                           cat.type === 'income' ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' : 
                           cat.type === 'expense' ? 'bg-white dark:bg-transparent border-black dark:border-white text-black dark:text-white shadow-xl' : 
-                          'bg-gray-100 dark:bg-white/10 text-gray-500 border-transparent'
+                          'bg-gray-100 dark:bg-white/10 text-black border-transparent'
                         }`}>{cat.type}</span>
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 border-l border-black/10 dark:border-white/10 pl-4">{cat.departmentScope} node</span>
-                        {cat.requiresProof && <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded text-gray-500">proof_req</span>}
-                        {cat.requiresEntityLink && <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded text-gray-500">entity_sync</span>}
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black border-l border-black/10 dark:border-white/10 pl-4">{cat.departmentScope} node</span>
+                        {cat.requiresProof && <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded text-black">proof_req</span>}
+                        {cat.requiresEntityLink && <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded text-black">entity_sync</span>}
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => toggleActive(cat.id, cat.isActive)} className="text-gray-300 hover:text-black dark:hover:text-white transition-all transform hover:scale-125">
+                  <button onClick={() => toggleActive(cat.id, cat.isActive)} className="text-black hover:text-black dark:hover:text-white transition-all transform hover:scale-125">
                     {cat.isActive ? <ToggleRight size={32} className="text-black dark:text-white" /> : <ToggleLeft size={32} />}
                   </button>
                 </div>

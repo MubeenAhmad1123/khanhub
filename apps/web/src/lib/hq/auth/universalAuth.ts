@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
-import { setHqSessionCookieFromIdToken, setUserDashboardClaims } from '@/app/hq/actions/auth';
+import { setHqSessionCookieFromIdToken, setUserDashboardClaims, createAuthCustomToken } from '@/app/hq/actions/auth';
 import { isSuperadminEmail } from './superadminWhitelist';
 
 export interface DepartmentAuthInfo {
@@ -19,7 +19,7 @@ export interface DepartmentAuthInfo {
   domain: string;
   dashboardPath: string;
   sessionKey: string;
-  legacyDomain?: string;
+  legacyDomains?: string[];
   prefixes?: string[];
 }
 
@@ -29,7 +29,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com.pk',
-    legacyDomain: '@khanhub.io',
+    legacyDomains: ['@hq.khanhub.com', '@khanhub.io', '@hq.KhanHub', '@hq.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -39,6 +39,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Rehab',
     collection: 'rehab_users',
     domain: '@rehab.khanhub.com.pk',
+    legacyDomains: ['@rehab.khanhub.com', '@rehab.KhanHub', '@rehab.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -48,16 +49,17 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'SPIMS',
     collection: 'spims_users',
     domain: '@spims.khanhub.com.pk',
+    legacyDomains: ['@spims.khanhub.com', '@spims.edu.pk', '@spims.KhanHub', '@spims.Khan Hub', '@khanhub.com.pk', '@khanhub', '@spims.khanhub'],
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
-    legacyDomain: '@spims.edu.pk',
-    prefixes: ['SPIMS', 'STU', 'STUDENT']
+    prefixes: ['SPIMS', 'STU', 'STUDENT', 'LECTURER', 'LECT', 'PROF']
   },
   hospital: {
     id: 'hospital',
     name: 'Hospital',
     collection: 'hospital_users',
     domain: '@hospital.khanhub.com.pk',
+    legacyDomains: ['@hospital.khanhub.com', '@hospital.KhanHub', '@hospital.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -67,6 +69,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Sukoon',
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub.com.pk',
+    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.KhanHub', '@sukoon.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -76,6 +79,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Welfare',
     collection: 'welfare_users',
     domain: '@welfare.khanhub.com.pk',
+    legacyDomains: ['@welfare.khanhub.com', '@welfare.KhanHub', '@welfare.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -85,7 +89,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub.com.pk',
-    legacyDomain: '@job-center.khanhub.com.pk',
+    legacyDomains: ['@jobcenter.khanhub.com', '@jobcenter.KhanHub', '@jobcenter.Khan Hub', '@job-center.khanhub.com.pk', '@jobcenter.khanhub', '@job-center.khanhub', '@job-center.KhanHub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
@@ -95,6 +99,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Social Media',
     collection: 'media_users',
     domain: '@media.khanhub.com.pk',
+    legacyDomains: ['@media.khanhub.com', '@media.KhanHub', '@media.Khan Hub', '@media.khanhub', '@social-media.khanhub', '@social-media.KhanHub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/social-media/dashboard',
     sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
@@ -103,7 +108,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     id: 'it',
     name: 'IT',
     collection: 'it_users',
-    domain: '@it.khanhub.com.pk',
+    domain: '@it.khanhub',
+    legacyDomains: ['@it.khanhub.com.pk', '@it.khanhub.com', '@it.KhanHub', '@it.Khan Hub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/it/dashboard',
     sessionKey: 'it_session',
     prefixes: ['IT', 'DEV']
@@ -214,6 +220,14 @@ export async function loginUniversal(customId: string, password: string, deptHin
     console.log('[UniversalAuth] Starting login for:', customId, deptHint ? `(Hint: ${deptHint})` : '');
     const discovery = await discoverUser(customId, deptHint);
     console.log('[UniversalAuth] Discovery result:', discovery ? discovery.dept.id : 'NOT FOUND');
+    if (discovery) {
+      console.log('[UniversalAuth] Discovered Data:', {
+        uid: discovery.uid,
+        customId: discovery.data.customId,
+        email: discovery.data.email,
+        role: discovery.data.role
+      });
+    }
     
     let dept: DepartmentAuthInfo;
     let finalData: any;
@@ -224,7 +238,11 @@ export async function loginUniversal(customId: string, password: string, deptHin
       // If not found by customId, maybe it's already a full email
       if (customId.includes('@')) {
         const domain = '@' + customId.split('@')[1];
-        const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => d.domain === domain || d.legacyDomain === domain || domain.includes(d.id));
+        const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => 
+          d.domain === domain || 
+          (d.legacyDomains || []).includes(domain) || 
+          domain.includes(d.id)
+        );
         if (foundDept) {
           try {
             console.log('[UniversalAuth] Attempting login with full email:', customId);
@@ -251,23 +269,66 @@ export async function loginUniversal(customId: string, password: string, deptHin
       dept = discovery.dept;
       finalData = discovery.data;
       uid = discovery.uid;
+      
       // Collect potential email prefixes to try
       const prefixes = Array.from(new Set([
         customId.trim().toLowerCase(),
+        customId.trim(), // Try exact case
         finalData.customId?.toLowerCase(),
-        finalData.employeeId?.toLowerCase()
+        finalData.customId,
+        finalData.employeeId?.toLowerCase(),
+        finalData.employeeId,
+        finalData.patientId?.toLowerCase(),
+        finalData.seekerId?.toLowerCase(),
+        finalData.studentId?.toLowerCase(),
+        finalData.childId?.toLowerCase(),
+        // Add designation-based prefix (e.g. "SPIMS Lecturer" -> "lecturer")
+        ...(finalData.designation ? [
+          finalData.designation.toLowerCase().replace('spims', '').trim().split(' ')[0],
+          finalData.designation.toLowerCase().replace('spims', '').trim().replace(/\s+/g, '-'),
+          // Try with -1 suffix as seen in some legacy accounts
+          finalData.designation.toLowerCase().replace('spims', '').trim().split(' ')[0] + '-1'
+        ] : [])
       ].filter(Boolean) as string[]));
       
-      const domains = [dept.domain, dept.legacyDomain].filter(Boolean) as string[];
+      const domains = Array.from(new Set([
+        dept.domain, 
+        ...(dept.legacyDomains || []),
+        '@khanhub.com.pk',
+        '@khanhub'
+      ])).filter(Boolean) as string[];
       
       let lastError: any;
       console.log('[UniversalAuth] Attempting robust auth for discovered user');
 
-      // Try any explicit email stored in Firestore first
-      if (finalData.email && typeof finalData.email === 'string' && finalData.email.includes('@')) {
+      // If the password matches the plaintext password stored in Firestore,
+      // create a Custom Token to log them in directly.
+      if (finalData && (
+        finalData.password === password || 
+        finalData.password?.trim() === password.trim() ||
+        finalData.defaultPassword === password ||
+        finalData.defaultPassword?.trim() === password.trim() ||
+        finalData.pin === password ||
+        finalData.pin?.trim() === password.trim()
+      )) {
+        console.log('[UniversalAuth] Plaintext password/pin matches. Creating Custom Token fallback.');
         try {
-          console.log('[UniversalAuth] Trying Firestore email:', finalData.email);
-          cred = await signInWithEmailAndPassword(auth, finalData.email, password);
+          const res = await createAuthCustomToken(uid);
+          if (res.success && res.customToken) {
+            const { signInWithCustomToken } = await import('firebase/auth');
+            cred = await signInWithCustomToken(auth, res.customToken);
+          }
+        } catch (e: any) {
+          console.error('[UniversalAuth] Custom token login fallback failed:', e);
+        }
+      }
+
+      // Try any explicit email stored in Firestore first
+      if (!cred && finalData.email && typeof finalData.email === 'string' && finalData.email.includes('@')) {
+        try {
+          const cleanEmail = finalData.email.replace(/\s+/g, '');
+          console.log('[UniversalAuth] Trying Firestore email:', cleanEmail);
+          cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
         } catch (e: any) {
           lastError = e;
         }
@@ -277,7 +338,9 @@ export async function loginUniversal(customId: string, password: string, deptHin
       if (!cred) {
         for (const prefix of prefixes) {
           for (const domain of domains) {
-            const email = `${prefix}${domain}`;
+            // We use trim() but NOT global replace of spaces, 
+            // as some legacy domains like "@jobcenter.Khan Hub" literally have a space.
+            const email = `${prefix.trim()}${domain.trim()}`;
             try {
               console.log('[UniversalAuth] Trying generated email:', email);
               cred = await signInWithEmailAndPassword(auth, email, password);
@@ -305,7 +368,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
     }
 
     // 2. Security checks
-    if (finalData.isActive === false) return { success: false, error: 'Your account is currently inactive.' };
+    if (finalData.role !== 'superadmin' && finalData.isActive === false) return { success: false, error: 'Your account is currently inactive.' };
 
     // Block superadmin login via ID/Password — only Google (whitelist) is allowed
     if (dept.id === 'hq' && finalData.role === 'superadmin') {
@@ -329,8 +392,8 @@ export async function loginUniversal(customId: string, password: string, deptHin
       customId: finalData.customId || customId.trim().toUpperCase(),
       name: finalData.name || finalData.displayName || 'User',
       role: finalData.role,
-      loginTime: Date.now(),
-      ...finalData
+      ...finalData,
+      loginTime: Date.now()
     };
     console.log('[UniversalAuth] Setting localStorage for:', dept.sessionKey);
     localStorage.setItem(dept.sessionKey, JSON.stringify(session));

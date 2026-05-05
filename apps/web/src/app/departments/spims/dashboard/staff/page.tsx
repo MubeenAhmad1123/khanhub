@@ -1,123 +1,145 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import {
   collection, query, where, getDocs, addDoc,
-  updateDoc, doc, getDoc, Timestamp
+  updateDoc, doc, getDoc, Timestamp, orderBy, limit, setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { formatDateDMY } from '@/lib/utils';
-import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/rehab';
+import { formatDateDMY, toDate } from '@/lib/utils';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
-  Lightbulb, Send, Star, List, Loader2
+  Lightbulb, Send, Star, List, Loader2, AlertCircle,
+  Trophy, TrendingUp, User as UserIcon, Shield, Activity,
+  CheckCircle2, Circle
 } from 'lucide-react';
-
-// Helper for robust timestamp handling
-const toDate = (ts: any): Date | null => {
-  if (!ts) return null;
-  if (ts instanceof Date) return ts;
-  if (typeof ts.toDate === 'function') return ts.toDate();
-  if (typeof ts === 'string') return new Date(ts);
-  return null;
-};
+import { toast } from 'react-hot-toast';
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useSpimsSession();
 
-  const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
-  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
-  const [contributions, setContributions] = useState<StaffContribution[]>([]);
+  const [staffProfile, setStaffProfile] = useState<any>(null);
+  const [todayRecord, setTodayRecord] = useState<any>(null);
+  const [contributions, setContributions] = useState<any[]>([]);
   const [contributionText, setContributionText] = useState('');
   const [loading, setLoading] = useState(true);
   const [checkLoading, setCheckLoading] = useState(false);
   const [contribLoading, setContribLoading] = useState(false);
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [submitted, setSubmitted] = useState(false);
+  const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      // Find staff profile linked to this login user
-      const staffSnap = await getDocs(
-        query(collection(db, 'rehab_staff'), where('loginUserId', '==', user.uid))
-      );
-      if (staffSnap.empty) { setLoading(false); return; }
-      const staffDoc = staffSnap.docs[0];
-      const staffId = staffDoc.id;
-      const staffData = staffDoc.data();
+      // 1. Fetch Staff Profile
+      const staffRef = doc(db, 'spims_users', user.uid);
+      const staffSnap = await getDoc(staffRef);
+      
+      if (!staffSnap.exists()) {
+        console.error('Staff profile not found for UID:', user.uid);
+        setLoading(false);
+        return;
+      }
+
+      const staffData = staffSnap.data();
+      const staffId = staffSnap.id;
+      
       setStaffProfile({ 
         id: staffId, 
         ...staffData, 
         joiningDate: toDate(staffData.joiningDate) || new Date(), 
         duties: staffData.duties || [] 
-      } as unknown as StaffMember);
+      });
 
-      const today = new Date().toISOString().split('T')[0];
+      // 2. Today's attendance
       const attSnap = await getDocs(
-        query(collection(db, 'rehab_attendance'), where('staffId', '==', staffId), where('date', '==', today))
+        query(
+          collection(db, 'spims_attendance'), 
+          where('staffId', '==', staffId), 
+          where('date', '==', today)
+        )
       );
 
-      // Today's attendance
-      const attDoc = attSnap.empty ? null : attSnap.docs[0];
-      if (attDoc) {
-        const d = attDoc.data();
+      if (!attSnap.empty) {
+        const d = attSnap.docs[0].data();
         setTodayRecord({ 
-          id: attDoc.id, 
+          id: attSnap.docs[0].id, 
           ...d, 
           checkInTime: toDate(d.checkInTime), 
           checkOutTime: toDate(d.checkOutTime) 
-        } as AttendanceRecord);
+        });
       } else {
         setTodayRecord(null);
       }
 
-      // Contributions (last 7 days)
+      // 3. Contributions (Recent)
       const contribSnap = await getDocs(
-        query(collection(db, 'rehab_contributions'), where('staffId', '==', staffId))
+        query(
+          collection(db, 'spims_contributions'), 
+          where('staffId', '==', staffId),
+          orderBy('createdAt', 'desc'),
+          limit(5)
+        )
       );
-      setContributions(
-        contribSnap.docs
-          .map(d => ({ 
-            id: d.id, 
-            ...d.data(), 
-            createdAt: toDate(d.data().createdAt) || new Date() 
-          } as StaffContribution))
-          .sort((a, b) => {
-            const dateA = toDate(a.createdAt)?.getTime() || 0;
-            const dateB = toDate(b.createdAt)?.getTime() || 0;
-            return dateB - dateA;
-          })
-          .slice(0, 10)
-      );
+      
+      const contribDocs = contribSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(), 
+        createdAt: toDate(d.data().createdAt) || new Date() 
+      } as any));
 
-      // Monthly attendance summary
-      const firstDay = new Date();
-      firstDay.setDate(1);
+      setHasContributedToday(contribDocs.some(d => d.date === today));
+      setContributions(contribDocs);
+
+      // 4. Monthly attendance summary
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const firstDayStr = firstDay.toISOString().split('T')[0];
-      const todayStr = new Date().toISOString().split('T')[0];
 
       const monthlySnap = await getDocs(
         query(
-          collection(db, 'rehab_attendance'),
+          collection(db, 'spims_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
-          where('date', '<=', todayStr)
+          where('date', '<=', today)
         )
       );
-      const presentCount = monthlySnap.docs.filter(d => d.data().status === 'present').length;
-      const absentCount  = monthlySnap.docs.filter(d => d.data().status === 'absent').length;
-      const leaveCount   = monthlySnap.docs.filter(d => d.data().status === 'leave').length;
+      
+      const summary = { present: 0, absent: 0, leave: 0 };
+      monthlySnap.docs.forEach(d => {
+        const status = d.data().status;
+        if (status === 'present') summary.present++;
+        else if (status === 'absent') summary.absent++;
+        else if (['leave', 'paid_leave', 'unpaid_leave'].includes(status)) summary.leave++;
+      });
 
-      setMonthlySummary({ present: presentCount, absent: absentCount, leave: leaveCount });
+      setMonthlySummary(summary);
+
+      // 5. Fetch Today's Duty Log for real-time status
+      const dutyLogSnap = await getDocs(
+        query(
+          collection(db, 'spims_duty_logs'),
+          where('staffId', '==', staffId),
+          where('date', '==', today)
+        )
+      );
+      
+      if (!dutyLogSnap.empty) {
+        const logData = dutyLogSnap.docs[0].data();
+        if (logData.duties) {
+          setStaffProfile((prev: any) => ({
+            ...(prev || {}),
+            duties: logData.duties
+          }));
+        }
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
@@ -125,26 +147,18 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') { router.push('/departments/spims/login'); return; }
+    if (!user || user.role !== 'staff') {
+      router.push('/departments/spims/login');
+      return;
+    }
     fetchData();
   }, [sessionLoading, user, fetchData, router]);
 
-  const showMsg = (type: string, text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-  };
-
   const handleCheckIn = async () => {
-    console.log('Check-in clicked, staffProfile:', staffProfile?.id, 'today:', today);
-    if (!staffProfile) {
-      showMsg('error', 'Staff profile not found. Contact admin.');
-      return;
-    }
-
+    if (!staffProfile) return;
     setCheckLoading(true);
     try {
       if (!todayRecord) {
-        // No record yet — create with check-in
         const now = new Date();
         const [dutyHour, dutyMin] = (staffProfile.dutyStartTime || '08:00').split(':').map(Number);
         const dutyStart = new Date();
@@ -152,9 +166,10 @@ export default function StaffSelfPage() {
 
         const lateByMs = now.getTime() - dutyStart.getTime();
         const lateByMinutes = Math.floor(lateByMs / 60000);
-        const isLate = lateByMinutes > 0;
+        const isLate = lateByMinutes > 15; // 15 min grace period
 
-        await addDoc(collection(db, 'rehab_attendance'), {
+        const ref = doc(db, 'spims_attendance', `${staffProfile.id}_${today}`);
+        await setDoc(ref, {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
@@ -165,264 +180,217 @@ export default function StaffSelfPage() {
           autoFineApplied: isLate,
         });
 
-        showMsg('success', 'Checked in! ✓');
-        // optimistic update
-        setTodayRecord({
-          id: 'temp-' + Date.now(),
-          staffId: staffProfile.id,
-          date: today,
-          status: 'present',
-          checkInTime: new Date(),
-          isLate,
-          lateByMinutes: isLate ? lateByMinutes : 0,
-          autoFineApplied: isLate,
-        } as unknown as AttendanceRecord);
-
         if (isLate) {
           const currentMonth = today.substring(0, 7);
-          await addDoc(collection(db, 'rehab_fines'), {
+          await addDoc(collection(db, 'spims_fines'), {
             staffId: staffProfile.id,
             amount: 200,
-            reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
+            reason: `Late arrival (${lateByMinutes} mins) - Auto-generated`,
             date: currentMonth,
-            recordedBy: 'system_auto',
+            recordedBy: 'System',
             createdAt: Timestamp.now(),
           });
-          showMsg('success', `Checked in. Note: You are ${lateByMinutes} minutes late. PKR 200 fine applied. ⚠️`);
+          toast.success('Checked in. Note: Late arrival fine applied.');
+        } else {
+          toast.success('Checked in successfully!');
         }
       } else if (!todayRecord.checkOutTime) {
-        // Already checked in — check out
-        await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
+        await updateDoc(doc(db, 'spims_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
-        showMsg('success', 'Checked out. Great work today! ✓');
-        setTodayRecord(prev => prev ? { ...prev, checkOutTime: new Date() } : prev);
+        toast.success('Checked out successfully!');
       }
       fetchData();
     } catch (err: any) {
-      console.error('Attendance error:', err);
-      showMsg('error', `Failed: ${err?.message || 'Unknown error'}`);
+      toast.error('Attendance failed: ' + err.message);
+    } finally {
+      setCheckLoading(false);
     }
-    setCheckLoading(false);
   };
 
   const handleContribution = async () => {
-    if (!contributionText.trim() || !staffProfile) return;
+    if (!contributionText.trim()) {
+      toast.error('Contribution cannot be empty!');
+      return;
+    }
+    if (!staffProfile) return;
     setContribLoading(true);
     try {
-      await addDoc(collection(db, 'rehab_contributions'), {
+      await addDoc(collection(db, 'spims_contributions'), {
         staffId: staffProfile.id,
+        staffName: staffProfile.name || user?.displayName,
         date: today,
         content: contributionText.trim(),
+        isApproved: false,
         createdAt: Timestamp.now(),
+        dept: 'spims'
       });
       setContributionText('');
+      setHasContributedToday(true);
+      toast.success('Contribution submitted for manager approval! ✓');
       fetchData();
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 2000);
-    } catch {
-      showMsg('error', 'Failed to save. Try again.');
+    } catch (err: any) {
+      toast.error('Submission failed: ' + err.message);
+    } finally {
+      setContribLoading(false);
     }
-    setContribLoading(false);
   };
-
-  const checkedIn    = !!todayRecord?.checkInTime;
-  const checkedOut   = !!todayRecord?.checkOutTime;
-  const isOverridden = !!todayRecord?.overriddenBy;
 
   if (sessionLoading || loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-40 bg-gray-100 rounded-3xl" />
-        <div className="h-32 bg-gray-100 rounded-3xl" />
-        <div className="h-48 bg-gray-100 rounded-3xl" />
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+          <p className="text-sm font-black uppercase tracking-widest text-gray-400">Loading Portal...</p>
+        </div>
       </div>
     );
   }
 
+  // --- Styles (Cream/Black Brutalist) ---
+  const glassStyle = "bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all";
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] overflow-x-hidden w-full max-w-full pb-24">
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Greeting */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-white">
-            {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, {user?.displayName?.split(' ')[0]}
-          </h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            {formatDateDMY(new Date())}
-          </p>
+    <div className="min-h-screen bg-[#FCFBF8] text-black pb-24 overflow-x-hidden font-bold">
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+        
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-gray-900">
+              {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'},
+              <span className="block text-blue-600">{user?.displayName?.split(' ')[0]}</span>
+            </h1>
+            <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mt-2">
+              {formatDateDMY(new Date())}
+            </p>
+          </div>
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 ${glassStyle}`}>
+            <UserIcon size={24} strokeWidth={2.5} />
+          </div>
         </div>
 
-        {/* Message */}
-        {message.text && (
-          <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${
-            message.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-          }`}>
-            <CheckCircle size={16} />
-            {message.text}
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`p-5 ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                <Trophy size={16} />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Growth Points</p>
+            </div>
+            <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
           </div>
-        )}
-
-        {/* Check In / Out Card */}
-        <div className={`rounded-2xl p-4 border-l-4 ${checkedIn || checkedOut ? 'border-teal-500 bg-white/5' : 'border-amber-500 bg-white/5'}`}>
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Clock size={18} className="text-teal-400" />
-              <h2 className="font-black text-white">Today's Attendance</h2>
+          <div className={`p-5 ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                <Activity size={16} />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance</p>
             </div>
-            {staffProfile && (
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
-                 Duty: {staffProfile.dutyStartTime} — {staffProfile.dutyEndTime}
-              </p>
-            )}
+            <p className="text-3xl font-black text-gray-900">{monthlySummary.present}</p>
           </div>
-
-          {isOverridden && (
-            <div className="mb-4 px-4 py-3 bg-amber-500/10 rounded-2xl text-xs text-amber-400 font-bold border border-amber-500/20">
-              ⚠️ Your attendance was marked by admin today.
-            </div>
-          )}
-
-          {/* Time display */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className={`p-4 rounded-2xl text-center ${checkedIn ? 'bg-teal-500/10' : 'bg-white/5'}`}>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check In</p>
-              <p className={`font-mono text-2xl font-black ${checkedIn ? 'text-teal-400' : 'opacity-30'}`}>
-                {todayRecord?.checkInTime
-                  ? toDate(todayRecord.checkInTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
-                  : '--:--'
-                }
-              </p>
-              {todayRecord?.isLate && (
-                <p className="text-[10px] text-amber-400 font-bold mt-1">
-                  ⚠️ Late by {todayRecord.lateByMinutes} mins — PKR 200 fine
-                </p>
-              )}
-            </div>
-            <div className={`p-4 rounded-2xl text-center ${checkedOut ? 'bg-blue-500/10' : 'bg-white/5'}`}>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check Out</p>
-              <p className={`font-mono text-2xl font-black ${checkedOut ? 'text-blue-400' : 'opacity-30'}`}>
-                {todayRecord?.checkOutTime
-                  ? toDate(todayRecord.checkOutTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
-                  : '--:--'
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Action Button OR Badge */}
-          {checkedOut || isOverridden ? (
-            <div className="w-full py-4 bg-white/5 rounded-2xl text-center text-slate-400 font-black text-sm uppercase tracking-wide">
-              {isOverridden ? 'Attendance marked by admin' : 'Shift complete for today ✓'}
-            </div>
-          ) : checkedIn ? (
-            <div className="w-full py-4 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-500/20">
-              <CheckCircle size={14} /> Checked In
-            </div>
-          ) : (
-            <button
-              onClick={handleCheckIn}
-              disabled={checkLoading}
-              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-teal-500 text-white animate-pulse"
-            >
-              {checkLoading
-                ? <Loader2 size={18} className="animate-spin" />
-                : <LogIn size={18} />
-              }
-              {checkLoading ? 'Processing...' : 'Check In Now'}
-            </button>
-          )}
         </div>
 
-        {/* Monthly Summary Card */}
-        <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar size={18} className="text-teal-400" />
-            <h2 className="font-black text-white">Monthly Summary</h2>
+        {/* Contribution Section */}
+        <div className={`p-8 border-4 border-black ${glassStyle}`}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+              <Lightbulb size={20} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900">Record Contribution</h2>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-emerald-500/10 rounded-2xl p-4 text-center">
-              <p className="text-2xl font-black text-emerald-400">{monthlySummary.present}</p>
-              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-wide mt-1">Present</p>
-            </div>
-            <div className="bg-red-500/10 rounded-2xl p-4 text-center">
-              <p className="text-2xl font-black text-red-400">{monthlySummary.absent}</p>
-              <p className="text-[9px] font-bold text-red-400/60 uppercase tracking-wide mt-1">Absent</p>
-            </div>
-            <div className="bg-blue-500/10 rounded-2xl p-4 text-center">
-              <p className="text-2xl font-black text-blue-400">{monthlySummary.leave}</p>
-              <p className="text-[9px] font-bold text-blue-400/60 uppercase tracking-wide mt-1">Leave</p>
-            </div>
-          </div>
-          {/* Progress bar */}
-          {((monthlySummary.present + monthlySummary.absent + monthlySummary.leave) > 0) && (
-            <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-              <div 
-                className="h-full bg-teal-500 rounded-full transition-all duration-500"
-                style={{ width: `${(monthlySummary.present / (monthlySummary.present + monthlySummary.absent + monthlySummary.leave)) * 100}%` }}
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
+          
+          <div className="space-y-4">
+            <div className="p-2 border-2 border-black bg-white">
+              <textarea
+                value={contributionText}
+                onChange={(e) => setContributionText(e.target.value)}
+                placeholder="What did you achieve or contribute today?"
+                rows={4}
+                className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
               />
             </div>
-          )}
+            
+            <button
+              onClick={handleContribution}
+              disabled={contribLoading || hasContributedToday || !contributionText.trim()}
+              className="w-full py-5 bg-black text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            >
+              {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
+            </button>
+          </div>
         </div>
 
-        {/* Duties */}
-        {(staffProfile?.duties?.length ?? 0) > 0 && (
-          <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <List size={18} className="text-teal-400" />
-              <h2 className="font-black text-white">Your Duties</h2>
+        {/* Recent Contributions List */}
+        {contributions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-2">
+              <Star size={16} className="text-amber-500 fill-amber-500" />
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Recent Contributions</h3>
             </div>
-            <ol className="space-y-2">
-              {staffProfile?.duties?.map((d: any, i: number) => (
-                <li key={d.id || i} className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
-                  <span className="w-5 h-5 rounded-lg bg-teal-500/10 text-teal-400 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                  <span className="text-slate-300 text-sm leading-snug">{d.description || String(d)}</span>
-                </li>
+            <div className="space-y-4">
+              {contributions.map((c) => (
+                <div key={c.id} className={`p-6 rounded-[2rem] border-2 border-white ${glassStyle}`}>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{c.content}</p>
+                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest whitespace-nowrap ${
+                      c.isApproved ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {c.isApproved ? 'Approved' : 'Pending'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <Calendar size={10} />
+                    {c.date}
+                  </div>
+                </div>
               ))}
-            </ol>
+            </div>
           </div>
         )}
 
-        {/* Daily Contribution */}
-        <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb size={18} className="text-amber-400" />
-            <h2 className="font-black text-white">Your Contribution Today</h2>
-          </div>
-          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the rehab center.</p>
-          <textarea
-            rows={3}
-            placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."
-            className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
-            value={contributionText}
-            onChange={e => setContributionText(e.target.value)}
-          />
-          <button
-            onClick={handleContribution}
-            disabled={contribLoading || !contributionText.trim()}
-            className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
-          >
-            {submitted ? '✓ Submitted' : contribLoading ? 'Submitting...' : 'Submit'}
-          </button>
-        </div>
-
-        {/* Past Contributions */}
-        {contributions.length > 0 && (
-          <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Star size={18} className="text-amber-300" />
-              <h2 className="font-black text-white">Recent Contributions</h2>
+        {/* Duties Section */}
+        {staffProfile?.duties?.length > 0 && (
+          <div className={`p-8 border-4 border-black ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
+                <List size={20} />
+              </div>
+              <h2 className="text-xl font-black text-gray-900">Daily Duties</h2>
             </div>
             <div className="space-y-3">
-                {contributions.map(c => (
-                  <div key={c.id} className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                    <p className="text-slate-300 text-sm leading-relaxed">{c.content || c.contributionDescription || ''}</p>
-                    <p className="text-[10px] text-slate-500 font-mono mt-2">{c.date} — {toDate(c.createdAt)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
+              {staffProfile.duties.map((duty: any, idx: number) => {
+                const label = duty.label || duty.description || (typeof duty === 'string' ? duty : 'Unknown Duty');
+                const isDone = duty.status === 'done';
+                return (
+                  <div key={idx} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isDone ? 'bg-emerald-50 border-emerald-100' : 'bg-white/50 border-white'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                        {idx + 1}
+                      </div>
+                      <p className={`text-sm font-bold ${isDone ? 'text-emerald-900' : 'text-slate-700'}`}>{label}</p>
+                    </div>
+                    {isDone ? (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        <CheckCircle2 size={12} />
+                        Completed
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-400 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        <Circle size={12} />
+                        Pending
+                      </div>
+                    )}
                   </div>
-                ))}
+                );
+              })}
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

@@ -2,32 +2,12 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminAuth, getAdminDb, adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import type { HqRole } from '@/types/hq';
 
 const COOKIE_NAME = 'hq_session';
 
-function getAdminApp(): App {
-  const existing = getApps().find((a) => a.name === 'hq-admin');
-  if (existing) return existing;
-
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-
-  const sa = JSON.parse(json);
-  return initializeApp(
-    {
-      credential: cert({
-        projectId: sa.project_id,
-        clientEmail: sa.client_email,
-        privateKey: sa.private_key,
-      }),
-    },
-    'hq-admin'
-  );
-}
+// Using unified adminAuth/adminDb from @/lib/firebaseAdmin
 
 type HqSessionCookie = {
   uid: string;
@@ -47,10 +27,8 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
   session?: HqSessionCookie;
 }> {
   try {
-    const app = getAdminApp();
-    const decoded = await getAuth(app).verifyIdToken(idToken);
-    const db = getFirestore(app);
-    const userRef = db.collection('hq_users').doc(decoded.uid);
+    const decoded = await adminAuth.verifyIdToken(idToken);
+    const userRef = adminDb.collection('hq_users').doc(decoded.uid);
     const userSnap = await userRef.get();
 
     let finalData: Record<string, any>;
@@ -74,7 +52,7 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
         await userRef.update({ role: 'superadmin' });
         finalData.role = 'superadmin';
       }
-      if (finalData.isActive === false) {
+      if (finalData.role !== 'superadmin' && finalData.isActive === false) {
         return { success: false, error: 'Account is disabled.' };
       }
     }
@@ -87,8 +65,10 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
       loginTime: Date.now(),
     };
 
-    // Set Custom Claims for zero-cost routing
-    await getAuth(app).setCustomUserClaims(decoded.uid, {
+    // Set Custom Claims for zero-cost routing and security rules
+    await adminAuth.setCustomUserClaims(decoded.uid, {
+      role: 'superadmin',
+      customId: 'SUPER-ADMIN',
       dashboardPath: '/hq/dashboard/superadmin'
     });
 
@@ -97,7 +77,7 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
       sameSite: 'lax',
       secure: true,
       path: '/',
-      maxAge: 60 * 60 * 12, // 12 hours
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
     return { success: true, session: payload };
@@ -107,59 +87,25 @@ export async function provisionSuperadminAndSetSession(idToken: string): Promise
   }
 }
 
-export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ success: boolean; error?: string }> {
+export async function setHqSessionCookieFromIdToken(idToken: string) {
   try {
-    const app = getAdminApp();
-    const decoded = await getAuth(app).verifyIdToken(idToken);
-
-    const db = getFirestore(app);
-    let userSnap = await db.collection('hq_users').doc(decoded.uid).get();
-    let data: any;
-
-    if (!userSnap.exists) {
-      // Fallback: Search by email if UID doesn't match document ID
-      const emailMatch = await db.collection('hq_users').where('email', '==', decoded.email).limit(1).get();
-      if (emailMatch.empty) {
-        return { success: false, error: `HQ user profile missing for ${decoded.email}` };
-      }
-      userSnap = emailMatch.docs[0];
-      data = userSnap.data();
-    } else {
-      data = userSnap.data();
-    }
-
-    if (data.isActive === false) return { success: false, error: 'Account disabled.' };
-
-    const role = String(data.role || '').toLowerCase();
-    if (role !== 'superadmin' && role !== 'manager' && role !== 'cashier') {
-      return { success: false, error: 'Invalid HQ role.' };
-    }
-
-    const payload: HqSessionCookie = {
-      uid: decoded.uid,
-      customId: String(data.customId || '').toUpperCase(),
-      name: String(data.name || ''),
-      role: role as HqRole,
-      loginTime: Date.now(),
-    };
-
-    // Set Custom Claims for zero-cost routing (Persists in Auth Token)
-    await getAuth(app).setCustomUserClaims(decoded.uid, {
-      dashboardPath: role === 'superadmin' ? '/hq/dashboard/superadmin' : 
-                     role === 'manager' ? '/hq/dashboard/manager' : 
-                     role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/dashboard'
-    });
-
-    cookies().set(COOKIE_NAME, JSON.stringify(payload), {
+    const auth = getAdminAuth();
+    const decoded = await auth.verifyIdToken(idToken);
+    
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    
+    cookieStore.set('hq_firebase_uid', decoded.uid, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
-      maxAge: 60 * 60 * 12, // 12 hours
+      sameSite: 'lax',
     });
-
+    
     return { success: true };
   } catch (err: any) {
+    console.error('[setHqSessionCookieFromIdToken]', err?.message);
     return { success: false, error: err?.message || 'Failed to set session.' };
   }
 }
@@ -169,8 +115,7 @@ export async function setHqSessionCookieFromIdToken(idToken: string): Promise<{ 
  */
 export async function setUserDashboardClaims(uid: string, path: string) {
   try {
-    const app = getAdminApp();
-    await getAuth(app).setCustomUserClaims(uid, { dashboardPath: path });
+    await adminAuth.setCustomUserClaims(uid, { dashboardPath: path });
     return { success: true };
   } catch (err) {
     console.error('[SetClaims] Error:', err);
@@ -197,4 +142,142 @@ export async function requireHqSuperadmin(): Promise<HqSessionCookie> {
   if (!session) throw new Error('Unauthorized');
   if (session.role !== 'superadmin') throw new Error('Unauthorized');
   return session;
+}
+
+export async function loginHqUser({ 
+  customId, 
+  password 
+}: { 
+  customId: string; 
+  password: string; 
+}) {
+  try {
+    // Validate inputs first — before touching Firebase
+    if (!customId?.trim() || !password?.trim()) {
+      return { success: false, error: 'User ID and password are required.' };
+    }
+
+    // Get adminDb lazily — will throw descriptive error if env vars missing
+    const db = getAdminDb();
+    
+    const snap = await db
+      .collection('hq_users')
+      .where('customId', '==', customId.trim())
+      .where('password', '==', password.trim())
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      return { success: false, error: 'Invalid User ID or password.' };
+    }
+
+    const userDoc = snap.docs[0];
+    const userData = userDoc.data();
+
+    if (userData.role !== 'superadmin' && userData.isActive === false) {
+      return { success: false, error: 'Account deactivated. Contact admin.' };
+    }
+
+    const uid = userDoc.id;
+    
+    const auth = getAdminAuth();
+    
+    // Set Custom User Claims for zero-cost security rules and routing
+    await auth.setCustomUserClaims(uid, {
+      role: userData.role,
+      customId: userData.customId,
+      dashboardPath: userData.role === 'superadmin' ? '/hq/dashboard/superadmin' : 
+                     userData.role === 'manager' ? '/hq/dashboard/manager' :
+                     userData.role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/login'
+    });
+
+    const customToken = await auth.createCustomToken(uid, {
+      role: userData.role,
+      customId: userData.customId,
+    });
+
+    const sessionCookie: HqSessionCookie = {
+      uid,
+      customId: userData.customId,
+      name: userData.name || userData.displayName || '',
+      role: userData.role,
+      loginTime: Date.now(),
+    };
+
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    cookieStore.set(COOKIE_NAME, JSON.stringify(sessionCookie), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return {
+      success: true,
+      uid,
+      customToken,
+      user: {
+        uid,
+        customId: userData.customId,
+        name: userData.name || userData.displayName || '',
+        role: userData.role,
+        photoUrl: userData.photoUrl || null,
+        phone: userData.phone || null,
+        isActive: userData.isActive !== false,
+      },
+    };
+  } catch (err: any) {
+    console.error('[loginHqUser] Server error:', err?.message || err);
+    
+    // Return safe error — never expose internal details to client
+    return { 
+      success: false, 
+      error: `Login failed: ${err?.message || 'Unknown server error'}`
+    };
+  }
+}
+
+export async function createHqFirebaseAuthAccount({
+  uid,        // The Firestore doc ID (hq_users document ID)
+  email,      // A generated email: customId@khanhub.internal
+  displayName,
+}: {
+  uid: string;
+  email: string;
+  displayName: string;
+}) {
+  try {
+    // Check if user already exists
+    try {
+      await adminAuth.getUser(uid);
+      return { success: true, message: 'User already exists' };
+    } catch {
+      // User doesn't exist, create them
+    }
+    
+    await adminAuth.createUser({
+      uid,
+      email,
+      displayName,
+      emailVerified: true,
+      password: Math.random().toString(36), // Random password — login via customToken only
+    });
+    
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function createAuthCustomToken(uid: string) {
+  try {
+    const auth = getAdminAuth();
+    const token = await auth.createCustomToken(uid);
+    return { success: true, customToken: token };
+  } catch (err: any) {
+    console.error('[createAuthCustomToken] Error:', err);
+    return { success: false, error: err.message };
+  }
 }

@@ -4,6 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function StatCard({
   title,
@@ -30,83 +31,143 @@ export function StatCard({
   loading?: boolean;
   onClick?: () => void;
 }) {
-  const toneStyles =
-    tone === 'rehab'
-      ? 'from-emerald-500/10 dark:from-emerald-500/20 to-transparent border-emerald-500/20 dark:border-emerald-500/30'
-      : tone === 'spims'
-        ? 'from-blue-500/10 dark:from-blue-500/20 to-transparent border-blue-500/20 dark:border-blue-500/30'
-        : tone === 'hq'
-          ? 'from-purple-500/10 dark:from-purple-500/20 to-transparent border-purple-500/20 dark:border-purple-500/30'
-    : tone === 'primary'
-      ? 'from-gray-500/5 dark:from-white/5 to-transparent border-gray-200 dark:border-white/10'
-    : tone === 'warning'
-      ? 'from-amber-500/10 dark:from-amber-500/20 to-transparent border-amber-500/20 dark:border-amber-500/30'
-    : tone === 'danger'
-      ? 'from-red-500/10 dark:from-red-500/20 to-transparent border-red-500/20 dark:border-red-500/30'
-          : 'from-gray-100 dark:from-white/5 to-transparent border-gray-200 dark:border-white/10';
+  const toneStyles = {
+    rehab: {
+      bg: 'bg-white',
+      border: 'border-emerald-100',
+      iconBg: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30',
+      gradient: 'from-emerald-500/5 to-transparent',
+      text: 'text-emerald-600'
+    },
+    spims: {
+      bg: 'bg-white',
+      border: 'border-sky-100',
+      iconBg: 'bg-sky-500 text-white shadow-lg shadow-sky-500/30',
+      gradient: 'from-sky-500/5 to-transparent',
+      text: 'text-sky-600'
+    },
+    hq: {
+      bg: 'bg-white',
+      border: 'border-purple-100',
+      iconBg: 'bg-purple-500 text-white shadow-lg shadow-purple-500/30',
+      gradient: 'from-purple-500/5 to-transparent',
+      text: 'text-purple-600'
+    },
+    primary: {
+      bg: 'bg-white',
+      border: 'border-gray-200',
+      iconBg: 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30',
+      gradient: 'from-indigo-500/5 to-transparent',
+      text: 'text-indigo-600'
+    },
+    warning: {
+      bg: 'bg-white',
+      border: 'border-amber-100',
+      iconBg: 'bg-amber-500 text-white shadow-lg shadow-amber-500/30',
+      gradient: 'from-amber-500/5 to-transparent',
+      text: 'text-amber-600'
+    },
+    danger: {
+      bg: 'bg-white',
+      border: 'border-rose-100',
+      iconBg: 'bg-rose-500 text-white shadow-lg shadow-rose-500/30',
+      gradient: 'from-rose-500/5 to-transparent',
+      text: 'text-rose-600'
+    },
+    neutral: {
+      bg: 'bg-white',
+      border: 'border-gray-100',
+      iconBg: 'bg-slate-600 text-white shadow-lg shadow-slate-600/30',
+      gradient: 'from-slate-500/5 to-transparent',
+      text: 'text-slate-600'
+    },
+  };
+
+  const style = toneStyles[tone];
 
   const badgeStyles = (bTone: string | undefined) => {
     switch (bTone) {
       case 'danger':
-        return 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-300';
+        return 'bg-rose-50 text-rose-600 border border-rose-100';
       case 'warning':
-        return 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300';
+        return 'bg-amber-50 text-amber-600 border border-amber-100';
       case 'success':
-        return 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300';
+        return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
       default:
-        return 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300';
+        return 'bg-blue-50 text-blue-600 border border-blue-100';
     }
   };
 
   const displayValue =
     loading ? '—'
-    : format === 'pkr' ? `PKR ${Number(value || 0).toLocaleString('en-PK')}`
+    : format === 'pkr' ? `₨${Number(value || 0).toLocaleString('en-PK')}`
     : String(value ?? '');
 
-  const Card = (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{title}</div>
-        <div className="mt-1 text-xl sm:text-2xl font-black text-black dark:text-white break-words tracking-tight leading-none">{displayValue}</div>
+  const CardContent = (
+    <div className="relative z-10 flex flex-col h-full justify-between gap-4 sm:gap-8">
+      <div className="flex items-start justify-between">
+        <div className={cn("w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", style.iconBg)}>
+          {Icon && <Icon className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={2.5} />}
+        </div>
+        {badge ? (
+          <div className={cn("inline-flex px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[7px] sm:text-[9px] font-black uppercase tracking-widest transition-all", badgeStyles(badge.tone))}>
+            {badge.label}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.3em] text-gray-400 mb-1 sm:mb-2 group-hover:text-current transition-colors truncate" title={title}>{title}</div>
+        <div className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter leading-none sm:leading-tight truncate" title={displayValue}>{displayValue}</div>
+        
         {trend && (
-          <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-            {trend.isUp ? <TrendingUp size={12} strokeWidth={3} /> : <TrendingDown size={12} strokeWidth={3} />}
-            {Math.abs(trend.value).toFixed(1)}%
+          <div className={cn("mt-2 sm:mt-4 flex items-center gap-1 sm:gap-2 text-[8px] sm:text-[10px] font-black uppercase tracking-widest", trend.isUp ? 'text-emerald-600' : 'text-rose-600')}>
+            <div className="flex items-center gap-1 bg-current/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl whitespace-nowrap">
+              {trend.isUp ? <TrendingUp size={10} strokeWidth={3} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} strokeWidth={3} className="sm:w-3 sm:h-3" />}
+              {Math.abs(trend.value).toFixed(1)}%
+            </div>
+            <span className="opacity-40 tracking-normal font-bold hidden sm:inline">Growth</span>
           </div>
         )}
-        {subtitle ? <div className="mt-1 text-sm font-bold text-gray-600 dark:text-gray-400">{subtitle}</div> : null}
-      </div>
-      {Icon ? (
-        <div className="shrink-0 flex flex-col items-end gap-2">
-          <div className="w-11 h-11 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm">
-            <Icon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        
+        {subtitle && (
+          <div className="mt-2 sm:mt-5 text-[8px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 truncate" title={subtitle}>
+            <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current opacity-20 shrink-0" />
+            <span className="truncate">{subtitle}</span>
           </div>
-          {badge ? (
-            <div className={`inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-transparent ${badgeStyles(badge.tone)}`}>
-              {badge.label}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 
-  const className = `block rounded-[2rem] border bg-gradient-to-br ${toneStyles} bg-white dark:bg-black p-6 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-300 w-full text-left`;
+  const containerClasses = cn(
+    "block relative overflow-hidden rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 transition-all duration-700 w-full text-left",
+    "border bg-white shadow-xl sm:shadow-2xl shadow-gray-200/50 hover:shadow-gray-300/60 hover:-translate-y-2 group flex flex-col",
+    style.border
+  );
+
+  const BackgroundGradient = (
+    <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", style.gradient)} />
+  );
 
   if (onClick && !href) {
     return (
-      <button onClick={onClick} className={className}>
-        {Card}
+      <button onClick={onClick} className={containerClasses}>
+        {BackgroundGradient}
+        {CardContent}
       </button>
     );
   }
 
   return href ? (
-    <Link href={href} className={className}>
-      {Card}
+    <Link href={href} className={containerClasses}>
+      {BackgroundGradient}
+      {CardContent}
     </Link>
   ) : (
-    <div className={className}>{Card}</div>
+    <div className={containerClasses}>
+      {BackgroundGradient}
+      {CardContent}
+    </div>
   );
 }
-
