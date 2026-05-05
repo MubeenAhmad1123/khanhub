@@ -5,7 +5,7 @@ import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield, DollarSign } f
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 
 export default function AdmissionTab({ 
   patient, 
@@ -39,11 +39,10 @@ export default function AdmissionTab({
       
       const monthlyPkg = Number(form.monthlyPackage || form.packageAmount || 0);
       const dRate = Math.round(monthlyPkg / 30);
-      const admissionDate = form.admissionDate instanceof Timestamp ? form.admissionDate.toDate() : new Date(form.admissionDate as any);
+      const admissionDate = toDate(form.admissionDate);
       const now = new Date();
-      const diffMs = now.getTime() - admissionDate.getTime();
-      const days = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-      const dynamicTotal = days * dRate;
+      const billableMonths = (now.getFullYear() - admissionDate.getFullYear()) * 12 + (now.getMonth() - admissionDate.getMonth()) + 1;
+      const dynamicTotal = billableMonths * monthlyPkg;
 
       const finalData = {
         ...form,
@@ -275,31 +274,26 @@ export default function AdmissionTab({
                 </div>
                 <div className="w-px h-8 bg-teal-200 hidden md:block"></div>
                 <div>
-                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Daily Rate</span>
-                  <span className="text-xl font-black text-teal-900">PKR {(Math.round((form.monthlyPackage || form.packageAmount || 0) / 30)).toLocaleString()}</span>
-                </div>
-                <div className="w-px h-8 bg-teal-200 hidden md:block"></div>
-                <div>
-                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Days Stayed</span>
+                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Billable Months</span>
                   <span className="text-xl font-black text-teal-900">
                     {(() => {
-                      const adm = patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : new Date(patient.admissionDate as any);
-                      const diffDays = Math.max(0, Math.floor((new Date().getTime() - adm.getTime()) / (1000 * 60 * 60 * 24)));
-                      const months = Math.floor(diffDays / 30);
-                      const extraDays = diffDays % 30;
-                      return `${diffDays} days (${months > 0 ? `${months} months ` : ''}${extraDays} days)`;
+                      const adm = toDate(patient.admissionDate);
+                      const now = new Date();
+                      const billableMonths = (now.getFullYear() - adm.getFullYear()) * 12 + (now.getMonth() - adm.getMonth()) + 1;
+                      return `${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'}`;
                     })()}
                   </span>
                 </div>
                 <div className="w-px h-8 bg-teal-200 hidden md:block"></div>
                 <div>
-                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Total Due (Based on Days)</span>
+                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Total Due (Month-based)</span>
                   <span className="text-xl font-black text-teal-900">
                     PKR {(() => {
-                      const adm = patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : new Date(patient.admissionDate as any);
-                      const diffDays = Math.max(0, Math.floor((new Date().getTime() - adm.getTime()) / (1000 * 60 * 60 * 24)));
-                      const dRate = Math.round((form.monthlyPackage || form.packageAmount || 0) / 30);
-                      return (diffDays * dRate).toLocaleString();
+                      const adm = toDate(patient.admissionDate);
+                      const now = new Date();
+                      const billableMonths = (now.getFullYear() - adm.getFullYear()) * 12 + (now.getMonth() - adm.getMonth()) + 1;
+                      const monthlyPkg = Number(form.monthlyPackage || form.packageAmount || 0);
+                      return (billableMonths * monthlyPkg).toLocaleString();
                     })()}
                   </span>
                 </div>

@@ -2,15 +2,16 @@
 'use client';
 
 import React from 'react';
-import { User, Wallet, Calendar, GraduationCap, Phone } from 'lucide-react';
+import { User, Wallet, Calendar, GraduationCap, Phone, FileText } from 'lucide-react';
 import type { SpimsStudent } from '@/types/spims';
 import { formatDateDMY } from '@/lib/utils';
 
 interface ProfileHeaderProps {
   student: SpimsStudent;
+  onGenerateReport?: () => void;
 }
 
-export default function ProfileHeader({ student }: ProfileHeaderProps) {
+export default function ProfileHeader({ student, onGenerateReport }: ProfileHeaderProps) {
   const totalPkg = Number(student.totalPackage) || 0;
 
   return (
@@ -65,6 +66,17 @@ export default function ProfileHeader({ student }: ProfileHeaderProps) {
                   {student.contact || (student as any).phone || 'No Phone'}
                 </p>
               </div>
+            </div>
+
+            {/* Actions */}
+            <div className="absolute top-0 right-0 p-5 md:p-10 flex gap-2">
+              <button
+                onClick={(onGenerateReport as any)}
+                className="p-3 bg-white hover:bg-gray-50 text-gray-400 hover:text-[#1D9E75] rounded-2xl border border-gray-100 shadow-sm transition-all active:scale-95 group"
+                title="Generate Report"
+              >
+                <FileText size={20} className="group-hover:scale-110 transition-transform" />
+              </button>
             </div>
 
             {/* Stats Grid */}

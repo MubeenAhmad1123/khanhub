@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Save, Loader2, GraduationCap, User, IndianRupee, Share2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import type { SpimsStudent } from '@/types/spims';
 import { SPIMS_COURSES } from '@/types/spims';
 import { updateStudent } from '@/lib/spims/students';
@@ -479,6 +479,35 @@ export default function AdmissionTab({
               disabled={true}
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
               value={form.examinationFeePaid ?? 0}
+            />
+          )}
+          {fld(
+            'Billable Months',
+            <input
+              type="text"
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
+              value={(() => {
+                const admission = toDate(student.admissionDate);
+                const now = new Date();
+                const billableMonths = (now.getFullYear() - admission.getFullYear()) * 12 + (now.getMonth() - admission.getMonth()) + 1;
+                return `${billableMonths} Months`;
+              })()}
+            />
+          )}
+          {fld(
+            'Total due till date',
+            <input
+              type="text"
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
+              value={(() => {
+                const admission = toDate(student.admissionDate);
+                const now = new Date();
+                const billableMonths = (now.getFullYear() - admission.getFullYear()) * 12 + (now.getMonth() - admission.getMonth()) + 1;
+                const monthlyFee = Number(form.monthlyFee || 0);
+                return `PKR ${(billableMonths * monthlyFee).toLocaleString()}`;
+              })()}
             />
           )}
           {fld(

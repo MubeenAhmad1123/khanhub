@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
+import { toPng } from 'html-to-image';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -138,6 +139,7 @@ export default function PatientDetailPage() {
   const [dAmount, setDAmount] = useState('');
   const [dNote, setDNote] = useState('Final Settlement');
   const [isDischarging, setIsDischarging] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     let sessionData = localStorage.getItem('rehab_session');
@@ -183,17 +185,19 @@ export default function PatientDetailPage() {
       const data = pDoc.data();
       
       // Calculate Financial Stats & Remaining Days
-      const admission = data.admissionDate?.toDate() || new Date();
+      const admission = toDate(data.admissionDate);
       const endDate = data.isActive === false && data.dischargeDate 
-        ? (data.dischargeDate?.toDate?.() || new Date(data.dischargeDate)) 
+        ? toDate(data.dischargeDate) 
         : new Date();
       
       const diffTimeMs = endDate.getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
       
-      const monthsAdmitted = Math.floor(daysAdmitted / 30);
-      const extraAdmittedDays = daysAdmitted % 30;
-      const durationFormatted = `${daysAdmitted} Days (${monthsAdmitted > 0 ? `${monthsAdmitted} months ` : ''}${extraAdmittedDays} days)`;
+      // Calculate Billable Months (Calendar-based, rounded up)
+      // If admission is Mar 28 and today is Apr 4, that's Mar (1) + Apr (1) = 2 months.
+      const billableMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth()) + 1;
+      
+      const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'})`;
 
       // Fetch all fees to calculate total received
       let overallReceived = 0;
@@ -224,7 +228,7 @@ export default function PatientDetailPage() {
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const dailyRate = Math.floor(monthlyPkg / 30);
-      const dueTillDate = daysAdmitted * dailyRate;
+      const dueTillDate = billableMonths * monthlyPkg;
       const overallRemaining = dueTillDate - overallReceived;
 
       setPatient({ 
@@ -236,6 +240,7 @@ export default function PatientDetailPage() {
         overallRemaining,
         dailyRate,
         dueTillDate,
+        billableMonths,
       });
       setEditForm({
         name: data.name || '',
@@ -243,12 +248,8 @@ export default function PatientDetailPage() {
         diagnosis: data.diagnosis || '',
         packageAmount: data.packageAmount || data.monthlyPackage || 0,
         photoUrl: data.photoUrl || '',
-        admissionDate: data.admissionDate?.toDate?.() 
-          ? data.admissionDate.toDate().toISOString().split('T')[0] 
-          : (typeof data.admissionDate === 'string' && data.admissionDate.includes('-') ? data.admissionDate : new Date().toISOString().split('T')[0]),
-        dischargeDate: data.dischargeDate?.toDate?.()
-          ? data.dischargeDate.toDate().toISOString().split('T')[0]
-          : (typeof data.dischargeDate === 'string' && data.dischargeDate.includes('-') ? data.dischargeDate : '')
+        admissionDate: toDate(data.admissionDate).toISOString().split('T')[0],
+        dischargeDate: data.dischargeDate ? toDate(data.dischargeDate).toISOString().split('T')[0] : ''
       });
       setPhotoPreview(data.photoUrl || '');
 
@@ -588,16 +589,16 @@ export default function PatientDetailPage() {
       setPatient((prev: any) => {
         const admission = new Date(editForm.admissionDate);
         const endDate = prev.isActive === false && prev.dischargeDate 
-          ? (prev.dischargeDate?.toDate?.() || new Date(prev.dischargeDate)) 
+          ? toDate(prev.dischargeDate) 
           : new Date();
           
         const diffTimeMs = endDate.getTime() - admission.getTime();
         const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
-        const monthsAdmitted = Math.floor(daysAdmitted / 30);
-        const extraAdmittedDays = daysAdmitted % 30;
-        const durationFormatted = `${daysAdmitted} Days (${monthsAdmitted > 0 ? `${monthsAdmitted} months ` : ''}${extraAdmittedDays} days)`;
+        
+        const billableMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth()) + 1;
+        const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'})`;
         const dailyRate = Math.floor(monthlyPkg / 30);
-        const dueTillDate = daysAdmitted * dailyRate;
+        const dueTillDate = billableMonths * monthlyPkg;
 
         return { 
           ...prev, 
@@ -610,6 +611,7 @@ export default function PatientDetailPage() {
           durationFormatted,
           dailyRate,
           dueTillDate,
+          billableMonths,
           overallRemaining: dueTillDate - (prev.overallReceived || 0),
           photoUrl: photoUrl,
           dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null
@@ -676,7 +678,7 @@ export default function PatientDetailPage() {
       setIsDischarging(true);
       
       const dischargeDateObj = parseDateDMY(dDateInput) || new Date(dDate);
-      const admissionDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
+      const admissionDateObj = toDate(patient.admissionDate);
       
       const diffTimeMs = dischargeDateObj.getTime() - admissionDateObj.getTime();
       const actualDays = diffTimeMs > 0 ? Math.ceil(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
@@ -998,16 +1000,26 @@ export default function PatientDetailPage() {
                 <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate leading-tight">
                   {patient.name}
                 </h1>
-                <button 
-                  onClick={() => {
-                    setActiveTab('profile');
-                    setIsEditing(true);
-                  }}
-                  className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-teal-900/20 dark:hover:text-teal-400 transition-all border border-slate-200/50 dark:border-white/5 active:scale-90"
-                  title="Edit Profile"
-                >
-                  <Edit3 className="h-5 w-5" />
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button 
+                    onClick={() => setShowReportModal(true)}
+                    className="self-center sm:self-start p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-lg shadow-teal-600/20 active:scale-95 flex items-center gap-2 px-4"
+                    title="Generate Report"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="text-xs font-black uppercase tracking-widest">Report</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setActiveTab('profile');
+                      setIsEditing(true);
+                    }}
+                    className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-teal-900/20 dark:hover:text-teal-400 transition-all border border-slate-200/50 dark:border-white/5 active:scale-90"
+                    title="Edit Profile"
+                  >
+                    <Edit3 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
               
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 text-sm text-slate-500 dark:text-gray-400 font-medium">
@@ -2157,6 +2169,269 @@ export default function PatientDetailPage() {
           </div>
         </div>
       )}
+      {showReportModal && (
+        <ReportModal 
+          patient={patient} 
+          allPayments={allPayments} 
+          onClose={() => setShowReportModal(false)} 
+        />
+      )}
     </div>
   );
 }
+
+const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayments: any[], onClose: () => void }) => {
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  const [reportData, setReportData] = useState({
+    name: patient.name,
+    admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
+    fatherName: patient.fatherName || '',
+    address: patient.address || '',
+    monthlyPackage: Number(patient.monthlyPackage || patient.packageAmount || 0),
+    billableMonths: patient.billableMonths || 1,
+    totalDue: patient.dueTillDate || 0,
+    receivedAmount: patient.overallReceived || 0,
+    remainingAmount: patient.overallRemaining || 0,
+    transactions: allPayments
+      .filter(p => p.status === 'approved')
+      .sort((a, b) => {
+        const dateA = a.date instanceof Object ? a.date.toDate().getTime() : new Date(a.date).getTime();
+        const dateB = b.date instanceof Object ? b.date.toDate().getTime() : new Date(b.date).getTime();
+        return dateB - dateA;
+      })
+  });
+
+  const downloadReport = async () => {
+    if (!reportRef.current) return;
+    setIsDownloading(true);
+    try {
+      const dataUrl = await toPng(reportRef.current, { 
+        cacheBust: true, 
+        backgroundColor: '#fff',
+        pixelRatio: 2
+      });
+      const link = document.createElement('a');
+      link.download = `Report-${reportData.name}-${new Date().toLocaleDateString()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Download failed', err);
+      toast.error('Download failed');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
+        <div className="p-8 border-b dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+          <div>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Report Preview</h2>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Review and Edit Before Downloading</p>
+          </div>
+          <button onClick={onClose} className="p-3 hover:bg-gray-200 dark:hover:bg-white/10 rounded-2xl transition-all active:scale-90">
+             <X className="w-6 h-6 text-gray-500" />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-100 dark:bg-black/20">
+          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-8 sm:p-16 mx-auto w-full max-w-[850px] text-gray-900 font-sans min-h-[1100px] border border-gray-100">
+            {/* Report Header */}
+            <div className="flex justify-between items-start border-b-4 border-gray-900 pb-8 mb-10">
+               <div className="space-y-1">
+                  <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Financial</h1>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter text-teal-600 leading-none">Statement</h1>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">Khan Hub Rehabilitation Center</p>
+               </div>
+               <div className="text-right">
+                  <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
+                     Official Report
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
+               </div>
+            </div>
+            
+            {/* Patient Details Section */}
+            <div className="grid grid-cols-2 gap-12 mb-12">
+               <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Basic Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
+                      <input 
+                        className="text-lg font-black w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.name}
+                        onChange={e => setReportData({...reportData, name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
+                      <input 
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.fatherName}
+                        onChange={e => setReportData({...reportData, fatherName: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
+                      <textarea 
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 resize-none"
+                        rows={2}
+                        value={reportData.address}
+                        onChange={e => setReportData({...reportData, address: e.target.value})}
+                      />
+                    </div>
+                  </div>
+               </div>
+               <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Stay Details</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
+                      <input 
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.admissionDate}
+                        onChange={e => setReportData({...reportData, admissionDate: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Duration Logic</label>
+                      <p className="text-xs font-bold text-gray-500 uppercase italic">Monthly-based calculation (rounded up)</p>
+                    </div>
+                  </div>
+               </div>
+            </div>
+            
+            {/* Financial Summary Box */}
+            <div className="bg-gray-50 rounded-3xl p-8 mb-12 border border-gray-100 grid grid-cols-3 gap-8">
+               <div className="relative">
+                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Package</label>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] font-black text-gray-400">PKR</span>
+                    <input 
+                      type="number"
+                      className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-teal-500 outline-none py-1"
+                      value={reportData.monthlyPackage}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setReportData(prev => ({
+                          ...prev,
+                          monthlyPackage: val,
+                          totalDue: val * prev.billableMonths,
+                          remainingAmount: (val * prev.billableMonths) - prev.receivedAmount
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+               </div>
+               <div className="relative text-center">
+                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Counted</label>
+                  <input 
+                    type="number"
+                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-teal-500 outline-none py-1 text-center"
+                    value={reportData.billableMonths}
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      setReportData(prev => ({
+                        ...prev,
+                        billableMonths: val,
+                        totalDue: val * prev.monthlyPackage,
+                        remainingAmount: (val * prev.monthlyPackage) - prev.receivedAmount
+                      }));
+                    }}
+                  />
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+               </div>
+               <div className="text-right">
+                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Payable</label>
+                  <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
+               </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-8 mb-12">
+               <div className="p-8 bg-teal-50/50 rounded-3xl border-2 border-teal-100 flex flex-col justify-center">
+                  <label className="text-[10px] font-black uppercase text-teal-600 block mb-1 tracking-widest">Received to Date</label>
+                  <p className="text-3xl font-black text-teal-900 tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
+               </div>
+               <div className="p-8 bg-red-50/50 rounded-3xl border-2 border-red-100 flex flex-col justify-center">
+                  <label className="text-[10px] font-black uppercase text-red-600 block mb-1 tracking-widest">Net Remaining</label>
+                  <p className="text-3xl font-black text-red-900 tracking-tighter">PKR {reportData.remainingAmount.toLocaleString()}</p>
+               </div>
+            </div>
+            
+            {/* Transaction Log Table */}
+            <div className="mb-12">
+               <div className="flex items-center justify-between mb-6 border-b-2 border-gray-100 pb-4">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Payment Transaction Log</h3>
+                  <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
+               </div>
+               <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                     <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
+                        <th className="py-4 px-2">Date</th>
+                        <th className="py-4 px-2">Description / Note</th>
+                        <th className="py-4 px-2 text-right">Amount Received</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                     {reportData.transactions.map((p, idx) => (
+                        <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
+                           <td className="py-4 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
+                           <td className="py-4 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
+                           <td className="py-4 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+                        </tr>
+                     ))}
+                     {reportData.transactions.length === 0 && (
+                        <tr>
+                           <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                        </tr>
+                     )}
+                  </tbody>
+                  <tfoot>
+                     <tr className="border-t-4 border-gray-900 font-black text-gray-900">
+                        <td colSpan={2} className="py-6 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
+                        <td className="py-6 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
+                     </tr>
+                  </tfoot>
+               </table>
+            </div>
+            
+            {/* Signature & Footer */}
+            <div className="mt-20 pt-12 border-t border-gray-100">
+               <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                     <p className="text-[10px] font-black text-gray-900 uppercase">Khan Hub</p>
+                     <p className="text-[9px] font-bold text-gray-400 uppercase">Rehabilitation & Recovery Center</p>
+                  </div>
+                  <div className="w-48 border-b-2 border-gray-200 pb-2 text-center">
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Authorized Signature</p>
+                  </div>
+               </div>
+               <div className="mt-12 text-center">
+                  <p className="text-[9px] font-bold text-gray-300 uppercase tracking-[0.4em]">This statement is for informational purposes only</p>
+               </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4">
+           <button onClick={onClose} className="px-8 py-4 rounded-2xl font-black text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all uppercase tracking-widest active:scale-95">
+             Close
+           </button>
+           <button 
+             onClick={downloadReport} 
+             disabled={isDownloading}
+             className="px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs flex items-center gap-3 shadow-2xl shadow-teal-600/30 active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest"
+           >
+             {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+             {isDownloading ? 'Generating...' : 'Download Statement'}
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
