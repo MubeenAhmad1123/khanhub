@@ -825,9 +825,15 @@ export default function DailyReportPage() {
             </button>
             <button
               onClick={handleDownloadImage}
-              className="flex items-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+              disabled={downloading}
+              className="flex items-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download size={16} /> Export Image
+              {downloading ? (
+                <Loader2 size={16} className="animate-spin text-indigo-600" />
+              ) : (
+                <Download size={16} />
+              )}
+              {downloading ? 'Processing...' : 'Export Image'}
             </button>
           </div>
         </div>
