@@ -3,6 +3,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SPIMS_COURSES } from '@/types/spims';
@@ -43,6 +45,26 @@ export default function SpimsAdminTestsPage() {
     return subscribeAdminTests((r) => setRows(r));
   }, [session]);
 
+  const [allStudents, setAllStudents] = useState<{id: string, name: string, rollNo: string}[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
+
+  useEffect(() => {
+    if (scope === 'student' && !allStudents.length) {
+      getDocs(collection(db, 'spims_students')).then((snap: any) => {
+        setAllStudents(snap.docs.map((d: any) => ({ id: d.id, name: d.data().name, rollNo: d.data().rollNo })));
+      });
+    }
+  }, [scope, allStudents.length]);
+
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch.trim()) return [];
+    const q = studentSearch.toLowerCase();
+    return allStudents.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      (s.rollNo && s.rollNo.toLowerCase().includes(q))
+    ).slice(0, 5);
+  }, [allStudents, studentSearch]);
+
   const canCreate = useMemo(() => {
     if (!title.trim()) return false;
     if (scope === 'all') return true;
@@ -68,6 +90,7 @@ export default function SpimsAdminTestsPage() {
         setTitle('');
         setNote('');
         setStudentId('');
+        setStudentSearch('');
         toast.success(`Test announced to ${result.notifiedCount} students`);
       } else {
         throw new Error(result.error);
@@ -99,7 +122,7 @@ export default function SpimsAdminTestsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-24">
+    <div className="max-w-4xl mx-auto space-y-6 pb-24 text-gray-900">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Tests / Announcements</h1>
@@ -113,7 +136,7 @@ export default function SpimsAdminTestsPage() {
           <div className="sm:col-span-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Title</label>
             <input
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Surprise test on Anatomy (Chapter 3)"
@@ -122,7 +145,7 @@ export default function SpimsAdminTestsPage() {
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Scope</label>
             <select
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
               value={scope}
               onChange={(e) => setScope(e.target.value as SpimsTestScope)}
             >
@@ -137,7 +160,7 @@ export default function SpimsAdminTestsPage() {
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Course</label>
                 <select
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
                   value={course}
                   onChange={(e) => setCourse(e.target.value)}
                 >
@@ -150,32 +173,61 @@ export default function SpimsAdminTestsPage() {
               </div>
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Session</label>
-                <input
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+                <select
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
                   value={cohortSession}
                   onChange={(e) => setCohortSession(e.target.value)}
-                  placeholder="e.g. 24-26"
-                />
+                >
+                  <option value="">Select Session</option>
+                  <option value="23-25">2023-2025</option>
+                  <option value="24-26">2024-2026</option>
+                  <option value="25-27">2025-2027</option>
+                </select>
               </div>
             </>
           ) : null}
 
           {scope === 'student' ? (
-            <div className="sm:col-span-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Student doc ID</label>
-              <input
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                placeholder="Paste spims_students document id"
-              />
+            <div className="sm:col-span-2 space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Search Student</label>
+              <div className="relative">
+                <input
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  placeholder="Type student name or roll no..."
+                />
+                {filteredStudents.length > 0 && !studentId && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                    {filteredStudents.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          setStudentId(s.id);
+                          setStudentSearch(`${s.name} (${s.rollNo || 'No Roll'})`);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                      >
+                        <p className="font-bold text-gray-900">{s.name}</p>
+                        <p className="text-[10px] text-gray-500 uppercase">{s.rollNo || 'No Roll No'}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {studentId && (
+                <div className="flex items-center justify-between bg-teal-50 px-4 py-2 rounded-xl border border-teal-100">
+                   <p className="text-xs font-bold text-teal-700">Selected student ID: {studentId}</p>
+                   <button onClick={() => { setStudentId(''); setStudentSearch(''); }} className="text-[10px] font-black text-teal-600 hover:underline uppercase">Clear</button>
+                </div>
+              )}
             </div>
           ) : null}
 
           <div className="sm:col-span-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Note (optional)</label>
             <textarea
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold min-h-[90px]"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900 min-h-[90px]"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Extra instructions…"

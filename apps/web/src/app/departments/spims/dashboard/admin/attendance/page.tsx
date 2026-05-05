@@ -115,7 +115,7 @@ export default function SpimsAdminAttendancePage() {
             <input
               type="text"
               placeholder="DD MM YYYY"
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
               value={formatDateDMY(date)}
               onChange={(e) => setDate(e.target.value)}
               onBlur={(e) => {
@@ -127,7 +127,7 @@ export default function SpimsAdminAttendancePage() {
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Course</label>
             <select
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
               value={course}
               onChange={(e) => setCourse(e.target.value)}
             >
@@ -140,16 +140,20 @@ export default function SpimsAdminAttendancePage() {
           </div>
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Session</label>
-            <input
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold"
+            <select
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
               value={cohortSession}
               onChange={(e) => setCohortSession(e.target.value)}
-              placeholder="e.g. 24-26"
-            />
+            >
+              <option value="">Select Session</option>
+              <option value="23-25">2023-2025</option>
+              <option value="24-26">2024-2026</option>
+              <option value="25-27">2025-2027</option>
+            </select>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3 pt-2">
           <button
             type="button"
             disabled={!canLoad || busy}
@@ -158,16 +162,47 @@ export default function SpimsAdminAttendancePage() {
           >
             {busy ? 'Loading…' : 'Load students'}
           </button>
-          <button
-            type="button"
-            disabled={!students.length || busy}
-            onClick={save}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-black hover:bg-teal-700 disabled:opacity-50"
-          >
-            <Save size={16} /> {busy ? 'Saving…' : 'Save attendance'}
-          </button>
-          <div className="ml-auto text-sm font-black text-gray-700">
-            Present: {presentCount} / {students.length}
+          
+          {students.length > 0 && (
+            <>
+              <div className="h-8 w-px bg-gray-200 mx-2" />
+              <button
+                type="button"
+                onClick={() => {
+                  const m: any = {};
+                  students.forEach(s => m[s.id] = 'present');
+                  setMarked(m);
+                }}
+                className="px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100"
+              >
+                All Present
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const m: any = {};
+                  students.forEach(s => m[s.id] = 'absent');
+                  setMarked(m);
+                }}
+                className="px-4 py-2.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100"
+              >
+                All Absent
+              </button>
+            </>
+          )}
+
+          <div className="ml-auto flex items-center gap-4">
+             <div className="text-sm font-black text-gray-700">
+                Present: <span className="text-emerald-600">{presentCount}</span> / {students.length}
+             </div>
+             <button
+                type="button"
+                disabled={!students.length || busy}
+                onClick={save}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-2xl text-sm font-black hover:bg-teal-700 shadow-lg shadow-teal-500/20 transition-all hover:-translate-y-0.5 disabled:opacity-50"
+             >
+                <Save size={16} /> {busy ? 'Saving…' : 'Save attendance'}
+             </button>
           </div>
         </div>
       </div>

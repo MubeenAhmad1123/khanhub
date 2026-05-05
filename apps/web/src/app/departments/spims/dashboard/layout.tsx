@@ -196,14 +196,14 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-white/50 dark:bg-black/50 backdrop-blur-xl border-r border-gray-200/50 dark:border-white/5">
+      <div className="flex flex-col h-full bg-white border-r border-gray-200">
         {/* Header */}
         <div className="p-8">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
             className="flex items-center gap-2 text-gray-400 hover:text-teal-600 text-[10px] font-bold mb-8 transition-all group uppercase tracking-widest"
           >
-            <div className="w-6 h-6 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-teal-500/50 transition-colors">
+            <div className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-teal-500/50 transition-colors">
               <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
             </div>
             {viewMode === 'hq' ? 'Return to Nexus' : 'Main Hub'}
@@ -216,7 +216,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
               {viewMode === 'hq' ? <Shield size={24} /> : <GraduationCap size={24} />}
             </div>
             <div>
-              <p className="font-black text-lg leading-tight tracking-tight dark:text-white">
+              <p className="font-black text-lg leading-tight tracking-tight text-gray-900">
                 {viewMode === 'hq' ? 'HQ Admin' : 'SPIMS'}
               </p>
               <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
@@ -230,17 +230,17 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
             <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all group"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <ExternalLink size={14} className="text-teal-500 group-hover:rotate-12 transition-transform" />
-                  <span className="text-[11px] font-black uppercase tracking-tight dark:text-gray-200">Switch Grid</span>
+                  <span className="text-[11px] font-black uppercase tracking-tight text-gray-700">Switch Grid</span>
                 </div>
                 <ChevronLeft size={14} className={`text-gray-400 transition-transform duration-300 ${portalOpen ? '-rotate-90' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-3xl border border-gray-200 dark:border-white/10 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-2xl shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-3xl border border-gray-200 bg-white/95 backdrop-blur-2xl shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-300 overflow-hidden">
                   <div className="space-y-1.5">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
@@ -250,11 +250,11 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
                         className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
                           pathname.includes(key)
                             ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
-                            : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'
+                            : 'hover:bg-gray-100 text-gray-600'
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 group-hover:bg-teal-500/10'
+                          pathname.includes(key) ? 'bg-white/20' : 'bg-gray-100 group-hover:bg-teal-500/10'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>
@@ -269,11 +269,11 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
 
           {/* Nav Switcher */}
           {isHqAdmin && (
-            <div className="flex p-1.5 bg-gray-100/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/5 mb-8">
+            <div className="flex p-1.5 bg-gray-100/50 rounded-2xl border border-gray-200 mb-8">
               <button
                 onClick={() => setViewMode('dept')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-white dark:bg-white/10 shadow-sm text-teal-600 dark:text-teal-400' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'dept' ? 'bg-white shadow-sm text-teal-600' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 LOCAL
@@ -281,7 +281,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
               <button
                 onClick={() => setViewMode('hq')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-white dark:bg-white/10 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'hq' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 CORE
@@ -301,8 +301,8 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
                   isActive 
-                    ? 'bg-gradient-to-r from-teal-500/10 to-transparent text-teal-600 dark:text-teal-400' 
-                    : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/50 dark:hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-teal-500/10 to-transparent text-teal-600' 
+                    : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50/50'
                 }`}
               >
                 {isActive && (
@@ -323,11 +323,11 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
         {/* User & Bottom */}
         <div className="p-8 space-y-6">
           <div className="flex items-center gap-4 px-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-white dark:to-gray-300 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-xl">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white font-black text-sm shadow-xl">
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+              <p className="text-xs font-black truncate text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
               <div className="flex items-center gap-2 mt-1">
                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                  <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{user?.customId}</p>
@@ -337,7 +337,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
 
           <button 
             onClick={handleSignOut} 
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-[11px] font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 transition-all group"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 text-[11px] font-black text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all group"
           >
             <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
             DISCONNECT
@@ -348,7 +348,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
   };
 
   return (
-    <div className={`min-h-screen flex bg-[#FDFDFD] dark:bg-[#050505] text-black dark:text-white transition-colors duration-500 font-sans`}>
+    <div className={`min-h-screen flex bg-[#FCFAF2] text-gray-900 transition-colors duration-500 font-sans`}>
       {/* Sidebar Desktop */}
       <aside className={`hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30`}>
         <SidebarContent />
@@ -357,17 +357,17 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
       {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 lg:hidden animate-in fade-in duration-500" 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-500" 
           onClick={() => setSidebarOpen(false)} 
         />
       )}
 
       <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
-      } bg-white dark:bg-[#0A0A0A] shadow-2xl`}>
+      } bg-white shadow-2xl`}>
         <button 
           onClick={() => setSidebarOpen(false)} 
-          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white z-50 hover:rotate-90 transition-all"
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black z-50 hover:rotate-90 transition-all"
         >
           <X size={18} />
         </button>
@@ -381,15 +381,15 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
         <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
 
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 py-4 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center justify-between">
           <button 
             onClick={() => setSidebarOpen(true)} 
-            className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white"
+            className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center text-black"
           >
             <Menu size={20} />
           </button>
           <div className="flex flex-col items-center">
-            <span className="font-black text-xs uppercase tracking-[0.2em] dark:text-white">SPIMS Grid</span>
+            <span className="font-black text-xs uppercase tracking-[0.2em] text-gray-900">SPIMS Grid</span>
             <span className="text-[8px] font-bold text-teal-500 uppercase tracking-widest mt-0.5">Academic Network</span>
           </div>
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-teal-500/20">
@@ -398,7 +398,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden lg:flex sticky top-0 z-20 bg-[#FDFDFD]/80 dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-12 py-6 items-center justify-between">
+        <header className="hidden lg:flex sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-12 py-6 items-center justify-between">
           <div className="flex flex-col">
             <h2 className="text-xs font-black uppercase tracking-[0.4em] text-gray-400">Khan Hub Network</h2>
             <p className="text-[10px] font-bold text-teal-500 uppercase tracking-widest mt-1">SPIMS Department Portal</p>
@@ -407,16 +407,16 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
           <div className="flex items-center gap-8">
              {user?.uid && <StaffNotifications uid={user.uid} dept="spims" />}
              
-             <div className="h-8 w-px bg-gray-200 dark:bg-white/10" />
+             <div className="h-8 w-px bg-gray-200" />
 
              <div className="flex items-center gap-4 pl-2">
                 <div className="flex flex-col items-end">
-                   <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+                   <p className="text-xs font-black text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
                    <span className="px-2 py-0.5 rounded-lg bg-teal-500/10 text-teal-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-teal-500/20">
                       {role && ROLE_LABELS[role]}
                    </span>
                 </div>
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center text-gray-900 font-black text-sm shadow-sm">
                    {user?.displayName?.[0]}
                 </div>
              </div>

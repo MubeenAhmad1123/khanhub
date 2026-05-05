@@ -134,7 +134,7 @@ export default function SpimsStudentsListPage() {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#1D9E75]" />
             <input
-              className="w-full rounded-2xl border border-gray-100 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl pl-12 pr-4 py-4 text-sm font-semibold shadow-sm focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75] outline-none transition-all"
+              className="w-full rounded-2xl border border-gray-100 bg-white/80 backdrop-blur-xl pl-12 pr-4 py-4 text-sm font-semibold text-gray-900 shadow-sm focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75] outline-none transition-all"
               placeholder="Search name, roll, CNIC, course…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -145,7 +145,7 @@ export default function SpimsStudentsListPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
            <div className="relative">
               <select
-                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
               >
@@ -157,7 +157,7 @@ export default function SpimsStudentsListPage() {
 
            <div className="relative">
               <select
-                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
                 value={selectedSession}
                 onChange={(e) => setSelectedSession(e.target.value)}
               >
@@ -169,7 +169,7 @@ export default function SpimsStudentsListPage() {
 
            <div className="relative">
               <select
-                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
               >
