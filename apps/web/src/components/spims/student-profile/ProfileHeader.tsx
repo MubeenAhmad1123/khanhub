@@ -69,7 +69,7 @@ export default function ProfileHeader({ student, onGenerateReport }: ProfileHead
             </div>
 
             {/* Actions */}
-            <div className="absolute top-0 right-0 p-5 md:p-10 flex gap-2">
+            <div className="md:absolute md:top-0 md:right-0 p-0 md:p-10 flex gap-2 relative top-0 right-0 justify-center md:justify-end w-full md:w-auto mb-4 md:mb-0">
               <button
                 onClick={(onGenerateReport as any)}
                 className="p-3 bg-white hover:bg-gray-50 text-gray-400 hover:text-[#1D9E75] rounded-2xl border border-gray-100 shadow-sm transition-all active:scale-95 group"

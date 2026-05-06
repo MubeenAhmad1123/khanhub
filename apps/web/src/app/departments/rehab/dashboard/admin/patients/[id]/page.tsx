@@ -1063,7 +1063,7 @@ export default function PatientDetailPage() {
 
   return (
     <div className="w-full overflow-x-hidden pb-20 bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen">
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-1 lg:px-0">
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
         
         {/* Top Link - Back Navigation */}
         <div className="px-4 sm:px-0 mt-4 leading-none">
@@ -1077,7 +1077,7 @@ export default function PatientDetailPage() {
         </div>
         
         {/* Header Profile Summary - Premium Floating Card */}
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-white dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 sticky top-[64px] z-[50] sm:relative sm:top-0 transition-all duration-500 overflow-hidden group">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-white dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 relative transition-all duration-500 overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 dark:bg-teal-500/5 rounded-bl-full transition-colors group-hover:bg-teal-100 dark:group-hover:bg-teal-500/10 -mr-4 -mt-4"></div>
           
           <div className="relative z-10 shrink-0">

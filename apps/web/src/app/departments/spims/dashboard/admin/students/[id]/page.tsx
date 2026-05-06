@@ -162,8 +162,9 @@ export default function AdminStudentProfilePage() {
   ];
 
   return (
-    <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 pb-24">
-      <Link
+    <div className="w-full overflow-x-hidden bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen pb-24">
+      <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8">
+        <Link
         href="/departments/spims/dashboard/admin/students"
         className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#1D9E75] transition-colors"
       >
@@ -338,6 +339,7 @@ export default function AdminStudentProfilePage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
