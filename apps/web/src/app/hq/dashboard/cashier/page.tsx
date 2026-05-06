@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, doc, deleteDoc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
+import { addDoc, collection, doc, deleteDoc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
 import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 import { db, auth } from '@/lib/firebase';
@@ -44,6 +44,55 @@ const BASE_CATEGORIES = [
 
 function slugify(v: string) {
   return v.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+async function reverseEntityTotals(db: any, deptCode: string, txData: any) {
+  const entityId = txData.patientId || txData.studentId || txData.seekerId || txData.donorId || txData.clientId;
+  if (!entityId) return;
+
+  let col = '';
+  if (deptCode === 'rehab') col = 'rehab_patients';
+  else if (deptCode === 'spims') col = 'spims_students';
+  else if (deptCode === 'job-center') col = 'job_center_seekers';
+  else if (deptCode === 'hospital') col = 'hospital_patients';
+  else if (deptCode === 'sukoon-center') col = 'sukoon_clients';
+  else if (deptCode === 'welfare') col = 'welfare_donors';
+  else return;
+
+  try {
+    const ref = doc(db, col, entityId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const amount = Number(txData.amount) || 0;
+    const isIncome = txData.type === 'income' || txData.type === undefined;
+    const diff = isIncome ? -amount : amount;
+
+    const update: Record<string, any> = {
+      totalReceived: increment(diff),
+    };
+
+    if (deptCode === 'spims' && isIncome) {
+      const subtype = txData.spimsFeeSubtype;
+      if (subtype === 'admission') update.admissionPaid = increment(-amount);
+      if (subtype === 'registration') update.registrationPaid = increment(-amount);
+      if (subtype === 'examination') update.examinationPaid = increment(-amount);
+    }
+
+    await updateDoc(ref, update);
+
+    const updatedSnap = await getDoc(ref);
+    const updatedData = updatedSnap.data() as any;
+    const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+    const received = Number(updatedData?.totalReceived) || 0;
+
+    await updateDoc(ref, {
+      remaining: Math.max(0, pkg - received),
+      remainingBalance: Math.max(0, pkg - received),
+    });
+  } catch (err) {
+    console.error('[Cashier] reverseEntityTotals error:', err);
+  }
 }
 
 function getLocalDateString(val: any): string {
@@ -425,6 +474,13 @@ export default function CashierStationPage() {
     try {
       setProcessing(true);
       const dept = DEPARTMENTS.find(d => d.code === tx.departmentCode) || activeDepartment;
+      
+      if (tx.status === 'approved') {
+        await reverseEntityTotals(db, tx.departmentCode || dept.code, tx).catch((err) => {
+          console.error('[Cashier] Failed to reverse entity totals:', err);
+        });
+      }
+
       const { deleteDoc, doc } = await import('firebase/firestore');
       await deleteDoc(doc(db, dept.txCollection, tx.id));
       
@@ -432,7 +488,7 @@ export default function CashierStationPage() {
         await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
       }
 
-      toast.success('Transaction permanently deleted from database');
+      toast.success('Transaction permanently deleted from database ✓');
       fetchHistory();
       if (selectedEntity) fetchEntityHistory(selectedEntity);
     } catch (err) {
@@ -807,15 +863,23 @@ export default function CashierStationPage() {
   async function createCategory() {
     const name = categorySearch.trim();
     if (!name) return;
-    const slug = slugify(name);
-    if (allCategories.some((c) => c.id === slug)) {
+    let slug = slugify(name);
+    if (BASE_CATEGORIES.some((c) => c.id === slug)) {
+      slug = slug + '_custom';
+    }
+    if (customCategories.some((c) => c.id === slug)) {
       setSelectedCategoryId(slug);
       return;
     }
     await addDoc(collection(db, 'hq_cashier_categories'), { name, slug, appliesTo: txnType, isCustom: true, createdBy: session?.uid, createdAt: Timestamp.now() });
-    setCustomCategories((p) => [...p, { id: slug, name, appliesTo: txnType } as any]);
+    
+    const updatedList = [...customCategories, { id: slug, name, appliesTo: txnType }];
+    setCustomCategories(updatedList as any);
+    setCached('hq_cashier_categories_list', updatedList, 600);
+    
     setSelectedCategoryId(slug);
     setCategorySearch('');
+    toast.success('Category created ✓');
   }
 
   async function submitTx(e: React.FormEvent) {
@@ -2044,7 +2108,9 @@ export default function CashierStationPage() {
               </div>
 
               <div className="mt-12 grid grid-cols-2 gap-4">
-                {['pending', 'pending_cashier'].includes(detailModalTx.status) && (
+                {((['pending', 'pending_cashier'].includes(detailModalTx.status)) ||
+                  ((detailModalTx.status === 'approved' || detailModalTx.status === 'rejected') && 
+                   (detailModalTx.cashierId === session?.customId || session?.role === 'superadmin'))) && (
                   <button 
                     onClick={() => {
                       setDetailModalTx(null);
@@ -2128,7 +2194,10 @@ function EntityProfileModal({
   const handleCreateCategory = async (isForEdit: boolean = false) => {
     const name = customCategoryName.trim();
     if (!name) return;
-    const slug = slugify(name);
+    let slug = slugify(name);
+    if (BASE_CATEGORIES.some((c) => c.id === slug)) {
+      slug = slug + '_custom';
+    }
     
     // Check if exists
     const existing = allCategories.find(c => c.id === slug);
@@ -2160,6 +2229,10 @@ function EntityProfileModal({
       const catObj = { id: slug, name, appliesTo: type };
       if (onAddCustomCategory) onAddCustomCategory(catObj);
       
+      // Update cache
+      const cached = getCached<any[]>('hq_cashier_categories_list') || [];
+      setCached('hq_cashier_categories_list', [...cached, catObj], 600);
+
       if (isForEdit) {
         setEditForm({ ...editForm, category: slug, categoryName: name });
       } else {
@@ -2360,8 +2433,8 @@ function EntityProfileModal({
     if (!window.confirm(`Delete this ${tx.status} transaction of Rs ${Number(tx.amount).toLocaleString()}? This cannot be undone.`)) return;
     
     let targetCollection = tx._collection;
+    const deptCode = tx.departmentCode || entity?._deptCode;
     if (!targetCollection) {
-      const deptCode = tx.departmentCode || entity?._deptCode;
       const dept = DEPARTMENTS.find(d => d.code === deptCode);
       if (dept) targetCollection = dept.txCollection;
     }
@@ -2373,7 +2446,18 @@ function EntityProfileModal({
 
     setDeletingId(tx.id);
     try {
+      if (tx.status === 'approved') {
+        await reverseEntityTotals(db, deptCode, tx).catch((err) => {
+          console.error('[Cashier Profile Modal] Failed to reverse entity totals:', err);
+        });
+      }
+
       await deleteDoc(doc(db, targetCollection, tx.id));
+      
+      if (deptCode === 'spims' && tx.feePaymentId) {
+        await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
+      }
+
       setLocalTxns(prev => prev.filter(t => t.id !== tx.id));
       toast.success('Transaction deleted ✓');
       if (onRefetch) onRefetch();
@@ -2745,8 +2829,8 @@ function EntityProfileModal({
                                   </button>
                                 </>
                               ) : (
-                                ['pending', 'pending_cashier'].includes(tx.status) && (
-                                  <>
+                                <div className="flex items-center justify-center gap-2">
+                                  {['pending', 'pending_cashier'].includes(tx.status) && (
                                     <button
                                       onClick={() => {
                                         setEditingId(tx.id);
@@ -2761,18 +2845,18 @@ function EntityProfileModal({
                                     >
                                       <Terminal size={14} />
                                     </button>
-                                    <button
-                                      onClick={() => handleDelete(tx)}
-                                      disabled={deletingId === tx.id}
-                                      className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
-                                    >
-                                      {deletingId === tx.id 
-                                        ? <Loader2 size={14} className="animate-spin" />
-                                        : <Trash2 size={14} />
-                                      }
-                                    </button>
-                                  </>
-                                )
+                                  )}
+                                  <button
+                                    onClick={() => handleDelete(tx)}
+                                    disabled={deletingId === tx.id}
+                                    className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
+                                  >
+                                    {deletingId === tx.id 
+                                      ? <Loader2 size={14} className="animate-spin" />
+                                      : <Trash2 size={14} />
+                                    }
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </td>
@@ -2901,8 +2985,8 @@ function EntityProfileModal({
                             </p>
                           </div>
 
-                          {['pending', 'pending_cashier'].includes(tx.status) && (
-                            <div className="flex gap-2 mt-4 pt-3 border-t border-zinc-50">
+                          <div className="flex gap-2 mt-4 pt-3 border-t border-zinc-50">
+                            {['pending', 'pending_cashier'].includes(tx.status) && (
                               <button
                                 onClick={() => {
                                   setEditingId(tx.id);
@@ -2917,16 +3001,16 @@ function EntityProfileModal({
                               >
                                 <Terminal size={12} /> Edit
                               </button>
-                              <button
-                                onClick={() => handleDelete(tx)}
-                                disabled={deletingId === tx.id}
-                                className="flex-1 bg-rose-50 text-rose-500 h-9 rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2"
-                              >
-                                {deletingId === tx.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                            )}
+                            <button
+                              onClick={() => handleDelete(tx)}
+                              disabled={deletingId === tx.id}
+                              className="flex-1 bg-rose-50 text-rose-500 h-9 rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2"
+                            >
+                              {deletingId === tx.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                              Delete
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>
