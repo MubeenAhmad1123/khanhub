@@ -141,6 +141,11 @@ export default function PatientDetailPage() {
   const [isDischarging, setIsDischarging] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
+  // Profile deletion state
+  const [showDeleteProfileModal, setShowDeleteProfileModal] = useState(false);
+  const [deleteProfileConfirmName, setDeleteProfileConfirmName] = useState('');
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false);
+
   useEffect(() => {
     let sessionData = localStorage.getItem('rehab_session');
     
@@ -710,6 +715,53 @@ export default function PatientDetailPage() {
       setDeactivating(false);
     }
   };
+
+  const handleDeleteProfile = async () => {
+    if (deleteProfileConfirmName.trim() !== patient?.name?.trim()) {
+      toast.error("The typed name does not match the patient's name.");
+      return;
+    }
+
+    try {
+      setIsDeletingProfile(true);
+
+      const deleteFromQuery = async (colName: string, fieldName: string, value: string) => {
+        const q = query(collection(db, colName), where(fieldName, "==", value));
+        const snap = await getDocs(q);
+        const deletes = snap.docs.map(d => deleteDoc(doc(db, colName, d.id)));
+        await Promise.all(deletes);
+      };
+
+      // 1. Delete linked sub-data/transactions across collections
+      await Promise.all([
+        deleteFromQuery('rehab_fees', 'patientId', patientId),
+        deleteFromQuery('rehab_canteen', 'patientId', patientId),
+        deleteFromQuery('rehab_videos', 'patientId', patientId),
+        deleteFromQuery('rehab_visits', 'patientId', patientId),
+        deleteFromQuery('rehab_transactions', 'patientId', patientId),
+        deleteFromQuery('rehab_daily_activities', 'patientId', patientId),
+        deleteFromQuery('rehab_therapy_sessions', 'patientId', patientId),
+        deleteFromQuery('rehab_medication_records', 'patientId', patientId),
+        deleteFromQuery('rehab_weekly_progress', 'patientId', patientId),
+        deleteFromQuery('rehab_attendance', 'patientId', patientId),
+        deleteFromQuery('rehab_users', 'patientId', patientId),
+        deleteFromQuery('rehab_users', 'customId', patientId),
+      ]);
+
+      // 2. Delete the main patient document last
+      await deleteDoc(doc(db, 'rehab_patients', patientId));
+
+      toast.success('Patient profile and all associated records deleted successfully ✓');
+      setShowDeleteProfileModal(false);
+      router.push('/departments/rehab/dashboard/admin/patients');
+    } catch (error) {
+      console.error("Delete profile error", error);
+      toast.error('Failed to delete patient profile completely');
+    } finally {
+      setIsDeletingProfile(false);
+    }
+  };
+
 
   const handleDischarge = () => {
     // Reset modal and open
@@ -1309,20 +1361,35 @@ export default function PatientDetailPage() {
                 </div>
               )}
 
-              <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full">
-                <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
-                <button 
-                  onClick={patient.isActive !== false ? handleDeactivate : handleRejoin} 
-                  disabled={deactivating}
-                  className={`bg-white dark:bg-gray-900 border px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto ${
-                    patient.isActive !== false 
-                      ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' 
-                      : 'border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
-                  }`}
-                >
-                  {deactivating ? 'Processing...' : (patient.isActive !== false ? 'Deactivate Patient' : 'Rejoin Patient')}
-                </button>
+              <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full flex flex-col gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Actions here can be destructive. Please proceed with extreme caution.</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button 
+                    onClick={patient.isActive !== false ? handleDeactivate : handleRejoin} 
+                    disabled={deactivating}
+                    className={`bg-white dark:bg-gray-900 border px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto ${
+                      patient.isActive !== false 
+                        ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' 
+                        : 'border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                    }`}
+                  >
+                    {deactivating ? 'Processing...' : (patient.isActive !== false ? 'Deactivate Patient' : 'Rejoin Patient')}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setDeleteProfileConfirmName('');
+                      setShowDeleteProfileModal(true);
+                    }}
+                    className="bg-red-55 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full sm:w-auto active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Patient Profile
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2243,6 +2310,76 @@ export default function PatientDetailPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Profile Deletion Confirmation Modal */}
+      {showDeleteProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-gray-950 rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-red-600 dark:text-red-400 uppercase tracking-tight flex items-center gap-2">
+                    <Shield className="w-6 h-6" />
+                    Confirm Deletion
+                  </h2>
+                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">This action cannot be undone</p>
+                </div>
+                <button onClick={() => setShowDeleteProfileModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full text-gray-400 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-2xl p-4 text-xs font-bold text-red-700 dark:text-red-400 space-y-2">
+                  <p>Warning: This will permanently cascade delete the patient profile and all linked records across 12 database collections, including:</p>
+                  <ul className="list-disc pl-5 space-y-1 lowercase font-mono">
+                    <li>financial/fee records</li>
+                    <li>canteen records</li>
+                    <li>uploaded files/videos</li>
+                    <li>visits & attendance logs</li>
+                    <li>therapy sessions</li>
+                    <li>medication records</li>
+                    <li>daily sheets & weekly progress logs</li>
+                    <li>user accounts</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-1">
+                    Type <span className="text-red-600 dark:text-red-400 font-black">"{patient?.name}"</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteProfileConfirmName}
+                    onChange={(e) => setDeleteProfileConfirmName(e.target.value)}
+                    placeholder="Enter patient's full name"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-red-500 dark:focus:border-red-500 transition-all text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteProfileModal(false)}
+                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteProfile}
+                    disabled={isDeletingProfile || deleteProfileConfirmName.trim() !== patient?.name?.trim()}
+                    className="flex-[2] bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-95"
+                  >
+                    {isDeletingProfile ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                    Delete Forever
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -4,8 +4,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, GraduationCap, RefreshCw, FileText, Camera, X } from 'lucide-react';
+import { ArrowLeft, Loader2, GraduationCap, RefreshCw, FileText, Camera, X, Shield, Trash2 } from 'lucide-react';
 import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
+import { doc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { toPng } from 'html-to-image';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
@@ -31,6 +33,11 @@ export default function AdminStudentProfilePage() {
   const [loading, setLoading] = useState(true);
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [showReportModal, setShowReportModal] = useState(false);
+
+  // Student deletion state
+  const [showDeleteStudentModal, setShowDeleteStudentModal] = useState(false);
+  const [deleteStudentConfirmName, setDeleteStudentConfirmName] = useState('');
+  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -65,6 +72,48 @@ export default function AdminStudentProfilePage() {
       setLoading(false);
     }
   }, [studentId]);
+
+  const handleDeleteStudent = async () => {
+    if (deleteStudentConfirmName.trim() !== student?.name?.trim()) {
+      toast.error("The typed name does not match the student's name.");
+      return;
+    }
+
+    try {
+      setIsDeletingStudent(true);
+
+      const deleteFromQuery = async (colName: string, fieldName: string, value: string) => {
+        const q = query(collection(db, colName), where(fieldName, "==", value));
+        const snap = await getDocs(q);
+        const deletes = snap.docs.map(d => deleteDoc(doc(db, colName, d.id)));
+        await Promise.all(deletes);
+      };
+
+      // 1. Delete linked sub-data/transactions across collections
+      await Promise.all([
+        deleteFromQuery('spims_fees', 'studentId', studentId),
+        deleteFromQuery('spims_transactions', 'studentId', studentId),
+        deleteFromQuery('spims_student_documents', 'studentId', studentId),
+        deleteFromQuery('spims_student_attendance', 'studentId', studentId),
+        deleteFromQuery('spims_tests', 'studentId', studentId),
+        deleteFromQuery('spims_users', 'studentId', studentId),
+        deleteFromQuery('spims_users', 'customId', studentId),
+      ]);
+
+      // 2. Delete the main student document last
+      await deleteDoc(doc(db, 'spims_students', studentId));
+
+      toast.success('Student profile and all associated records deleted successfully ✓');
+      setShowDeleteStudentModal(false);
+      router.push('/departments/spims/dashboard/admin/students');
+    } catch (error) {
+      console.error("Delete student error", error);
+      toast.error('Failed to delete student profile completely');
+    } finally {
+      setIsDeletingStudent(false);
+    }
+  };
+
 
   useEffect(() => {
     let sessionData = localStorage.getItem('spims_session');
@@ -187,20 +236,108 @@ export default function AdminStudentProfilePage() {
         </div>
 
         <div className="rounded-[2.5rem] border border-gray-100 bg-white p-6 md:p-10 shadow-xl shadow-gray-200/50 min-h-[400px]">
+          {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
+          {tab === 'fees' && <FeeRecordTab student={student} session={session} />}
+          {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
+          {tab === 'documents' && <DocumentsTab studentId={student.id} session={session} />}
+          {tab === 'finance' && <FinanceSummaryTab student={student} />}
+        </div>
 
-        {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
-        {tab === 'fees' && <FeeRecordTab student={student} session={session} />}
-        {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
-        {tab === 'documents' && <DocumentsTab studentId={student.id} session={session} />}
-        {tab === 'finance' && <FinanceSummaryTab student={student} />}
+        {/* Danger Zone */}
+        <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full flex flex-col gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Actions here can be destructive. Please proceed with extreme caution.</p>
+          </div>
+          <div>
+            <button 
+              type="button"
+              onClick={() => {
+                setDeleteStudentConfirmName('');
+                setShowDeleteStudentModal(true);
+              }}
+              className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full sm:w-auto active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Student Profile
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+
       {showReportModal && (
         <ReportModal 
           student={student} 
           allPayments={allPayments} 
           onClose={() => setShowReportModal(false)} 
         />
+      )}
+
+      {/* Premium Student Deletion Confirmation Modal */}
+      {showDeleteStudentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl border border-gray-100">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-red-600 uppercase tracking-tight flex items-center gap-2">
+                    <Shield className="w-6 h-6" />
+                    Confirm Deletion
+                  </h2>
+                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">This action cannot be undone</p>
+                </div>
+                <button onClick={() => setShowDeleteStudentModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-xs font-bold text-red-700 space-y-2">
+                  <p>Warning: This will permanently cascade delete the student profile and all linked records across 7 database collections, including:</p>
+                  <ul className="list-disc pl-5 space-y-1 lowercase font-mono">
+                    <li>fee records & transaction logs</li>
+                    <li>uploaded student documents</li>
+                    <li>attendance records</li>
+                    <li>exam & test scores</li>
+                    <li>associated user account</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+                    Type <span className="text-red-600 font-black">"{student?.name}"</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteStudentConfirmName}
+                    onChange={(e) => setDeleteStudentConfirmName(e.target.value)}
+                    placeholder="Enter student's full name"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-red-500 transition-all text-gray-900"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteStudentModal(false)}
+                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-100 text-gray-400 font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteStudent}
+                    disabled={isDeletingStudent || deleteStudentConfirmName.trim() !== student?.name?.trim()}
+                    className="flex-[2] bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 active:scale-95"
+                  >
+                    {isDeletingStudent ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                    Delete Forever
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
