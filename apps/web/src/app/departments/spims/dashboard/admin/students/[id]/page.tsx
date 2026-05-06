@@ -217,14 +217,13 @@ export default function AdminStudentProfilePage() {
       )}
 
       <div className="space-y-6 w-full">
-        <div className="overflow-x-auto pb-2 scrollbar-none w-full">
-          <div className="flex sm:flex-wrap gap-2 md:gap-3 p-1.5 bg-gray-100/50 rounded-[1.5rem] w-fit">
+          <div className="flex flex-wrap gap-2 md:gap-3 p-1.5 bg-gray-100/50 rounded-[1.5rem] w-full sm:w-fit">
             {tabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${tab === t.id
+                className={`px-4 sm:px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-1 sm:flex-none text-center ${tab === t.id
                     ? 'bg-white text-[#1D9E75] shadow-lg shadow-gray-200/50 transform -translate-y-0.5'
                     : 'text-gray-400 hover:text-gray-600'
                   }`}
