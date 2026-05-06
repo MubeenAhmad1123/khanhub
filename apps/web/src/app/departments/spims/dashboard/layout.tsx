@@ -348,7 +348,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
   };
 
   return (
-    <div className={`min-h-screen flex bg-[#FCFAF2] text-gray-900 transition-colors duration-500 font-sans`}>
+    <div className={`min-h-screen flex bg-[#FCFAF2] text-black transition-colors duration-500 font-sans`}>
       {/* Sidebar Desktop */}
       <aside className={`hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30`}>
         <SidebarContent />

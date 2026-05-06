@@ -170,6 +170,56 @@ export default function PatientDetailPage() {
     setSession(parsed);
   }, [router]);
 
+  const isScrollingRef = useRef(false);
+
+  const scrollToSection = (id: string) => {
+    isScrollingRef.current = true;
+    setActiveTab(id as any);
+    const element = document.getElementById(`section-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 800);
+  };
+
+  useEffect(() => {
+    if (loading) return;
+
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      if (isScrollingRef.current) return;
+
+      let maxRatio = 0;
+      let visibleSectionId: any = null;
+
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          visibleSectionId = entry.target.id.replace('section-', '');
+        }
+      });
+
+      if (visibleSectionId && TABS.some(t => t.id === visibleSectionId)) {
+        setActiveTab(visibleSectionId);
+      }
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: null,
+      rootMargin: '-15% 0px -65% 0px',
+      threshold: [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    });
+
+    TABS.forEach((t) => {
+      const el = document.getElementById(`section-${t.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loading]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -1046,13 +1096,13 @@ export default function PatientDetailPage() {
           </div>
         </div>
 
-        {/* Tabs Navigation - Premium Glass Header */}
-        <div className="w-full px-2 sm:px-0 mt-6 mb-4">
+        {/* Tabs Navigation - Premium Sticky Glass Header */}
+        <div className="w-full px-2 sm:px-0 mt-6 mb-4 sticky top-0 z-40 bg-slate-50/80 dark:bg-gray-950/80 backdrop-blur-md py-2">
           <div className="flex overflow-x-auto no-scrollbar gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5">
             {TABS.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
+                onClick={() => scrollToSection(t.id)}
                 className={`px-5 py-3 text-xs sm:text-[11px] whitespace-nowrap font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl min-w-fit flex-1 ${
                   activeTab === t.id 
                     ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/30 active:scale-95' 
@@ -1066,11 +1116,11 @@ export default function PatientDetailPage() {
           </div>
         </div>
 
-        {/* Tab Content Areas */}
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 min-h-[400px] transition-colors duration-300">
+        {/* Tab Content Areas Stacked */}
+        <div className="w-full flex flex-col gap-10">
           
           {/* TAB: PROFILE */}
-          {activeTab === 'profile' && (
+          <div id="section-profile" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="space-y-8 w-full">
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
@@ -1275,35 +1325,60 @@ export default function PatientDetailPage() {
                 </button>
               </div>
             </div>
-          )}
+          </div>
 
           {/* TAB: ADMISSION */}
-          {activeTab === 'admission' && (
+          <div id="section-admission" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <FileText className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
+            </div>
             <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({...patient, ...updated})} />
-          )}
+          </div>
 
           {/* TAB: DAILY SHEET */}
-          {activeTab === 'daily' && (
+          <div id="section-daily" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <ClipboardList className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Daily Sheets Log</h2>
+            </div>
             <DailySheetTab patientId={patientId} session={session} />
-          )}
+          </div>
 
           {/* TAB: PROGRESS */}
-          {activeTab === 'progress' && (
+          <div id="section-progress" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <TrendingUp className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Progress Chart & Details</h2>
+            </div>
             <ProgressTab patientId={patientId} session={session} />
-          )}
+          </div>
 
           {/* TAB: THERAPY */}
-          {activeTab === 'therapy' && (
+          <div id="section-therapy" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <Activity className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Therapy Sessions</h2>
+            </div>
             <TherapyTab patientId={patientId} session={session} />
-          )}
+          </div>
 
           {/* TAB: MEDICATION */}
-          {activeTab === 'meds' && (
+          <div id="section-meds" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <Pill className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Medications Schedule</h2>
+            </div>
             <MedicationTab patientId={patientId} session={session} />
-          )}
+          </div>
 
           {/* TAB: FEES */}
-          {activeTab === 'fees' && (
+          <div id="section-fees" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <DollarSign className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Financials & Payments History</h2>
+            </div>
+
             <div className="space-y-6">
               {/* Premium Journey Section */}
               <FinanceHistory 
@@ -1435,10 +1510,15 @@ export default function PatientDetailPage() {
                 )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* TAB: CANTEEN */}
-          {activeTab === 'canteen' && (
+          <div id="section-canteen" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
+              <ShoppingCart className="w-6 h-6 text-teal-600" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Canteen Wallet & Transactions</h2>
+            </div>
+
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
@@ -1540,24 +1620,24 @@ export default function PatientDetailPage() {
                 </div>
               )}
             </div>
-          )}
+          </div>
 
           {/* TAB: VIDEOS */}
-          {activeTab === 'videos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-white/10 pb-4">
-                <div className="flex items-center gap-3">
-                  <Video className="w-6 h-6 text-teal-600" />
-                  <h2 className="text-xl font-bold text-gray-800">Files & Progress</h2>
-                </div>
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" /> Upload
-                </button>
+          <div id="section-videos" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <Video className="w-6 h-6 text-teal-600" />
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Files & Media Progress</h2>
               </div>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" /> Upload
+              </button>
+            </div>
 
+            <div className="space-y-6">
               {videos.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
                   <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -1571,7 +1651,7 @@ export default function PatientDetailPage() {
                     const isPdf = vid.fileType === 'application/pdf';
 
                     return (
-                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative">
+                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 group hover:border-teal-300 transition-colors shadow-sm relative">
                         {session?.role === 'superadmin' && (
                           <button
                             onClick={() => handleDeleteVideo(vid.id)}
@@ -1597,7 +1677,7 @@ export default function PatientDetailPage() {
                           </a>
                         </div>
                         <div className="p-4">
-                          <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
+                          <h4 className="font-bold text-gray-900 dark:text-white truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
                           <div className="flex items-center justify-between mt-2">
                              <p className="text-xs text-gray-500">
                               {formatDateDMY(vid.createdAt)}
@@ -1616,37 +1696,35 @@ export default function PatientDetailPage() {
                 </div>
               )}
             </div>
-          )}
+          </div>
 
           {/* TAB: VISITS */}
-          {activeTab === 'visits' && (
-            <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
-                    <Users size={20} />
-                  </div>
-                  <h2 className="text-xl font-black text-gray-900">Family Visit Log</h2>
-                </div>
-                <button
-                  onClick={() => setShowAddVisitModal(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 w-full sm:w-auto"
-                >
-                  <Plus size={16} /> Log New Visit
-                </button>
+          <div id="section-visits" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 dark:border-white/10 pb-4 gap-3">
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6 text-teal-600" />
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Family Visit Log</h2>
               </div>
+              <button
+                onClick={() => setShowAddVisitModal(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 w-full sm:w-auto"
+              >
+                <Plus size={16} /> Log New Visit
+              </button>
+            </div>
 
+            <div className="space-y-6">
               {visits.length === 0 ? (
-                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                <div className="text-center py-16 border-2 border-dashed border-gray-100 dark:border-white/10 rounded-[2rem] bg-gray-50/30">
                   <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                   <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No visits recorded yet</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {visits.map(visit => (
-                    <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
+                    <div key={visit.id} className="bg-white dark:bg-gray-850 border border-gray-100 dark:border-white/5 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 dark:hover:border-teal-900 transition-all group relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4">
-                         <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
+                         <div className="bg-gray-900 dark:bg-gray-800 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200/10 flex flex-col items-center leading-tight">
                             <span>{formatDateDMY(visit.date?.toDate?.() ? visit.date.toDate() : visit.date)}</span>
                          </div>
                       </div>
@@ -1654,8 +1732,8 @@ export default function PatientDetailPage() {
                       <div className="flex flex-col gap-4">
                         <div className="space-y-1 pr-16">
                           <div className="flex items-center gap-2">
-                             <h4 className="font-black text-gray-900 text-xl tracking-tight">{visit.visitorName}</h4>
-                             <span className="text-[10px] font-black bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
+                             <h4 className="font-black text-gray-900 dark:text-white text-xl tracking-tight">{visit.visitorName}</h4>
+                             <span className="text-[10px] font-black bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
                           </div>
                           <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
                             <span className="flex items-center gap-1.5"><Phone size={14} className="text-teal-500" /> {visit.phone}</span>
@@ -1664,23 +1742,23 @@ export default function PatientDetailPage() {
                         </div>
 
                         {visit.notes && (
-                          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
-                            <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Observation Notes</div>
+                          <div className="bg-gray-50/80 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100/50 dark:border-white/5 italic text-sm text-gray-600 dark:text-gray-300 relative">
+                            <div className="absolute -top-2 left-6 bg-white dark:bg-gray-900 px-2 text-[10px] font-black text-gray-300 dark:text-gray-500 uppercase tracking-widest">Observation Notes</div>
                             "{visit.notes}"
                           </div>
                         )}
                         
-                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div className="pt-4 border-t border-gray-50 dark:border-white/5 flex items-center justify-between">
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Admin: {visit.loggedBy}</p>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => openEditVisit(visit)}
-                                className="text-[10px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-2 rounded-xl transition"
+                                className="text-[10px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950 px-3 py-2 rounded-xl transition"
                               >
                                 Edit
                               </button>
-                              <User size={14} className="text-gray-200" />
+                              <User size={14} className="text-gray-200 dark:text-gray-700" />
                             </div>
                         </div>
                       </div>
@@ -1689,7 +1767,7 @@ export default function PatientDetailPage() {
                 </div>
               )}
             </div>
-          )}
+          </div>
 
         </div>
       </div>
