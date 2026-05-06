@@ -1077,7 +1077,7 @@ export default function PatientDetailPage() {
         </div>
         
         {/* Header Profile Summary - Premium Floating Card */}
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-white dark:border-white/5 w-full p-5 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 sticky top-[64px] z-[50] sm:relative sm:top-0 transition-all duration-500 overflow-hidden group">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-white dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 sticky top-[64px] z-[50] sm:relative sm:top-0 transition-all duration-500 overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 dark:bg-teal-500/5 rounded-bl-full transition-colors group-hover:bg-teal-100 dark:group-hover:bg-teal-500/10 -mr-4 -mt-4"></div>
           
           <div className="relative z-10 shrink-0">
@@ -1099,7 +1099,7 @@ export default function PatientDetailPage() {
           <div className="relative z-10 flex-1 text-center sm:text-left min-w-0">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate leading-tight">
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate leading-tight">
                   {patient.name}
                 </h1>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -1172,7 +1172,7 @@ export default function PatientDetailPage() {
         <div className="w-full flex flex-col gap-10">
           
           {/* TAB: PROFILE */}
-          <div id="section-profile" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-profile" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="space-y-8 w-full">
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
@@ -1308,7 +1308,7 @@ export default function PatientDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
                   <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-800/50 w-full p-6 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2 shadow-sm">
                     <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Total Stay Duration</p>
-                    <p className="text-4xl font-black text-teal-700 dark:text-teal-300">
+                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-teal-700 dark:text-teal-300">
                       {patient.daysAdmitted || 0} Days
                     </p>
                     <p className="text-xs font-bold text-teal-500 dark:text-teal-400/80 mt-1 italic">
@@ -1395,7 +1395,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: ADMISSION */}
-          <div id="section-admission" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-admission" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <FileText className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
@@ -1404,7 +1404,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: DAILY SHEET */}
-          <div id="section-daily" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-daily" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <ClipboardList className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Daily Sheets Log</h2>
@@ -1413,7 +1413,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: PROGRESS */}
-          <div id="section-progress" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-progress" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <TrendingUp className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Progress Chart & Details</h2>
@@ -1422,7 +1422,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: THERAPY */}
-          <div id="section-therapy" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-therapy" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <Activity className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Therapy Sessions</h2>
@@ -1431,7 +1431,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: MEDICATION */}
-          <div id="section-meds" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-meds" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <Pill className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Medications Schedule</h2>
@@ -1440,7 +1440,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: FEES */}
-          <div id="section-fees" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-fees" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <DollarSign className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Financials & Payments History</h2>
@@ -1494,7 +1494,7 @@ export default function PatientDetailPage() {
               />
 
               {/* Detailed Transaction Log */}
-              <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 shadow-sm border border-gray-100 dark:border-white/10">
+              <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-100 dark:border-white/10">
                 <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-white/10 pb-4">
                   <div>
                     <h3 className="text-xl font-black text-[#1a3a5c] dark:text-blue-400 tracking-tight">Payment Transaction Log</h3>
@@ -1521,7 +1521,7 @@ export default function PatientDetailPage() {
                     <p className="text-gray-400 dark:text-gray-500 font-bold uppercase text-xs tracking-widest">No transactions found</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto no-scrollbar">
+                  <div className="overflow-x-auto w-full no-scrollbar">
                     <table className="w-full">
                       <thead>
                         <tr className="text-left text-gray-500 dark:text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/10">
@@ -1580,7 +1580,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* TAB: CANTEEN */}
-          <div id="section-canteen" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-5 sm:p-8 flex flex-col gap-6 transition-colors duration-300">
+          <div id="section-canteen" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <ShoppingCart className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Canteen Wallet & Transactions</h2>
@@ -1616,7 +1616,7 @@ export default function PatientDetailPage() {
               </div>
 
               {!canteenRecord ? (
-                <div className="bg-gray-50 dark:bg-gray-800/50 border-2 border-dashed border-gray-200 dark:border-white/10 p-12 rounded-3xl text-center">
+                <div className="bg-gray-50 dark:bg-gray-800/50 border-2 border-dashed border-gray-200 dark:border-white/10 p-6 sm:p-8 lg:p-12 rounded-3xl text-center">
                   <div className="w-16 h-16 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                     <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                   </div>
@@ -1628,9 +1628,9 @@ export default function PatientDetailPage() {
               ) : (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   {/* Balance Card */}
-                  <div className="text-center p-8 bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/30 rounded-[2rem] border border-teal-200/50 dark:border-teal-800/50 shadow-sm">
+                  <div className="text-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/30 rounded-[2rem] border border-teal-200/50 dark:border-teal-800/50 shadow-sm">
                     <p className="text-[10px] font-black text-teal-500 dark:text-teal-400 uppercase tracking-widest mb-1">Available Balance</p>
-                    <p className={`text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700 dark:text-teal-300' : 'text-red-600 dark:text-red-400'}`}>
+                    <p className={`text-2xl sm:text-4xl lg:text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700 dark:text-teal-300' : 'text-red-600 dark:text-red-400'}`}>
                       PKR {Number(canteenRecord.balance).toLocaleString('en-PK')}
                     </p>
                     <div className="flex justify-center gap-8 mt-6">
@@ -1711,7 +1711,7 @@ export default function PatientDetailPage() {
                   <p className="text-gray-500">No files uploaded yet</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {videos.map(vid => {
                     const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
                     const isImage = vid.fileType?.startsWith('image/');
@@ -2470,7 +2470,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             </div>
             
             {/* Patient Details Section */}
-            <div className="grid grid-cols-2 gap-12 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-12 mb-12">
                <div className="space-y-6">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Basic Information</h3>
                   <div className="space-y-4">
@@ -2521,7 +2521,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             </div>
             
             {/* Financial Summary Box */}
-            <div className="bg-gray-50 rounded-3xl p-8 mb-12 border border-gray-100 grid grid-cols-3 gap-8">
+            <div className="bg-gray-50 rounded-3xl p-8 mb-12 border border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
                <div className="relative">
                   <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Package</label>
                   <div className="flex items-baseline gap-1">
@@ -2567,7 +2567,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-8 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-12">
                <div className="p-8 bg-teal-50/50 rounded-3xl border-2 border-teal-100 flex flex-col justify-center">
                   <label className="text-[10px] font-black uppercase text-teal-600 block mb-1 tracking-widest">Received to Date</label>
                   <p className="text-3xl font-black text-teal-900 tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
@@ -2584,35 +2584,37 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Payment Transaction Log</h3>
                   <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
                </div>
-               <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                     <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
-                        <th className="py-4 px-2">Date</th>
-                        <th className="py-4 px-2">Description / Note</th>
-                        <th className="py-4 px-2 text-right">Amount Received</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                     {reportData.transactions.map((p, idx) => (
-                        <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
-                           <td className="py-4 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
-                           <td className="py-4 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
-                           <td className="py-4 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+               <div className="overflow-x-auto w-full no-scrollbar">
+                  <table className="w-full text-left text-sm border-collapse">
+                     <thead>
+                        <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
+                           <th className="py-4 px-2">Date</th>
+                           <th className="py-4 px-2">Description / Note</th>
+                           <th className="py-4 px-2 text-right">Amount Received</th>
                         </tr>
-                     ))}
-                     {reportData.transactions.length === 0 && (
-                        <tr>
-                           <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                     </thead>
+                     <tbody className="divide-y divide-gray-50">
+                        {reportData.transactions.map((p, idx) => (
+                           <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
+                              <td className="py-4 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
+                              <td className="py-4 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
+                              <td className="py-4 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+                           </tr>
+                        ))}
+                        {reportData.transactions.length === 0 && (
+                           <tr>
+                              <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                           </tr>
+                        )}
+                     </tbody>
+                     <tfoot>
+                        <tr className="border-t-4 border-gray-900 font-black text-gray-900">
+                           <td colSpan={2} className="py-6 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
+                           <td className="py-6 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
                         </tr>
-                     )}
-                  </tbody>
-                  <tfoot>
-                     <tr className="border-t-4 border-gray-900 font-black text-gray-900">
-                        <td colSpan={2} className="py-6 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
-                        <td className="py-6 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
-                     </tr>
-                  </tfoot>
-               </table>
+                     </tfoot>
+                  </table>
+               </div>
             </div>
             
             {/* Signature & Footer */}

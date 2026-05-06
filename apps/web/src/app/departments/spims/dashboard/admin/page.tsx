@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
           <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white">
             {getGreeting()}, {session?.displayName?.split(' ')?.[0] || session?.name?.split(' ')?.[0] || 'Admin'} 👋
           </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
+          <p className="text-sm text-black dark:text-gray-300 font-bold mt-1">
             {formatDateDMY(new Date())}
           </p>
         </div>
@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white">{totalStudents}</div>
-            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Total Student</div>
+            <div className="text-[9px] md:text-sm text-black dark:text-gray-300 font-black uppercase tracking-widest mt-1">Total Student</div>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-xl md:text-4xl font-black text-gray-900 dark:text-white">Student Focus</div>
-            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Management Mode</div>
+            <div className="text-[9px] md:text-sm text-black dark:text-gray-300 font-black uppercase tracking-widest mt-1">Management Mode</div>
           </div>
         </div>
 
@@ -139,7 +139,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-xl md:text-4xl font-black text-gray-900 dark:text-white">Real-time</div>
-            <div className="text-[9px] md:text-sm text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mt-1">Data Insights</div>
+            <div className="text-[9px] md:text-sm text-black dark:text-gray-300 font-black uppercase tracking-widest mt-1">Data Insights</div>
           </div>
         </div>
       </div>
@@ -170,12 +170,12 @@ export default function AdminDashboardPage() {
                       className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group active:bg-gray-100 dark:active:bg-white/10"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 font-black text-sm group-hover:bg-teal-50 dark:group-hover:bg-teal-500/20 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-black dark:text-white font-black text-sm group-hover:bg-teal-50 dark:group-hover:bg-teal-500/20 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors flex-shrink-0">
                           {student.name?.[0]?.toUpperCase()}
                         </div>
                         <div>
                           <p className="font-bold text-gray-900 dark:text-white text-sm">{student.name}</p>
-                          <p className="text-[9px] font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest">{student.rollNo || student.id}</p>
+                          <p className="text-[9px] font-mono text-black dark:text-gray-300 font-bold uppercase tracking-widest">{student.rollNo || student.id}</p>
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />

@@ -46,13 +46,13 @@ export default function AdminStudentProfilePage() {
         getUnifiedStudent(studentId),
         fetchStudentFees(studentId)
       ]);
-      
+
       if (s) {
         // Calculate Billable Months (same as Rehab)
         const admission = toDate(s.admissionDate);
         const now = new Date();
         const billableMonths = (now.getFullYear() - admission.getFullYear()) * 12 + (now.getMonth() - admission.getMonth()) + 1;
-        
+
         const monthlyFee = Number(s.monthlyFee || 0);
         const dueTillDate = billableMonths * monthlyFee;
         const totalReceived = fees.filter(f => f.status === 'approved').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
@@ -117,7 +117,7 @@ export default function AdminStudentProfilePage() {
 
   useEffect(() => {
     let sessionData = localStorage.getItem('spims_session');
-    
+
     if (!sessionData) {
       const hqRaw = localStorage.getItem('hq_session');
       if (hqRaw) {
@@ -170,8 +170,8 @@ export default function AdminStudentProfilePage() {
         <ArrowLeft size={14} strokeWidth={3} /> Students Registry
       </Link>
 
-      <ProfileHeader 
-        student={student} 
+      <ProfileHeader
+        student={student}
         onGenerateReport={() => setShowReportModal(true)}
       />
 
@@ -223,11 +223,10 @@ export default function AdminStudentProfilePage() {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
-                  tab === t.id 
-                    ? 'bg-white text-[#1D9E75] shadow-lg shadow-gray-200/50 transform -translate-y-0.5' 
+                className={`px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${tab === t.id
+                    ? 'bg-white text-[#1D9E75] shadow-lg shadow-gray-200/50 transform -translate-y-0.5'
                     : 'text-gray-400 hover:text-gray-600'
-                }`}
+                  }`}
               >
                 {t.label}
               </button>
@@ -235,7 +234,7 @@ export default function AdminStudentProfilePage() {
           </div>
         </div>
 
-        <div className="rounded-[2.5rem] border border-gray-100 bg-white p-6 md:p-10 shadow-xl shadow-gray-200/50 min-h-[400px]">
+        <div className="rounded-[2.5rem] border border-gray-100 bg-white p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 min-h-[400px]">
           {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
           {tab === 'fees' && <FeeRecordTab student={student} session={session} />}
           {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
@@ -250,7 +249,7 @@ export default function AdminStudentProfilePage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">Actions here can be destructive. Please proceed with extreme caution.</p>
           </div>
           <div>
-            <button 
+            <button
               type="button"
               onClick={() => {
                 setDeleteStudentConfirmName('');
@@ -266,10 +265,10 @@ export default function AdminStudentProfilePage() {
       </div>
 
       {showReportModal && (
-        <ReportModal 
-          student={student} 
-          allPayments={allPayments} 
-          onClose={() => setShowReportModal(false)} 
+        <ReportModal
+          student={student}
+          allPayments={allPayments}
+          onClose={() => setShowReportModal(false)}
         />
       )}
 
@@ -346,7 +345,7 @@ export default function AdminStudentProfilePage() {
 const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayments: any[], onClose: () => void }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  
+
   const [reportData, setReportData] = useState({
     name: student.name,
     fatherName: student.fatherName || '',
@@ -373,8 +372,8 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(reportRef.current, { 
-        cacheBust: true, 
+      const dataUrl = await toPng(reportRef.current, {
+        cacheBust: true,
         backgroundColor: '#fff',
         pixelRatio: 2
       });
@@ -399,220 +398,221 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Review and Edit Before Downloading</p>
           </div>
           <button onClick={onClose} className="p-3 hover:bg-gray-200 dark:hover:bg-white/10 rounded-2xl transition-all active:scale-90">
-             <X className="w-6 h-6 text-gray-500" />
+            <X className="w-6 h-6 text-gray-500" />
           </button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-100 dark:bg-black/20">
-          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-8 sm:p-16 mx-auto w-full max-w-[850px] text-gray-900 font-sans min-h-[1100px] border border-gray-100">
+          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-4 sm:p-8 lg:p-16 mx-auto w-full max-w-[850px] text-gray-900 font-sans min-h-[1100px] border border-gray-100">
             {/* Report Header */}
-            <div className="flex justify-between items-start border-b-4 border-gray-900 pb-8 mb-10">
-               <div className="space-y-1">
-                  <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
-                  <h1 className="text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">SPIMS Medical Institute</p>
-               </div>
-               <div className="text-right">
-                  <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
-                     Official Report
-                  </div>
-                  <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
-               </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-4 border-gray-900 pb-8 mb-10">
+              <div className="space-y-1">
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">SPIMS Medical Institute</p>
+              </div>
+              <div className="text-left sm:text-right">
+                <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
+                  Official Report
+                </div>
+                <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
+              </div>
             </div>
-            
+
             {/* Student Details Section */}
-            <div className="grid grid-cols-2 gap-12 mb-12">
-               <div className="space-y-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Student Information</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
-                      <input 
-                        className="text-lg font-black w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
-                        value={reportData.name}
-                        onChange={e => setReportData({...reportData, name: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
-                      <input 
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
-                        value={reportData.fatherName}
-                        onChange={e => setReportData({...reportData, fatherName: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Roll Number</label>
-                      <input 
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
-                        value={reportData.rollNo}
-                        onChange={e => setReportData({...reportData, rollNo: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student ID</label>
-                      <input 
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
-                        value={reportData.studentId}
-                        onChange={e => setReportData({...reportData, studentId: e.target.value})}
-                      />
-                    </div>
-                  </div>
-               </div>
-               <div className="space-y-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Academic Info</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Course Name</label>
-                      <input 
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
-                        value={reportData.course}
-                        onChange={e => setReportData({...reportData, course: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
-                      <input 
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
-                        value={reportData.admissionDate}
-                        onChange={e => setReportData({...reportData, admissionDate: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
-                      <textarea 
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 resize-none"
-                        rows={2}
-                        value={reportData.address}
-                        onChange={e => setReportData({...reportData, address: e.target.value})}
-                      />
-                    </div>
-                  </div>
-               </div>
-            </div>
-            
-            {/* Financial Summary Box */}
-            <div className="bg-gray-50 rounded-3xl p-8 mb-12 border border-gray-100 grid grid-cols-3 gap-8">
-               <div className="relative">
-                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Fee</label>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[10px] font-black text-gray-400">PKR</span>
-                    <input 
-                      type="number"
-                      className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1"
-                      value={reportData.monthlyFee}
-                      onChange={e => {
-                        const val = Number(e.target.value);
-                        setReportData(prev => ({
-                          ...prev,
-                          monthlyFee: val,
-                          totalDue: val * prev.billableMonths,
-                          remainingAmount: (val * prev.billableMonths) - prev.receivedAmount
-                        }));
-                      }}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 mb-8 sm:mb-12">
+              <div className="space-y-6">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Student Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
+                    <input
+                      className="text-lg font-black w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      value={reportData.name}
+                      onChange={e => setReportData({ ...reportData, name: e.target.value })}
                     />
                   </div>
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
-               </div>
-               <div className="relative text-center">
-                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Billable</label>
-                  <input 
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      value={reportData.fatherName}
+                      onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Roll Number</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      value={reportData.rollNo}
+                      onChange={e => setReportData({ ...reportData, rollNo: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student ID</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      value={reportData.studentId}
+                      onChange={e => setReportData({ ...reportData, studentId: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Academic Info</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Course Name</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      value={reportData.course}
+                      onChange={e => setReportData({ ...reportData, course: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      value={reportData.admissionDate}
+                      onChange={e => setReportData({ ...reportData, admissionDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
+                    <textarea
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 resize-none"
+                      rows={2}
+                      value={reportData.address}
+                      onChange={e => setReportData({ ...reportData, address: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Financial Summary Box */}
+            <div className="bg-gray-50 rounded-3xl p-4 sm:p-8 mb-8 sm:mb-12 border border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              <div className="relative">
+                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Fee</label>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-[10px] font-black text-gray-400">PKR</span>
+                  <input
                     type="number"
-                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-center"
-                    value={reportData.billableMonths}
+                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1"
+                    value={reportData.monthlyFee}
                     onChange={e => {
                       const val = Number(e.target.value);
                       setReportData(prev => ({
                         ...prev,
-                        billableMonths: val,
-                        totalDue: val * prev.monthlyFee,
-                        remainingAmount: (val * prev.monthlyFee) - prev.receivedAmount
+                        monthlyFee: val,
+                        totalDue: val * prev.billableMonths,
+                        remainingAmount: (val * prev.billableMonths) - prev.receivedAmount
                       }));
                     }}
                   />
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
-               </div>
-               <div className="text-right">
-                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Due</label>
-                  <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
-               </div>
+                </div>
+                <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+              </div>
+              <div className="relative text-left sm:text-center">
+                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Billable</label>
+                <input
+                  type="number"
+                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-left sm:text-center"
+                  value={reportData.billableMonths}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    setReportData(prev => ({
+                      ...prev,
+                      billableMonths: val,
+                      totalDue: val * prev.monthlyFee,
+                      remainingAmount: (val * prev.monthlyFee) - prev.receivedAmount
+                    }));
+                  }}
+                />
+                <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+              </div>
+              <div className="text-left sm:text-right">
+                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Due</label>
+                <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-8 mb-12">
-               <div className="p-8 bg-[#1D9E75]/5 rounded-3xl border-2 border-[#1D9E75]/10 flex flex-col justify-center">
-                  <label className="text-[10px] font-black uppercase text-[#1D9E75] block mb-1 tracking-widest">Total Received</label>
-                  <p className="text-3xl font-black text-[#1D9E75] tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
-               </div>
-               <div className="p-8 bg-red-50/50 rounded-3xl border-2 border-red-100 flex flex-col justify-center">
-                  <label className="text-[10px] font-black uppercase text-red-600 block mb-1 tracking-widest">Outstanding</label>
-                  <p className="text-3xl font-black text-red-900 tracking-tighter">PKR {reportData.remainingAmount.toLocaleString()}</p>
-               </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
+              <div className="p-4 sm:p-8 bg-[#1D9E75]/5 rounded-3xl border-2 border-[#1D9E75]/10 flex flex-col justify-center">
+                <label className="text-[10px] font-black uppercase text-[#1D9E75] block mb-1 tracking-widest">Total Received</label>
+                <p className="text-2xl sm:text-3xl font-black text-[#1D9E75] tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
+              </div>
+              <div className="p-4 sm:p-8 bg-red-50/50 rounded-3xl border-2 border-red-100 flex flex-col justify-center">
+                <label className="text-[10px] font-black uppercase text-red-600 block mb-1 tracking-widest">Outstanding</label>
+                <p className="text-2xl sm:text-3xl font-black text-red-900 tracking-tighter">PKR {reportData.remainingAmount.toLocaleString()}</p>
+              </div>
             </div>
-            
+
             {/* Transaction Log Table */}
-            <div className="mb-12">
-               <div className="flex items-center justify-between mb-6 border-b-2 border-gray-100 pb-4">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fee Payment History</h3>
-                  <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
-               </div>
-               <table className="w-full text-left text-sm border-collapse">
+            <div className="mb-8 sm:mb-12">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 border-b-2 border-gray-100 pb-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fee Payment History</h3>
+                <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
+              </div>
+              <div className="overflow-x-auto w-full no-scrollbar">
+                <table className="w-full text-left text-sm border-collapse min-w-[500px] sm:min-w-full">
                   <thead>
-                     <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
-                        <th className="py-4 px-2">Date</th>
-                        <th className="py-4 px-2">Type / Note</th>
-                        <th className="py-4 px-2 text-right">Amount (PKR)</th>
-                     </tr>
+                    <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
+                      <th className="py-4 px-2">Date</th>
+                      <th className="py-4 px-2">Type / Note</th>
+                      <th className="py-4 px-2 text-right">Amount (PKR)</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                     {reportData.transactions.map((p, idx) => (
-                        <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
-                           <td className="py-4 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
-                           <td className="py-4 px-2 text-[10px] text-gray-500 uppercase tracking-tight">{p.type || 'Monthly Fee'} {p.month ? `(${p.month})` : ''}</td>
-                           <td className="py-4 px-2 text-right text-[#1D9E75] font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
-                        </tr>
-                     ))}
-                     {reportData.transactions.length === 0 && (
-                        <tr>
-                           <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
-                        </tr>
-                     )}
+                    {reportData.transactions.map((p, idx) => (
+                      <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
+                        <td className="py-4 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
+                        <td className="py-4 px-2 text-[10px] text-gray-500 uppercase tracking-tight">{p.type || 'Monthly Fee'} {p.month ? `(${p.month})` : ''}</td>
+                        <td className="py-4 px-2 text-right text-[#1D9E75] font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {reportData.transactions.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                      </tr>
+                    )}
                   </tbody>
                   <tfoot>
-                     <tr className="border-t-4 border-gray-900 font-black text-gray-900">
-                        <td colSpan={2} className="py-6 px-2 uppercase tracking-[0.2em] text-[10px]">Net Fee Received</td>
-                        <td className="py-6 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
-                     </tr>
+                    <tr className="border-t-4 border-gray-900 font-black text-gray-900">
+                      <td colSpan={2} className="py-6 px-2 uppercase tracking-[0.2em] text-[10px]">Net Fee Received</td>
+                      <td className="py-6 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
+                    </tr>
                   </tfoot>
-               </table>
+                </table>
+              </div>
             </div>
-            
+
             {/* Signature & Footer */}
-            <div className="mt-20 pt-12 border-t border-gray-100">
-               <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                     <p className="text-[10px] font-black text-gray-900 uppercase">SPIMS Institute</p>
-                     <p className="text-[9px] font-bold text-gray-400 uppercase">Medical Sciences & Technology</p>
-                  </div>
-                  <div className="w-48 border-b-2 border-gray-200 pb-2 text-center">
-                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Registrar Signature</p>
-                  </div>
-               </div>
+            <div className="mt-12 sm:mt-20 pt-12 border-t border-gray-100">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 sm:gap-0">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-gray-900 uppercase">SPIMS Institute</p>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase">Medical Sciences & Technology</p>
+                </div>
+                <div className="w-full sm:w-48 border-b-2 border-gray-200 pb-2 text-center">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Registrar Signature</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4">
-           <button onClick={onClose} className="px-8 py-4 rounded-2xl font-black text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all uppercase tracking-widest active:scale-95">
-             Close
-           </button>
-           <button 
-             onClick={downloadReport} 
-             disabled={isDownloading}
-             className="px-10 py-4 bg-[#1D9E75] hover:bg-[#1D9E75]/90 text-white rounded-2xl font-black text-xs flex items-center gap-3 shadow-2xl shadow-[#1D9E75]/30 active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest"
-           >
-             {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-             {isDownloading ? 'Generating...' : 'Download Statement'}
-           </button>
+
+        <div className="p-4 sm:p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4">
+          <button onClick={onClose} className="px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all uppercase tracking-widest active:scale-95">
+            Close
+          </button>
+          <button
+            onClick={downloadReport}
+            disabled={isDownloading}
+            className="px-6 sm:px-10 py-3 sm:py-4 bg-[#1D9E75] hover:bg-[#1D9E75]/90 text-white rounded-2xl font-black text-xs flex items-center gap-3 shadow-2xl shadow-[#1D9E75]/30 active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest"
+          >
+            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+            {isDownloading ? 'Generating...' : 'Download Statement'}
+          </button>
         </div>
       </div>
     </div>
