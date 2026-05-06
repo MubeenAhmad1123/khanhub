@@ -202,7 +202,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
         </div>
       </div>
 
-      <div className="flex items-center gap-6 text-sm bg-blue-50/50 p-4 rounded-2xl border border-blue-100 mb-4 justify-center md:justify-start">
+      <div className="flex flex-wrap items-center gap-3 text-sm bg-blue-50/50 p-4 rounded-2xl border border-blue-100 mb-4 justify-center md:justify-start">
         <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> <span className="font-bold text-gray-700">Done</span></div>
         <div className="flex items-center gap-2"><XCircle className="w-4 h-4 text-red-500" /> <span className="font-bold text-gray-700">Not Done</span></div>
         <div className="flex items-center gap-2"><MinusCircle className="w-4 h-4 text-gray-300" /> <span className="text-gray-500">N/A</span></div>
@@ -269,8 +269,8 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
           </div>
         </div>
 
-        <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm hidden md:block">
-          <div className="overflow-x-auto custom-scrollbar">
+        <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm hidden md:block w-full">
+          <div className="overflow-x-auto w-full custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead className="bg-gray-50 uppercase text-[9px] font-black text-gray-500 tracking-widest sticky top-0 z-10 shadow-sm">
                 <tr>
@@ -300,12 +300,12 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                         return (
                           <td key={day} className="border-r border-gray-50 last:border-r-0">
                             <button
-                              onClick={() => handleCellClick(day, activity.id)}
-                              disabled={isSaving || readOnly}
-                              className={`w-full h-full min-h-[44px] flex items-center justify-center transition-colors active:scale-90 disabled:opacity-50 ${
-                                readOnly ? 'cursor-default' : 'hover:bg-gray-100'
-                              }`}
-                              title={`${activity.name} — ${dateStr}`}
+                               onClick={() => handleCellClick(day, activity.id)}
+                               disabled={isSaving || readOnly}
+                               className={`w-full h-full min-h-[44px] flex items-center justify-center transition-colors active:scale-90 disabled:opacity-50 ${
+                                 readOnly ? 'cursor-default' : 'hover:bg-gray-100'
+                               }`}
+                               title={`${activity.name} — ${dateStr}`}
                             >
                               {isSaving ? (
                                 <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />

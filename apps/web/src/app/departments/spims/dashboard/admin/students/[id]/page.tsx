@@ -163,7 +163,7 @@ export default function AdminStudentProfilePage() {
 
   return (
     <div className="w-full overflow-x-hidden bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen pb-24">
-      <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8">
+      <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 w-full">
         <Link
         href="/departments/spims/dashboard/admin/students"
         className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#1D9E75] transition-colors"
@@ -177,7 +177,7 @@ export default function AdminStudentProfilePage() {
       />
 
       {student.isVirtual && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
               <GraduationCap size={24} />
@@ -197,7 +197,7 @@ export default function AdminStudentProfilePage() {
       )}
 
       {!student.isVirtual && (student.status === 'Pass' || student.status === 'Left' || student.status === 'Fail') && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
+        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
               <RefreshCw size={24} />
@@ -216,9 +216,9 @@ export default function AdminStudentProfilePage() {
         </div>
       )}
 
-      <div className="space-y-6">
-        <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
-          <div className="flex sm:flex-wrap gap-2 md:gap-3 p-1.5 bg-gray-100/50 rounded-[1.5rem] w-fit min-w-max sm:min-w-0">
+      <div className="space-y-6 w-full">
+        <div className="overflow-x-auto pb-2 scrollbar-none w-full">
+          <div className="flex sm:flex-wrap gap-2 md:gap-3 p-1.5 bg-gray-100/50 rounded-[1.5rem] w-fit">
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -235,7 +235,7 @@ export default function AdminStudentProfilePage() {
           </div>
         </div>
 
-        <div className="rounded-[2.5rem] border border-gray-100 bg-white p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 min-h-[400px]">
+        <div className="rounded-[2.5rem] border border-gray-100 bg-white p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 min-h-[400px] w-full">
           {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
           {tab === 'fees' && <FeeRecordTab student={student} session={session} />}
           {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
@@ -404,10 +404,10 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-100 dark:bg-black/20">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-100 dark:bg-black/20 w-full">
           <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-4 sm:p-8 lg:p-16 mx-auto w-full max-w-[850px] text-gray-900 font-sans min-h-[1100px] border border-gray-100">
             {/* Report Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-4 border-gray-900 pb-8 mb-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-4 border-gray-900 pb-8 mb-10 w-full">
               <div className="space-y-1">
                 <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
                 <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
@@ -422,7 +422,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
             </div>
 
             {/* Student Details Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 mb-8 sm:mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 mb-8 sm:mb-12 w-full">
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Student Information</h3>
                 <div className="space-y-4">
@@ -492,7 +492,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
               </div>
             </div>
             {/* Financial Summary Box */}
-            <div className="bg-gray-50 rounded-3xl p-4 sm:p-8 mb-8 sm:mb-12 border border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="bg-gray-50 rounded-3xl p-4 sm:p-8 mb-8 sm:mb-12 border border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
               <div className="relative">
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Fee</label>
                 <div className="flex items-baseline gap-1">
@@ -538,7 +538,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12 w-full">
               <div className="p-4 sm:p-8 bg-[#1D9E75]/5 rounded-3xl border-2 border-[#1D9E75]/10 flex flex-col justify-center">
                 <label className="text-[10px] font-black uppercase text-[#1D9E75] block mb-1 tracking-widest">Total Received</label>
                 <p className="text-2xl sm:text-3xl font-black text-[#1D9E75] tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
@@ -550,8 +550,8 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
             </div>
 
             {/* Transaction Log Table */}
-            <div className="mb-8 sm:mb-12">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 border-b-2 border-gray-100 pb-4">
+            <div className="mb-8 sm:mb-12 w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 border-b-2 border-gray-100 pb-4 w-full">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fee Payment History</h3>
                 <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
               </div>
@@ -589,8 +589,8 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
             </div>
 
             {/* Signature & Footer */}
-            <div className="mt-12 sm:mt-20 pt-12 border-t border-gray-100">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 sm:gap-0">
+            <div className="mt-12 sm:mt-20 pt-12 border-t border-gray-100 w-full">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 sm:gap-0 w-full">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-gray-900 uppercase">SPIMS Institute</p>
                   <p className="text-[9px] font-bold text-gray-400 uppercase">Medical Sciences & Technology</p>
@@ -603,7 +603,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
           </div>
         </div>
 
-        <div className="p-4 sm:p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4">
+        <div className="p-4 sm:p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4 w-full">
           <button onClick={onClose} className="px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all uppercase tracking-widest active:scale-95">
             Close
           </button>
