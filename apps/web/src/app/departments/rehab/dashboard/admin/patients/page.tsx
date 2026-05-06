@@ -224,7 +224,8 @@ export default function PatientsListPage() {
     const matches = allPatients.filter((p) =>
       (p.name || '').toLowerCase().includes(q) ||
       (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q) ||
-      (p.fatherName || '').toLowerCase().includes(q)
+      (p.fatherName || '').toLowerCase().includes(q) ||
+      String(p.serialNumber || '').toLowerCase().includes(q)
     );
     setSearchResults(matches.slice(0, 10));
     setSearchOpen(true);
@@ -248,10 +249,12 @@ export default function PatientsListPage() {
     if (searchQuery) {
       const s = searchQuery.toLowerCase();
       return (
-        p.name.toLowerCase().includes(s) ||
-        p.inpatientNumber.toLowerCase().includes(s) ||
-        p.substanceOfAddiction.toLowerCase().includes(s) ||
-        p.fatherName.toLowerCase().includes(s)
+        (p.name || '').toLowerCase().includes(s) ||
+        (p.inpatientNumber || '').toLowerCase().includes(s) ||
+        (p.patientId || p.id || '').toLowerCase().includes(s) ||
+        (p.substanceOfAddiction || '').toLowerCase().includes(s) ||
+        (p.fatherName || '').toLowerCase().includes(s) ||
+        String(p.serialNumber || '').toLowerCase().includes(s)
       );
     }
     return true;

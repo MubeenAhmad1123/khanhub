@@ -838,8 +838,9 @@ export default function CashierStationPage() {
       return;
     }
     const matches = allEntities.filter((p) => {
-      const queryMatch = (p.name || p.fullName || '').toLowerCase().includes(q) ||
-        (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id || '').toLowerCase().includes(q);
+      const queryMatch = (p.name || p.fullName || p.fatherName || '').toLowerCase().includes(q) ||
+        (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.rollNo || p.inpatientNumber || p.id || '').toLowerCase().includes(q) ||
+        String(p.serialNumber || '').toLowerCase().includes(q);
       
       if (!queryMatch) return false;
 

@@ -93,7 +93,9 @@ export default function SpimsStudentsListPage() {
           (st.cnic || '').toLowerCase().includes(s) ||
           (st.course || '').toLowerCase().includes(s) ||
           (st.session || '').toLowerCase().includes(s) ||
-          st.id.toLowerCase().includes(s)
+          (st.fatherName || '').toLowerCase().includes(s) ||
+          (st.studentId || '').toLowerCase().includes(s) ||
+          (st.id || '').toLowerCase().includes(s)
       );
     }
 
