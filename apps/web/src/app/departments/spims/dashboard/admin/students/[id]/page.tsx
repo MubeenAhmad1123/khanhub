@@ -232,7 +232,6 @@ export default function AdminStudentProfilePage() {
               </button>
             ))}
           </div>
-        </div>
 
         <div className="rounded-[2.5rem] border border-gray-100 bg-white p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 min-h-[400px] w-full">
           {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
