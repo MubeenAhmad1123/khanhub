@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white">
-            {getGreeting()}, {session?.displayName?.split(' ')[0]} 👋
+            {getGreeting()}, {session?.displayName?.split(' ')?.[0] || session?.name?.split(' ')?.[0] || 'Admin'} 👋
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
             {formatDateDMY(new Date())}

@@ -14,7 +14,7 @@ export function HqNotificationPermissionBanner({ isRequesting, onAllow, onDismis
 
   const handleAllow = async () => {
     const granted = await onAllow();
-    if (!granted) setResult('denied');
+    onDismiss();
   };
 
   if (result === 'denied') {

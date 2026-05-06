@@ -206,7 +206,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            {getGreeting()}, {session?.displayName?.split(' ')[0]} 👋
+            {getGreeting()}, {session?.displayName?.split(' ')?.[0] || session?.name?.split(' ')?.[0] || 'Admin'} 👋
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}

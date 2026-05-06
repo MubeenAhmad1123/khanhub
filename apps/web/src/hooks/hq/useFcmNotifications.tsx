@@ -51,8 +51,12 @@ export function useFcmNotifications(session: HqSession | null, userCol: string =
 
   // Read the current permission state on mount (don't prompt yet)
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermission(Notification.permission);
+    if (typeof window !== 'undefined') {
+      if ('Notification' in window) {
+        setPermission(Notification.permission);
+      } else {
+        setPermission('denied');
+      }
     }
   }, []);
 

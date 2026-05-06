@@ -259,7 +259,7 @@ export default function StaffSelfPage() {
           <div>
             <h1 className="text-3xl font-black tracking-tight text-gray-900">
               {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'},
-              <span className="block text-blue-600">{user?.displayName?.split(' ')[0]}</span>
+              <span className="block text-blue-600">{user?.displayName?.split?.(' ')?.[0] || 'User'}</span>
             </h1>
             <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mt-2">
               {formatDateDMY(new Date())}

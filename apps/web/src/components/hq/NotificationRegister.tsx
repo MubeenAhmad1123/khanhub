@@ -17,14 +17,21 @@ export default function NotificationRegister({ userId, userName }: NotificationR
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    setPermission(Notification.permission);
-    
-    // Show prompt after 3 seconds if permission is default
-    if (Notification.permission === 'default') {
-      const timer = setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000);
-      return () => clearTimeout(timer);
+    if ('Notification' in window) {
+      setPermission(Notification.permission);
+      
+      // Show prompt after 3 seconds if permission is default and not previously dismissed
+      if (Notification.permission === 'default') {
+        const dismissed = localStorage.getItem('fcm_prompt_dismissed');
+        if (!dismissed) {
+          const timer = setTimeout(() => {
+            setShowPrompt(true);
+          }, 3000);
+          return () => clearTimeout(timer);
+        }
+      }
+    } else {
+      setPermission('denied');
     }
   }, []);
 
@@ -99,7 +106,10 @@ export default function NotificationRegister({ userId, userName }: NotificationR
                 Enable
               </button>
               <button
-                onClick={() => setShowPrompt(false)}
+                onClick={() => {
+                  setShowPrompt(false);
+                  localStorage.setItem('fcm_prompt_dismissed', 'true');
+                }}
                 className="px-4 py-2 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100"
               >
                 Later

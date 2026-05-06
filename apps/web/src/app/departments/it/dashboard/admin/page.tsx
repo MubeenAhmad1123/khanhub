@@ -97,7 +97,7 @@ export default function ITAdminDashboardPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-black/5 pb-10">
         <div>
           <h1 className="text-4xl md:text-6xl font-black text-black tracking-tighter leading-tight">
-            {getGreeting()}, <span className="text-indigo-600">{session?.displayName?.split(' ')[0]}</span> 💻
+            {getGreeting()}, <span className="text-indigo-600">{session?.displayName?.split(' ')?.[0] || session?.name?.split(' ')?.[0] || 'Admin'}</span> 💻
           </h1>
           <p className="text-xs text-gray-400 font-black uppercase tracking-[0.3em] mt-4 flex items-center gap-2">
             <Calendar size={14} className="text-indigo-500" />
