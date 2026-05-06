@@ -2401,6 +2401,9 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
   
   const [reportData, setReportData] = useState({
     name: patient.name,
+    patientId: patient.patientId || 'None',
+    serialNumber: patient.id || 'None',
+    stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
     fatherName: patient.fatherName || '',
     address: patient.address || '',
@@ -2482,6 +2485,24 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                         onChange={e => setReportData({...reportData, name: e.target.value})}
                       />
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
+                        <input 
+                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
+                          value={reportData.patientId}
+                          onChange={e => setReportData({...reportData, patientId: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Serial Number</label>
+                        <input 
+                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
+                          value={reportData.serialNumber}
+                          onChange={e => setReportData({...reportData, serialNumber: e.target.value})}
+                        />
+                      </div>
+                    </div>
                     <div>
                       <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
                       <input 
@@ -2510,6 +2531,14 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                         className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
                         value={reportData.admissionDate}
                         onChange={e => setReportData({...reportData, admissionDate: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Stay Duration</label>
+                      <input 
+                        className="text-sm font-black w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-teal-600"
+                        value={reportData.stayDuration}
+                        onChange={e => setReportData({...reportData, stayDuration: e.target.value})}
                       />
                     </div>
                     <div>
