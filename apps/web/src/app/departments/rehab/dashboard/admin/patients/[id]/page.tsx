@@ -82,6 +82,8 @@ export default function PatientDetailPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [showRejoinCheckModal, setShowRejoinCheckModal] = useState(false);
+  const [matchingPatients, setMatchingPatients] = useState<any[]>([]);
 
   // Photo Upload State
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -698,8 +700,7 @@ export default function PatientDetailPage() {
     }
   };
 
-  const handleRejoin = async () => {
-    if (!window.confirm("Are you sure you want to rejoin this patient?")) return;
+  const executeRejoin = async () => {
     try {
       setDeactivating(true);
       await updateDoc(doc(db, 'rehab_patients', patientId), { 
@@ -707,11 +708,44 @@ export default function PatientDetailPage() {
         rejoinDate: Timestamp.now()
       });
       toast.success('Patient rejoined successfully ✓');
+      setShowRejoinCheckModal(false);
       fetchData();
     } catch (error) {
       console.error("Rejoin error", error);
       toast.error('Rejoin failed');
     } finally {
+      setDeactivating(false);
+    }
+  };
+
+  const handleRejoin = async () => {
+    if (!patient?.name) {
+      toast.error("Patient name not found");
+      return;
+    }
+    try {
+      setDeactivating(true);
+      const q = query(collection(db, 'rehab_patients'), where('name', '==', patient.name));
+      const snap = await getDocs(q);
+      const matching = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(p => p.id !== patientId);
+
+      if (matching.length > 0) {
+        setMatchingPatients(matching);
+        setShowRejoinCheckModal(true);
+        setDeactivating(false);
+        return;
+      }
+
+      if (!window.confirm("Are you sure you want to rejoin this patient?")) {
+        setDeactivating(false);
+        return;
+      }
+      await executeRejoin();
+    } catch (error) {
+      console.error("Rejoin error during search", error);
+      toast.error('Failed to search duplicate profiles');
       setDeactivating(false);
     }
   };
@@ -2384,6 +2418,95 @@ export default function PatientDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Premium Rejoin Duplicate Check Modal */}
+      {showRejoinCheckModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-gray-950 rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-teal-600 dark:text-teal-400 uppercase tracking-tight flex items-center gap-2">
+                    <Shield className="w-6 h-6 animate-pulse text-amber-500" />
+                    Duplicate Detected
+                  </h2>
+                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                    Verify before rejoining to avoid duplicate active profiles
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowRejoinCheckModal(false)} 
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full text-gray-400 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 text-xs font-bold text-amber-700 dark:text-amber-400 space-y-2">
+                  <p>Warning: We detected {matchingPatients.length} existing profile(s) with the exact same name <span className="font-mono text-sm underline text-red-600 dark:text-red-400">"{patient?.name}"</span> in the system. Please verify if you already have an active profile for this patient:</p>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+                  {matchingPatients.map((p) => (
+                    <div 
+                      key={p.id} 
+                      className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-teal-500/30 transition-all"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-sm text-gray-800 dark:text-white uppercase">
+                            {p.name}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                            p.isActive 
+                              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/20' 
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
+                          }`}>
+                            {p.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
+                          <div>Patient ID: <span className="font-mono text-gray-700 dark:text-gray-300 normal-case">{p.patientId || 'None'}</span></div>
+                          <div>Serial No: <span className="font-mono text-gray-700 dark:text-gray-300 normal-case">{p.serialNumber || 'None'}</span></div>
+                          <div className="col-span-2">Admitted: <span className="font-mono text-gray-700 dark:text-gray-300 normal-case">{formatDateDMY(p.admissionDate?.toDate?.() || p.admissionDate)}</span></div>
+                        </div>
+                      </div>
+                      
+                      <Link 
+                        href={`/departments/rehab/dashboard/admin/patients/${p.id}`} 
+                        target="_blank"
+                        className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-gray-800 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-teal-600 dark:text-teal-400 font-black text-[10px] uppercase tracking-widest border border-teal-100 dark:border-teal-900/50 rounded-xl transition-all text-center"
+                      >
+                        View Profile
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowRejoinCheckModal(false)}
+                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeRejoin}
+                    disabled={deactivating}
+                    className="flex-[2] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/20 active:scale-95"
+                  >
+                    {deactivating ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                    Rejoin Anyway
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showReportModal && (
         <ReportModal 
           patient={patient} 
@@ -2402,7 +2525,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
   const [reportData, setReportData] = useState({
     name: patient.name,
     patientId: patient.patientId || 'None',
-    serialNumber: patient.id || 'None',
+    serialNumber: patient.serialNumber || 'None',
     stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
     fatherName: patient.fatherName || '',

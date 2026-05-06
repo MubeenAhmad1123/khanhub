@@ -4,10 +4,10 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, Loader2, Save, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2, Save, Eye, EyeOff, Shield, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createStudent, firestoreDate, getStudent } from '@/lib/spims/students';
 import { createSpimsStudentUserServer } from '@/app/departments/rehab/actions/createRehabUser';
@@ -42,6 +42,9 @@ function NewSpimsStudentForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [showPw, setShowPw] = useState(false);
+  const [checkingDuplicateName, setCheckingDuplicateName] = useState(false);
+  const [matchingStudents, setMatchingStudents] = useState<any[]>([]);
+  const [showDuplicateWarningModal, setShowDuplicateWarningModal] = useState(false);
 
   const [loginId, setLoginId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -130,6 +133,39 @@ function NewSpimsStudentForm() {
       fetchOldRecord();
     }
   }, [router, prefillName, prefillLoginId, reAdmissionFrom]);
+
+  const handleNextStep = async () => {
+    if (step === 1) {
+      if (!loginId.trim() || !loginPassword || loginPassword.length < 6) {
+        toast.error('Login ID and password (6+ chars) required');
+        return;
+      }
+      if (!name.trim() || !fatherName.trim()) {
+        toast.error('Name and father name are required');
+        return;
+      }
+
+      setCheckingDuplicateName(true);
+      try {
+        const q = query(
+          collection(db, 'spims_students'),
+          where('name', '==', name.trim())
+        );
+        const snap = await getDocs(q);
+        const matches = snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+        if (matches.length > 0) {
+          setMatchingStudents(matches);
+          setShowDuplicateWarningModal(true);
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking duplicate name:', err);
+      } finally {
+        setCheckingDuplicateName(false);
+      }
+    }
+    setStep((s) => Math.min(3, s + 1));
+  };
 
   const submit = async () => {
     if (submitting) return;
@@ -405,10 +441,20 @@ function NewSpimsStudentForm() {
           {step < 3 ? (
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-black active:scale-95 transition-all"
-              onClick={() => setStep((s) => Math.min(3, s + 1))}
+              disabled={checkingDuplicateName}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-black active:scale-95 transition-all disabled:opacity-50"
+              onClick={handleNextStep}
             >
-              Next <ChevronRight size={16} />
+              {checkingDuplicateName ? (
+                <>
+                  <Loader2 className="animate-spin w-4 h-4" />
+                  <span>Checking...</span>
+                </>
+              ) : (
+                <>
+                  Next <ChevronRight size={16} />
+                </>
+              )}
             </button>
           ) : (
             <button
@@ -446,6 +492,75 @@ function NewSpimsStudentForm() {
           )}
         </div>
       </div>
+
+      {showDuplicateWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border-2 border-gray-900 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative space-y-6">
+            <button
+              type="button"
+              onClick={() => setShowDuplicateWarningModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl shrink-0">
+                <Shield size={24} className="animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-gray-900">Duplicate student name detected</h3>
+                <p className="text-sm text-gray-500 font-medium">
+                  A student with the name <strong className="text-gray-900">"{name.trim()}"</strong> is already enrolled in the system.
+                </p>
+              </div>
+            </div>
+
+            <div className="border border-gray-100 rounded-2xl bg-gray-50/50 overflow-hidden divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              {matchingStudents.map((stu) => (
+                <div key={stu.id} className="p-4 flex flex-col gap-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-900">{stu.name}</span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-gray-200 text-gray-700">
+                      {stu.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500 font-medium mt-1">
+                    <div>Father: <span className="text-gray-700 font-bold">{stu.fatherName}</span></div>
+                    <div>Course: <span className="text-gray-700 font-bold">{stu.course}</span></div>
+                    <div>Session: <span className="text-gray-700 font-bold">{stu.session}</span></div>
+                    <div>ID: <span className="text-gray-700 font-bold">{stu.studentId || 'N/A'}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-gray-400 font-medium leading-relaxed">
+              Please verify if this is a new admission or a namesake. If this is a namesake, you can proceed. Otherwise, click cancel to modify the name.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                className="flex-1 px-5 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-black transition-colors"
+                onClick={() => setShowDuplicateWarningModal(false)}
+              >
+                Cancel & Edit Name
+              </button>
+              <button
+                type="button"
+                className="flex-1 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-black shadow-lg shadow-amber-600/10 transition-all active:scale-95"
+                onClick={() => {
+                  setShowDuplicateWarningModal(false);
+                  setStep(2);
+                }}
+              >
+                Proceed Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
