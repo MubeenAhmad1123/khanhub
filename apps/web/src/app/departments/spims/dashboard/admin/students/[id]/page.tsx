@@ -1,17 +1,16 @@
 // apps/web/src/app/departments/spims/dashboard/admin/students/[id]/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, GraduationCap, RefreshCw, FileText, Camera, X, Shield, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, GraduationCap, RefreshCw, FileText, Camera, X, Shield, Trash2, BookOpen, Layers, Award, Upload, TrendingUp } from 'lucide-react';
 import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
 import { doc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toPng } from 'html-to-image';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
-import { useRef } from 'react';
 import type { SpimsStudent } from '@/types/spims';
 import AdmissionTab from '@/components/spims/student-profile/AdmissionTab';
 import FeeRecordTab from '@/components/spims/student-profile/FeeRecordTab';
@@ -39,6 +38,8 @@ export default function AdminStudentProfilePage() {
   const [deleteStudentConfirmName, setDeleteStudentConfirmName] = useState('');
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
 
+  const isScrollingRef = useRef(false);
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -53,6 +54,10 @@ export default function AdminStudentProfilePage() {
         const now = new Date();
         const billableMonths = (now.getFullYear() - admission.getFullYear()) * 12 + (now.getMonth() - admission.getMonth()) + 1;
 
+        const diffTimeMs = now.getTime() - admission.getTime();
+        const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+        const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'})`;
+
         const monthlyFee = Number(s.monthlyFee || 0);
         const dueTillDate = billableMonths * monthlyFee;
         const totalReceived = fees.filter(f => f.status === 'approved').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
@@ -60,6 +65,8 @@ export default function AdminStudentProfilePage() {
         setStudent({
           ...s,
           billableMonths,
+          daysAdmitted,
+          durationFormatted,
           dueTillDate,
           totalReceived,
           remaining: Math.max(0, dueTillDate - totalReceived)
@@ -114,7 +121,6 @@ export default function AdminStudentProfilePage() {
     }
   };
 
-
   useEffect(() => {
     let sessionData = localStorage.getItem('spims_session');
 
@@ -145,14 +151,6 @@ export default function AdminStudentProfilePage() {
     void load();
   }, [router, load]);
 
-  if (!session || loading || !student) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
-      </div>
-    );
-  }
-
   const tabs: { id: Tab; label: string }[] = [
     { id: 'admission', label: 'Admission' },
     { id: 'fees', label: 'Fee record' },
@@ -161,104 +159,200 @@ export default function AdminStudentProfilePage() {
     { id: 'finance', label: 'Finance summary' },
   ];
 
+  const scrollToSection = (id: Tab) => {
+    isScrollingRef.current = true;
+    setTab(id);
+    const element = document.getElementById(`section-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 800);
+  };
+
+  useEffect(() => {
+    if (loading) return;
+
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      if (isScrollingRef.current) return;
+
+      let maxRatio = 0;
+      let visibleSectionId: Tab | null = null;
+
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          visibleSectionId = entry.target.id.replace('section-', '') as Tab;
+        }
+      });
+
+      if (visibleSectionId && tabs.some(t => t.id === visibleSectionId)) {
+        setTab(visibleSectionId);
+      }
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: null,
+      rootMargin: '-15% 0px -65% 0px',
+      threshold: [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    });
+
+    tabs.forEach((t) => {
+      const el = document.getElementById(`section-${t.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loading]);
+
+  if (!session || loading || !student) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full overflow-x-hidden bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen pb-24">
       <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 w-full">
         <Link
-        href="/departments/spims/dashboard/admin/students"
-        className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#1D9E75] transition-colors"
-      >
-        <ArrowLeft size={14} strokeWidth={3} /> Students Registry
-      </Link>
+          href="/departments/spims/dashboard/admin/students"
+          className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#1D9E75] transition-colors"
+        >
+          <ArrowLeft size={14} strokeWidth={3} /> Students Registry
+        </Link>
 
-      <ProfileHeader
-        student={student}
-        onGenerateReport={() => setShowReportModal(true)}
-      />
+        <ProfileHeader
+          student={student}
+          onGenerateReport={() => setShowReportModal(true)}
+        />
 
-      {student.isVirtual && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-              <GraduationCap size={24} />
+        {student.isVirtual && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                <GraduationCap size={24} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-amber-900 uppercase tracking-tight">Login Account Only</h3>
+                <p className="text-xs font-medium text-amber-700/80">This student has a login account but no admission profile. Complete their admission to enable full tracking.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-black text-amber-900 uppercase tracking-tight">Login Account Only</h3>
-              <p className="text-xs font-medium text-amber-700/80">This student has a login account but no admission profile. Complete their admission to enable full tracking.</p>
-            </div>
-          </div>
-          <Link
-            href={`/departments/spims/dashboard/admin/students/new?prefill_uid=${student.login?.uid || student.id}&prefill_name=${encodeURIComponent(student.name)}&prefill_login_id=${student.login?.customId || student.login?.studentId || ''}`}
-            className="whitespace-nowrap bg-amber-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            Complete Admission
-          </Link>
-        </div>
-      )}
-
-      {!student.isVirtual && (student.status === 'Pass' || student.status === 'Left' || student.status === 'Fail') && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-              <RefreshCw size={24} />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-indigo-900 uppercase tracking-tight">Ready for Re-admission?</h3>
-              <p className="text-xs font-medium text-indigo-700/80">This student has {student.status.toLowerCase()} their previous session. You can start a new admission for them.</p>
-            </div>
-          </div>
-          <Link
-            href={`/departments/spims/dashboard/admin/students/new?prefill_uid=${student.login?.uid || ''}&prefill_name=${encodeURIComponent(student.name)}&prefill_login_id=${student.login?.customId || student.rollNo || ''}&re_admission_from=${student.id}`}
-            className="whitespace-nowrap bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            New Admission / Re-join
-          </Link>
-        </div>
-      )}
-
-      <div className="space-y-6 w-full">
-          <div className="flex flex-wrap gap-2 md:gap-3 p-1.5 bg-gray-100/50 rounded-[1.5rem] w-full sm:w-fit">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={`px-4 sm:px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-1 sm:flex-none text-center ${tab === t.id
-                    ? 'bg-white text-[#1D9E75] shadow-lg shadow-gray-200/50 transform -translate-y-0.5'
-                    : 'text-gray-400 hover:text-gray-600'
-                  }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-        <div className="rounded-[2.5rem] border border-gray-100 bg-white p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 min-h-[400px] w-full">
-          {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
-          {tab === 'fees' && <FeeRecordTab student={student} session={session} />}
-          {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
-          {tab === 'documents' && <DocumentsTab studentId={student.id} session={session} />}
-          {tab === 'finance' && <FinanceSummaryTab student={student} />}
-        </div>
-
-        {/* Danger Zone */}
-        <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full flex flex-col gap-4">
-          <div>
-            <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Actions here can be destructive. Please proceed with extreme caution.</p>
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setDeleteStudentConfirmName('');
-                setShowDeleteStudentModal(true);
-              }}
-              className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full sm:w-auto active:scale-95 flex items-center justify-center gap-2"
+            <Link
+              href={`/departments/spims/dashboard/admin/students/new?prefill_uid=${student.login?.uid || student.id}&prefill_name=${encodeURIComponent(student.name)}&prefill_login_id=${student.login?.customId || student.login?.studentId || ''}`}
+              className="whitespace-nowrap bg-amber-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all"
             >
-              <Trash2 className="w-4 h-4" />
-              Delete Student Profile
-            </button>
+              Complete Admission
+            </Link>
+          </div>
+        )}
+
+        {!student.isVirtual && (student.status === 'Pass' || student.status === 'Left' || student.status === 'Fail') && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                <RefreshCw size={24} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-indigo-900 uppercase tracking-tight">Ready for Re-admission?</h3>
+                <p className="text-xs font-medium text-indigo-700/80">This student has {student.status.toLowerCase()} their previous session. You can start a new admission for them.</p>
+              </div>
+            </div>
+            <Link
+              href={`/departments/spims/dashboard/admin/students/new?prefill_uid=${student.login?.uid || ''}&prefill_name=${encodeURIComponent(student.name)}&prefill_login_id=${student.login?.customId || student.rollNo || ''}&re_admission_from=${student.id}`}
+              className="whitespace-nowrap bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              New Admission / Re-join
+            </Link>
+          </div>
+        )}
+
+        <div className="space-y-10 w-full">
+          {/* Sticky Tab Bar */}
+          <div className="sticky top-4 z-40 w-full flex justify-center">
+            <div className="flex flex-wrap gap-1.5 p-1.5 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-[1.5rem] w-full sm:w-fit shadow-xl shadow-gray-100/50 dark:shadow-none">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => scrollToSection(t.id)}
+                  className={`px-4 sm:px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-1 sm:flex-none text-center ${tab === t.id
+                      ? 'bg-white dark:bg-gray-800 text-[#1D9E75] shadow-lg shadow-gray-200/50 dark:shadow-none transform -translate-y-0.5 font-extrabold'
+                      : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+                    }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Stacked Sections */}
+          <div className="w-full flex flex-col gap-10">
+            <div id="section-admission" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <BookOpen className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
+              </div>
+              <AdmissionTab student={student} session={session} onSaved={load} />
+            </div>
+
+            <div id="section-fees" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <Layers className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Fee Record</h2>
+              </div>
+              <FeeRecordTab student={student} session={session} />
+            </div>
+
+            <div id="section-exam" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <Award className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Exam Record</h2>
+              </div>
+              <ExamRecordTab student={student} session={session} onSaved={load} />
+            </div>
+
+            <div id="section-documents" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <Upload className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Documents</h2>
+              </div>
+              <DocumentsTab studentId={student.id} session={session} />
+            </div>
+
+            <div id="section-finance" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <TrendingUp className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Finance Summary</h2>
+              </div>
+              <FinanceSummaryTab student={student} />
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full flex flex-col gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Actions here can be destructive. Please proceed with extreme caution.</p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteStudentConfirmName('');
+                  setShowDeleteStudentModal(true);
+                }}
+                className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full sm:w-auto active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Student Profile
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -337,7 +431,6 @@ export default function AdminStudentProfilePage() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
@@ -356,6 +449,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
     address: student.address || '',
     monthlyFee: Number(student.monthlyFee || 0),
     billableMonths: student.billableMonths || 1,
+    durationFormatted: student.durationFormatted || '',
     totalDue: student.dueTillDate || 0,
     receivedAmount: student.totalReceived || 0,
     remainingAmount: student.remaining || 0,
@@ -427,7 +521,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
                     <input
-                      className="text-lg font-black w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      className="text-lg font-black w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.name}
                       onChange={e => setReportData({ ...reportData, name: e.target.value })}
                     />
@@ -435,15 +529,15 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
                     <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.fatherName}
                       onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Roll Number</label>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Roll Number / Serial No</label>
                     <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.rollNo}
                       onChange={e => setReportData({ ...reportData, rollNo: e.target.value })}
                     />
@@ -451,7 +545,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student ID</label>
                     <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.studentId}
                       onChange={e => setReportData({ ...reportData, studentId: e.target.value })}
                     />
@@ -459,12 +553,12 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                 </div>
               </div>
               <div className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Academic Info</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Academic & Session Info</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Course Name</label>
                     <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.course}
                       onChange={e => setReportData({ ...reportData, course: e.target.value })}
                     />
@@ -472,16 +566,24 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
                     <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1"
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.admissionDate}
                       onChange={e => setReportData({ ...reportData, admissionDate: e.target.value })}
                     />
                   </div>
                   <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Stay Duration</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                      value={reportData.durationFormatted || `${reportData.billableMonths} Months`}
+                      onChange={e => setReportData({ ...reportData, durationFormatted: e.target.value })}
+                    />
+                  </div>
+                  <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
                     <textarea
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 resize-none"
-                      rows={2}
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 resize-none text-gray-900 bg-transparent"
+                      rows={1}
                       value={reportData.address}
                       onChange={e => setReportData({ ...reportData, address: e.target.value })}
                     />
@@ -497,7 +599,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                   <span className="text-[10px] font-black text-gray-400">PKR</span>
                   <input
                     type="number"
-                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1"
+                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-gray-900"
                     value={reportData.monthlyFee}
                     onChange={e => {
                       const val = Number(e.target.value);
@@ -516,7 +618,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Billable</label>
                 <input
                   type="number"
-                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-left sm:text-center"
+                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-left sm:text-center text-gray-900"
                   value={reportData.billableMonths}
                   onChange={e => {
                     const val = Number(e.target.value);
