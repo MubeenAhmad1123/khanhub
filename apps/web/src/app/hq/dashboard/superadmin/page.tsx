@@ -250,18 +250,22 @@ export default function HqSuperadminPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
               {[
                 { label: 'Personnel',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, tone: 'rehab', desc: 'Staff registry & compliance' },
                 { label: 'Analytics',   href: '/hq/dashboard/superadmin/analytics',   icon: Activity, tone: 'spims', desc: 'Real-time data matrix' },
                 { label: 'Departments', href: '/hq/dashboard/superadmin/departments', icon: Building2, tone: 'hq', desc: 'Institutional structure' },
                 { label: 'Finance',     href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, tone: 'primary', desc: 'Global financial ledger' },
+                { label: 'Manager Panel', href: '/hq/dashboard/manager',              icon: Users2, tone: 'manager', desc: 'Manage roster, attendance & salary' },
+                { label: 'Cashier Panel', href: '/hq/dashboard/cashier',              icon: CreditCard, tone: 'cashier', desc: 'Direct station & day closings' },
               ].map((btn) => {
                 const colors = {
                   rehab: 'from-emerald-400 to-teal-500 text-white shadow-emerald-500/30',
                   spims: 'from-sky-400 to-blue-500 text-white shadow-sky-500/30',
                   hq: 'from-violet-400 to-purple-500 text-white shadow-violet-500/30',
-                  primary: 'from-rose-400 to-pink-500 text-white shadow-rose-500/30'
+                  primary: 'from-rose-400 to-pink-500 text-white shadow-rose-500/30',
+                  manager: 'from-emerald-500 to-green-600 text-white shadow-emerald-600/30',
+                  cashier: 'from-blue-500 to-indigo-600 text-white shadow-blue-600/30'
                 };
                 return (
                   <Link

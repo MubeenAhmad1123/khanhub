@@ -129,13 +129,14 @@ const DEPARTMENT_NAV: Record<string, NavItem[]> = {
 
 export default function HqDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<HqSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [activeDepts, setActiveDepts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'hq' | string>('hq');
+  const [activeRole, setActiveRole] = useState<HqRole | null>(null);
 
   // FCM push notifications
   const { permission, isRequesting, requestPermission } = useFcmNotifications(user);
@@ -195,16 +196,11 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         setIsChecking(false);
         setTimeout(() => setMounted(true), 50);
       } else {
-        // Only redirect if we ALSO don't have a local session.
-        // If we have a local session, wait for Firebase to potentially recover it.
         const localSession = localStorage.getItem(SESSION_KEY);
         if (!localSession) {
           console.warn('[HQ Layout] No Firebase user and no local session. Redirecting...');
           router.push('/hq/login');
         } else {
-          // If we have a local session but Firebase says null, 
-          // we might be in a mid-initialization state. 
-          // We'll set isChecking to false anyway so the page can at least render based on local state.
           setIsChecking(false);
           setTimeout(() => setMounted(true), 50);
         }
@@ -231,6 +227,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     return () => unsub();
   }, [user]);
 
+  useEffect(() => {
+    if (user?.role === 'superadmin') {
+      if (pathname.startsWith('/hq/dashboard/manager')) {
+        setActiveRole('manager');
+      } else if (pathname.startsWith('/hq/dashboard/cashier')) {
+        setActiveRole('cashier');
+      } else if (pathname.startsWith('/hq/dashboard/superadmin')) {
+        setActiveRole('superadmin');
+      }
+    }
+  }, [pathname, user]);
+
   if (isChecking) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#FCFBF8]">
@@ -241,10 +249,11 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   }
 
   const role = normalizeRole(user?.role) || 'cashier';
+  const currentRole = role === 'superadmin' ? (activeRole || 'superadmin') : role;
   
   // Dynamic Nav Items based on viewMode
   let navItems = viewMode === 'hq' 
-    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    ? NAV_ITEMS.filter(item => user && item.roles.includes(currentRole))
     : DEPARTMENT_NAV[viewMode] || [];
 
   const handleSignOut = async () => {
@@ -293,7 +302,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 p-2 border border-gray-100 shadow-2xl rounded-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-white">
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 border border-gray-100 shadow-2xl rounded-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-white max-h-[220px] overflow-y-auto scrollbar-thin">
                   {Object.keys(DEPT_INFO).map(dept => {
                     const info = DEPT_INFO[dept];
                     return (
@@ -316,9 +325,50 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           )}
         </div>
 
+        {/* Console Switcher for HQ Superadmin */}
+        {role === 'superadmin' && viewMode === 'hq' && (
+          <div className="px-4 pt-4 pb-1 bg-white">
+            <p className="px-4 text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-black/40">
+              Active Console
+            </p>
+            <div className="p-1 rounded-2xl bg-gray-50 flex gap-1">
+              <button
+                onClick={() => setActiveRole('superadmin')}
+                className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
+                  currentRole === 'superadmin'
+                    ? 'bg-white text-indigo-600 shadow-sm border border-gray-100'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                SUPER
+              </button>
+              <button
+                onClick={() => setActiveRole('manager')}
+                className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
+                  currentRole === 'manager'
+                    ? 'bg-white text-indigo-600 shadow-sm border border-gray-100'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                MANAGER
+              </button>
+              <button
+                onClick={() => setActiveRole('cashier')}
+                className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
+                  currentRole === 'cashier'
+                    ? 'bg-white text-indigo-600 shadow-sm border border-gray-100'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                CASHIER
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Navigation Mode Switcher - Modernized Pill */}
         {role === 'superadmin' && activeDepts.length > 0 && (
-          <div className="px-4 pt-5 pb-2">
+          <div className="px-4 pt-3 pb-2">
             <div className="p-1 rounded-2xl bg-gray-50 flex flex-col gap-1">
               <button
                 onClick={() => setViewMode('hq')}
@@ -372,10 +422,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                   {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 3 : 2 })}
                 </div>
                 <span className="flex-1">{item.label}</span>
-                {item.label === 'Approvals' && viewMode === 'hq' && role === 'superadmin' && (
+                {item.label === 'Approvals' && viewMode === 'hq' && currentRole === 'superadmin' && (
                   <HqSuperadminApprovalsNavBadge />
                 )}
-                {item.label === 'Contributions' && viewMode === 'hq' && role === 'manager' && (
+                {item.label === 'Contributions' && viewMode === 'hq' && currentRole === 'manager' && (
                   <HqManagerApprovalsNavBadge />
                 )}
               </Link>
@@ -391,7 +441,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black truncate text-black uppercase">{user?.name}</p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-black/50">{ROLE_LABELS[role]}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-black/50">{ROLE_LABELS[currentRole]}</p>
             </div>
             <button 
               onClick={handleSignOut}
@@ -415,7 +465,6 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       </div>
     );
   };
-
 
   return (
     <div className="min-h-screen flex overflow-x-hidden bg-white">
@@ -491,8 +540,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           <div className="flex items-center gap-3">
             <div className="w-px h-6 bg-gray-100 mx-1" />
             {user ? <HqNotificationBell session={user} /> : null}
-            <span className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest ${ROLE_COLORS[role]} shadow-sm`}>
-              {ROLE_LABELS[role]}
+            <span className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest ${ROLE_COLORS[currentRole]} shadow-sm`}>
+              {ROLE_LABELS[currentRole]}
             </span>
             <div className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-900 font-bold text-sm shadow-sm bg-white">
               {user?.name?.[0]?.toUpperCase() || '?'}

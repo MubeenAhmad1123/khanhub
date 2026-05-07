@@ -72,7 +72,7 @@ const HQ_NAV_ITEMS = [
 
 export default function ITDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: ItRole; displayName: string; customId: string; uid: string } | null>(null);

@@ -48,7 +48,7 @@ export default function HospitalDashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -72,24 +72,39 @@ export default function HospitalDashboardLayout({
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const sessionData = localStorage.getItem('hospital_session');
+        let sessionData = localStorage.getItem('hospital_session');
         const hqSession = localStorage.getItem('hq_session');
 
-        if (!sessionData && hqSession) {
-          const parsedHq = JSON.parse(hqSession);
-          if (parsedHq.departmentCode === 'hospital') {
-            const userDoc = await getDoc(doc(db, 'hospital_users', parsedHq.uid));
-            if (userDoc.exists()) {
-              const hospitalUser = {
+        if (hqSession) {
+          try {
+            const parsedHq = JSON.parse(hqSession);
+            if (parsedHq?.role === 'superadmin') {
+              console.log('[HospitalLayout] Detected HQ Superadmin session, syncing to hospital...');
+              const syncSession = {
                 uid: parsedHq.uid,
-                ...userDoc.data(),
-                role: userDoc.data().role as HospitalRole
+                customId: parsedHq.customId || parsedHq.email || 'HQ-USER',
+                role: 'superadmin',
+                displayName: parsedHq.displayName || 'Superadmin',
               };
-              localStorage.setItem('hospital_session', JSON.stringify(hospitalUser));
-              setUser(hospitalUser);
-              setLoading(false);
-              return;
+              localStorage.setItem('hospital_session', JSON.stringify(syncSession));
+              localStorage.setItem('hospital_login_time', Date.now().toString());
+              sessionData = JSON.stringify(syncSession);
+            } else if (parsedHq.departmentCode === 'hospital') {
+              if (!sessionData) {
+                const userDoc = await getDoc(doc(db, 'hospital_users', parsedHq.uid));
+                if (userDoc.exists()) {
+                  const hospitalUser = {
+                    uid: parsedHq.uid,
+                    ...userDoc.data(),
+                    role: userDoc.data().role as HospitalRole
+                  };
+                  localStorage.setItem('hospital_session', JSON.stringify(hospitalUser));
+                  sessionData = JSON.stringify(hospitalUser);
+                }
+              }
             }
+          } catch (e) {
+            console.error('HQ session sync error:', e);
           }
         }
 

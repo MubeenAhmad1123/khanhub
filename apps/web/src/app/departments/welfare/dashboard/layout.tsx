@@ -69,7 +69,7 @@ const HQ_NAV_ITEMS = [
 
 export default function WelfareDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: WelfareRole; displayName: string; customId: string; uid: string; childId?: string } | null>(null);

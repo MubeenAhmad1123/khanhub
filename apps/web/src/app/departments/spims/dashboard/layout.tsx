@@ -71,7 +71,7 @@ const HQ_NAV_ITEMS = [
 
 export default function SpimsDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
 
   const [user, setUser] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(true);

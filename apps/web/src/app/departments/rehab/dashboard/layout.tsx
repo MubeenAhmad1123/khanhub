@@ -65,7 +65,7 @@ const HQ_NAV_ITEMS = [
 
 export default function RehabDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);

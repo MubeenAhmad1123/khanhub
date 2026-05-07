@@ -77,12 +77,13 @@ export default function PatientsListPage() {
       setLoading(true);
       
       // 1. Get counts using zero-cost getCountFromServer (1 read per 1000 docs)
-      const activeCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
       const dischargedCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', false)));
       const totalCountSnap = await getCountFromServer(collection(db, 'rehab_patients'));
-      setTotalActiveCount(activeCountSnap.data().count);
-      setTotalDischargedCount(dischargedCountSnap.data().count);
-      setTotalPatientsCount(totalCountSnap.data().count);
+      const dischargedCount = dischargedCountSnap.data().count;
+      const totalCount = totalCountSnap.data().count;
+      setTotalDischargedCount(dischargedCount);
+      setTotalPatientsCount(totalCount);
+      setTotalActiveCount(totalCount - dischargedCount);
 
       // 2. Build Paginated Query
       let q = query(
@@ -318,7 +319,7 @@ export default function PatientsListPage() {
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0"><User className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Patients</p><p className="text-xl font-black text-gray-900">{totalPatientsCount}</p></div>
+              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Patients Till Date</p><p className="text-xl font-black text-gray-900">{totalPatientsCount}</p></div>
             </div>
           </div>
         </div>

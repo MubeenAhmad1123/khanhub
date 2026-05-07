@@ -29,7 +29,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com.pk',
-    legacyDomains: ['@hq.khanhub.com', '@khanhub.io', '@hq.KhanHub', '@hq.Khan Hub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@hq.khanhub.com', '@khanhub.io', '@hq.KhanHub', '@hq.Khan Hub', '@khanhub.com.pk', '@khanhub', '@hq.khanhub'],
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -39,7 +39,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Rehab',
     collection: 'rehab_users',
     domain: '@rehab.khanhub.com.pk',
-    legacyDomains: ['@rehab.khanhub.com', '@rehab.KhanHub', '@rehab.Khan Hub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@rehab.khanhub.com', '@rehab.KhanHub', '@rehab.Khan Hub', '@khanhub.com.pk', '@khanhub', '@rehab.khanhub'],
     dashboardPath: '/departments/rehab/dashboard',
     sessionKey: 'rehab_session',
     prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
@@ -59,7 +59,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Hospital',
     collection: 'hospital_users',
     domain: '@hospital.khanhub.com.pk',
-    legacyDomains: ['@hospital.khanhub.com', '@hospital.KhanHub', '@hospital.Khan Hub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@hospital.khanhub.com', '@hospital.KhanHub', '@hospital.Khan Hub', '@khanhub.com.pk', '@khanhub', '@hospital.khanhub'],
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
     prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
@@ -69,7 +69,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Sukoon',
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub.com.pk',
-    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.KhanHub', '@sukoon.Khan Hub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@sukoon.khanhub.com', '@sukoon.KhanHub', '@sukoon.Khan Hub', '@khanhub.com.pk', '@khanhub', '@sukoon.khanhub'],
     dashboardPath: '/departments/sukoon/dashboard',
     sessionKey: 'sukoon_session',
     prefixes: ['SUK', 'RES', 'RESIDENT']
@@ -79,7 +79,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Welfare',
     collection: 'welfare_users',
     domain: '@welfare.khanhub.com.pk',
-    legacyDomains: ['@welfare.khanhub.com', '@welfare.KhanHub', '@welfare.Khan Hub', '@khanhub.com.pk', '@khanhub'],
+    legacyDomains: ['@welfare.khanhub.com', '@welfare.KhanHub', '@welfare.Khan Hub', '@khanhub.com.pk', '@khanhub', '@welfare.khanhub'],
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session',
     prefixes: ['WEL', 'ORPH', 'CHILD']
@@ -444,7 +444,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
 /**
  * Constructs the correct dashboard path based on department and role.
  */
-function getDashboardPath(deptId: string, role: string, patientId?: string): string {
+export function getDashboardPath(deptId: string, role: string, patientId?: string): string {
   const normalizedRole = (role || '').toLowerCase();
 
   if (deptId === 'hq') {
@@ -484,4 +484,131 @@ function getDashboardPath(deptId: string, role: string, patientId?: string): str
   }
 
   return `${base}/${normalizedRole}`;
+}
+
+/**
+ * Searches across all department user collections to find a user matching the given email or UID.
+ */
+export async function discoverUserByGoogleAuth(email: string, uid: string): Promise<{ dept: DepartmentAuthInfo; data: any; uid: string } | null> {
+  const depts = Object.values(DEPARTMENTS_AUTH);
+
+  const performSearch = async (dept: DepartmentAuthInfo) => {
+    try {
+      // 1. Check if user document exists with the UID as document ID
+      const userDoc = await getDoc(doc(db, dept.collection, uid));
+      if (userDoc.exists()) {
+        return { dept, data: userDoc.data(), uid };
+      }
+
+      // 2. Search for a document with matching email field
+      const emailQuery = query(collection(db, dept.collection), where('email', '==', email), limit(1));
+      const emailSnap = await getDocs(emailQuery);
+      if (!emailSnap.empty) {
+        const foundDoc = emailSnap.docs[0];
+        return { dept, data: foundDoc.data(), uid: foundDoc.id };
+      }
+
+      return null;
+    } catch (e) {
+      console.warn(`[UniversalAuth] Error searching department ${dept.id}:`, e);
+      return null;
+    }
+  };
+
+  const results = await Promise.all(depts.map(performSearch));
+  return results.find(r => r !== null) || null;
+}
+
+/**
+ * Handles dynamic universal Google sign-in for any role and any department.
+ */
+export async function loginGoogleUniversal(firebaseUser: any): Promise<{ success: boolean; error?: string; redirectUrl?: string }> {
+  try {
+    const email = firebaseUser.email;
+    const uid = firebaseUser.uid;
+
+    console.log('[UniversalAuth] Dynamic Google sign-in initiated for:', email, uid);
+
+    // 1. Is superadmin?
+    if (isSuperadminEmail(email)) {
+      const redirectPath = '/hq/dashboard/superadmin';
+      const session = {
+        uid,
+        customId: 'SUPER-ADMIN',
+        name: firebaseUser.displayName || 'Super Admin',
+        role: 'superadmin',
+        loginTime: Date.now(),
+        email: email,
+        photoUrl: firebaseUser.photoURL,
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hq_session', JSON.stringify(session));
+        localStorage.setItem('hq_login_time', Date.now().toString());
+      }
+
+      try {
+        await setUserDashboardClaims(uid, redirectPath);
+      } catch (err) {
+        console.warn('[UniversalAuth] Failed to set superadmin claims:', err);
+      }
+
+      return { success: true, redirectUrl: redirectPath };
+    }
+
+    // 2. Discover user across departments
+    const discovery = await discoverUserByGoogleAuth(email, uid);
+    if (!discovery) {
+      console.log('[UniversalAuth] No registered user found for email/uid:', email, uid);
+      return { 
+        success: false, 
+        error: 'No account with this Google email is registered in our departments. Please ask your administrator to add your email.' 
+      };
+    }
+
+    const { dept, data: finalData, uid: discoveredUid } = discovery;
+    console.log('[UniversalAuth] Google user discovered in:', dept.name, 'with role:', finalData.role);
+
+    if (finalData.isActive === false) {
+      return { success: false, error: 'Your account is currently inactive.' };
+    }
+
+    // 3. Configure Local Session
+    const session = {
+      uid: discoveredUid,
+      customId: finalData.customId || email,
+      name: finalData.name || finalData.displayName || firebaseUser.displayName || 'User',
+      role: finalData.role,
+      ...finalData,
+      loginTime: Date.now()
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(dept.sessionKey, JSON.stringify(session));
+      const loginTimeKey = dept.sessionKey.replace('_session', '_login_time');
+      localStorage.setItem(loginTimeKey, Date.now().toString());
+    }
+
+    // 4. Set HQ Cookie if needed
+    if (dept.id === 'hq' || finalData.role === 'superadmin') {
+      const idToken = await firebaseUser.getIdToken();
+      const cookieResult = await setHqSessionCookieFromIdToken(idToken);
+      if (!cookieResult.success) {
+        return { success: false, error: cookieResult.error || 'Failed to set security cookie.' };
+      }
+    }
+
+    // 5. Update custom claims
+    const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
+    try {
+      await setUserDashboardClaims(discoveredUid, redirectPath);
+    } catch (err) {
+      console.warn('[UniversalAuth] Failed to update claims:', err);
+    }
+
+    return { success: true, redirectUrl: redirectPath };
+  } catch (err: any) {
+    console.error('[UniversalAuth] Dynamic Google sign-in failed:', err);
+    return { success: false, error: err.message || 'Authentication failed.' };
+  }
 }

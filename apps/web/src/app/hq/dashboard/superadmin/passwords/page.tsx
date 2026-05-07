@@ -40,6 +40,9 @@ export default function HqPasswordsPage() {
   const [activePortal, setActivePortal] = useState<'all' | CredentialUser['portal']>('all');
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [allPasswordsVisible, setAllPasswordsVisible] = useState(false);
+  const [visibleSecurityIds, setVisibleSecurityIds] = useState<Record<string, boolean>>({});
+  const [allSecurityIdsVisible, setAllSecurityIdsVisible] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [resettingId, setResettingId] = useState<string | null>(null);
@@ -113,6 +116,30 @@ export default function HqPasswordsPage() {
 
   const togglePassword = (id: string) => {
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleAllPasswords = () => {
+    const nextState = !allPasswordsVisible;
+    setAllPasswordsVisible(nextState);
+    const updated: Record<string, boolean> = {};
+    users.forEach((u) => {
+      updated[u.id] = nextState;
+    });
+    setVisiblePasswords(updated);
+  };
+
+  const toggleSecurityId = (id: string) => {
+    setVisibleSecurityIds((prev) => ({ ...prev, [id]: prev[id] === false }));
+  };
+
+  const toggleAllSecurityIds = () => {
+    const nextState = !allSecurityIdsVisible;
+    setAllSecurityIdsVisible(nextState);
+    const updated: Record<string, boolean> = {};
+    users.forEach((u) => {
+      updated[u.id] = nextState;
+    });
+    setVisibleSecurityIds(updated);
   };
 
   const copyToClipboard = (id: string, customId: string, password: string) => {
@@ -294,8 +321,30 @@ export default function HqPasswordsPage() {
                 <th className="px-12 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Operator Identity</th>
                 <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic text-center">Domain</th>
                 <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic text-center">Rank</th>
-                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Security ID</th>
-                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Encryption Key</th>
+                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">
+                  <div className="flex items-center gap-2">
+                    Security ID
+                    <button
+                      onClick={toggleAllSecurityIds}
+                      className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-indigo-600 transition-colors"
+                      title={allSecurityIdsVisible ? "Hide All Security IDs" : "Show All Security IDs"}
+                    >
+                      {allSecurityIdsVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </th>
+                <th className="px-10 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic">
+                  <div className="flex items-center gap-2">
+                    Encryption Key
+                    <button
+                      onClick={toggleAllPasswords}
+                      className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-indigo-600 transition-colors"
+                      title={allPasswordsVisible ? "Hide All Passwords" : "Show All Passwords"}
+                    >
+                      {allPasswordsVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </th>
                 <th className="px-12 py-10 text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic text-right">Directives</th>
               </tr>
             </thead>
@@ -325,8 +374,15 @@ export default function HqPasswordsPage() {
                   </td>
                   <td className="px-10 py-8">
                     <div className="flex items-center gap-3 font-black text-[11px] text-gray-900 uppercase tracking-widest">
-                      <Shield size={16} className="text-gray-300" />
-                      {u.customId}
+                      <Shield size={16} className="text-gray-300 shrink-0" />
+                      <span>{visibleSecurityIds[u.id] !== false ? u.customId : '••••••••••••'}</span>
+                      <button
+                        onClick={() => toggleSecurityId(u.id)}
+                        className="p-1 rounded-md hover:bg-gray-100 text-gray-300 hover:text-indigo-600 transition-colors ml-auto"
+                        title={visibleSecurityIds[u.id] !== false ? "Hide Security ID" : "Show Security ID"}
+                      >
+                        {visibleSecurityIds[u.id] !== false ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </button>
                     </div>
                   </td>
                   <td className="px-10 py-8">
@@ -337,6 +393,7 @@ export default function HqPasswordsPage() {
                       <button
                         onClick={() => togglePassword(u.id)}
                         className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all active:scale-95 shadow-sm"
+                        title={visiblePasswords[u.id] ? "Hide Password" : "Show Password"}
                       >
                         {visiblePasswords[u.id] ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>

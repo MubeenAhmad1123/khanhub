@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { loginUniversal } from '@/lib/hq/auth/universalAuth';
+import { loginUniversal, loginGoogleUniversal } from '@/lib/hq/auth/universalAuth';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
 import { Info, Lock, User as UserIcon, Loader2, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
@@ -22,11 +22,15 @@ export default function SignInPage() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    // Redirect if already signed in (as regular user, not superadmin)
+    // Redirect if already signed in (dynamically discover their dashboard)
     useEffect(() => {
-        if (user && !isSuperadminEmail(user.email)) {
-            console.log('[SignInPage] Firebase user detected, redirecting to /');
-            router.push('/');
+        if (user) {
+            console.log('[SignInPage] Firebase user detected, discovering dashboard routing...');
+            loginGoogleUniversal(user).then((result) => {
+                if (result.success && result.redirectUrl) {
+                    window.location.href = result.redirectUrl;
+                }
+            });
         }
     }, [user, router]);
 
@@ -41,7 +45,7 @@ export default function SignInPage() {
         );
     }
 
-    if (user && !isSuperadminEmail(user.email)) return null;
+    if (user) return null;
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
@@ -52,37 +56,17 @@ export default function SignInPage() {
                 return;
             }
 
-            // ── Superadmin whitelist check ──────────────────────────────
-            if (isSuperadminEmail(firebaseUser.email)) {
-                // Get ID token and provision via Server Action (bypasses Firestore rules)
-                const idToken = await firebaseUser.getIdToken();
-                const result = await provisionSuperadminAndSetSession(idToken);
-
-                if (!result.success) {
-                    toast.error(result.error || 'Failed to set up admin session.');
-                    return;
+            console.log('[SignInPage] Initiating universal Google login for:', firebaseUser.email);
+            const result = await loginGoogleUniversal(firebaseUser);
+            if (result.success) {
+                toast.success('Successfully logged in!');
+                if (result.redirectUrl) {
+                    console.log('[SignInPage] Proceeding to redirect:', result.redirectUrl);
+                    window.location.href = result.redirectUrl;
                 }
-
-                // Set local HQ session from what the server returned
-                const session = {
-                    uid: firebaseUser.uid,
-                    customId: result.session?.customId || 'SUPER-ADMIN',
-                    name: result.session?.name || firebaseUser.displayName || 'Super Admin',
-                    role: 'superadmin',
-                    loginTime: Date.now(),
-                    email: firebaseUser.email,
-                    photoUrl: firebaseUser.photoURL,
-                };
-                localStorage.setItem('hq_session', JSON.stringify(session));
-                localStorage.setItem('hq_login_time', Date.now().toString());
-
-                toast.success('Welcome, Super Admin!');
-                window.location.href = '/hq/dashboard/superadmin';
-                return;
+            } else {
+                toast.error(result.error || 'Failed to sign in.');
             }
-
-            // Regular Google user — send to main site
-            router.push('/');
         } catch (error) {
             console.error('Sign-in error:', error);
             toast.error('Failed to sign in. Please try again.');
