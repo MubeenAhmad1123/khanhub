@@ -352,7 +352,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
+      allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager() || (isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId());
     }
 
     // ── Staff profiles ─────────────────────────────────
@@ -377,7 +377,7 @@ service cloud.firestore {
         || isHqSuperOrManager();
       allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow update: if isRehabRole('staff') || isRehabAdminOrAbove();
-      allow delete: if false;
+      allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
     }
 
     // ── Departmental Staff Operational Rules (Rehab, SPIMS, etc.) ─────────────────
