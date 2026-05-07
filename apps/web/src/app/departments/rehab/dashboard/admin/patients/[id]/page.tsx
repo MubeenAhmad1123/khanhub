@@ -154,7 +154,15 @@ export default function PatientDetailPage() {
   const [rejoinForm, setRejoinForm] = useState({
     duration: '',
     totalFee: '',
-    familyVisit: ''
+    familyVisit: '',
+    admissionDate: new Date().toISOString().split('T')[0],
+    dischargeDate: '',
+    visitorName: '',
+    visitorRelation: '',
+    visitorPhone: '',
+    visitorCnic: '',
+    visitorNotes: '',
+    visitDate: new Date().toISOString().split('T')[0]
   });
   const [isRejoiningWithDetails, setIsRejoiningWithDetails] = useState(false);
 
@@ -718,9 +726,19 @@ export default function PatientDetailPage() {
       const updatePayload: any = {
         isActive: true,
         rejoinDate: Timestamp.now(),
-        admissionDate: Timestamp.now(), // Reset admission date for the new stay
-        dischargeDate: null,           // Clear discharge date
       };
+
+      if (rejoinData?.admissionDate) {
+        updatePayload.admissionDate = Timestamp.fromDate(new Date(`${rejoinData.admissionDate}T00:00:00`));
+      } else {
+        updatePayload.admissionDate = Timestamp.now();
+      }
+
+      if (rejoinData?.dischargeDate) {
+        updatePayload.dischargeDate = Timestamp.fromDate(new Date(`${rejoinData.dischargeDate}T00:00:00`));
+      } else {
+        updatePayload.dischargeDate = null;
+      }
 
       // Store previous stay in history if rejoining the CURRENT profile
       if (!targetId || targetId === patientId) {
@@ -747,6 +765,26 @@ export default function PatientDetailPage() {
       }
 
       await updateDoc(doc(db, 'rehab_patients', tid), updatePayload);
+
+      // Log the family visit if visitor details are filled
+      if (rejoinData && rejoinData.visitorName && rejoinData.visitorRelation && rejoinData.visitorPhone) {
+        try {
+          const visitData = {
+            patientId: tid,
+            visitorName: rejoinData.visitorName,
+            relation: rejoinData.visitorRelation,
+            phone: rejoinData.visitorPhone,
+            cnic: rejoinData.visitorCnic || null,
+            notes: rejoinData.visitorNotes || rejoinData.familyVisit || null,
+            date: Timestamp.fromDate(new Date(`${rejoinData.visitDate || rejoinData.admissionDate}T00:00:00`)),
+            loggedBy: session?.uid || 'system',
+            createdAt: Timestamp.now()
+          };
+          await addDoc(collection(db, 'rehab_visits'), visitData);
+        } catch (visitErr) {
+          console.error("Error logging visit during rejoin:", visitErr);
+        }
+      }
 
       toast.success('Patient rejoined successfully ✓');
       setShowRejoinCheckModal(false);
@@ -777,6 +815,20 @@ export default function PatientDetailPage() {
       const matching = snap.docs
         .map(d => ({ id: d.id, ...d.data() } as any))
         .filter(p => p.id !== patientId);
+
+      setRejoinForm({
+        duration: '',
+        totalFee: String(patient?.monthlyPackage || patient?.packageAmount || ''),
+        familyVisit: '',
+        admissionDate: new Date().toISOString().split('T')[0],
+        dischargeDate: '',
+        visitorName: '',
+        visitorRelation: '',
+        visitorPhone: '',
+        visitorCnic: '',
+        visitorNotes: '',
+        visitDate: new Date().toISOString().split('T')[0]
+      });
 
       if (matching.length > 0) {
         setMatchingPatients(matching);
@@ -1476,6 +1528,123 @@ export default function PatientDetailPage() {
               <FileText className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
             </div>
+
+            {/* Stays & Rejoining History Timeline */}
+            {patient?.rejoinHistory && patient.rejoinHistory.length > 0 && (
+              <div className="p-6 rounded-3xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-teal-600 dark:text-teal-400 flex items-center gap-2">
+                      <Clock className="w-4 h-4 animate-pulse" />
+                      Stay & Readmission History ({patient.rejoinHistory.length + 1} Stays Total)
+                    </h3>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Chronological record of patient admissions & stays</p>
+                  </div>
+                  <span className="text-[10px] bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 px-3 py-1 rounded-full font-black uppercase tracking-wider">
+                    {patient.isActive ? "Currently Active" : "Discharged"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Current Active/Recent Stay Card */}
+                  <div className="relative overflow-hidden bg-white dark:bg-gray-900 border-2 border-teal-500 rounded-2xl p-5 shadow-lg shadow-teal-500/5">
+                    <div className="absolute top-0 right-0 bg-teal-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-bl-xl flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                      Current Stay Overview
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Admission Date</p>
+                        <p className="text-sm font-black text-gray-900 dark:text-white mt-1">
+                          {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Expected Discharge</p>
+                        <p className="text-sm font-bold text-gray-600 dark:text-gray-300 mt-1">
+                          {patient.dischargeDate ? formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate) : "Not Decided"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Monthly Package</p>
+                        <p className="text-sm font-black text-teal-600 dark:text-teal-400 mt-1">
+                          PKR {(patient.monthlyPackage || patient.packageAmount || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Duration Elapsed</p>
+                        <p className="text-sm font-bold text-gray-600 dark:text-gray-300 mt-1">
+                          {patient.durationFormatted || `${patient.daysAdmitted || 0} Days`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Past Stays Timeline */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Previous Stays ({patient.rejoinHistory.length})</p>
+                    {patient.rejoinHistory.map((stay: any, idx: number) => (
+                      <div key={idx} className="bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-white/5 rounded-2xl p-4 transition-all hover:bg-white dark:hover:bg-gray-900">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-50 dark:border-white/5 pb-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-xs font-black text-gray-500">
+                              {patient.rejoinHistory.length - idx}
+                            </span>
+                            <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">Stay Record</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-400">
+                            Rejoined On: {formatDateDMY(stay.rejoinedAt?.toDate?.() || stay.rejoinedAt)}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Admission Date</p>
+                            <p className="font-bold text-gray-800 dark:text-gray-200 mt-0.5">
+                              {formatDateDMY(stay.admissionDate?.toDate?.() || stay.admissionDate)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Discharge Date</p>
+                            <p className="font-bold text-gray-800 dark:text-gray-200 mt-0.5">
+                              {stay.dischargeDate ? formatDateDMY(stay.dischargeDate?.toDate?.() || stay.dischargeDate) : "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Stay Package</p>
+                            <p className="font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                              PKR {(stay.monthlyPackage || stay.packageAmount || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Stay Duration</p>
+                            <p className="font-bold text-gray-800 dark:text-gray-200 mt-0.5">
+                              {stay.duration || `${stay.daysAdmitted || 0} Days`}
+                            </p>
+                          </div>
+                        </div>
+                        {stay.rejoinDetails?.visitorName && (
+                          <div className="mt-3 pt-3 border-t border-dashed border-gray-100 dark:border-white/5 text-xs text-gray-500 bg-teal-500/5 rounded-xl p-3">
+                            <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mb-1">Guardian/Visitor at Readmission</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div>Name: <span className="font-black text-gray-700 dark:text-gray-300">{stay.rejoinDetails.visitorName}</span></div>
+                              <div>Relation: <span className="font-bold text-gray-700 dark:text-gray-300">{stay.rejoinDetails.visitorRelation}</span></div>
+                              <div>Phone: <span className="font-mono text-gray-700 dark:text-gray-300">{stay.rejoinDetails.visitorPhone}</span></div>
+                              {stay.rejoinDetails.visitorCnic && <div>CNIC: <span className="font-mono text-gray-700 dark:text-gray-300">{stay.rejoinDetails.visitorCnic}</span></div>}
+                            </div>
+                            {stay.rejoinDetails.visitorNotes && (
+                              <p className="mt-1.5 pt-1.5 border-t border-teal-500/10 italic text-[11px] text-gray-400">
+                                Notes: {stay.rejoinDetails.visitorNotes}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({ ...patient, ...updated })} />
           </div>
 
@@ -2562,77 +2731,181 @@ export default function PatientDetailPage() {
       {/* Premium Rejoin Details Modal */}
       {showRejoinDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-gray-950 rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5">
+          <div className="bg-white dark:bg-gray-950 rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-black text-teal-600 dark:text-teal-400 uppercase tracking-tight flex items-center gap-2">
                     <Clock className="w-6 h-6" />
-                    Rejoin Details
+                    Patient Rejoin Details & Stay Setup
                   </h2>
-                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Please provide rejoin information</p>
+                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Setup the new stay parameters and log the initial family visit</p>
                 </div>
                 <button onClick={() => setShowRejoinDetailsModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full text-gray-400 transition-colors">
                   <X size={20} />
                 </button>
               </div>
 
-              <div>
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 text-xs font-bold text-amber-700 dark:text-amber-400 mb-4">
-                  <p className="uppercase tracking-widest text-[9px] mb-1 opacity-70">Previous Stay Info</p>
-                  <p>Duration: <span className="font-black">{patient?.durationFormatted}</span></p>
-                  <p>Last Package: <span className="font-black">PKR {(patient?.monthlyPackage || patient?.packageAmount)?.toLocaleString()}</span></p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Column 1: Stay & Financial Details */}
+                <div className="space-y-4">
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 text-xs font-bold text-amber-700 dark:text-amber-400">
+                    <p className="uppercase tracking-widest text-[9px] mb-1 opacity-70">Previous Stay Summary</p>
+                    <p>Last Duration: <span className="font-black">{patient?.durationFormatted || `${patient?.daysAdmitted || 0} Days`}</span></p>
+                    <p>Last Active Package: <span className="font-black">PKR {(patient?.monthlyPackage || patient?.packageAmount || 0).toLocaleString()} / Month</span></p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-teal-500" />
+                      Admission Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={rejoinForm.admissionDate}
+                      onChange={(e) => setRejoinForm({ ...rejoinForm, admissionDate: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-rose-500" />
+                      Discharge Date <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={rejoinForm.dischargeDate}
+                      onChange={(e) => setRejoinForm({ ...rejoinForm, dischargeDate: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                      <DollarSign className="w-3.5 h-3.5 text-teal-500" />
+                      Decided Monthly Package Fee (PKR) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs uppercase tracking-widest">PKR</span>
+                      <input
+                        type="number"
+                        required
+                        value={rejoinForm.totalFee}
+                        onChange={(e) => setRejoinForm({ ...rejoinForm, totalFee: e.target.value })}
+                        placeholder="0"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-teal-500" />
+                      Stay Duration <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={rejoinForm.duration}
+                      onChange={(e) => setRejoinForm({ ...rejoinForm, duration: e.target.value })}
+                      placeholder="E.g. 3 Months"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Column 2: Family Visit Information */}
+                <div className="space-y-4">
+                  <div className="bg-teal-50 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/30 rounded-2xl p-4 text-xs font-bold text-teal-700 dark:text-teal-400">
+                    <p className="uppercase tracking-widest text-[9px] mb-1 opacity-70">Readmission Family Visit Log</p>
+                    <p>Enter guardian/visitor details to automatically log their stay-opening visit record.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Visitor Name</label>
+                      <input
+                        type="text"
+                        value={rejoinForm.visitorName}
+                        onChange={(e) => setRejoinForm({ ...rejoinForm, visitorName: e.target.value })}
+                        placeholder="E.g. Muhammad Ahmad"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Relation</label>
+                      <input
+                        type="text"
+                        value={rejoinForm.visitorRelation}
+                        onChange={(e) => setRejoinForm({ ...rejoinForm, visitorRelation: e.target.value })}
+                        placeholder="E.g. Father"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone Number</label>
+                      <input
+                        type="text"
+                        value={rejoinForm.visitorPhone}
+                        onChange={(e) => setRejoinForm({ ...rejoinForm, visitorPhone: e.target.value })}
+                        placeholder="03001234567"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">CNIC (Optional)</label>
+                      <input
+                        type="text"
+                        value={rejoinForm.visitorCnic}
+                        onChange={(e) => setRejoinForm({ ...rejoinForm, visitorCnic: e.target.value })}
+                        placeholder="35201-XXXXXXX-X"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Visit Date</label>
+                    <input
+                      type="date"
+                      value={rejoinForm.visitDate}
+                      onChange={(e) => setRejoinForm({ ...rejoinForm, visitDate: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Visit Notes / Family Policy</label>
+                    <textarea
+                      value={rejoinForm.visitorNotes}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setRejoinForm(prev => ({ ...prev, visitorNotes: val, familyVisit: val }));
+                      }}
+                      placeholder="Details about family visit policy, agreement or history during this stay..."
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all min-h-[90px] resize-none text-gray-900 dark:text-white"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">New Stay Duration (Days/Months)</label>
-                <input
-                  type="text"
-                  value={rejoinForm.duration}
-                  onChange={(e) => setRejoinForm({ ...rejoinForm, duration: e.target.value })}
-                  placeholder="E.g. 3 Months"
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Total Fee Decided (PKR)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs uppercase tracking-widest">PKR</span>
-                  <input
-                    type="number"
-                    value={rejoinForm.totalFee}
-                    onChange={(e) => setRejoinForm({ ...rejoinForm, totalFee: e.target.value })}
-                    placeholder="0"
-                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Family Visit Notes</label>
-                <textarea
-                  value={rejoinForm.familyVisit}
-                  onChange={(e) => setRejoinForm({ ...rejoinForm, familyVisit: e.target.value })}
-                  placeholder="Details about family visit policy or history during this stay..."
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all min-h-[100px] resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-4 pt-6 border-t border-gray-100 dark:border-white/5 mt-6 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowRejoinDetailsModal(false)}
-                  className="flex-1 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                  className="px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={() => executeRejoin(undefined, rejoinForm)}
-                  disabled={deactivating || !rejoinForm.duration || !rejoinForm.totalFee}
-                  className="flex-[2] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/20 active:scale-95"
+                  disabled={deactivating || !rejoinForm.admissionDate || !rejoinForm.totalFee || (!!(rejoinForm.visitorName || rejoinForm.visitorRelation || rejoinForm.visitorPhone) && (!rejoinForm.visitorName || !rejoinForm.visitorRelation || !rejoinForm.visitorPhone))}
+                  className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-8 py-4 rounded-2xl transition-all flex items-center gap-2 shadow-lg shadow-teal-900/20 active:scale-95"
                 >
                   {deactivating ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
                   Confirm Rejoin
