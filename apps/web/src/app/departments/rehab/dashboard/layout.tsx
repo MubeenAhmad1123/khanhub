@@ -8,7 +8,8 @@ import {
   LayoutDashboard, Heart, CalendarDays, User, UserCog, Shield, ArrowLeft, LogOut, Menu, X, CheckCircle, Users
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import StaffNotifications from '@/components/layout/StaffNotifications';
 
 
@@ -92,36 +93,48 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
   useEffect(() => {
     setMounted(true);
-    let session = localStorage.getItem('rehab_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-          console.log('[RehabLayout] Detected HQ Superadmin session, syncing to rehab...');
-          const syncSession = {
-            uid: hqSession.uid,
-            customId: hqSession.customId || hqSession.email || 'HQ-USER',
-            role: 'superadmin',
-            displayName: hqSession.displayName || 'Superadmin',
-          };
-          localStorage.setItem('rehab_session', JSON.stringify(syncSession));
-          localStorage.setItem('rehab_login_time', Date.now().toString());
-          session = JSON.stringify(syncSession);
-          setIsHqAdmin(true);
-        }
-      } catch (e) {}
-    }
 
-    if (!session) { 
-      console.warn('[RehabLayout] No rehab_session found, redirecting to login');
-      router.push('/departments/rehab/login'); 
-      return; 
-    }
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      let session = localStorage.getItem('rehab_session');
+      const hqSessionStr = localStorage.getItem('hq_session');
+      
+      if (hqSessionStr) {
+        try {
+          const hqSession = JSON.parse(hqSessionStr);
+          if (hqSession?.role === 'superadmin') {
+            console.log('[RehabLayout] Detected HQ Superadmin session, syncing to rehab...');
+            const syncSession = {
+              uid: hqSession.uid,
+              customId: hqSession.customId || hqSession.email || 'HQ-USER',
+              role: 'superadmin',
+              displayName: hqSession.displayName || 'Superadmin',
+            };
+            localStorage.setItem('rehab_session', JSON.stringify(syncSession));
+            localStorage.setItem('rehab_login_time', Date.now().toString());
+            session = JSON.stringify(syncSession);
+            setIsHqAdmin(true);
+          }
+        } catch (e) {}
+      }
 
-    const performAuthCheck = () => {
-      console.log('[RehabLayout] Performing auth check. Session exists:', !!session);
+      if (!session) { 
+        console.warn('[RehabLayout] No rehab_session found, redirecting to login');
+        router.push('/departments/rehab/login'); 
+        return; 
+      }
+
+      if (!firebaseUser) {
+        console.warn('[RehabLayout] Firebase Auth user is null, checking for redirection...');
+        const timeout = setTimeout(() => {
+          if (!auth.currentUser) {
+            console.warn('[RehabLayout] Session restoration timed out, redirecting to login');
+            router.push('/departments/rehab/login');
+          }
+        }, 1500);
+        return () => clearTimeout(timeout);
+      }
+
+      console.log('[RehabLayout] Performing auth check. Session exists:', !!session, 'Firebase User:', firebaseUser.uid);
       try {
         const parsed = JSON.parse(session!);
         console.log('[RehabLayout] Session parsed for:', parsed.customId, 'Role:', parsed.role);
@@ -131,6 +144,11 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           throw new Error('Invalid session');
         }
 
+        if (parsed.uid !== firebaseUser.uid) {
+          console.warn('[RehabLayout] Session UID mismatch with Firebase Auth UID');
+          throw new Error('UID mismatch');
+        }
+
         console.log('[RehabLayout] Auth Check SUCCESS');
         setUser(parsed);
         setIsChecking(false);
@@ -138,9 +156,9 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         console.error('[RehabLayout] Auth Check FAILED:', err);
         handleSignOut();
       }
-    };
+    });
 
-    performAuthCheck();
+    return () => unsubscribeAuth();
   }, [router, handleSignOut]);
 
   useEffect(() => {
