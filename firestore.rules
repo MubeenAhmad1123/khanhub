@@ -15,14 +15,12 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == uid;
     }
     function isAdmin() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid))
-          .data.get('role', '') == 'admin';
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isAuth() && exists(path) && get(path).data.get('role', '') == 'admin';
     }
     function isCashier() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid))
-          .data.get('role', '') == 'cashier';
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isAuth() && exists(path) && get(path).data.get('role', '') == 'cashier';
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -232,10 +230,12 @@ service cloud.firestore {
       return isRehabRole('superadmin');
     }
     function rehabPatientId() {
-      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId;
+      let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('patientId', null) : null;
     }
     function rehabStaffId() {
-      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId;
+      let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('staffId', null) : null;
     }
     function isOwnStaffRecord(staffId) {
       return isRehabRole('staff')
@@ -543,10 +543,12 @@ service cloud.firestore {
       return isSpimsRole('superadmin');
     }
     function spimsStudentId() {
-      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.studentId;
+      let path = /databases/$(database)/documents/spims_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('studentId', null) : null;
     }
     function spimsStaffId() {
-      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.staffId;
+      let path = /databases/$(database)/documents/spims_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('staffId', null) : null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -693,7 +695,9 @@ service cloud.firestore {
 
     // spims_tests — admin announcements for tests (course/session or single student)
     function spimsStudentDoc() {
-      return get(/databases/$(database)/documents/spims_students/$(spimsStudentId())).data;
+      let id = spimsStudentId();
+      let path = /databases/$(database)/documents/spims_students/$(id);
+      return (id != null && exists(path)) ? get(path).data : {'course': '', 'session': ''};
     }
     match /spims_tests/{docId} {
       allow read: if isSpimsAdminOrAbove()
@@ -765,20 +769,20 @@ service cloud.firestore {
       ); 
     } 
 
-    function getHqUser() {
-      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data;
-    }
-
     function hqRole() { 
+      let path = /databases/$(database)/documents/hq_users/$(request.auth.uid);
       return request.auth == null ? '' :
              isSystemAdmin() ? 'superadmin' : 
-             ('role' in request.auth.token ? request.auth.token.role : getHqUser().get('role', ''));
+             ('role' in request.auth.token ? request.auth.token.role : 
+              (exists(path) ? get(path).data.get('role', '') : ''));
     } 
 
     function hqCustomId() {
+      let path = /databases/$(database)/documents/hq_users/$(request.auth.uid);
       return request.auth == null ? '' :
              isSystemAdmin() ? 'SYSTEM_ADMIN' : 
-             ('customId' in request.auth.token ? request.auth.token.customId : getHqUser().get('customId', ''));
+             ('customId' in request.auth.token ? request.auth.token.customId : 
+              (exists(path) ? get(path).data.get('customId', '') : ''));
     }
 
     function isHqRole(role) { 
@@ -896,13 +900,13 @@ service cloud.firestore {
       allow read: if isHqAuth()
         && (
           isHqSuperOrManager()
-          || resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+          || resource.data.recipientId == hqCustomId()
         );
       allow create: if isHqAuth();
       allow update: if isHqAuth()
         && (
           isHqSuperOrManager()
-          || resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+          || resource.data.recipientId == hqCustomId()
         )
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
       allow delete: if false;
@@ -1148,10 +1152,12 @@ service cloud.firestore {
       return isHospitalRole('superadmin');
     }
     function hospitalPatientId() {
-      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.patientId;
+      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('patientId', null) : null;
     }
     function hospitalStaffId() {
-      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.staffId;
+      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('staffId', null) : null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1288,10 +1294,12 @@ service cloud.firestore {
       return isSukoonRole('superadmin');
     }
     function sukoonClientId() {
-      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.clientId;
+      let path = /databases/$(database)/documents/sukoon_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('clientId', null) : null;
     }
     function sukoonStaffId() {
-      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.staffId;
+      let path = /databases/$(database)/documents/sukoon_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('staffId', null) : null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1431,10 +1439,12 @@ service cloud.firestore {
       return isWelfareRole('superadmin');
     }
     function welfareChildId() {
-      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.childId;
+      let path = /databases/$(database)/documents/welfare_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('childId', null) : null;
     }
     function welfareStaffId() {
-      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.staffId;
+      let path = /databases/$(database)/documents/welfare_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('staffId', null) : null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1598,9 +1608,9 @@ service cloud.firestore {
             || exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)));
     }
     function jobCenterRole() {
-      return exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/job_center_users/$(request.auth.uid)).data.role
-        : get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data.role;
+      let p1 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      let p2 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return exists(p1) ? get(p1).data.get('role', '') : (exists(p2) ? get(p2).data.get('role', '') : '');
     }
     function isJobCenterRole(role) {
       return isJobCenterAuth() && jobCenterRole() == role;
@@ -1613,14 +1623,14 @@ service cloud.firestore {
       return isJobCenterRole('superadmin');
     }
     function jobCenterSeekerId() {
-      return exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/job_center_users/$(request.auth.uid)).data.seekerId
-        : get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data.seekerId;
+      let p1 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      let p2 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return exists(p1) ? get(p1).data.get('seekerId', null) : (exists(p2) ? get(p2).data.get('seekerId', null) : null);
     }
     function jobCenterStaffId() {
-      return exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/job_center_users/$(request.auth.uid)).data.staffId
-        : get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data.staffId;
+      let p1 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      let p2 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return exists(p1) ? get(p1).data.get('staffId', null) : (exists(p2) ? get(p2).data.get('staffId', null) : null);
     }
 
     // ═══════════════════════════════════════════════════════════
