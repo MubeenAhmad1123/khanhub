@@ -754,6 +754,29 @@ export default function PatientDetailPage() {
           rejoinDetails: rejoinData || null
         };
         updatePayload.rejoinHistory = [...currentHistory, previousStay];
+      } else {
+        // MERGING CASE: Fetch target profile's history, append current profile's history + current stay
+        const targetDocRef = doc(db, 'rehab_patients', targetId);
+        const targetDocSnap = await getDoc(targetDocRef);
+        if (!targetDocSnap.exists()) {
+          throw new Error("Target patient profile not found");
+        }
+        const targetData = targetDocSnap.data() as any;
+
+        const currentHistory = patient?.rejoinHistory || [];
+        const previousStay = {
+          admissionDate: patient.admissionDate,
+          dischargeDate: patient.dischargeDate,
+          duration: patient.durationFormatted,
+          daysAdmitted: patient.daysAdmitted,
+          monthlyPackage: patient.monthlyPackage || patient.packageAmount,
+          finalBalance: patient.overallRemaining,
+          rejoinedAt: Timestamp.now(),
+          rejoinDetails: rejoinData || { notes: `Merged from duplicate profile ID: ${patientId}` }
+        };
+
+        const targetHistory = targetData.rejoinHistory || [];
+        updatePayload.rejoinHistory = [...targetHistory, ...currentHistory, previousStay];
       }
 
       if (rejoinData) {
@@ -786,7 +809,44 @@ export default function PatientDetailPage() {
         }
       }
 
-      toast.success('Patient rejoined successfully ✓');
+      // If merging occurred, transfer all sub-collection details and delete the current profile
+      if (targetId && targetId !== patientId) {
+        const collectionsToMerge = [
+          'rehab_fees',
+          'rehab_canteen',
+          'rehab_videos',
+          'rehab_visits',
+          'rehab_transactions',
+          'rehab_daily_activities',
+          'rehab_therapy_sessions',
+          'rehab_medication_records',
+          'rehab_weekly_progress',
+          'rehab_attendance'
+        ];
+
+        for (const colName of collectionsToMerge) {
+          const q = query(collection(db, colName), where('patientId', '==', patientId));
+          const snap = await getDocs(q);
+          const updates = snap.docs.map(d => updateDoc(doc(db, colName, d.id), { patientId: targetId }));
+          await Promise.all(updates);
+        }
+
+        // Handle rehab_users which has both patientId and customId fields
+        const qUsersPatientId = query(collection(db, 'rehab_users'), where('patientId', '==', patientId));
+        const snapUsersPatientId = await getDocs(qUsersPatientId);
+        const updatesUsersPatientId = snapUsersPatientId.docs.map(d => updateDoc(doc(db, 'rehab_users', d.id), { patientId: targetId }));
+        await Promise.all(updatesUsersPatientId);
+
+        const qUsersCustomId = query(collection(db, 'rehab_users'), where('customId', '==', patientId));
+        const snapUsersCustomId = await getDocs(qUsersCustomId);
+        const updatesUsersCustomId = snapUsersCustomId.docs.map(d => updateDoc(doc(db, 'rehab_users', d.id), { customId: targetId }));
+        await Promise.all(updatesUsersCustomId);
+
+        // Delete the duplicate patient profile document
+        await deleteDoc(doc(db, 'rehab_patients', patientId));
+      }
+
+      toast.success('Patient profile merged and rejoined successfully ✓');
       setShowRejoinCheckModal(false);
       setShowRejoinDetailsModal(false);
 
