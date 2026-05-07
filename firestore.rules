@@ -212,12 +212,14 @@ service cloud.firestore {
     function isRehabAuth() {
       return request.auth != null && (
         exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid)) ||
-        isHqTier1()
+        isHqTier1() ||
+        ('role' in request.auth.token && request.auth.token.deptId == 'rehab')
       );
     }
     function rehabRole() {
       let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('role', '') : '';
+      return exists(path) ? get(path).data.get('role', '') :
+             ('role' in request.auth.token ? request.auth.token.role : '');
     }
     function isRehabRole(role) {
       return isRehabAuth() && rehabRole() == role;
@@ -231,11 +233,13 @@ service cloud.firestore {
     }
     function rehabPatientId() {
       let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('patientId', null) : null;
+      return exists(path) ? get(path).data.get('patientId', null) :
+             ('patientId' in request.auth.token ? request.auth.token.patientId : null);
     }
     function rehabStaffId() {
       let path = /databases/$(database)/documents/rehab_users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('staffId', null) : null;
+      return exists(path) ? get(path).data.get('staffId', null) :
+             ('staffId' in request.auth.token ? request.auth.token.staffId : null);
     }
     function isOwnStaffRecord(staffId) {
       return isRehabRole('staff')
@@ -263,7 +267,7 @@ service cloud.firestore {
     // Write is false from client — only server action (Firebase Admin) creates/updates.
     match /rehab_users/{uid} {
       allow read: if (request.auth != null
-        && (request.auth.uid == uid || isRehabAdminOrAbove()))
+        && (request.auth.uid == uid || resource.data.uid == request.auth.uid || resource.data.email == request.auth.token.email || isRehabAdminOrAbove()))
         || isDiscoveryQuery()
         || isHqTier1();
       allow create: if isRehabAdminOrAbove() || isHqSuperOrManager();
@@ -1032,7 +1036,16 @@ service cloud.firestore {
     match /{collectionId}/{docId} {
       allow read: if (
         isHqTier1()
-        || (isAuth() && (docId == request.auth.uid || (resource != null && (resource.data.get('staffId', '') == request.auth.uid || resource.data.get('loginUserId', '') == request.auth.uid))))
+        || (isAuth() && (
+             docId == request.auth.uid 
+             || (resource != null && (
+                  resource.data.get('staffId', '') == request.auth.uid 
+                  || resource.data.get('loginUserId', '') == request.auth.uid
+                  || resource.data.get('uid', '') == request.auth.uid
+                  || resource.data.get('email', '') == request.auth.token.email
+                  || resource.data.get('recipientId', '') == request.auth.uid
+                ))
+           ))
       ) && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
@@ -1049,11 +1062,13 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
+          || collectionId.matches('^[a-z0-9_-]+_notifications$')
         ) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
       allow create, update: if (
         isHqSuperOrManager() 
         || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$'))
         || (isAuth() && request.resource.data.staffId == request.auth.uid && collectionId.matches('^[a-z0-9_-]+_contributions$'))
+        || (isAuth() && collectionId.matches('^[a-z0-9_-]+_notifications$'))
       )
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
@@ -1071,6 +1086,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
+          || collectionId.matches('^[a-z0-9_-]+_notifications$')
         );
       allow delete: if isHqSuperOrManager()
         && (

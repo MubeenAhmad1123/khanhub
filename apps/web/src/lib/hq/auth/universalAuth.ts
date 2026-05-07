@@ -601,7 +601,16 @@ export async function loginGoogleUniversal(firebaseUser: any): Promise<{ success
     // 5. Update custom claims
     const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
     try {
-      await setUserDashboardClaims(discoveredUid, redirectPath);
+      const extraClaims = {
+        role: finalData.role,
+        patientId: finalData.patientId || null,
+        studentId: finalData.studentId || null,
+        seekerId: finalData.seekerId || null,
+        childId: finalData.childId || null,
+        customId: finalData.customId || null,
+        deptId: dept.id
+      };
+      await setUserDashboardClaims(uid, redirectPath, extraClaims);
     } catch (err) {
       console.warn('[UniversalAuth] Failed to update claims:', err);
     }

@@ -33,6 +33,10 @@ export function useHospitalSession() {
     
     const startSync = async () => {
       if (!parsed?.uid) return;
+      if (parsed.role === 'superadmin') {
+        setSession(parsed);
+        return;
+      }
 
       const cacheKey = `hospital_profile_${parsed.uid}`;
       const cached = getCached<HospitalSession>(cacheKey);

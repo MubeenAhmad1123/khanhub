@@ -8,7 +8,29 @@ export default function HospitalDashboardRootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const raw = localStorage.getItem('hospital_session');
+    let raw = localStorage.getItem('hospital_session');
+    const hqSession = localStorage.getItem('hq_session');
+
+    if (!raw && hqSession) {
+      try {
+        const parsedHq = JSON.parse(hqSession);
+        if (parsedHq?.role === 'superadmin') {
+          const syncSession = {
+            uid: parsedHq.uid,
+            customId: parsedHq.customId || parsedHq.email || 'HQ-USER',
+            role: 'superadmin',
+            displayName: parsedHq.displayName || 'Superadmin',
+            isActive: true,
+          };
+          localStorage.setItem('hospital_session', JSON.stringify(syncSession));
+          localStorage.setItem('hospital_login_time', Date.now().toString());
+          raw = JSON.stringify(syncSession);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     if (!raw) {
       router.push('/departments/hospital/login');
       return;

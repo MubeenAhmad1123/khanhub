@@ -113,9 +113,12 @@ export async function setHqSessionCookieFromIdToken(idToken: string) {
 /**
  * Sets custom claims for any department user to enable zero-cost routing.
  */
-export async function setUserDashboardClaims(uid: string, path: string) {
+export async function setUserDashboardClaims(uid: string, path: string, extraClaims?: Record<string, any>) {
   try {
-    await adminAuth.setCustomUserClaims(uid, { dashboardPath: path });
+    await adminAuth.setCustomUserClaims(uid, { 
+      dashboardPath: path,
+      ...extraClaims
+    });
     return { success: true };
   } catch (err) {
     console.error('[SetClaims] Error:', err);

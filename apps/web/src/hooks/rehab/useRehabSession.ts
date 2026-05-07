@@ -33,6 +33,10 @@ export function useRehabSession() {
     
     const startSync = async () => {
       if (!parsed?.uid) return;
+      if (parsed.role === 'superadmin') {
+        setSession(parsed);
+        return;
+      }
 
       const cacheKey = `rehab_profile_${parsed.uid}`;
       const cached = getCached<RehabSession>(cacheKey);
