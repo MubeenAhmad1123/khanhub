@@ -347,11 +347,10 @@ export default function PatientsListPage() {
               <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-gray-100 rounded-[2rem] shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                 <div className="p-2">
                   {searchResults.map((p) => (
-                    <button
+                    <Link
                       key={p.id}
-                      type="button"
+                      href={`/departments/rehab/dashboard/admin/patients/${p.id}`}
                       onClick={() => {
-                        router.push(`/departments/rehab/dashboard/admin/patients/${p.id}`);
                         setSearchOpen(false);
                       }}
                       className="w-full flex items-center gap-4 px-4 py-3 hover:bg-teal-50/50 rounded-2xl transition-all text-left group"
@@ -365,7 +364,7 @@ export default function PatientsListPage() {
                           {p.inpatientNumber || `#${p.serialNumber}`}
                         </p>
                       </div>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
