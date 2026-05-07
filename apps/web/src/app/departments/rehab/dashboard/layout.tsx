@@ -130,7 +130,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             console.warn('[RehabLayout] Session restoration timed out, redirecting to login');
             router.push('/departments/rehab/login');
           }
-        }, 1500);
+        }, 8000);
         return () => clearTimeout(timeout);
       }
 

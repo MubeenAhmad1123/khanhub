@@ -720,7 +720,7 @@ export default function PatientDetailPage() {
 
   const executeRejoin = async (targetId?: string, rejoinData?: any) => {
     try {
-      const tid = targetId || patientId;
+      const tid = patientId; // Keep the current active patient profile as primary
       setDeactivating(true);
 
       const updatePayload: any = {
@@ -740,22 +740,22 @@ export default function PatientDetailPage() {
         updatePayload.dischargeDate = null;
       }
 
-      // Store previous stay in history if rejoining the CURRENT profile
+      const currentHistory = patient?.rejoinHistory || [];
+      const previousStay = {
+        admissionDate: patient.admissionDate,
+        dischargeDate: patient.dischargeDate,
+        duration: patient.durationFormatted,
+        daysAdmitted: patient.daysAdmitted,
+        monthlyPackage: patient.monthlyPackage || patient.packageAmount,
+        finalBalance: patient.overallRemaining,
+        rejoinedAt: Timestamp.now(),
+        rejoinDetails: rejoinData || null
+      };
+
       if (!targetId || targetId === patientId) {
-        const currentHistory = patient?.rejoinHistory || [];
-        const previousStay = {
-          admissionDate: patient.admissionDate,
-          dischargeDate: patient.dischargeDate,
-          duration: patient.durationFormatted,
-          daysAdmitted: patient.daysAdmitted,
-          monthlyPackage: patient.monthlyPackage || patient.packageAmount,
-          finalBalance: patient.overallRemaining,
-          rejoinedAt: Timestamp.now(),
-          rejoinDetails: rejoinData || null
-        };
         updatePayload.rejoinHistory = [...currentHistory, previousStay];
       } else {
-        // MERGING CASE: Fetch target profile's history, append current profile's history + current stay
+        // MERGING CASE: Fetch target profile's history, append its current stay, and merge with current history & previousStay
         const targetDocRef = doc(db, 'rehab_patients', targetId);
         const targetDocSnap = await getDoc(targetDocRef);
         if (!targetDocSnap.exists()) {
@@ -763,20 +763,24 @@ export default function PatientDetailPage() {
         }
         const targetData = targetDocSnap.data() as any;
 
-        const currentHistory = patient?.rejoinHistory || [];
-        const previousStay = {
-          admissionDate: patient.admissionDate,
-          dischargeDate: patient.dischargeDate,
-          duration: patient.durationFormatted,
-          daysAdmitted: patient.daysAdmitted,
-          monthlyPackage: patient.monthlyPackage || patient.packageAmount,
-          finalBalance: patient.overallRemaining,
-          rejoinedAt: Timestamp.now(),
-          rejoinDetails: rejoinData || { notes: `Merged from duplicate profile ID: ${patientId}` }
+        const targetHistory = targetData.rejoinHistory || [];
+        const targetCurrentStay = {
+          admissionDate: targetData.admissionDate || null,
+          dischargeDate: targetData.dischargeDate || null,
+          duration: targetData.durationFormatted || null,
+          daysAdmitted: targetData.daysAdmitted || null,
+          monthlyPackage: targetData.monthlyPackage || targetData.packageAmount || null,
+          finalBalance: targetData.overallRemaining || 0,
+          rejoinedAt: targetData.rejoinDate || null,
+          rejoinDetails: { notes: `Imported from merged duplicate profile ID: ${targetId}` }
         };
 
-        const targetHistory = targetData.rejoinHistory || [];
-        updatePayload.rejoinHistory = [...targetHistory, ...currentHistory, previousStay];
+        updatePayload.rejoinHistory = [
+          ...targetHistory,
+          targetCurrentStay,
+          ...currentHistory,
+          previousStay
+        ];
       }
 
       if (rejoinData) {
@@ -809,7 +813,7 @@ export default function PatientDetailPage() {
         }
       }
 
-      // If merging occurred, transfer all sub-collection details and delete the current profile
+      // If merging occurred, transfer all sub-collection details from targetId to patientId and delete targetId
       if (targetId && targetId !== patientId) {
         const collectionsToMerge = [
           'rehab_fees',
@@ -825,36 +829,32 @@ export default function PatientDetailPage() {
         ];
 
         for (const colName of collectionsToMerge) {
-          const q = query(collection(db, colName), where('patientId', '==', patientId));
+          const q = query(collection(db, colName), where('patientId', '==', targetId));
           const snap = await getDocs(q);
-          const updates = snap.docs.map(d => updateDoc(doc(db, colName, d.id), { patientId: targetId }));
+          const updates = snap.docs.map(d => updateDoc(doc(db, colName, d.id), { patientId: patientId }));
           await Promise.all(updates);
         }
 
         // Handle rehab_users which has both patientId and customId fields
-        const qUsersPatientId = query(collection(db, 'rehab_users'), where('patientId', '==', patientId));
+        const qUsersPatientId = query(collection(db, 'rehab_users'), where('patientId', '==', targetId));
         const snapUsersPatientId = await getDocs(qUsersPatientId);
-        const updatesUsersPatientId = snapUsersPatientId.docs.map(d => updateDoc(doc(db, 'rehab_users', d.id), { patientId: targetId }));
+        const updatesUsersPatientId = snapUsersPatientId.docs.map(d => updateDoc(doc(db, 'rehab_users', d.id), { patientId: patientId }));
         await Promise.all(updatesUsersPatientId);
 
-        const qUsersCustomId = query(collection(db, 'rehab_users'), where('customId', '==', patientId));
+        const qUsersCustomId = query(collection(db, 'rehab_users'), where('customId', '==', targetId));
         const snapUsersCustomId = await getDocs(qUsersCustomId);
-        const updatesUsersCustomId = snapUsersCustomId.docs.map(d => updateDoc(doc(db, 'rehab_users', d.id), { customId: targetId }));
+        const updatesUsersCustomId = snapUsersCustomId.docs.map(d => updateDoc(doc(db, 'rehab_users', d.id), { customId: patientId }));
         await Promise.all(updatesUsersCustomId);
 
-        // Delete the duplicate patient profile document
-        await deleteDoc(doc(db, 'rehab_patients', patientId));
+        // Delete the duplicate patient profile document (targetId)
+        await deleteDoc(doc(db, 'rehab_patients', targetId));
       }
 
       toast.success('Patient profile merged and rejoined successfully ✓');
       setShowRejoinCheckModal(false);
       setShowRejoinDetailsModal(false);
 
-      if (targetId && targetId !== patientId) {
-        router.push(`/departments/rehab/dashboard/admin/patients/${targetId}`);
-      } else {
-        fetchData();
-      }
+      fetchData();
     } catch (error) {
       console.error("Rejoin error", error);
       toast.error('Rejoin failed');
