@@ -39,6 +39,7 @@ export default function PatientsListPage() {
   const [hasMore, setHasMore] = useState(true);
   const [totalActiveCount, setTotalActiveCount] = useState(0);
   const [totalDischargedCount, setTotalDischargedCount] = useState(0);
+  const [totalPatientsCount, setTotalPatientsCount] = useState(0);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -78,8 +79,10 @@ export default function PatientsListPage() {
       // 1. Get counts using zero-cost getCountFromServer (1 read per 1000 docs)
       const activeCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
       const dischargedCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', false)));
+      const totalCountSnap = await getCountFromServer(collection(db, 'rehab_patients'));
       setTotalActiveCount(activeCountSnap.data().count);
       setTotalDischargedCount(dischargedCountSnap.data().count);
+      setTotalPatientsCount(totalCountSnap.data().count);
 
       // 2. Build Paginated Query
       let q = query(
@@ -314,8 +317,8 @@ export default function PatientsListPage() {
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0"><Phone className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total</p><p className="text-xl font-black text-gray-900">{patients.length}</p></div>
+              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0"><User className="w-4 h-4" /></div>
+              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Patients</p><p className="text-xl font-black text-gray-900">{totalPatientsCount}</p></div>
             </div>
           </div>
         </div>
@@ -512,8 +515,8 @@ export default function PatientsListPage() {
           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Page {page}</span>
           <button
             onClick={() => {
-              setPage(p => p + 1);
-              fetchPatients(true);
+               setPage(p => p + 1);
+               fetchPatients(true);
             }}
             disabled={!hasMore}
             className="px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-500 disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"

@@ -6,7 +6,30 @@ import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle,
 import { toast } from 'react-hot-toast';
 import { toDate, formatDateDMY } from '@/lib/utils';
 
-export default function DailySheetTab({ patientId, session, readOnly = false }: { patientId: string, session: any, readOnly?: boolean }) {
+export default function DailySheetTab({ patientId, session, readOnly = false, dateFilter }: { patientId: string, session: any, readOnly?: boolean, dateFilter?: { admissionDate: any; dischargeDate?: any } | null }) {
+  const isDateInFilter = useCallback((dateStr: string) => {
+    if (!dateFilter) return true;
+    const d = new Date(dateStr + 'T00:00:00');
+    
+    let start = dateFilter.admissionDate;
+    if (start) {
+      if (typeof start.toDate === 'function') start = start.toDate();
+      else start = new Date(start);
+      start.setHours(0, 0, 0, 0);
+    }
+    
+    let end = dateFilter.dischargeDate;
+    if (end) {
+      if (typeof end.toDate === 'function') end = end.toDate();
+      else end = new Date(end);
+      end.setHours(23, 59, 59, 999);
+    }
+    
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  }, [dateFilter]);
+
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -240,6 +263,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
               const existing = selectedDayActivities.find((a) => a.activityId === activity.id);
               const key = `${selectedDateStr}-${activity.id}`;
               const isSaving = pendingSaves.has(key);
+              const disabledByFilter = !isDateInFilter(selectedDateStr);
               return (
                 <div key={activity.id} className="p-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -249,12 +273,12 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                   </div>
                   <button
                     onClick={() => handleCellClick(selectedDay, activity.id)}
-                    disabled={isSaving || readOnly}
+                    disabled={isSaving || readOnly || disabledByFilter}
                     className={`shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center ${
-                      readOnly ? 'cursor-default' : 'hover:bg-gray-50'
+                      readOnly || disabledByFilter ? 'cursor-not-allowed opacity-40 bg-gray-100' : 'hover:bg-gray-50'
                     }`}
                   >
-                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
+                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : disabledByFilter ? <MinusCircle className="w-4 h-4 text-gray-300" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
                   </button>
                 </div>
               );
@@ -297,18 +321,21 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                         const key = `${dateStr}-${activity.id}`;
                         const isSaving = pendingSaves.has(key);
                         
+                        const disabledByFilter = !isDateInFilter(dateStr);
                         return (
-                          <td key={day} className="border-r border-gray-50 last:border-r-0">
+                          <td key={day} className={`border-r border-gray-50 last:border-r-0 ${disabledByFilter ? 'bg-gray-50/70' : ''}`}>
                             <button
                                onClick={() => handleCellClick(day, activity.id)}
-                               disabled={isSaving || readOnly}
+                               disabled={isSaving || readOnly || disabledByFilter}
                                className={`w-full h-full min-h-[44px] flex items-center justify-center transition-colors active:scale-90 disabled:opacity-50 ${
-                                 readOnly ? 'cursor-default' : 'hover:bg-gray-100'
+                                 readOnly || disabledByFilter ? 'cursor-not-allowed opacity-40' : 'hover:bg-gray-100'
                                }`}
-                               title={`${activity.name} — ${dateStr}`}
+                               title={`${activity.name} — ${dateStr}${disabledByFilter ? ' (Out of stay range)' : ''}`}
                             >
                               {isSaving ? (
                                 <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
+                              ) : disabledByFilter ? (
+                                <MinusCircle className="w-4 h-4 text-gray-300" />
                               ) : (
                                 getCellIcon(existing?.status, activity.id, dateStr)
                               )}

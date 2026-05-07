@@ -1,16 +1,43 @@
 // src/components/rehab/patient-profile/MedicationTab.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MedicationRecord } from '@/types/rehab';
 import { getMedicationRecords, addMedicationRecord } from '@/lib/rehab/patients';
 import { Loader2, Plus, Calendar, Pill } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
-export default function MedicationTab({ patientId, session }: { patientId: string, session: any }) {
+export default function MedicationTab({ patientId, session, dateFilter }: { patientId: string, session: any, dateFilter?: { admissionDate: any; dischargeDate?: any } | null }) {
   const [records, setRecords] = useState<MedicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isRecordInFilter = useCallback((recordDateStr: string) => {
+    if (!dateFilter) return true;
+    const d = new Date(recordDateStr + 'T00:00:00');
+
+    let start = dateFilter.admissionDate;
+    if (start) {
+      if (typeof start.toDate === 'function') start = start.toDate();
+      else start = new Date(start);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    let end = dateFilter.dischargeDate;
+    if (end) {
+      if (typeof end.toDate === 'function') end = end.toDate();
+      else end = new Date(end);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  }, [dateFilter]);
+
+  const filteredRecords = useMemo(() => {
+    return records.filter(r => isRecordInFilter(r.date));
+  }, [records, isRecordInFilter]);
 
   // Form state
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -43,11 +70,11 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
       toast.error('Medications list is required');
       return;
     }
-    
+
     try {
       setSaving(true);
       const newRecord: MedicationRecord = {
-        id: '', 
+        id: '',
         patientId,
         date,
         timing,
@@ -58,7 +85,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
         createdBy: session.uid,
         createdAt: new Date(),
       };
-      
+
       await addMedicationRecord(newRecord);
       toast.success('Record added');
       setShowAddModal(false);
@@ -96,100 +123,100 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
         </div>
       ) : (
         <>
-        <div className="md:hidden space-y-3">
-          {records.map(r => (
-            <div key={r.id} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 font-bold text-gray-900 text-sm">
-                  <Calendar size={14} className="text-teal-500" />
-                  <span>{formatDateDMY(r.date)}</span>
+          <div className="md:hidden space-y-3">
+            {records.map(r => (
+              <div key={r.id} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 font-bold text-gray-900 text-sm">
+                    <Calendar size={14} className="text-teal-500" />
+                    <span>{formatDateDMY(r.date)}</span>
+                  </div>
+                  <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
+                    {r.timing}
+                  </span>
                 </div>
-                <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
-                  {r.timing}
-                </span>
+                <div className="text-sm text-gray-800 break-words">{r.medications}</div>
+                {r.notes && (
+                  <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-100 break-words">
+                    {r.notes}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-1 text-xs">
+                  {r.medicalOfficerSig && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">MO:</span>
+                      <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.medicalOfficerSig}</span>
+                    </div>
+                  )}
+                  {r.dispenserSig && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">Disp:</span>
+                      <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.dispenserSig}</span>
+                    </div>
+                  )}
+                  {!r.medicalOfficerSig && !r.dispenserSig && (
+                    <span className="text-gray-300 italic">No signatures</span>
+                  )}
+                </div>
               </div>
-              <div className="text-sm text-gray-800 break-words">{r.medications}</div>
-              {r.notes && (
-                <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-100 break-words">
-                  {r.notes}
-                </p>
-              )}
-              <div className="grid grid-cols-1 gap-1 text-xs">
-                {r.medicalOfficerSig && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">MO:</span>
-                    <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.medicalOfficerSig}</span>
-                  </div>
-                )}
-                {r.dispenserSig && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">Disp:</span>
-                    <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.dispenserSig}</span>
-                  </div>
-                )}
-                {!r.medicalOfficerSig && !r.dispenserSig && (
-                  <span className="text-gray-300 italic">No signatures</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="hidden md:block overflow-x-auto rounded-[2rem] border border-gray-100 shadow-sm bg-white">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-gray-50/80 text-gray-500 font-black uppercase tracking-widest text-[10px]">
-              <tr>
-                <th className="px-6 py-4">Date & Time</th>
-                <th className="px-6 py-4 w-1/2">Medications</th>
-                <th className="px-6 py-4">Signatures</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {records.map(r => (
-                <tr key={r.id} className="hover:bg-teal-50/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 font-bold text-gray-900 mb-1">
-                      <Calendar size={14} className="text-teal-500" />
-                      {formatDateDMY(r.date)}
-                    </div>
-                    <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
-                      {r.timing}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-normal">
-                    <div className="font-medium text-gray-800">
-                      {r.medications}
-                    </div>
-                    {r.notes && (
-                      <p className="text-xs text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg border border-gray-100">
-                        {r.notes}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-2 text-xs">
-                      {r.medicalOfficerSig && (
-                         <div className="flex items-center gap-1.5">
+          <div className="hidden md:block overflow-x-auto rounded-[2rem] border border-gray-100 shadow-sm bg-white">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-gray-50/80 text-gray-500 font-black uppercase tracking-widest text-[10px]">
+                <tr>
+                  <th className="px-6 py-4">Date & Time</th>
+                  <th className="px-6 py-4 w-1/2">Medications</th>
+                  <th className="px-6 py-4">Signatures</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {records.map(r => (
+                  <tr key={r.id} className="hover:bg-teal-50/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 font-bold text-gray-900 mb-1">
+                        <Calendar size={14} className="text-teal-500" />
+                        {formatDateDMY(r.date)}
+                      </div>
+                      <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
+                        {r.timing}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-normal">
+                      <div className="font-medium text-gray-800">
+                        {r.medications}
+                      </div>
+                      {r.notes && (
+                        <p className="text-xs text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg border border-gray-100">
+                          {r.notes}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2 text-xs">
+                        {r.medicalOfficerSig && (
+                          <div className="flex items-center gap-1.5">
                             <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">MO:</span>
                             <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded">{r.medicalOfficerSig}</span>
-                         </div>
-                      )}
-                      {r.dispenserSig && (
-                         <div className="flex items-center gap-1.5">
+                          </div>
+                        )}
+                        {r.dispenserSig && (
+                          <div className="flex items-center gap-1.5">
                             <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">Disp:</span>
                             <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded">{r.dispenserSig}</span>
-                         </div>
-                      )}
-                      {!r.medicalOfficerSig && !r.dispenserSig && (
-                        <span className="text-gray-300 italic">No signatures</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                          </div>
+                        )}
+                        {!r.medicalOfficerSig && !r.dispenserSig && (
+                          <span className="text-gray-300 italic">No signatures</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -219,15 +246,15 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
                   />
                 </div>
                 <div>
-                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Timing *</label>
-                   <select value={timing} onChange={e => setTiming(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
-                     <option value="Morning">Morning</option>
-                     <option value="Afternoon">Afternoon</option>
-                     <option value="Night">Night</option>
-                   </select>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Timing *</label>
+                  <select value={timing} onChange={e => setTiming(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Night">Night</option>
+                  </select>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Medications *</label>
                 <textarea required rows={2} value={medications} onChange={e => setMedications(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="List medications..."></textarea>

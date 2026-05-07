@@ -1,19 +1,46 @@
 // src/components/rehab/patient-profile/ProgressTab.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { WeeklyProgress } from '@/types/rehab';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/rehab/patients';
 import { Loader2, Plus, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
-import { 
+import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
-export default function ProgressTab({ patientId, session }: { patientId: string, session: any }) {
+export default function ProgressTab({ patientId, session, dateFilter }: { patientId: string, session: any, dateFilter?: { admissionDate: any; dischargeDate?: any } | null }) {
   const [progress, setProgress] = useState<WeeklyProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isProgressInFilter = useCallback((startDateStr: string) => {
+    if (!dateFilter) return true;
+    const d = new Date(startDateStr + 'T00:00:00');
+
+    let start = dateFilter.admissionDate;
+    if (start) {
+      if (typeof start.toDate === 'function') start = start.toDate();
+      else start = new Date(start);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    let end = dateFilter.dischargeDate;
+    if (end) {
+      if (typeof end.toDate === 'function') end = end.toDate();
+      else end = new Date(end);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  }, [dateFilter]);
+
+  const filteredProgress = useMemo(() => {
+    return progress.filter(p => isProgressInFilter(p.weekStartDate));
+  }, [progress, isProgressInFilter]);
 
   // Form state
   const [weekNum, setWeekNum] = useState(1);
@@ -23,7 +50,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [score, setScore] = useState<1|2|3|4>(2);
+  const [score, setScore] = useState<1 | 2 | 3 | 4>(2);
   const [notes, setNotes] = useState('');
 
   const fetchProgress = useCallback(async () => {
@@ -63,7 +90,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
         createdBy: session.uid,
         createdAt: new Date(),
       };
-      
+
       await addWeeklyProgress(newProgress);
       toast.success('Progress updated');
       setShowAddModal(false);
@@ -78,7 +105,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
     }
   };
 
-  const chartData = progress.map(p => ({
+  const chartData = filteredProgress.map(p => ({
     name: `Week ${p.weekNumber}`,
     score: p.score,
     label: p.score === 1 ? 'Static' : p.score === 2 ? 'Slow' : p.score === 3 ? 'Good' : 'Max',
@@ -101,7 +128,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
         </button>
       </div>
 
-      {progress.length === 0 ? (
+      {filteredProgress.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
           <TrendingUp className="w-16 h-16 text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No progress recorded yet</p>
@@ -114,18 +141,18 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
               <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis domain={[1, 4]} ticks={[1,2,3,4]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <Tooltip 
+                <YAxis domain={[1, 4]} ticks={[1, 2, 3, 4]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value: number, name: string, props: any) => [props.payload.label, 'Progress']}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="score" 
-                  stroke="#0d9488" 
-                  strokeWidth={3} 
-                  dot={{ r: 6, fill: '#0d9488', strokeWidth: 2, stroke: '#fff' }} 
-                  activeDot={{ r: 8 }} 
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#0d9488"
+                  strokeWidth={3}
+                  dot={{ r: 6, fill: '#0d9488', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 8 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -133,16 +160,15 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
 
           {/* Records List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {progress.map(p => (
+            {filteredProgress.map(p => (
               <div key={p.id} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:border-teal-200 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
                   <h3 className="font-black text-gray-900">Week {p.weekNumber}</h3>
-                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest break-words ${
-                    p.score === 4 ? 'bg-green-100 text-green-700' :
-                    p.score === 3 ? 'bg-teal-100 text-teal-700' :
-                    p.score === 2 ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest break-words ${p.score === 4 ? 'bg-green-100 text-green-700' :
+                      p.score === 3 ? 'bg-teal-100 text-teal-700' :
+                        p.score === 2 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                    }`}>
                     {p.score === 4 ? 'Max Progress (4)' : p.score === 3 ? 'Good Progress (3)' : p.score === 2 ? 'Slow Progress (2)' : 'Static (1)'}
                   </div>
                 </div>
@@ -175,16 +201,16 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
                   <input type="number" required value={weekNum} onChange={e => setWeekNum(parseInt(e.target.value))} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" min={1} />
                 </div>
                 <div>
-                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Progress Score *</label>
-                   <select value={score} onChange={e => setScore(Number(e.target.value) as 1|2|3|4)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
-                     <option value={1}>1 - Static</option>
-                     <option value={2}>2 - Slow Progress</option>
-                     <option value={3}>3 - Good Progress</option>
-                     <option value={4}>4 - Max Progress</option>
-                   </select>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Progress Score *</label>
+                  <select value={score} onChange={e => setScore(Number(e.target.value) as 1 | 2 | 3 | 4)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
+                    <option value={1}>1 - Static</option>
+                    <option value={2}>2 - Slow Progress</option>
+                    <option value={3}>3 - Good Progress</option>
+                    <option value={4}>4 - Max Progress</option>
+                  </select>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Start Date *</label>

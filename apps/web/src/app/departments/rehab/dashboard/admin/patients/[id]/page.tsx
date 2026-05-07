@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -164,7 +164,94 @@ export default function PatientDetailPage() {
     visitorNotes: '',
     visitDate: new Date().toISOString().split('T')[0]
   });
-  const [isRejoiningWithDetails, setIsRejoiningWithDetails] = useState(false);
+  // Selected stay for historical filtering
+  const [selectedStayIndex, setSelectedStayIndex] = useState<number>(-1);
+
+  // Edit previous stay states
+  const [editingStayIdx, setEditingStayIdx] = useState<number | null>(null);
+  const [stayForm, setStayForm] = useState<any>({
+    admissionDate: '',
+    dischargeDate: '',
+    monthlyPackage: 0,
+    rejoinedAt: '',
+    visitorName: '',
+    visitorRelation: '',
+    visitorPhone: '',
+    visitorCnic: '',
+    visitorNotes: ''
+  });
+  const [savingStay, setSavingStay] = useState(false);
+
+  // Compute date filter bounds for the active stay
+  const dateFilter = useMemo(() => {
+    if (!patient) return null;
+    if (selectedStayIndex === -1) {
+      return {
+        admissionDate: patient.admissionDate,
+        dischargeDate: patient.dischargeDate
+      };
+    }
+    const stay = patient.rejoinHistory?.[selectedStayIndex];
+    if (!stay) return null;
+    return {
+      admissionDate: stay.admissionDate,
+      dischargeDate: stay.dischargeDate
+    };
+  }, [patient, selectedStayIndex]);
+
+  // Filter visits based on date bounds
+  const filteredVisits = useMemo(() => {
+    if (!dateFilter) return visits;
+    return visits.filter((v: any) => {
+      const vDateStr = v.date;
+      if (!vDateStr) return true;
+      const d = new Date(vDateStr + 'T00:00:00');
+
+      let start = dateFilter.admissionDate;
+      if (start) {
+        if (typeof start.toDate === 'function') start = start.toDate();
+        else start = new Date(start);
+        start.setHours(0, 0, 0, 0);
+      }
+
+      let end = dateFilter.dischargeDate;
+      if (end) {
+        if (typeof end.toDate === 'function') end = end.toDate();
+        else end = new Date(end);
+        end.setHours(23, 59, 59, 999);
+      }
+
+      if (start && d < start) return false;
+      if (end && d > end) return false;
+      return true;
+    });
+  }, [visits, dateFilter]);
+
+  // Filter payments based on date bounds
+  const filteredPayments = useMemo(() => {
+    if (!dateFilter) return allPayments;
+    return allPayments.filter((p: any) => {
+      const pDate = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+
+      let start = dateFilter.admissionDate;
+      if (start) {
+        if (typeof start.toDate === 'function') start = start.toDate();
+        else start = new Date(start);
+        start.setHours(0, 0, 0, 0);
+      }
+
+      let end = dateFilter.dischargeDate;
+      if (end) {
+        if (typeof end.toDate === 'function') end = end.toDate();
+        else end = new Date(end);
+        end.setHours(23, 59, 59, 999);
+      }
+
+      if (start && pDate < start) return false;
+      if (end && pDate > end) return false;
+      return true;
+    });
+  }, [allPayments, dateFilter]);
 
   useEffect(() => {
     let sessionData = localStorage.getItem('rehab_session');
@@ -701,6 +788,66 @@ export default function PatientDetailPage() {
       toast.error('Failed to update profile');
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleSaveStay = async () => {
+    try {
+      setSavingStay(true);
+      const docRef = doc(db, 'rehab_patients', patientId);
+
+      const parsedAdmissionDate = stayForm.admissionDate ? Timestamp.fromDate(new Date(`${stayForm.admissionDate}T00:00:00`)) : null;
+      const parsedDischargeDate = stayForm.dischargeDate ? Timestamp.fromDate(new Date(`${stayForm.dischargeDate}T00:00:00`)) : null;
+      const parsedRejoinedAt = stayForm.rejoinedAt ? Timestamp.fromDate(new Date(`${stayForm.rejoinedAt}T00:00:00`)) : null;
+      const parsedPackage = Number(stayForm.monthlyPackage || 0);
+
+      if (editingStayIdx === -1) {
+        const updatePayload: any = {
+          admissionDate: parsedAdmissionDate,
+          dischargeDate: parsedDischargeDate,
+          monthlyPackage: parsedPackage,
+          packageAmount: parsedPackage
+        };
+        await updateDoc(docRef, updatePayload);
+        setPatient((prev: any) => ({
+          ...prev,
+          admissionDate: parsedAdmissionDate,
+          dischargeDate: parsedDischargeDate,
+          monthlyPackage: parsedPackage,
+          packageAmount: parsedPackage
+        }));
+      } else if (editingStayIdx !== null && editingStayIdx >= 0) {
+        const updatedHistory = [...(patient.rejoinHistory || [])];
+        updatedHistory[editingStayIdx] = {
+          ...updatedHistory[editingStayIdx],
+          admissionDate: parsedAdmissionDate,
+          dischargeDate: parsedDischargeDate,
+          monthlyPackage: parsedPackage,
+          packageAmount: parsedPackage,
+          rejoinedAt: parsedRejoinedAt,
+          rejoinDetails: {
+            visitorName: stayForm.visitorName,
+            visitorRelation: stayForm.visitorRelation,
+            visitorPhone: stayForm.visitorPhone,
+            visitorCnic: stayForm.visitorCnic,
+            visitorNotes: stayForm.visitorNotes
+          }
+        };
+
+        await updateDoc(docRef, { rejoinHistory: updatedHistory });
+        setPatient((prev: any) => ({
+          ...prev,
+          rejoinHistory: updatedHistory
+        }));
+      }
+
+      setEditingStayIdx(null);
+      toast.success('Stay details saved successfully ✓');
+    } catch (error) {
+      console.error('Failed to save stay details', error);
+      toast.error('Failed to save stay details');
+    } finally {
+      setSavingStay(false);
     }
   };
 
@@ -1357,6 +1504,52 @@ export default function PatientDetailPage() {
           </div>
         </div>
 
+        {/* Stay Period / Readmission Selector */}
+        {patient?.rejoinHistory && patient.rejoinHistory.length > 0 && (
+          <div className="w-full px-2 sm:px-0 mt-2 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-teal-500/5 border border-teal-500/10 dark:border-teal-500/5 rounded-2xl p-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400">Viewing Stay Context</p>
+                <h4 className="text-sm font-black text-gray-800 dark:text-gray-200 mt-0.5">
+                  {selectedStayIndex === -1 ? (
+                    <span>Current Active Stay (Since {formatDateDMY(patient.admissionDate)})</span>
+                  ) : (
+                    <span>Previous Stay #{patient.rejoinHistory.length - selectedStayIndex} ({formatDateDMY(patient.rejoinHistory[selectedStayIndex].admissionDate)} - {patient.rejoinHistory[selectedStayIndex].dischargeDate ? formatDateDMY(patient.rejoinHistory[selectedStayIndex].dischargeDate) : 'Present'})</span>
+                  )}
+                </h4>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  All transaction history, daily sheets, medication, progress, and therapy logs are filtered to this stay.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setSelectedStayIndex(-1)}
+                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                    selectedStayIndex === -1
+                      ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
+                      : 'bg-white/60 dark:bg-gray-900/60 border border-gray-100 dark:border-white/5 text-gray-600 hover:bg-white hover:text-teal-600 dark:text-gray-400 active:scale-95'
+                  }`}
+                >
+                  Current Stay
+                </button>
+                {patient.rejoinHistory.map((stay: any, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedStayIndex(idx)}
+                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                      selectedStayIndex === idx
+                        ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
+                        : 'bg-white/60 dark:bg-gray-900/60 border border-gray-100 dark:border-white/5 text-gray-600 hover:bg-white hover:text-teal-600 dark:text-gray-400 active:scale-95'
+                    }`}
+                  >
+                    Stay #{patient.rejoinHistory.length - idx}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab Content Areas Stacked */}
         <div className="w-full flex flex-col gap-10">
 
@@ -1608,9 +1801,30 @@ export default function PatientDetailPage() {
                 <div className="grid grid-cols-1 gap-4">
                   {/* Current Active/Recent Stay Card */}
                   <div className="relative overflow-hidden bg-white dark:bg-gray-900 border-2 border-teal-500 rounded-2xl p-5 shadow-lg shadow-teal-500/5">
-                    <div className="absolute top-0 right-0 bg-teal-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-bl-xl flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                      Current Stay Overview
+                    <div className="absolute top-0 right-0 bg-teal-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-bl-xl flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                        <span>Current Stay Overview</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingStayIdx(-1);
+                          setStayForm({
+                            admissionDate: patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate().toISOString().split('T')[0] : (patient.admissionDate || ''),
+                            dischargeDate: patient.dischargeDate?.toDate?.() ? patient.dischargeDate.toDate().toISOString().split('T')[0] : (patient.dischargeDate || ''),
+                            monthlyPackage: patient.monthlyPackage || patient.packageAmount || 0,
+                            rejoinedAt: '',
+                            visitorName: '',
+                            visitorRelation: '',
+                            visitorPhone: '',
+                            visitorCnic: '',
+                            visitorNotes: ''
+                          });
+                        }}
+                        className="border-l border-white/30 pl-2 py-0.5 flex items-center gap-1 text-white hover:text-teal-200 transition-all font-black"
+                      >
+                        <Edit3 className="w-2.5 h-2.5" /> EDIT STAY
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
@@ -1652,9 +1866,30 @@ export default function PatientDetailPage() {
                             </span>
                             <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">Stay Record</span>
                           </div>
-                          <p className="text-[10px] font-bold text-gray-400">
-                            Rejoined On: {formatDateDMY(stay.rejoinedAt?.toDate?.() || stay.rejoinedAt)}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <p className="text-[10px] font-bold text-gray-400">
+                              Rejoined On: {formatDateDMY(stay.rejoinedAt?.toDate?.() || stay.rejoinedAt)}
+                            </p>
+                            <button
+                              onClick={() => {
+                                setEditingStayIdx(idx);
+                                setStayForm({
+                                  admissionDate: stay.admissionDate?.toDate?.() ? stay.admissionDate.toDate().toISOString().split('T')[0] : (stay.admissionDate || ''),
+                                  dischargeDate: stay.dischargeDate?.toDate?.() ? stay.dischargeDate.toDate().toISOString().split('T')[0] : (stay.dischargeDate || ''),
+                                  monthlyPackage: stay.monthlyPackage || stay.packageAmount || 0,
+                                  rejoinedAt: stay.rejoinedAt?.toDate?.() ? stay.rejoinedAt.toDate().toISOString().split('T')[0] : (stay.rejoinedAt || ''),
+                                  visitorName: stay.rejoinDetails?.visitorName || '',
+                                  visitorRelation: stay.rejoinDetails?.visitorRelation || '',
+                                  visitorPhone: stay.rejoinDetails?.visitorPhone || '',
+                                  visitorCnic: stay.rejoinDetails?.visitorCnic || '',
+                                  visitorNotes: stay.rejoinDetails?.visitorNotes || ''
+                                });
+                              }}
+                              className="text-teal-600 hover:text-teal-700 bg-teal-500/10 hover:bg-teal-500/20 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 active:scale-95"
+                            >
+                              <Edit3 className="w-3 h-3" /> Edit Stay
+                            </button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                           <div>
@@ -1714,34 +1949,34 @@ export default function PatientDetailPage() {
               <ClipboardList className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Daily Sheets Log</h2>
             </div>
-            <DailySheetTab patientId={patientId} session={session} />
+            <DailySheetTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
-
+ 
           {/* TAB: PROGRESS */}
           <div id="section-progress" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <TrendingUp className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Progress Chart & Details</h2>
             </div>
-            <ProgressTab patientId={patientId} session={session} />
+            <ProgressTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
-
+ 
           {/* TAB: THERAPY */}
           <div id="section-therapy" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <Activity className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Therapy Sessions</h2>
             </div>
-            <TherapyTab patientId={patientId} session={session} />
+            <TherapyTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
-
+ 
           {/* TAB: MEDICATION */}
           <div id="section-meds" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
               <Pill className="w-6 h-6 text-teal-600" />
               <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">Medications Schedule</h2>
             </div>
-            <MedicationTab patientId={patientId} session={session} />
+            <MedicationTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
 
           {/* TAB: FEES */}
@@ -1759,9 +1994,9 @@ export default function PatientDetailPage() {
                   const records: MonthRecord[] = [];
                   const monthlyPkg = Number(patient?.monthlyPackage || 40000);
 
-                  // Group payments by month
-                  const groups: { [key: string]: PaymentType[] } = {};
-                  allPayments.forEach((p: any) => {
+                   // Group payments by month
+                   const groups: { [key: string]: PaymentType[] } = {};
+                   filteredPayments.forEach((p: any) => {
                     const date = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
                     const monthLabel = date.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
                     if (!groups[monthLabel]) groups[monthLabel] = [];
@@ -2085,14 +2320,14 @@ export default function PatientDetailPage() {
             </div>
 
             <div className="space-y-6">
-              {visits.length === 0 ? (
+              {filteredVisits.length === 0 ? (
                 <div className="text-center py-16 border-2 border-dashed border-gray-100 dark:border-white/10 rounded-[2rem] bg-gray-50/30">
                   <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                   <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No visits recorded yet</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {visits.map(visit => (
+                  {filteredVisits.map(visit => (
                     <div key={visit.id} className="bg-white dark:bg-gray-850 border border-gray-100 dark:border-white/5 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 dark:hover:border-teal-900 transition-all group relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4">
                         <div className="bg-gray-900 dark:bg-gray-800 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200/10 flex flex-col items-center leading-tight">
@@ -2971,6 +3206,164 @@ export default function PatientDetailPage() {
                   Confirm Rejoin
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingStayIdx !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-950 border border-gray-100 dark:border-white/5 rounded-[2rem] w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl transition-all scale-100">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-50 dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+              <div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-teal-600" />
+                  {editingStayIdx === -1 ? 'Edit Current Stay' : 'Edit Historical Stay'}
+                </h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                  {editingStayIdx === -1 ? 'Modify current admission & package parameters' : 'Modify historical record details'}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingStayIdx(null)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Admission Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={stayForm.admissionDate}
+                    onChange={(e) => setStayForm({ ...stayForm, admissionDate: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Discharge Date</label>
+                  <input
+                    type="date"
+                    value={stayForm.dischargeDate}
+                    onChange={(e) => setStayForm({ ...stayForm, dischargeDate: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Monthly Stay Package (PKR) *</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400">PKR</span>
+                  <input
+                    type="number"
+                    required
+                    value={stayForm.monthlyPackage}
+                    onChange={(e) => setStayForm({ ...stayForm, monthlyPackage: Number(e.target.value) })}
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-2.5 text-sm font-black outline-none focus:border-teal-500 transition-all text-teal-600 dark:text-teal-400"
+                  />
+                </div>
+              </div>
+
+              {editingStayIdx !== -1 && (
+                <>
+                  <div className="border-t border-gray-100 dark:border-white/5 pt-6 space-y-6">
+                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">Readmission Details</h4>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Rejoin Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={stayForm.rejoinedAt}
+                        onChange={(e) => setStayForm({ ...stayForm, rejoinedAt: e.target.value })}
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Visitor / Guardian Name</label>
+                        <input
+                          type="text"
+                          value={stayForm.visitorName}
+                          onChange={(e) => setStayForm({ ...stayForm, visitorName: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Relation with Patient</label>
+                        <input
+                          type="text"
+                          value={stayForm.visitorRelation}
+                          onChange={(e) => setStayForm({ ...stayForm, visitorRelation: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Visitor Phone</label>
+                        <input
+                          type="tel"
+                          value={stayForm.visitorPhone}
+                          onChange={(e) => setStayForm({ ...stayForm, visitorPhone: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Visitor CNIC</label>
+                        <input
+                          type="text"
+                          value={stayForm.visitorCnic}
+                          onChange={(e) => setStayForm({ ...stayForm, visitorCnic: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 block mb-1.5 tracking-wider">Admission / Visitor Notes</label>
+                      <textarea
+                        value={stayForm.visitorNotes}
+                        onChange={(e) => setStayForm({ ...stayForm, visitorNotes: e.target.value })}
+                        rows={3}
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-800 dark:text-white resize-none"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-50 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingStayIdx(null)}
+                className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveStay}
+                disabled={savingStay || !stayForm.admissionDate}
+                className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-teal-500/10 active:scale-95"
+              >
+                {savingStay ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Save Changes
+              </button>
             </div>
           </div>
         </div>
