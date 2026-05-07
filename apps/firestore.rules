@@ -234,7 +234,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('family') && rehabPatientId() == patientId);
       allow create, update: if isRehabAdminOrAbove();
-      allow delete: if isRehabSuperAdmin();
+      allow delete: if isRehabAdminOrAbove();
     }
 
     // ── Fee records ────────────────────────────────────
@@ -245,7 +245,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
-      allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
+      allow write: if isRehabRole('cashier') || isRehabAdminOrAbove();
     }
 
     // ── Canteen records ────────────────────────────────
@@ -253,7 +253,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
-      allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
+      allow write: if isRehabRole('cashier') || isRehabAdminOrAbove();
     }
 
     // ── Transactions ───────────────────────────────────
@@ -268,7 +268,7 @@ service cloud.firestore {
     match /rehab_staff/{staffId} {
       allow read: if isRehabAdminOrAbove() || isRehabRole('staff');
       allow create, update: if isRehabAdminOrAbove();
-      allow delete: if isRehabSuperAdmin();
+      allow delete: if isRehabAdminOrAbove();
     }
 
     // ── Attendance ─────────────────────────────────────
@@ -290,7 +290,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
       allow create, update: if isRehabAdminOrAbove();
-      allow delete: if isRehabSuperAdmin();
+      allow delete: if isRehabAdminOrAbove();
     }
 
     // ── Audit log ──────────────────────────────────────
@@ -299,7 +299,7 @@ service cloud.firestore {
     // Client writes allowed for fire-and-forget audit entries
     // from authenticated rehab users only.
     match /rehab_audit/{docId} {
-      allow read: if isRehabSuperAdmin();
+      allow read: if isRehabAdminOrAbove();
       allow create: if isRehabAuth();
       allow update, delete: if false;
     }
@@ -321,7 +321,7 @@ service cloud.firestore {
         || (isRehabRole('staff') 
             && resource.data.staffId == request.auth.uid);
       allow create, update: if isRehabAdminOrAbove();
-      allow delete: if isRehabSuperAdmin();
+      allow delete: if isRehabAdminOrAbove();
     }
 
     // ── Staff leaves ───────────────────────────────────
@@ -331,7 +331,7 @@ service cloud.firestore {
         || (isRehabRole('staff') 
             && resource.data.staffId == request.auth.uid);
       allow create, update: if isRehabAdminOrAbove();
-      allow delete: if isRehabSuperAdmin();
+      allow delete: if isRehabAdminOrAbove();
     }
 
     // ═══════════════════════════════════════════════════════════
