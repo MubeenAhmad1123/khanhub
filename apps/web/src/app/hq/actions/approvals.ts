@@ -138,6 +138,7 @@ async function syncRehabRecords(
             date: txDate,
             transactionId: txId,
             approvedBy,
+            status: 'approved',
           }],
           lastPaymentDate: FieldValue.serverTimestamp(),
           lastPaymentAmount: amount,
@@ -160,6 +161,7 @@ async function syncRehabRecords(
             date: txDate,
             transactionId: txId,
             approvedBy,
+            status: 'approved',
           }],
         });
       }

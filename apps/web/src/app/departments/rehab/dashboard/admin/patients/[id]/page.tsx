@@ -389,10 +389,12 @@ export default function PatientDetailPage() {
           const feeData = doc.data();
           const docPayments = feeData.payments || [];
           docPayments.forEach((p: any) => {
-            if (p.status === 'approved') overallReceived += Number(p.amount || 0);
+            const status = p.status || 'approved';
+            if (status === 'approved') overallReceived += Number(p.amount || 0);
             aggregatedPayments.push({
               id: `${doc.id}_${p.date}`,
               ...p,
+              status,
               month: feeData.month // preserve month context if needed
             });
           });
@@ -598,7 +600,7 @@ export default function PatientDetailPage() {
         departmentName: 'Rehab Center',
         patientId: patientId,
         patientName: patient?.name || '',
-        status: 'pending',
+        status: 'pending_cashier',
         cashierId: cashierCustomId,
         proofRequired: true,
         description: paymentNote || '',
@@ -621,7 +623,7 @@ export default function PatientDetailPage() {
   const handleDirectApprove = async (txId: string) => {
     try {
       setDirectApproveLoading(txId);
-      
+
       // 1. Update the transaction status first
       await updateDoc(doc(db, 'rehab_transactions', txId), {
         status: 'approved',
@@ -667,6 +669,7 @@ export default function PatientDetailPage() {
                     date: txDate,
                     transactionId: txId,
                     approvedBy: session?.uid,
+                    status: 'approved',
                   }],
                   lastPaymentDate: Timestamp.now(),
                   lastPaymentAmount: tx.amount,
@@ -689,6 +692,7 @@ export default function PatientDetailPage() {
                     date: txDate,
                     transactionId: txId,
                     approvedBy: session?.uid,
+                    status: 'approved',
                   }],
                 });
               }
@@ -741,7 +745,7 @@ export default function PatientDetailPage() {
         departmentName: 'Rehab Center',
         patientId: patientId,
         patientName: patient?.name || '',
-        status: 'pending',
+        status: 'pending_cashier',
         cashierId: cashierCustomId,
         proofRequired: true,
         description: payNote || '',
@@ -1665,11 +1669,10 @@ export default function PatientDetailPage() {
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   onClick={() => setSelectedStayIndex(-1)}
-                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
-                    selectedStayIndex === -1
+                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${selectedStayIndex === -1
                       ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
                       : 'bg-white/60 dark:bg-gray-900/60 border border-gray-100 dark:border-white/5 text-gray-600 hover:bg-white hover:text-teal-600 dark:text-gray-400 active:scale-95'
-                  }`}
+                    }`}
                 >
                   Current Stay
                 </button>
@@ -1677,11 +1680,10 @@ export default function PatientDetailPage() {
                   <button
                     key={idx}
                     onClick={() => setSelectedStayIndex(idx)}
-                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
-                      selectedStayIndex === idx
+                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${selectedStayIndex === idx
                         ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
                         : 'bg-white/60 dark:bg-gray-900/60 border border-gray-100 dark:border-white/5 text-gray-600 hover:bg-white hover:text-teal-600 dark:text-gray-400 active:scale-95'
-                    }`}
+                      }`}
                   >
                     Stay #{patient.rejoinHistory.length - idx}
                   </button>
@@ -2092,7 +2094,7 @@ export default function PatientDetailPage() {
             </div>
             <DailySheetTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
- 
+
           {/* TAB: PROGRESS */}
           <div id="section-progress" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
@@ -2101,7 +2103,7 @@ export default function PatientDetailPage() {
             </div>
             <ProgressTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
- 
+
           {/* TAB: THERAPY */}
           <div id="section-therapy" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
@@ -2110,7 +2112,7 @@ export default function PatientDetailPage() {
             </div>
             <TherapyTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
- 
+
           {/* TAB: MEDICATION */}
           <div id="section-meds" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
             <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100 dark:border-white/10">
@@ -2135,9 +2137,9 @@ export default function PatientDetailPage() {
                   const records: MonthRecord[] = [];
                   const monthlyPkg = Number(patient?.monthlyPackage || 40000);
 
-                   // Group payments by month
-                   const groups: { [key: string]: PaymentType[] } = {};
-                   filteredPayments.forEach((p: any) => {
+                  // Group payments by month
+                  const groups: { [key: string]: PaymentType[] } = {};
+                  filteredPayments.forEach((p: any) => {
                     const date = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
                     const monthLabel = date.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
                     if (!groups[monthLabel]) groups[monthLabel] = [];

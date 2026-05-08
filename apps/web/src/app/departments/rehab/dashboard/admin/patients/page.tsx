@@ -153,7 +153,8 @@ export default function PatientsListPage() {
         let totalReceived = 0;
         pFees.forEach(f => {
           (f.payments || []).forEach((p: any) => {
-            if (p.status === 'approved') totalReceived += Number(p.amount || 0);
+            const status = p.status || 'approved';
+            if (status === 'approved') totalReceived += Number(p.amount || 0);
           });
         });
 
