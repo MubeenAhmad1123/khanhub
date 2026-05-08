@@ -96,20 +96,38 @@ async function syncRehabRecords(
   const staffId = txData.staffId;
   if (!patientId && !staffId) return;
 
+  console.log('[syncRehabRecords] Called with:', { txId, patientId, staffId, category: txData.category, amount: txData.amount });
+
   try {
     let txDate = new Date();
     if (txData.date) {
       if (typeof txData.date.toDate === 'function') {
         txDate = txData.date.toDate();
-      } else if (txData.date._seconds) {
+      } else if (txData.date && typeof txData.date.seconds === 'number') {
+        txDate = new Date(txData.date.seconds * 1000);
+      } else if (txData.date && typeof txData.date._seconds === 'number') {
         txDate = new Date(txData.date._seconds * 1000);
       } else {
-        txDate = new Date(txData.date);
+        const parsed = new Date(txData.date);
+        if (!isNaN(parsed.getTime())) {
+          txDate = parsed;
+        }
       }
     }
-    const month = txDate.toISOString().slice(0, 7); // "YYYY-MM"
+    const year = txDate.getFullYear();
+    const mm = String(txDate.getMonth() + 1).padStart(2, '0');
+    const month = `${year}-${mm}`;
+    console.log('[syncRehabRecords] Parsed date:', txDate, 'month:', month);
 
-    if ((txData.category === 'patient_fee' || txData.category === 'fee') && patientId) {
+    const isFeeCategory = 
+      txData.type === 'income' ||
+      txData.category === 'patient_fee' || 
+      txData.category === 'fee' || 
+      String(txData.category || '').toLowerCase().includes('fee') ||
+      String(txData.categoryName || '').toLowerCase().includes('fee') ||
+      String(txData.categoryName || '').toLowerCase().includes('admission');
+
+    if (isFeeCategory && patientId) {
       const feesRef = adminDb.collection('rehab_fees');
       const feesSnap = await feesRef
         .where('patientId', '==', patientId)
@@ -118,13 +136,15 @@ async function syncRehabRecords(
         .get();
 
       const amount = Number(txData.amount) || 0;
+      console.log('[syncRehabRecords] Querying rehab_fees with patientId:', patientId, 'month:', month, 'found:', feesSnap.size);
 
       if (feesSnap.empty) {
         const patientSnap = await adminDb.collection('rehab_patients').doc(patientId).get();
         const packageAmount = patientSnap.exists
-          ? (Number(patientSnap.data()?.packageAmount) || 60000)
+          ? (Number(patientSnap.data()?.packageAmount || patientSnap.data()?.monthlyPackage) || 60000)
           : 60000;
         const amountRemaining = Math.max(0, packageAmount - amount);
+        console.log('[syncRehabRecords] Creating new fee record for patientId:', patientId, 'packageAmount:', packageAmount, 'amountPaid:', amount);
 
         await feesRef.add({
           patientId,
@@ -148,8 +168,9 @@ async function syncRehabRecords(
         const feeDoc = feesSnap.docs[0];
         const current = feeDoc.data();
         const newPaid = (Number(current.amountPaid) || 0) + amount;
-        const newRemaining = Math.max(0, (Number(current.packageAmount) || 60000) - newPaid);
+        const newRemaining = Math.max(0, (Number(current.packageAmount || current.monthlyPackage) || 60000) - newPaid);
         const existingPayments = current.payments || [];
+        console.log('[syncRehabRecords] Updating existing fee record for patientId:', patientId, 'newPaid:', newPaid, 'newRemaining:', newRemaining);
 
         await feeDoc.ref.update({
           amountPaid: newPaid,

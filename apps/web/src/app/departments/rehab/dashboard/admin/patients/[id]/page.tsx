@@ -638,9 +638,19 @@ export default function PatientDetailPage() {
         if (tx.patientId) {
           try {
             const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
-            const month = txDate.toISOString().slice(0, 7); // "2026-03"
+            const year = txDate.getFullYear();
+            const mm = String(txDate.getMonth() + 1).padStart(2, '0');
+            const month = `${year}-${mm}`;
 
-            if (tx.category === 'patient_fee' || tx.category === 'fee') {
+            const isFeeCategory = 
+              tx.type === 'income' ||
+              tx.category === 'patient_fee' || 
+              tx.category === 'fee' || 
+              String(tx.category || '').toLowerCase().includes('fee') ||
+              String(tx.categoryName || '').toLowerCase().includes('fee') ||
+              String(tx.categoryName || '').toLowerCase().includes('admission');
+
+            if (isFeeCategory) {
               // Find or CREATE the fee record for this patient+month
               const feesQ = query(
                 collection(db, 'rehab_fees'),
