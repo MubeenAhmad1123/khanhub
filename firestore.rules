@@ -83,6 +83,22 @@ service cloud.firestore {
         && (resource.data.userId == request.auth.uid || isAdmin() || isHqSuperOrManager());
     }
 
+    // ── Staff Notifications ───────────────────────────
+    match /staff_notifications/{notifId} {
+      allow read: if isAuth()
+        && (
+          resource.data.recipientId == request.auth.uid 
+          || isHqTier1()
+          || isRehabAdminOrAbove()
+          || isSpimsAdminOrAbove()
+        );
+      allow create: if isAuth();
+      allow update: if isAuth()
+        && (resource.data.recipientId == request.auth.uid || isHqSuperOrManager());
+      allow delete: if isAuth()
+        && (resource.data.recipientId == request.auth.uid || isHqSuperOrManager());
+    }
+
     // ── Payments ──────────────────────────────────────
     match /payments/{payId} {
       allow read: if isAuth()
@@ -565,10 +581,7 @@ service cloud.firestore {
     }
 
     match /spims_users/{uid} {
-      allow read: if (request.auth != null
-        && (request.auth.uid == uid || isSpimsAdminOrAbove()))
-        || isDiscoveryQuery()
-        || isHqSuperOrManager();
+      allow read: if isAuth();
       allow create: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -580,19 +593,13 @@ service cloud.firestore {
     }
 
     match /spims_students/{studentId} {
-      allow read: if isSpimsAdminOrAbove()
-        || isSpimsRole('cashier')
-        || (isSpimsRole('student') && spimsStudentId() == studentId)
-        || isHqTier1();
+      allow read: if isAuth();
       allow create, update: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
     }
 
     match /spims_fees/{docId} {
-      allow read: if isSpimsAdminOrAbove()
-        || (isSpimsRole('cashier'))
-        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId)
-        || isHqTier1();
+      allow read: if isAuth();
       allow create: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqTier1();
       allow update: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqTier1()
         || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
