@@ -119,7 +119,7 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
   };
 }
 
-export const PENDING_STATUSES = ['pending'];
+export const PENDING_STATUSES = ['pending', 'pending_cashier'];
 export const REJECT_STATUSES = ['rejected'];
 
 function getAmountBucketPredicate(bucket: AmountBucket) {

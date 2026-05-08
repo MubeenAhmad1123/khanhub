@@ -109,7 +109,7 @@ async function syncRehabRecords(
     }
     const month = txDate.toISOString().slice(0, 7); // "YYYY-MM"
 
-    if (txData.category === 'patient_fee' && patientId) {
+    if ((txData.category === 'patient_fee' || txData.category === 'fee') && patientId) {
       const feesRef = adminDb.collection('rehab_fees');
       const feesSnap = await feesRef
         .where('patientId', '==', patientId)
