@@ -79,16 +79,27 @@ export default function HospitalDashboardLayout({
           try {
             const parsedHq = JSON.parse(hqSession);
             if (parsedHq?.role === 'superadmin') {
-              console.log('[HospitalLayout] Detected HQ Superadmin session, syncing to hospital...');
-              const syncSession = {
-                uid: parsedHq.uid,
-                customId: parsedHq.customId || parsedHq.email || 'HQ-USER',
-                role: 'superadmin',
-                displayName: parsedHq.displayName || 'Superadmin',
-              };
-              localStorage.setItem('hospital_session', JSON.stringify(syncSession));
-              localStorage.setItem('hospital_login_time', Date.now().toString());
-              sessionData = JSON.stringify(syncSession);
+              let alreadySynced = false;
+              if (sessionData) {
+                try {
+                  const parsedHospital = JSON.parse(sessionData);
+                  if (parsedHospital.role === 'superadmin' && parsedHospital.uid === parsedHq.uid) {
+                    alreadySynced = true;
+                  }
+                } catch (e) {}
+              }
+              if (!alreadySynced) {
+                console.log('[HospitalLayout] Detected HQ Superadmin session, syncing to hospital...');
+                const syncSession = {
+                  uid: parsedHq.uid,
+                  customId: parsedHq.customId || parsedHq.email || 'HQ-USER',
+                  role: 'superadmin',
+                  displayName: parsedHq.displayName || 'Superadmin',
+                };
+                localStorage.setItem('hospital_session', JSON.stringify(syncSession));
+                localStorage.setItem('hospital_login_time', Date.now().toString());
+                sessionData = JSON.stringify(syncSession);
+              }
             } else if (parsedHq.departmentCode === 'hospital') {
               if (!sessionData) {
                 const userDoc = await getDoc(doc(db, 'hospital_users', parsedHq.uid));
