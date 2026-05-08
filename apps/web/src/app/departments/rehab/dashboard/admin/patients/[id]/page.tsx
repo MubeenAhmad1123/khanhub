@@ -355,11 +355,24 @@ export default function PatientDetailPage() {
       const diffTimeMs = endDate.getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
 
-      // Calculate Billable Months (Calendar-based, rounded up)
-      // If admission is Mar 28 and today is Apr 4, that's Mar (1) + Apr (1) = 2 months.
-      const billableMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth()) + 1;
+      // Calculate Billable Months (Completed month cycle + 1 day above counts as full next month)
+      const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
+      let completedMonths = rawMonths;
+      let hasExtraDays = false;
 
-      const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'})`;
+      if (endDate.getDate() < admission.getDate()) {
+        completedMonths = rawMonths - 1;
+        hasExtraDays = true;
+      } else if (endDate.getDate() > admission.getDate()) {
+        completedMonths = rawMonths;
+        hasExtraDays = true;
+      } else {
+        completedMonths = rawMonths;
+        hasExtraDays = false;
+      }
+
+      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'} counted)`;
 
       // Fetch all fees to calculate total received
       let overallReceived = 0;
@@ -757,8 +770,23 @@ export default function PatientDetailPage() {
         const diffTimeMs = endDate.getTime() - admission.getTime();
         const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
 
-        const billableMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth()) + 1;
-        const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'})`;
+        const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
+        let completedMonths = rawMonths;
+        let hasExtraDays = false;
+
+        if (endDate.getDate() < admission.getDate()) {
+          completedMonths = rawMonths - 1;
+          hasExtraDays = true;
+        } else if (endDate.getDate() > admission.getDate()) {
+          completedMonths = rawMonths;
+          hasExtraDays = true;
+        } else {
+          completedMonths = rawMonths;
+          hasExtraDays = false;
+        }
+
+        const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+        const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'} counted)`;
         const dailyRate = Math.floor(monthlyPkg / 30);
         const dueTillDate = billableMonths * monthlyPkg;
 
@@ -3472,23 +3500,13 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                       onChange={e => setReportData({ ...reportData, name: e.target.value })}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
-                      <input
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
-                        value={reportData.patientId}
-                        onChange={e => setReportData({ ...reportData, patientId: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Serial Number</label>
-                      <input
-                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
-                        value={reportData.serialNumber}
-                        onChange={e => setReportData({ ...reportData, serialNumber: e.target.value })}
-                      />
-                    </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
+                      value={reportData.patientId}
+                      onChange={e => setReportData({ ...reportData, patientId: e.target.value })}
+                    />
                   </div>
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>

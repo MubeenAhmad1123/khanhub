@@ -98,7 +98,7 @@ function NewSpimsStudentForm() {
     if (prefillLoginId) setLoginId(prefillLoginId);
     if (reAdmissionFrom) {
       setLoginPassword('RE-ENTER'); // Hint for re-admission
-      
+
       // Fetch existing record to pre-fill more data
       const fetchOldRecord = async () => {
         try {
@@ -109,7 +109,7 @@ function NewSpimsStudentForm() {
             setContact(old.contact || '');
             setFatherContact(old.fatherContact || '');
             setAddress(old.address || '');
-            
+
             if (old.dateOfBirth) {
               if (typeof old.dateOfBirth === 'string') {
                 setDob(old.dateOfBirth);
@@ -182,7 +182,7 @@ function NewSpimsStudentForm() {
     try {
       setSubmitting(true);
       setSubmitStatus('processing');
-      
+
       const studentDocId = await createStudent({
         rollNo: rollNo.trim(),
         studentId: studentId.trim(),
@@ -235,7 +235,7 @@ function NewSpimsStudentForm() {
       if (!authRes.success) {
         try {
           await deleteDoc(doc(db, 'spims_students', studentDocId));
-        } catch {}
+        } catch { }
         setSubmitStatus('error');
         toast.error(authRes.error || 'Could not create login');
         return;
@@ -276,9 +276,8 @@ function NewSpimsStudentForm() {
   const StepBadge = ({ n, label }: { n: number; label: string }) => (
     <div className="flex items-center gap-2">
       <span
-        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${
-          step === n ? 'bg-[#1D9E75] text-white' : step > n ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'
-        }`}
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${step === n ? 'bg-[#1D9E75] text-white' : step > n ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'
+          }`}
       >
         {n}
       </span>
@@ -339,11 +338,11 @@ function NewSpimsStudentForm() {
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Name" value={name} onChange={setName} />
               <Field label="Father name" value={fatherName} onChange={setFatherName} />
-              <Field 
-                label="CNIC" 
-                value={cnic} 
-                onChange={(v) => setCnic(formatCnic(v))} 
-                placeholder="00000-0000000-0" 
+              <Field
+                label="CNIC"
+                value={cnic}
+                onChange={(v) => setCnic(formatCnic(v))}
+                placeholder="00000-0000000-0"
               />
               <Field label="Contact" value={contact} onChange={setContact} />
               <Field label="Father contact" value={fatherContact} onChange={setFatherContact} />
@@ -460,11 +459,10 @@ function NewSpimsStudentForm() {
             <button
               type="button"
               disabled={submitting}
-              className={`inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-2xl disabled:opacity-50 ${
-                submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
-                submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
-                'bg-[#1D9E75] text-white shadow-emerald-900/10'
-              }`}
+              className={`inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-2xl disabled:opacity-50 ${submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
+                  submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
+                    'bg-[#1D9E75] text-white shadow-emerald-900/10'
+                }`}
               onClick={submit}
             >
               {submitting ? (
@@ -503,7 +501,7 @@ function NewSpimsStudentForm() {
             >
               <X size={20} />
             </button>
-            
+
             <div className="flex items-start gap-4">
               <div className="p-3 bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl shrink-0">
                 <Shield size={24} className="animate-pulse" />

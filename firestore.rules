@@ -648,7 +648,7 @@ service cloud.firestore {
             'cashierRejectReason'
           ])
         );
-      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
+      allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager() || (isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId());
     }
 
     match /spims_staff/{staffId} {
@@ -726,7 +726,7 @@ service cloud.firestore {
         || (isSpimsRole('student') && resource.data.studentId == spimsStudentId())
         || isHqTier1();
       allow create, update: if isSpimsAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if false;
+      allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
     }
 
     match /spims_audit/{docId} {
