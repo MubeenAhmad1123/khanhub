@@ -385,7 +385,7 @@ export default function AdminReportsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#faf8f5] via-[#f5f1ea] to-[#ede7db] text-slate-800 p-4 md:p-8 font-sans">
       {/* Dynamic Print Styles */}
       <style>{`
         @media print {
@@ -585,17 +585,17 @@ export default function AdminReportsPage() {
       <div id="main-content" className="max-w-7xl mx-auto space-y-6">
         
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-800 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#e4dcce] pb-6">
           <div>
-            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200 flex items-center gap-2">
-              <FileBarChart className="w-8 h-8 text-emerald-400" /> Hospital Logs & Reports Hub
+            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-800 to-teal-600 flex items-center gap-2">
+              <FileBarChart className="w-8 h-8 text-emerald-700" /> Hospital Logs & Reports Hub
             </h1>
-            <p className="text-sm text-gray-400 mt-1">Manage and generate simple to the point patient logs, test results, and shift reports.</p>
+            <p className="text-sm text-slate-500 mt-1">Manage and generate simple to the point patient logs, test results, and shift reports.</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => handlePrint(activeTab === 'financial' ? 'fin' : activeTab === 'lab' ? 'lab' : activeTab === 'operation' ? 'op' : 'shift')}
-              className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-lg hover:brightness-110 active:scale-95 transition-all"
+              className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md hover:brightness-105 active:scale-95 transition-all"
             >
               <Printer className="w-4 h-4" /> Print Active Log Section
             </button>
@@ -603,7 +603,7 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Tab Selection */}
-        <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-[#e4dcce] pb-2">
           {[
             { id: 'financial', title: 'Monthly Summary Compiler', icon: BarChart3 },
             { id: 'lab', title: 'Lab Test Records', icon: Layers },
@@ -615,8 +615,8 @@ export default function AdminReportsPage() {
               onClick={() => setActiveTab(t.id as any)}
               className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
                 activeTab === t.id
-                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-sm'
+                  : 'text-slate-600 hover:bg-white/50 hover:text-slate-800'
               }`}
             >
               <t.icon className="w-4 h-4" /> {t.title}
@@ -627,34 +627,34 @@ export default function AdminReportsPage() {
         {/* FINANCIAL SUMMARY COMPILER TAB */}
         {activeTab === 'financial' && (
           <div className="space-y-6">
-            <div className="bg-gray-800/40 backdrop-blur-md rounded-2xl border border-gray-800 p-6">
-              <h2 className="font-bold text-gray-200 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-400" /> Select Report Period</h2>
+            <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-[#e4dcce] p-6 shadow-sm">
+              <h2 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-600" /> Select Report Period</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Month</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Month</label>
                   <select
                     value={selectedMonth}
                     onChange={e => setSelectedMonth(Number(e.target.value))}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-4 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Year</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Year</label>
                   <input
                     type="number"
                     value={selectedYear}
                     onChange={e => setSelectedYear(Number(e.target.value))}
                     min={2020}
                     max={2100}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-4 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <button
                   onClick={handleGenerateFinancial}
                   disabled={loading}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-md active:scale-95"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
                   Compile Summary
@@ -663,55 +663,55 @@ export default function AdminReportsPage() {
             </div>
 
             {finGenerated && financialReport && (
-              <div className="bg-gray-800/20 rounded-2xl border border-gray-800 p-6 space-y-6">
-                <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+              <div className="bg-white/40 rounded-2xl border border-[#e4dcce] p-6 space-y-6 shadow-sm">
+                <div className="flex justify-between items-center border-b border-[#e4dcce] pb-4">
                   <div>
-                    <h3 className="text-xl font-bold text-emerald-400">{financialReport.monthLabel} Report Summary</h3>
-                    <p className="text-xs text-gray-500">Compiled on {financialReport.generatedAt}</p>
+                    <h3 className="text-xl font-bold text-emerald-800">{financialReport.monthLabel} Report Summary</h3>
+                    <p className="text-xs text-slate-500">Compiled on {financialReport.generatedAt}</p>
                   </div>
                   <button
                     onClick={() => handlePrint('fin')}
-                    className="flex items-center gap-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600/30 transition-all"
+                    className="flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200/40 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-100/50 transition-all shadow-sm"
                   >
                     <Printer className="w-3.5 h-3.5" /> Print Summary
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-emerald-500/5 border border-emerald-500/10 p-5 rounded-xl">
-                    <TrendingUp className="w-6 h-6 text-emerald-400 mb-2" />
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Compiled Income</div>
-                    <div className="text-2xl font-black text-emerald-400">{formatPKR(financialReport.totalIncome)}</div>
+                  <div className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-xl shadow-sm">
+                    <TrendingUp className="w-6 h-6 text-emerald-600 mb-2" />
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Compiled Income</div>
+                    <div className="text-2xl font-black text-emerald-700">{formatPKR(financialReport.totalIncome)}</div>
                   </div>
-                  <div className="bg-red-500/5 border border-red-500/10 p-5 rounded-xl">
-                    <TrendingDown className="w-6 h-6 text-red-400 mb-2" />
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Compiled Expenses</div>
-                    <div className="text-2xl font-black text-red-400">{formatPKR(financialReport.totalExpense)}</div>
+                  <div className="bg-rose-50/50 border border-rose-100 p-5 rounded-xl shadow-sm">
+                    <TrendingDown className="w-6 h-6 text-rose-600 mb-2" />
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Compiled Expenses</div>
+                    <div className="text-2xl font-black text-rose-700">{formatPKR(financialReport.totalExpense)}</div>
                   </div>
-                  <div className="bg-teal-500/5 border border-teal-500/10 p-5 rounded-xl">
-                    <DollarSign className="w-6 h-6 text-teal-400 mb-2" />
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Net Compiled Balance</div>
-                    <div className="text-2xl font-black text-teal-400">{formatPKR(financialReport.netBalance)}</div>
+                  <div className="bg-teal-50/50 border border-teal-100 p-5 rounded-xl shadow-sm">
+                    <DollarSign className="w-6 h-6 text-teal-600 mb-2" />
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Net Compiled Balance</div>
+                    <div className="text-2xl font-black text-teal-700">{formatPKR(financialReport.netBalance)}</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-800">
-                    <h4 className="font-bold text-gray-300 border-b border-gray-700 pb-2 mb-3 text-sm">Income Stream Compilation</h4>
-                    <div className="space-y-2 text-sm text-gray-400">
-                      <div className="flex justify-between"><span>Lab Services Income:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.labIncome)}</span></div>
-                      <div className="flex justify-between"><span>Operations Income:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.opIncome)}</span></div>
-                      <div className="flex justify-between"><span>Morning Shift Income:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.shiftMorningIncome)}</span></div>
-                      <div className="flex justify-between"><span>Evening Shift Income:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.shiftEveningIncome)}</span></div>
+                  <div className="bg-white/60 rounded-xl p-4 border border-[#e4dcce] shadow-sm">
+                    <h4 className="font-bold text-slate-800 border-b border-[#e4dcce] pb-2 mb-3 text-sm">Income Stream Compilation</h4>
+                    <div className="space-y-2 text-sm text-slate-600">
+                      <div className="flex justify-between"><span>Lab Services Income:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.labIncome)}</span></div>
+                      <div className="flex justify-between"><span>Operations Income:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.opIncome)}</span></div>
+                      <div className="flex justify-between"><span>Morning Shift Income:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.shiftMorningIncome)}</span></div>
+                      <div className="flex justify-between"><span>Evening Shift Income:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.shiftEveningIncome)}</span></div>
                     </div>
                   </div>
-                  <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-800">
-                    <h4 className="font-bold text-gray-300 border-b border-gray-700 pb-2 mb-3 text-sm">Expense Stream Compilation</h4>
-                    <div className="space-y-2 text-sm text-gray-400">
-                      <div className="flex justify-between"><span>Lab Services Expense:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.labExpense)}</span></div>
-                      <div className="flex justify-between"><span>Morning Shift Expense:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.shiftMorningExpense)}</span></div>
-                      <div className="flex justify-between"><span>Evening Shift Expense:</span><span className="font-bold text-gray-200">{formatPKR(financialReport.shiftEveningExpense)}</span></div>
-                      <div className="flex justify-between border-t border-gray-700 pt-2 text-gray-300 font-bold"><span>Total Month Patients:</span><span>{financialReport.totalPatients}</span></div>
+                  <div className="bg-white/60 rounded-xl p-4 border border-[#e4dcce] shadow-sm">
+                    <h4 className="font-bold text-slate-800 border-b border-[#e4dcce] pb-2 mb-3 text-sm">Expense Stream Compilation</h4>
+                    <div className="space-y-2 text-sm text-slate-600">
+                      <div className="flex justify-between"><span>Lab Services Expense:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.labExpense)}</span></div>
+                      <div className="flex justify-between"><span>Morning Shift Expense:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.shiftMorningExpense)}</span></div>
+                      <div className="flex justify-between"><span>Evening Shift Expense:</span><span className="font-bold text-slate-800">{formatPKR(financialReport.shiftEveningExpense)}</span></div>
+                      <div className="flex justify-between border-t border-[#e4dcce] pt-2 text-slate-800 font-bold"><span>Total Month Patients:</span><span>{financialReport.totalPatients}</span></div>
                     </div>
                   </div>
                 </div>
@@ -725,104 +725,104 @@ export default function AdminReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Input Form Column */}
-            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-800 rounded-2xl p-6 h-fit space-y-4">
-              <h3 className="font-bold text-emerald-400 text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Lab Record Entry</h3>
+            <div className="bg-white/70 backdrop-blur-md border border-[#e4dcce] rounded-2xl p-6 h-fit space-y-4 shadow-sm">
+              <h3 className="font-bold text-emerald-700 text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Lab Record Entry</h3>
               <form onSubmit={handleAddLab} className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Test Date</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Test Date</label>
                   <input
                     type="date"
                     value={labForm.date}
                     onChange={e => setLabForm({ ...labForm, date: e.target.value })}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Patient Name</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Patient Name</label>
                   <input
                     type="text"
                     value={labForm.patientName}
                     onChange={e => setLabForm({ ...labForm, patientName: e.target.value })}
                     placeholder="Enter Patient Name"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Test Name</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Test Name</label>
                   <input
                     type="text"
                     value={labForm.testName}
                     onChange={e => setLabForm({ ...labForm, testName: e.target.value })}
                     placeholder="e.g. CBC, Lipid Profile"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Test Result</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Test Result</label>
                   <input
                     type="text"
                     value={labForm.result}
                     onChange={e => setLabForm({ ...labForm, result: e.target.value })}
                     placeholder="Result Details (or Pending)"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Referred By</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Referred By</label>
                   <input
                     type="text"
                     value={labForm.referredBy}
                     onChange={e => setLabForm({ ...labForm, referredBy: e.target.value })}
                     placeholder="Dr. Reference Name"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Charges</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Charges</label>
                     <input
                       type="number"
                       value={labForm.charges}
                       onChange={e => setLabForm({ ...labForm, charges: e.target.value })}
                       placeholder="Charges"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Expense</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Expense</label>
                     <input
                       type="number"
                       value={labForm.expense}
                       onChange={e => setLabForm({ ...labForm, expense: e.target.value })}
                       placeholder="Expense"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Cashier Sig</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Cashier Sig</label>
                     <input
                       type="text"
                       value={labForm.cashierSig}
                       onChange={e => setLabForm({ ...labForm, cashierSig: e.target.value })}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Receiver Sig</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Receiver Sig</label>
                     <input
                       type="text"
                       value={labForm.receiverSig}
                       onChange={e => setLabForm({ ...labForm, receiverSig: e.target.value })}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Save Lab Record'}
                 </button>
@@ -830,24 +830,24 @@ export default function AdminReportsPage() {
             </div>
 
             {/* List Records Table Column */}
-            <div className="lg:col-span-2 bg-gray-800/20 border border-gray-800 rounded-2xl p-6 space-y-4">
+            <div className="lg:col-span-2 bg-white/70 border border-[#e4dcce] rounded-2xl p-6 space-y-4 shadow-sm">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <h3 className="font-bold text-emerald-400 text-lg flex items-center gap-2">Lab Test Database Logs</h3>
+                <h3 className="font-bold text-emerald-700 text-lg flex items-center gap-2">Lab Test Database Logs</h3>
                 <div className="relative w-full sm:w-64">
-                  <span className="absolute left-3 top-2.5 text-gray-500"><Search className="w-4 h-4" /></span>
+                  <span className="absolute left-3 top-2.5 text-slate-400"><Search className="w-4 h-4" /></span>
                   <input
                     type="text"
                     value={labSearch}
                     onChange={e => setLabSearch(e.target.value)}
                     placeholder="Search patient/test..."
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-gray-800">
+              <div className="overflow-x-auto rounded-xl border border-[#e4dcce]">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-800/50 text-gray-300 font-bold">
+                  <thead className="bg-slate-100 text-slate-700 border-b border-[#e4dcce] font-bold">
                     <tr>
                       <th className="p-3">Date</th>
                       <th className="p-3">Patient</th>
@@ -858,32 +858,32 @@ export default function AdminReportsPage() {
                       <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800 text-gray-400">
+                  <tbody className="divide-y divide-slate-100 text-slate-600">
                     {filteredLab.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="p-4 text-center text-gray-500">No lab records found.</td>
+                        <td colSpan={7} className="p-4 text-center text-slate-400">No lab records found.</td>
                       </tr>
                     ) : (
                       filteredLab.map(r => (
-                        <tr key={r.id} className="hover:bg-gray-800/20 transition-all">
+                        <tr key={r.id} className="hover:bg-slate-50/50 transition-all">
                           <td className="p-3 whitespace-nowrap">{r.date}</td>
-                          <td className="p-3 font-bold text-gray-200">{r.patientName}</td>
+                          <td className="p-3 font-bold text-slate-800">{r.patientName}</td>
                           <td className="p-3">{r.testName}</td>
                           <td className="p-3">{formatPKR(r.charges)}</td>
-                          <td className="p-3 font-bold text-emerald-400">{formatPKR(r.netAmount)}</td>
+                          <td className="p-3 font-bold text-emerald-700">{formatPKR(r.netAmount)}</td>
                           <td className="p-3 text-[10px] font-mono italic">{r.cashierSig} / {r.receiverSig}</td>
                           <td className="p-3">
                             <div className="flex justify-center gap-2">
                               <button
                                 onClick={() => handlePrint('lab', [r])}
-                                className="text-gray-400 hover:text-emerald-400 transition-all"
+                                className="text-slate-400 hover:text-emerald-600 transition-all"
                                 title="Print Single Slip"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteLab(r.id)}
-                                className="text-gray-500 hover:text-red-400 transition-all"
+                                className="text-slate-400 hover:text-red-500 transition-all"
                                 title="Delete Record"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -906,112 +906,112 @@ export default function AdminReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Input Form Column */}
-            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-800 rounded-2xl p-6 h-fit space-y-4">
-              <h3 className="font-bold text-indigo-400 text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Operation Record</h3>
+            <div className="bg-white/70 backdrop-blur-md border border-[#e4dcce] rounded-2xl p-6 h-fit space-y-4 shadow-sm">
+              <h3 className="font-bold text-indigo-700 text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Operation Record</h3>
               <form onSubmit={handleAddOp} className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Operation Date</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Operation Date</label>
                   <input
                     type="date"
                     value={opForm.date}
                     onChange={e => setOpForm({ ...opForm, date: e.target.value })}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Patient Name</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Patient Name</label>
                   <input
                     type="text"
                     value={opForm.patientName}
                     onChange={e => setOpForm({ ...opForm, patientName: e.target.value })}
                     placeholder="Enter Patient Name"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Operation Type</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Operation Type</label>
                   <input
                     type="text"
                     value={opForm.operationType}
                     onChange={e => setOpForm({ ...opForm, operationType: e.target.value })}
                     placeholder="e.g. Appendectomy, Cataract"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Contact No#</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Contact No#</label>
                   <input
                     type="text"
                     value={opForm.contactNo}
                     onChange={e => setOpForm({ ...opForm, contactNo: e.target.value })}
                     placeholder="Patient Contact"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Referred By</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Referred By</label>
                   <input
                     type="text"
                     value={opForm.referredBy}
                     onChange={e => setOpForm({ ...opForm, referredBy: e.target.value })}
                     placeholder="Referred Doctor"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Admit Date</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Admit Date</label>
                     <input
                       type="date"
                       value={opForm.admitDate}
                       onChange={e => setOpForm({ ...opForm, admitDate: e.target.value })}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-200 outline-none"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-xs text-slate-800 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Discharge Date</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Discharge Date</label>
                     <input
                       type="date"
                       value={opForm.dischargeDate}
                       onChange={e => setOpForm({ ...opForm, dischargeDate: e.target.value })}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-200 outline-none"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-xs text-slate-800 outline-none"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Operation Charges / Amount</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Operation Charges / Amount</label>
                   <input
                     type="number"
                     value={opForm.amount}
                     onChange={e => setOpForm({ ...opForm, amount: e.target.value })}
                     placeholder="Operation Amount"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Cashier Sig</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Cashier Sig</label>
                     <input
                       type="text"
                       value={opForm.cashierSig}
                       onChange={e => setOpForm({ ...opForm, cashierSig: e.target.value })}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-400 outline-none"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-xs text-slate-600 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Receiver Sig</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Receiver Sig</label>
                     <input
                       type="text"
                       value={opForm.receiverSig}
                       onChange={e => setOpForm({ ...opForm, receiverSig: e.target.value })}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-400 outline-none"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-xs text-slate-600 outline-none"
                     />
                   </div>
                 </div>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Save Operation Record'}
                 </button>
@@ -1019,24 +1019,24 @@ export default function AdminReportsPage() {
             </div>
 
             {/* List Records Table Column */}
-            <div className="lg:col-span-2 bg-gray-800/20 border border-gray-800 rounded-2xl p-6 space-y-4">
+            <div className="lg:col-span-2 bg-white/70 border border-[#e4dcce] rounded-2xl p-6 space-y-4 shadow-sm">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <h3 className="font-bold text-indigo-400 text-lg flex items-center gap-2">Operation Database Logs</h3>
+                <h3 className="font-bold text-indigo-700 text-lg flex items-center gap-2">Operation Database Logs</h3>
                 <div className="relative w-full sm:w-64">
-                  <span className="absolute left-3 top-2.5 text-gray-500"><Search className="w-4 h-4" /></span>
+                  <span className="absolute left-3 top-2.5 text-slate-400"><Search className="w-4 h-4" /></span>
                   <input
                     type="text"
                     value={opSearch}
                     onChange={e => setOpSearch(e.target.value)}
                     placeholder="Search patient/operation..."
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-gray-800">
+              <div className="overflow-x-auto rounded-xl border border-[#e4dcce]">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-800/50 text-gray-300 font-bold">
+                  <thead className="bg-slate-100 text-slate-700 border-b border-[#e4dcce] font-bold">
                     <tr>
                       <th className="p-3">Date</th>
                       <th className="p-3">Patient</th>
@@ -1047,32 +1047,32 @@ export default function AdminReportsPage() {
                       <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800 text-gray-400">
+                  <tbody className="divide-y divide-slate-100 text-slate-600">
                     {filteredOp.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="p-4 text-center text-gray-500">No operation records found.</td>
+                        <td colSpan={7} className="p-4 text-center text-slate-400">No operation records found.</td>
                       </tr>
                     ) : (
                       filteredOp.map(r => (
-                        <tr key={r.id} className="hover:bg-gray-800/20 transition-all">
+                        <tr key={r.id} className="hover:bg-slate-50/50 transition-all">
                           <td className="p-3 whitespace-nowrap">{r.date}</td>
-                          <td className="p-3 font-bold text-gray-200">{r.patientName}</td>
+                          <td className="p-3 font-bold text-slate-800">{r.patientName}</td>
                           <td className="p-3">{r.operationType}</td>
                           <td className="p-3 whitespace-nowrap text-[10px]">{r.admitDate} to {r.dischargeDate}</td>
-                          <td className="p-3 font-bold text-indigo-400">{formatPKR(r.amount)}</td>
+                          <td className="p-3 font-bold text-indigo-700">{formatPKR(r.amount)}</td>
                           <td className="p-3 text-[10px] font-mono italic">{r.cashierSig} / {r.receiverSig}</td>
                           <td className="p-3">
                             <div className="flex justify-center gap-2">
                               <button
                                 onClick={() => handlePrint('op', [r])}
-                                className="text-gray-400 hover:text-indigo-400 transition-all"
+                                className="text-slate-400 hover:text-indigo-600 transition-all"
                                 title="Print Single Slip"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteOp(r.id)}
-                                className="text-gray-500 hover:text-red-400 transition-all"
+                                className="text-slate-400 hover:text-red-500 transition-all"
                                 title="Delete Record"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -1095,68 +1095,68 @@ export default function AdminReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Input Form Column */}
-            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-800 rounded-2xl p-6 h-fit space-y-4">
-              <h3 className="font-bold text-teal-400 text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Shift Performance Report</h3>
+            <div className="bg-white/70 backdrop-blur-md border border-[#e4dcce] rounded-2xl p-6 h-fit space-y-4 shadow-sm">
+              <h3 className="font-bold text-teal-700 text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Add Shift Performance Report</h3>
               <form onSubmit={handleAddShift} className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">Date</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1">Date</label>
                   <input
                     type="date"
                     value={shiftForm.date}
                     onChange={e => setShiftForm({ ...shiftForm, date: e.target.value })}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 
                 {/* Morning section */}
-                <div className="border border-gray-800 rounded-xl p-3 bg-gray-900/30 space-y-2">
-                  <h4 className="text-xs font-black text-teal-400 uppercase tracking-widest border-b border-gray-800 pb-1">Morning Shift Metrics</h4>
+                <div className="border border-[#e4dcce] rounded-xl p-3 bg-white/40 space-y-2">
+                  <h4 className="text-xs font-black text-teal-700 uppercase tracking-widest border-b border-[#e4dcce] pb-1">Morning Shift Metrics</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 block">Morning Income</label>
+                      <label className="text-[10px] font-bold text-slate-500 block">Morning Income</label>
                       <input
                         type="number"
                         value={shiftForm.morningIncome}
                         onChange={e => setShiftForm({ ...shiftForm, morningIncome: e.target.value })}
                         placeholder="Income"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200 outline-none"
+                        className="w-full bg-white border border-[#dcd3c1] rounded-lg px-2 py-1.5 text-xs text-slate-800 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 block">Morning Expense</label>
+                      <label className="text-[10px] font-bold text-slate-500 block">Morning Expense</label>
                       <input
                         type="number"
                         value={shiftForm.morningExpense}
                         onChange={e => setShiftForm({ ...shiftForm, morningExpense: e.target.value })}
                         placeholder="Expense"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200 outline-none"
+                        className="w-full bg-white border border-[#dcd3c1] rounded-lg px-2 py-1.5 text-xs text-slate-800 outline-none"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Evening section */}
-                <div className="border border-gray-800 rounded-xl p-3 bg-gray-900/30 space-y-2">
-                  <h4 className="text-xs font-black text-teal-400 uppercase tracking-widest border-b border-gray-800 pb-1">Evening Shift Metrics</h4>
+                <div className="border border-[#e4dcce] rounded-xl p-3 bg-white/40 space-y-2">
+                  <h4 className="text-xs font-black text-teal-700 uppercase tracking-widest border-b border-[#e4dcce] pb-1">Evening Shift Metrics</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 block">Evening Income</label>
+                      <label className="text-[10px] font-bold text-slate-500 block">Evening Income</label>
                       <input
                         type="number"
                         value={shiftForm.eveningIncome}
                         onChange={e => setShiftForm({ ...shiftForm, eveningIncome: e.target.value })}
                         placeholder="Income"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200 outline-none"
+                        className="w-full bg-white border border-[#dcd3c1] rounded-lg px-2 py-1.5 text-xs text-slate-800 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 block">Evening Expense</label>
+                      <label className="text-[10px] font-bold text-slate-500 block">Evening Expense</label>
                       <input
                         type="number"
                         value={shiftForm.eveningExpense}
                         onChange={e => setShiftForm({ ...shiftForm, eveningExpense: e.target.value })}
                         placeholder="Expense"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200 outline-none"
+                        className="w-full bg-white border border-[#dcd3c1] rounded-lg px-2 py-1.5 text-xs text-slate-800 outline-none"
                       />
                     </div>
                   </div>
@@ -1164,23 +1164,23 @@ export default function AdminReportsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">No of Patients</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">No of Patients</label>
                     <input
                       type="number"
                       value={shiftForm.noOfPatients}
                       onChange={e => setShiftForm({ ...shiftForm, noOfPatients: e.target.value })}
                       placeholder="Daily Patients"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">Grand Total Cash</label>
+                    <label className="text-xs font-bold text-slate-500 block mb-1">Grand Total Cash</label>
                     <input
                       type="number"
                       value={shiftForm.grandTotal}
                       onChange={e => setShiftForm({ ...shiftForm, grandTotal: e.target.value })}
                       placeholder="Cumulative"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full bg-white border border-[#dcd3c1] rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
                 </div>
@@ -1188,7 +1188,7 @@ export default function AdminReportsPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50"
                 >
                   {submitting ? 'Saving...' : 'Save Shift Report'}
                 </button>
@@ -1196,12 +1196,12 @@ export default function AdminReportsPage() {
             </div>
 
             {/* List Records Table Column */}
-            <div className="lg:col-span-2 bg-gray-800/20 border border-gray-800 rounded-2xl p-6 space-y-4">
-              <h3 className="font-bold text-teal-400 text-lg flex items-center gap-2">Daily Performance Database Records</h3>
+            <div className="lg:col-span-2 bg-white/70 border border-[#e4dcce] rounded-2xl p-6 space-y-4 shadow-sm">
+              <h3 className="font-bold text-teal-700 text-lg flex items-center gap-2">Daily Performance Database Records</h3>
 
-              <div className="overflow-x-auto rounded-xl border border-gray-800">
+              <div className="overflow-x-auto rounded-xl border border-[#e4dcce]">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-gray-800/50 text-gray-300 font-bold">
+                  <thead className="bg-slate-100 text-slate-700 border-b border-[#e4dcce] font-bold">
                     <tr>
                       <th className="p-3">Date</th>
                       <th className="p-3">M. Net</th>
@@ -1212,32 +1212,32 @@ export default function AdminReportsPage() {
                       <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800 text-gray-400">
+                  <tbody className="divide-y divide-slate-100 text-slate-600">
                     {shiftReports.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="p-4 text-center text-gray-500">No shift reports registered.</td>
+                        <td colSpan={7} className="p-4 text-center text-slate-400">No shift reports registered.</td>
                       </tr>
                     ) : (
                       shiftReports.map(r => (
-                        <tr key={r.id} className="hover:bg-gray-800/20 transition-all">
-                          <td className="p-3 whitespace-nowrap font-bold text-gray-200">{r.date}</td>
-                          <td className="p-3 text-emerald-400">{formatPKR(r.morningNetAmount)}</td>
-                          <td className="p-3 text-teal-400">{formatPKR(r.eveningNetAmount)}</td>
-                          <td className="p-3 text-center font-bold text-gray-200">{r.noOfPatients}</td>
-                          <td className="p-3 font-extrabold text-teal-300">{formatPKR(r.netAmount)}</td>
-                          <td className="p-3 font-black text-emerald-300">{formatPKR(r.grandTotal)}</td>
+                        <tr key={r.id} className="hover:bg-slate-50/50 transition-all">
+                          <td className="p-3 whitespace-nowrap font-bold text-slate-800">{r.date}</td>
+                          <td className="p-3 text-emerald-700">{formatPKR(r.morningNetAmount)}</td>
+                          <td className="p-3 text-teal-700">{formatPKR(r.eveningNetAmount)}</td>
+                          <td className="p-3 text-center font-bold text-slate-800">{r.noOfPatients}</td>
+                          <td className="p-3 font-extrabold text-teal-800">{formatPKR(r.netAmount)}</td>
+                          <td className="p-3 font-black text-emerald-800">{formatPKR(r.grandTotal)}</td>
                           <td className="p-3">
                             <div className="flex justify-center gap-2">
                               <button
                                 onClick={() => handlePrint('shift', [r])}
-                                className="text-gray-400 hover:text-teal-400 transition-all"
+                                className="text-slate-400 hover:text-teal-600 transition-all"
                                 title="Print Shift Report Slip"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteShift(r.id)}
-                                className="text-gray-500 hover:text-red-400 transition-all"
+                                className="text-slate-400 hover:text-red-500 transition-all"
                                 title="Delete Record"
                               >
                                 <Trash2 className="w-4 h-4" />
