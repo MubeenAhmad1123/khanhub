@@ -78,7 +78,7 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
   const donorId = data.donorId != null ? String(data.donorId) : undefined;
   const rejectionReason =
     (data.rejectionReason as string | undefined) || (data.rejectedReason as string | undefined);
-  
+
   return {
     id,
     dept,
@@ -120,7 +120,7 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
 }
 
 export const PENDING_STATUSES = ['pending', 'pending_cashier'];
-export const REJECT_STATUSES = ['rejected'];
+export const REJECT_STATUSES = ['rejected', 'rejected_cashier'];
 
 function getAmountBucketPredicate(bucket: AmountBucket) {
   return (tx: UnifiedTx) => {
@@ -246,7 +246,7 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
         collection(db, col),
         where('status', 'in', [...PENDING_STATUSES]),
         orderBy('createdAt', 'desc'),
-        limit(50)
+        limit(150)
       ),
     ];
   }
@@ -256,7 +256,7 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
         collection(db, col),
         where('status', '==', 'approved'),
         orderBy('createdAt', 'desc'),
-        limit(50)
+        limit(150)
       ),
     ];
   }
@@ -266,12 +266,12 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
         collection(db, col),
         where('status', 'in', [...REJECT_STATUSES]),
         orderBy('createdAt', 'desc'),
-        limit(50)
+        limit(150)
       ),
     ];
   }
   // history — broad pull; filters applied client-side
-  return [query(collection(db, col), orderBy('createdAt', 'desc'), limit(100))];
+  return [query(collection(db, col), orderBy('createdAt', 'desc'), limit(200))];
 }
 
 function tabFilterClient(
@@ -478,15 +478,15 @@ export function subscribePendingApprovalsCount({
 
   const unsubs = ALL_DEPTS.map(dept => {
     const col = DEPT_TX_MAP[dept];
-    if (!col) return () => {};
-    
+    if (!col) return () => { };
+
     const q = query(
       collection(db, col),
       where('status', 'in', [...PENDING_STATUSES]),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
-    
+
     return onSnapshot(
       q,
       (snap) => {
@@ -534,7 +534,7 @@ export async function searchEntitiesCombined(
   if (deptFilter === 'all' || deptFilter === 'rehab') parts.push(searchEntitiesByNamePrefix({ dept: 'rehab', namePrefix: prefix }));
   if (deptFilter === 'all' || deptFilter === 'spims') parts.push(searchEntitiesByNamePrefix({ dept: 'spims', namePrefix: prefix }));
   if (deptFilter === 'all' || deptFilter === 'job-center') parts.push(searchEntitiesByNamePrefix({ dept: 'job-center', namePrefix: prefix }));
-  
+
   // We can add search for hospital/welfare etc later if those entity collections follow name prefixing
   const rows = (await Promise.all(parts)).flat() as any[];
   return rows.slice(0, 16);
