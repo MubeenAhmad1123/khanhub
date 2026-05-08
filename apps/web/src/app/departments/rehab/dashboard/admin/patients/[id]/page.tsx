@@ -385,44 +385,69 @@ export default function PatientDetailPage() {
         );
         const allFeesSnap = await getDocs(allFeesQ);
 
+        const syncedTxIds = new Set<string>();
         allFeesSnap.docs.forEach(doc => {
           const feeData = doc.data();
           const docPayments = feeData.payments || [];
           docPayments.forEach((p: any) => {
             const status = p.status || 'approved';
             if (status === 'approved') overallReceived += Number(p.amount || 0);
+            if (p.transactionId) syncedTxIds.add(p.transactionId);
             aggregatedPayments.push({
               id: `${doc.id}_${p.date}`,
               ...p,
               status,
-              month: feeData.month // preserve month context if needed
+              month: feeData.month
             });
           });
         });
 
-        // Also fetch pending transactions from rehab_transactions to display in ledger
+        // Fetch ALL transactions from rehab_transactions to display in ledger
         const txQ = query(
           collection(db, 'rehab_transactions'),
-          where('patientId', '==', patientId),
-          where('status', 'in', ['pending', 'pending_cashier'])
+          where('patientId', '==', patientId)
         );
         const txSnap = await getDocs(txQ);
         txSnap.docs.forEach(doc => {
           const txData = doc.data();
-          aggregatedPayments.push({
-            id: doc.id,
-            amount: Number(txData.amount || 0),
-            date: txData.date || txData.createdAt,
-            cashierId: txData.cashierId || txData.createdByName || 'Office',
-            note: txData.description || txData.categoryName || '',
-            status: 'pending',
-            isPendingTransaction: true,
-            method: txData.method || 'Cash'
-          });
+          const txId = doc.id;
+          
+          const isApproved = txData.status === 'approved';
+          const isSynced = syncedTxIds.has(txId);
+          
+          if (isApproved && !isSynced) {
+            overallReceived += Number(txData.amount || 0);
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date || txData.createdAt,
+              cashierId: txData.cashierId || txData.createdByName || 'Office',
+              note: txData.description || txData.categoryName || '',
+              status: 'approved',
+              method: txData.method || 'Cash'
+            });
+          } else if (!isApproved) {
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date || txData.createdAt,
+              cashierId: txData.cashierId || txData.createdByName || 'Office',
+              note: txData.description || txData.categoryName || '',
+              status: txData.status || 'pending',
+              isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
+              method: txData.method || 'Cash'
+            });
+          }
         });
       } catch (err) {
         console.warn("Error fetching aggregated fees", err);
       }
+
+      aggregatedPayments.sort((a, b) => {
+        const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date || 0);
+        const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
       setAllPayments(aggregatedPayments);
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
@@ -2240,8 +2265,14 @@ export default function PatientDetailPage() {
                               </td>
                               <td className="py-5 font-bold text-xs text-gray-500 dark:text-gray-400">{p.method || 'Cash'}</td>
                               <td className="py-5">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${p.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
-                                  {p.status === 'approved' ? 'APPROVED' : 'PENDING'}
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${
+                                  p.status === 'approved' 
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                    : p.status === 'rejected' || p.status === 'rejected_cashier'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                }`}>
+                                  {String(p.status || 'pending').toUpperCase()}
                                 </span>
                               </td>
                               <td className="py-5">
