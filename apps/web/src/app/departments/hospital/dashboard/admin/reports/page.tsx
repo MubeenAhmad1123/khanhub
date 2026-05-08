@@ -389,9 +389,114 @@ export default function AdminReportsPage() {
       {/* Dynamic Print Styles */}
       <style>{`
         @media print {
-          body { background: white !important; color: black !important; }
+          @page {
+            size: A4 portrait;
+            margin: 8mm 8mm 8mm 8mm;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+            font-size: 11px !important;
+            line-height: 1.15 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
           #main-content { display: none !important; }
-          #print-section { display: block !important; width: 100%; }
+          #print-section {
+            display: block !important;
+            width: 100% !important;
+            padding: 0px !important;
+            margin: 0px !important;
+          }
+          /* Ensure compact title headers */
+          .print-header {
+            text-align: center !important;
+            border-bottom: 2px solid #000 !important;
+            padding-bottom: 4px !important;
+            margin-bottom: 12px !important;
+          }
+          .print-header h1 {
+            font-size: 20px !important;
+            font-weight: 900 !important;
+            margin: 0 !important;
+            letter-spacing: 0.05em !important;
+            text-transform: uppercase !important;
+            color: #000 !important;
+          }
+          .print-header h2 {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            margin: 1px 0 !important;
+            color: #333 !important;
+          }
+          .print-header p {
+            font-size: 9px !important;
+            margin: 1px 0 !important;
+            color: #555 !important;
+          }
+          /* Compact tables */
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
+          }
+          th {
+            background-color: #f3f4f6 !important;
+            color: black !important;
+            font-weight: bold !important;
+            padding: 3px 4px !important;
+            font-size: 8.5px !important;
+            border: 1px solid #4b5563 !important;
+            text-transform: uppercase !important;
+          }
+          td {
+            padding: 3px 4px !important;
+            font-size: 8.5px !important;
+            border: 1px solid #9ca3af !important;
+            line-height: 1.1 !important;
+            word-break: break-word !important;
+          }
+          /* Narrow specific wide table for shifts */
+          .shift-table th, .shift-table td {
+            font-size: 7.5px !important;
+            padding: 2px 3px !important;
+          }
+          /* Financial monthly layout side-by-side */
+          .financial-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+            margin-bottom: 8px !important;
+          }
+          .financial-card {
+            border: 1px solid #9ca3af !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+          }
+          .financial-card h3 {
+            font-size: 10px !important;
+            font-weight: bold !important;
+            margin-bottom: 4px !important;
+            border-bottom: 1px solid #9ca3af !important;
+            padding-bottom: 2px !important;
+            color: black !important;
+            text-transform: uppercase !important;
+          }
+          .financial-card div {
+            font-size: 9px !important;
+          }
+          .net-performance {
+            border-top: 1.5px solid #000 !important;
+            padding-top: 6px !important;
+            margin-top: 6px !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+          }
+          /* Force fits on one page */
+          .no-break {
+            page-break-inside: avoid !important;
+          }
         }
         @media screen {
           #print-section { display: none !important; }
@@ -399,13 +504,13 @@ export default function AdminReportsPage() {
       `}</style>
 
       {/* PRINT LAYOUT */}
-      <div id="print-section" className="text-black p-8 bg-white font-sans">
+      <div id="print-section" className="text-black p-4 bg-white font-sans no-break">
         {printPreviewType === 'lab' && (
           <div>
-            <div className="text-center border-b-2 border-emerald-600 pb-4 mb-6">
-              <h1 className="text-3xl font-black uppercase tracking-wider text-emerald-700">Khan Hub Hospital</h1>
-              <h2 className="text-xl font-bold text-gray-800">Lab Test Records Report</h2>
-              <p className="text-sm text-gray-500 mt-1">Generated on {new Date().toLocaleString()}</p>
+            <div className="print-header">
+              <h1>Khan Hub Hospital</h1>
+              <h2>Lab Test Records Report</h2>
+              <p>Generated on {new Date().toLocaleString()}</p>
             </div>
             <table className="w-full border-collapse border border-gray-400 text-xs">
               <thead>
@@ -446,10 +551,10 @@ export default function AdminReportsPage() {
 
         {printPreviewType === 'op' && (
           <div>
-            <div className="text-center border-b-2 border-indigo-600 pb-4 mb-6">
-              <h1 className="text-3xl font-black uppercase tracking-wider text-indigo-700">Khan Hub Hospital</h1>
-              <h2 className="text-xl font-bold text-gray-800">Operation Records Report</h2>
-              <p className="text-sm text-gray-500 mt-1">Generated on {new Date().toLocaleString()}</p>
+            <div className="print-header">
+              <h1>Khan Hub Hospital</h1>
+              <h2>Operation Records Report</h2>
+              <p>Generated on {new Date().toLocaleString()}</p>
             </div>
             <table className="w-full border-collapse border border-gray-400 text-xs">
               <thead>
@@ -490,12 +595,12 @@ export default function AdminReportsPage() {
 
         {printPreviewType === 'shift' && (
           <div>
-            <div className="text-center border-b-2 border-emerald-600 pb-4 mb-6">
-              <h1 className="text-3xl font-black uppercase tracking-wider text-emerald-700">Khan Hub Medical Center</h1>
-              <h2 className="text-xl font-bold text-gray-800">Daily Patient & Shift Performance Report</h2>
-              <p className="text-sm text-gray-500 mt-1">Generated on {new Date().toLocaleString()}</p>
+            <div className="print-header">
+              <h1>Khan Hub Medical Center</h1>
+              <h2>Daily Patient & Shift Performance Report</h2>
+              <p>Generated on {new Date().toLocaleString()}</p>
             </div>
-            <table className="w-full border-collapse border border-gray-400 text-[10px]">
+            <table className="shift-table w-full border-collapse border border-gray-400">
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-gray-400 p-1">Sr.No</th>
@@ -535,8 +640,8 @@ export default function AdminReportsPage() {
                     <td className="border border-gray-400 p-1 text-center font-bold">{r.noOfPatients}</td>
                     <td className="border border-gray-400 p-1">Rs. {r.totalIncome?.toLocaleString()}</td>
                     <td className="border border-gray-400 p-1">Rs. {r.totalExpense?.toLocaleString()}</td>
-                    <td className="border border-gray-400 p-1 font-bold text-emerald-800">Rs. {r.netAmount?.toLocaleString()}</td>
-                    <td className="border border-gray-400 p-1 font-black text-emerald-950">Rs. {r.grandTotal?.toLocaleString()}</td>
+                    <td className="border border-gray-400 p-1 font-bold">Rs. {r.netAmount?.toLocaleString()}</td>
+                    <td className="border border-gray-400 p-1 font-black">Rs. {r.grandTotal?.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -546,36 +651,36 @@ export default function AdminReportsPage() {
 
         {printPreviewType === 'fin' && financialReport && (
           <div>
-            <div className="text-center border-b-2 border-emerald-600 pb-4 mb-6">
-              <h1 className="text-3xl font-black uppercase tracking-wider text-emerald-700">Khan Hub Hospital</h1>
-              <h2 className="text-xl font-bold text-gray-800">Financial Monthly Compilation Report</h2>
-              <p className="text-sm text-gray-500 mt-1">For Period: {financialReport.monthLabel}</p>
-              <p className="text-xs text-gray-400 mt-1">Generated: {financialReport.generatedAt}</p>
+            <div className="print-header">
+              <h1>Khan Hub Hospital</h1>
+              <h2>Financial Monthly Compilation Report</h2>
+              <p>For Period: {financialReport.monthLabel}</p>
+              <p>Generated: {financialReport.generatedAt}</p>
             </div>
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="border border-gray-300 p-4 rounded-xl">
-                <h3 className="font-bold text-gray-700 border-b pb-2 mb-2">Revenue Summaries</h3>
+            <div className="financial-grid grid grid-cols-2 gap-8 mb-8">
+              <div className="financial-card border border-gray-300 p-4 rounded-xl">
+                <h3>Revenue Summaries</h3>
                 <div className="space-y-1.5 text-sm text-gray-600">
                   <div className="flex justify-between"><span>Lab Services Income:</span><span className="font-bold text-gray-800">Rs. {financialReport.labIncome?.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Operations Services Income:</span><span className="font-bold text-gray-800">Rs. {financialReport.opIncome?.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Morning Shift Income:</span><span className="font-bold text-gray-800">Rs. {financialReport.shiftMorningIncome?.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Evening Shift Income:</span><span className="font-bold text-gray-800">Rs. {financialReport.shiftEveningIncome?.toLocaleString()}</span></div>
-                  <div className="flex justify-between border-t pt-1 font-bold text-emerald-700"><span>Grand Total Income:</span><span>Rs. {financialReport.totalIncome?.toLocaleString()}</span></div>
+                  <div className="flex justify-between border-t pt-1 font-bold text-black border-gray-400"><span>Grand Total Income:</span><span>Rs. {financialReport.totalIncome?.toLocaleString()}</span></div>
                 </div>
               </div>
-              <div className="border border-gray-300 p-4 rounded-xl">
-                <h3 className="font-bold text-gray-700 border-b pb-2 mb-2">Expense Summaries</h3>
+              <div className="financial-card border border-gray-300 p-4 rounded-xl">
+                <h3>Expense Summaries</h3>
                 <div className="space-y-1.5 text-sm text-gray-600">
                   <div className="flex justify-between"><span>Lab Service Expenses:</span><span className="font-bold text-gray-800">Rs. {financialReport.labExpense?.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Morning Shift Expenses:</span><span className="font-bold text-gray-800">Rs. {financialReport.shiftMorningExpense?.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span>Evening Shift Expenses:</span><span className="font-bold text-gray-800">Rs. {financialReport.shiftEveningExpense?.toLocaleString()}</span></div>
-                  <div className="flex justify-between border-t pt-1 font-bold text-red-600"><span>Grand Total Expenses:</span><span>Rs. {financialReport.totalExpense?.toLocaleString()}</span></div>
+                  <div className="flex justify-between border-t pt-1 font-bold text-black border-gray-400"><span>Grand Total Expenses:</span><span>Rs. {financialReport.totalExpense?.toLocaleString()}</span></div>
                 </div>
               </div>
             </div>
-            <div className="border-t-2 pt-4 flex justify-between items-center">
-              <span className="text-lg font-bold text-gray-700">Monthly Net Performance Balance:</span>
-              <span className={`text-2xl font-black ${financialReport.netBalance >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>Rs. {financialReport.netBalance?.toLocaleString()}</span>
+            <div className="net-performance border-t-2 pt-4 flex justify-between items-center">
+              <span>Monthly Net Performance Balance:</span>
+              <span className="text-2xl font-black">Rs. {financialReport.netBalance?.toLocaleString()}</span>
             </div>
           </div>
         )}
