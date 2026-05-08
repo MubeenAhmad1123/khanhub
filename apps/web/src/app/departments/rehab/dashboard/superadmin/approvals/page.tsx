@@ -45,7 +45,7 @@ export default function ApprovalsPage() {
     // No orderBy — avoids index requirement
     const q = query(
       collection(db, 'rehab_transactions'),
-      where('status', '==', 'pending')
+      where('status', 'in', ['pending', 'pending_cashier'])
     )
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -158,14 +158,15 @@ export default function ApprovalsPage() {
       });
 
       // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
-      const allTransactions = [...pendingTransactions, ...historyTransactions];
-      const tx = allTransactions.find((t: any) => t.id === txId);
-      if (tx && tx.patientId) {
-        try {
-          const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
-          const month = txDate.toISOString().slice(0, 7); // "2026-03"
+      const txDoc = await getDoc(doc(db, 'rehab_transactions', txId));
+      if (txDoc.exists()) {
+        const tx = { id: txDoc.id, ...txDoc.data() as any };
+        if (tx.patientId) {
+          try {
+            const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
+            const month = txDate.toISOString().slice(0, 7); // "2026-03"
 
-          if (tx.category === 'patient_fee') {
+            if (tx.category === 'patient_fee' || tx.category === 'fee') {
             // Find or CREATE the fee record for this patient+month
             const feesQ = query(
               collection(db, 'rehab_fees'),
@@ -297,10 +298,10 @@ export default function ApprovalsPage() {
                 lastPaidAt: serverTimestamp(),
               });
             }
+            }
+          } catch (syncErr) {
+            console.error('Sync error after approval:', syncErr);
           }
-        } catch (syncErr) {
-          console.error('Sync error after approval:', syncErr);
-          // Don't fail the approval if sync fails — transaction is already approved
         }
       }
 

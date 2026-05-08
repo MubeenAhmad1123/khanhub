@@ -82,6 +82,7 @@ export default function PatientDetailPage() {
     dischargeDate: ''
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [directApproveLoading, setDirectApproveLoading] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [showRejoinCheckModal, setShowRejoinCheckModal] = useState(false);
   const [matchingPatients, setMatchingPatients] = useState<any[]>([]);
@@ -396,6 +397,27 @@ export default function PatientDetailPage() {
             });
           });
         });
+
+        // Also fetch pending transactions from rehab_transactions to display in ledger
+        const txQ = query(
+          collection(db, 'rehab_transactions'),
+          where('patientId', '==', patientId),
+          where('status', 'in', ['pending', 'pending_cashier'])
+        );
+        const txSnap = await getDocs(txQ);
+        txSnap.docs.forEach(doc => {
+          const txData = doc.data();
+          aggregatedPayments.push({
+            id: doc.id,
+            amount: Number(txData.amount || 0),
+            date: txData.date || txData.createdAt,
+            cashierId: txData.cashierId || txData.createdByName || 'Office',
+            note: txData.description || txData.categoryName || '',
+            status: 'pending',
+            isPendingTransaction: true,
+            method: txData.method || 'Cash'
+          });
+        });
       } catch (err) {
         console.warn("Error fetching aggregated fees", err);
       }
@@ -593,6 +615,97 @@ export default function PatientDetailPage() {
     } catch (error) {
       console.error("Initialize Fee error", error);
       toast.error('Failed to create fee record');
+    }
+  };
+
+  const handleDirectApprove = async (txId: string) => {
+    try {
+      setDirectApproveLoading(txId);
+      
+      // 1. Update the transaction status first
+      await updateDoc(doc(db, 'rehab_transactions', txId), {
+        status: 'approved',
+        approvedBy: session.uid,
+        approvedAt: Timestamp.now()
+      });
+
+      // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
+      const txDoc = await getDoc(doc(db, 'rehab_transactions', txId));
+      if (txDoc.exists()) {
+        const tx = { id: txDoc.id, ...txDoc.data() as any };
+        if (tx.patientId) {
+          try {
+            const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
+            const month = txDate.toISOString().slice(0, 7); // "2026-03"
+
+            if (tx.category === 'patient_fee' || tx.category === 'fee') {
+              // Find or CREATE the fee record for this patient+month
+              const feesQ = query(
+                collection(db, 'rehab_fees'),
+                where('patientId', '==', tx.patientId),
+                where('month', '==', month)
+              );
+              const feesSnap = await getDocs(feesQ);
+
+              if (feesSnap.empty) {
+                // Auto-create fee record — fetch patient package amount first
+                const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
+                const packageAmount = patientSnap.exists()
+                  ? (patientSnap.data().packageAmount || 60000)
+                  : 60000;
+                const amountPaid = tx.amount;
+                const amountRemaining = Math.max(0, packageAmount - amountPaid);
+                await addDoc(collection(db, 'rehab_fees'), {
+                  patientId: tx.patientId,
+                  patientName: tx.patientName || '',
+                  month,
+                  packageAmount,
+                  amountPaid,
+                  amountRemaining,
+                  payments: [{
+                    amount: tx.amount,
+                    date: txDate,
+                    transactionId: txId,
+                    approvedBy: session?.uid,
+                  }],
+                  lastPaymentDate: Timestamp.now(),
+                  lastPaymentAmount: tx.amount,
+                  createdAt: Timestamp.now(),
+                });
+              } else {
+                // Update existing fee record
+                const feeDoc = feesSnap.docs[0];
+                const current = feeDoc.data();
+                const newPaid = (current.amountPaid || 0) + tx.amount;
+                const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
+                const existingPayments = current.payments || [];
+                await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+                  amountPaid: newPaid,
+                  amountRemaining: newRemaining,
+                  lastPaymentDate: Timestamp.now(),
+                  lastPaymentAmount: tx.amount,
+                  payments: [...existingPayments, {
+                    amount: tx.amount,
+                    date: txDate,
+                    transactionId: txId,
+                    approvedBy: session?.uid,
+                  }],
+                });
+              }
+            }
+          } catch (syncErr) {
+            console.error('Sync error after approval:', syncErr);
+          }
+        }
+      }
+
+      toast.success('Approved ✓');
+      fetchData(); // Refresh patient profile and ledger data
+    } catch (error) {
+      console.error("Approve error", error);
+      toast.error("Failed to approve");
+    } finally {
+      setDirectApproveLoading(null);
     }
   };
 
@@ -2124,13 +2237,22 @@ export default function PatientDetailPage() {
                                 {p.note && <p className="text-[10px] text-[#1a3a5c] dark:text-blue-400 font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
                               </td>
                               {session?.role === 'superadmin' && (
-                                <td className="py-5">
+                                <td className="py-5 flex items-center gap-2">
+                                  {p.isPendingTransaction && (
+                                    <button
+                                      onClick={() => handleDirectApprove(p.id)}
+                                      disabled={directApproveLoading === p.id}
+                                      className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-xl font-black text-xs transition-all active:scale-95"
+                                    >
+                                      {directApproveLoading === p.id ? '...' : 'Approve ✓'}
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => {
                                       setDeletingPayment(p);
                                       setShowDeleteModal(true);
                                     }}
-                                    className="p-2 text-rose-50 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                    className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                                     title="Delete Transaction"
                                   >
                                     <Trash2 className="w-4 h-4" />
