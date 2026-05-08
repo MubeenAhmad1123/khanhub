@@ -72,12 +72,6 @@ async function updateEntityTotals(
     if (subtype === 'examination') update.examinationPaid = FieldValue.increment(amount);
   }
 
-  // After incrementing, we should technically recalculate remaining,
-  // but since increment is atomic, we might need a separate step or just do it in the next read.
-  // To keep it simple and accurate, we'll fetch then set or use a transaction if very critical.
-  // However, increment is usually preferred for concurrency.
-  // For 'remaining', we will update it based on the new total if we can.
-  
   await ref.update(update);
 
   // Re-read to sync 'remaining' balance field if it exists
@@ -90,6 +84,176 @@ async function updateEntityTotals(
     remaining: Math.max(0, pkg - received),
     remainingBalance: Math.max(0, pkg - received), // Support both naming conventions
   });
+}
+
+async function syncRehabRecords(
+  adminDb: FirebaseFirestore.Firestore,
+  txId: string,
+  txData: any,
+  approvedBy: string
+) {
+  const patientId = txData.patientId;
+  const staffId = txData.staffId;
+  if (!patientId && !staffId) return;
+
+  try {
+    let txDate = new Date();
+    if (txData.date) {
+      if (typeof txData.date.toDate === 'function') {
+        txDate = txData.date.toDate();
+      } else if (txData.date._seconds) {
+        txDate = new Date(txData.date._seconds * 1000);
+      } else {
+        txDate = new Date(txData.date);
+      }
+    }
+    const month = txDate.toISOString().slice(0, 7); // "YYYY-MM"
+
+    if (txData.category === 'patient_fee' && patientId) {
+      const feesRef = adminDb.collection('rehab_fees');
+      const feesSnap = await feesRef
+        .where('patientId', '==', patientId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (feesSnap.empty) {
+        const patientSnap = await adminDb.collection('rehab_patients').doc(patientId).get();
+        const packageAmount = patientSnap.exists
+          ? (Number(patientSnap.data()?.packageAmount) || 60000)
+          : 60000;
+        const amountRemaining = Math.max(0, packageAmount - amount);
+
+        await feesRef.add({
+          patientId,
+          patientName: txData.patientName || '',
+          month,
+          packageAmount,
+          amountPaid: amount,
+          amountRemaining,
+          payments: [{
+            amount,
+            date: txDate,
+            transactionId: txId,
+            approvedBy,
+          }],
+          lastPaymentDate: FieldValue.serverTimestamp(),
+          lastPaymentAmount: amount,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        const feeDoc = feesSnap.docs[0];
+        const current = feeDoc.data();
+        const newPaid = (Number(current.amountPaid) || 0) + amount;
+        const newRemaining = Math.max(0, (Number(current.packageAmount) || 60000) - newPaid);
+        const existingPayments = current.payments || [];
+
+        await feeDoc.ref.update({
+          amountPaid: newPaid,
+          amountRemaining: newRemaining,
+          lastPaymentDate: FieldValue.serverTimestamp(),
+          lastPaymentAmount: amount,
+          payments: [...existingPayments, {
+            amount,
+            date: txDate,
+            transactionId: txId,
+            approvedBy,
+          }],
+        });
+      }
+    }
+
+    if (txData.category === 'canteen_deposit' && patientId) {
+      const canteenRef = adminDb.collection('rehab_canteen');
+      const canteenSnap = await canteenRef
+        .where('patientId', '==', patientId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (canteenSnap.empty) {
+        await canteenRef.add({
+          patientId,
+          patientName: txData.patientName || '',
+          month,
+          totalDeposited: amount,
+          totalSpent: 0,
+          balance: amount,
+          lastDepositDate: FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        const canteenDoc = canteenSnap.docs[0];
+        const current = canteenDoc.data();
+        const newDeposited = (Number(current.totalDeposited) || 0) + amount;
+        const newBalance = newDeposited - (Number(current.totalSpent) || 0);
+
+        await canteenDoc.ref.update({
+          totalDeposited: newDeposited,
+          balance: newBalance,
+          lastDepositDate: FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    if (txData.category === 'canteen_expense' && patientId) {
+      const canteenRef = adminDb.collection('rehab_canteen');
+      const canteenSnap = await canteenRef
+        .where('patientId', '==', patientId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (!canteenSnap.empty) {
+        const canteenDoc = canteenSnap.docs[0];
+        const current = canteenDoc.data();
+        const newSpent = (Number(current.totalSpent) || 0) + amount;
+        const newBalance = (Number(current.totalDeposited) || 0) - newSpent;
+
+        await canteenDoc.ref.update({
+          totalSpent: newSpent,
+          balance: Math.max(0, newBalance),
+        });
+      }
+    }
+
+    if (txData.category === 'staff_salary' && staffId) {
+      const salaryRef = adminDb.collection('rehab_salary_records');
+      const salarySnap = await salaryRef
+        .where('staffId', '==', staffId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (salarySnap.empty) {
+        await salaryRef.add({
+          staffId,
+          staffName: txData.staffName || '',
+          month,
+          amount,
+          transactionId: txId,
+          paidAt: FieldValue.serverTimestamp(),
+          approvedBy,
+        });
+      } else {
+        const salaryDoc = salarySnap.docs[0];
+        await salaryDoc.ref.update({
+          amount: (Number(salaryDoc.data()?.amount) || 0) + amount,
+          lastPaidAt: FieldValue.serverTimestamp(),
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[syncRehabRecords] Error:', err);
+  }
 }
 
 export async function decideTransaction(params: {
@@ -129,6 +293,9 @@ export async function decideTransaction(params: {
 
     if (params.decision === 'approved') {
       await updateEntityTotals(adminDb, params.dept, data);
+      if (params.dept === 'rehab') {
+        await syncRehabRecords(adminDb, params.txId, data, caller.customId);
+      }
     }
 
     await adminDb.collection('hq_audit').add({
@@ -227,6 +394,9 @@ export async function bulkDecideTransactions(params: {
       // Process entity updates sequentially to avoid race conditions on same entity
       for (const snap of validSnaps) {
         await updateEntityTotals(adminDb, params.dept, snap.data());
+        if (params.dept === 'rehab') {
+          await syncRehabRecords(adminDb, snap.id, snap.data(), caller.customId);
+        }
       }
     }
 
@@ -272,4 +442,3 @@ export async function bulkDecideTransactions(params: {
     return { success: false, processed: 0, error: err?.message || 'Failed.' };
   }
 }
-
