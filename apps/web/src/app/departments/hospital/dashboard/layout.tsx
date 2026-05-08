@@ -22,14 +22,15 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { title: 'Overview', href: '/departments/hospital/dashboard/admin', icon: LayoutDashboard, roles: ['admin'] },
-  { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['admin'] },
-  { title: 'SuperAdmin', href: '/departments/hospital/dashboard/superadmin', icon: ShieldCheck, roles: ['superadmin'] },
-  { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin'] },
+  { title: 'Overview', href: '/departments/hospital/dashboard/admin', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
+  { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['admin', 'superadmin'] },
+  { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin', 'superadmin'] },
+  { title: 'Reports & Logs', href: '/departments/hospital/dashboard/admin/reports', icon: ClipboardList, roles: ['admin', 'superadmin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
   { title: 'My Profile', href: '/departments/hospital/dashboard/profile', icon: UserCircle, roles: ['admin', 'staff', 'superadmin'] },
   { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/patient', icon: UserCircle, roles: ['family'] },
+  { title: 'HQ Portal', href: '/hq/dashboard/superadmin', icon: ExternalLink, roles: ['superadmin'] },
 ];
 
 const ROLE_COLORS: Record<string, string> = {

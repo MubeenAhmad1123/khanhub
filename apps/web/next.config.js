@@ -72,6 +72,9 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: '/about-us', destination: '/about', permanent: true },
+      { source: '/affiliate-program', destination: '/affiliate', permanent: true },
+      { source: '/terms-and-conditions', destination: '/terms', permanent: true },
       { source: '/contact.php', destination: '/contact', permanent: true },
       { source: '/about.php', destination: '/about', permanent: true },
       { source: '/media.php', destination: '/media', permanent: true },

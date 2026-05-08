@@ -6,16 +6,17 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import {
-  collection, getDocs, query, where, orderBy, limit, Timestamp
+  collection, getDocs, query, where, orderBy, limit, Timestamp, doc, getDoc, setDoc
 } from 'firebase/firestore';
 import {
   TrendingUp, TrendingDown, Users, Activity, Loader2,
-  Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight
+  Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight, X, Calendar
 } from 'lucide-react';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
+import { toast } from 'react-hot-toast';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -31,7 +32,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   staff_salary: 'Staff Salary',
   utilities: 'Utilities',
   other_expense: 'Other Expense',
-  other_income: 'Other Income'
+  other_income: 'Other Income',
+  fee: 'Admission / Fees',
+  canteen: 'Canteen Ledger'
 };
 
 export default function AdminDashboardPage() {
@@ -51,11 +54,21 @@ export default function AdminDashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
 
+  // Day-Close Stats State
+  const [dailyStats, setDailyStats] = useState<any>(null);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [submittingStats, setSubmittingStats] = useState(false);
+  const [statsForm, setStatsForm] = useState({
+    patientsCount: '',
+    labTestsCount: '',
+    operationsCount: ''
+  });
+
   useEffect(() => {
     const sessionData = localStorage.getItem('hospital_session');
     if (!sessionData) { router.push('/departments/hospital/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
       router.push('/departments/hospital/login'); return;
     }
     setSession(parsed);
@@ -133,6 +146,28 @@ export default function AdminDashboardPage() {
         opBreakdown
       });
 
+      // Fetch Day-Close Stats for today
+      const todayStr = new Date().toISOString().split('T')[0];
+      const dailyDocRef = doc(db, 'hospital_daily_stats', todayStr);
+      const dailyDocSnap = await getDoc(dailyDocRef);
+      
+      if (dailyDocSnap.exists()) {
+        const ds = dailyDocSnap.data();
+        setDailyStats(ds);
+        setStatsForm({
+          patientsCount: String(ds.patientsCount || 0),
+          labTestsCount: String(ds.labTestsCount || 0),
+          operationsCount: String(ds.operationsCount || 0)
+        });
+      } else {
+        setDailyStats(null);
+        setStatsForm({
+          patientsCount: String(opdCount),
+          labTestsCount: String(labCount),
+          operationsCount: String(opCount)
+        });
+      }
+
       // Recent Transactions (Last 10)
       const recentQuery = query(
         collection(db, 'hospital_transactions'),
@@ -189,6 +224,34 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleSaveStats = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSubmittingStats(true);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const dailyDocRef = doc(db, 'hospital_daily_stats', todayStr);
+      
+      const dataToSave = {
+        patientsCount: Number(statsForm.patientsCount) || 0,
+        labTestsCount: Number(statsForm.labTestsCount) || 0,
+        operationsCount: Number(statsForm.operationsCount) || 0,
+        reportedBy: session.uid,
+        reportedByName: session.displayName || session.name || 'Hospital Admin',
+        reportedAt: Timestamp.now()
+      };
+
+      await setDoc(dailyDocRef, dataToSave);
+      toast.success('Day-Close operational report saved successfully ✓');
+      setShowStatsModal(false);
+      loadDashboard();
+    } catch (error) {
+      console.error('Error saving stats:', error);
+      toast.error('Failed to save day-close stats');
+    } finally {
+      setSubmittingStats(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -234,6 +297,55 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Day-Close Operational Stats Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-6 md:p-8 rounded-[2rem] border border-slate-700/30 shadow-xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none group-hover:scale-110 transition-transform">
+          <Activity size={180} className="text-indigo-400" />
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${dailyStats ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'}`}>
+                {dailyStats ? 'Day-Close Active ✓' : 'Day-Close Pending'}
+              </span>
+              <span className="text-xs text-slate-400 font-bold">Official Operational Stats</span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
+              {dailyStats ? "Today's verified report has been filed" : "Today's Day-Close report is pending submission"}
+            </h2>
+            <p className="text-xs text-slate-300 font-medium max-w-xl">
+              {dailyStats 
+                ? `Filed by ${dailyStats.reportedByName || 'Admin'} at ${dailyStats.reportedAt?.toDate?.() ? dailyStats.reportedAt.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}. These values override dynamic transaction counts.`
+                : "As Admin, file verified daily patient visits, conducted lab tests, and completed operations to seal today's record."}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowStatsModal(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black transition-all shadow-lg shadow-indigo-900/40 hover:shadow-indigo-900/60 whitespace-nowrap border border-indigo-500/20"
+          >
+            <Plus size={16} />
+            {dailyStats ? 'Update Day-Close Stats' : 'Submit Day-Close Stats'}
+          </button>
+        </div>
+
+        {dailyStats && (
+          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-700/50">
+            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified OPD</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.patientsCount}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Labs</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.labTestsCount}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Operations</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.operationsCount}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Row 1: 4 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
@@ -276,10 +388,16 @@ export default function AdminDashboardPage() {
             <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users size={24} />
             </div>
-            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">Patients</span>
+            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
+              {dailyStats ? 'Day-Close verified' : 'Dynamic OPD'}
+            </span>
           </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">{stats.opdCount}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">Total OPD Today</div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">
+            {dailyStats ? dailyStats.patientsCount : stats.opdCount}
+          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">
+            {dailyStats ? 'Verified Patients Today' : 'Total OPD Today'}
+          </div>
         </div>
       </div>
 
@@ -336,28 +454,22 @@ export default function AdminDashboardPage() {
           <div className="space-y-4">
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Morning</p>
-                <p className="font-bold text-gray-900 dark:text-white">{stats.opdBreakdown.morning.count} Patients</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Patients</p>
+                <p className="font-bold text-gray-900 dark:text-white">
+                  {dailyStats ? `${dailyStats.patientsCount} (Verified)` : `${stats.opdCount} (Dynamic)`}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {stats.opdBreakdown.morning.amount.toLocaleString()}</p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
-              <div>
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Evening</p>
-                <p className="font-bold text-gray-900 dark:text-white">{stats.opdBreakdown.evening.count} Patients</p>
-              </div>
-              <div className="text-right">
-                <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {stats.opdBreakdown.evening.amount.toLocaleString()}</p>
+                <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {(stats.opdBreakdown.morning.amount + stats.opdBreakdown.evening.amount).toLocaleString()}</p>
               </div>
             </div>
 
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-blue-100 dark:hover:border-blue-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
                 <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lab Tests</p>
-                <p className="font-bold text-gray-900 dark:text-white">{stats.labBreakdown.count} Tests</p>
+                <p className="font-bold text-gray-900 dark:text-white">
+                  {dailyStats ? `${dailyStats.labTestsCount} (Verified)` : `${stats.labCount} (Dynamic)`}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-blue-600 dark:text-blue-400 font-black">₨ {stats.labBreakdown.amount.toLocaleString()}</p>
@@ -367,7 +479,9 @@ export default function AdminDashboardPage() {
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-purple-100 dark:hover:border-purple-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
                 <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Operations</p>
-                <p className="font-bold text-gray-900 dark:text-white">{stats.opBreakdown.count} Cases</p>
+                <p className="font-bold text-gray-900 dark:text-white">
+                  {dailyStats ? `${dailyStats.operationsCount} (Verified)` : `${stats.opCount} (Dynamic)`}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-purple-600 dark:text-purple-400 font-black">₨ {stats.opBreakdown.amount.toLocaleString()}</p>
@@ -457,6 +571,85 @@ export default function AdminDashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* Stats Input Modal */}
+      {showStatsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+              <h2 className="text-lg font-black flex items-center gap-2.5">
+                <Calendar className="w-5 h-5 text-indigo-400" />
+                Day-Close Operational Stats
+              </h2>
+              <button 
+                onClick={() => setShowStatsModal(false)}
+                className="text-slate-300 hover:text-white hover:bg-white/10 p-2 rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStats} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">OPD Patients Today *</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={statsForm.patientsCount}
+                  onChange={e => setStatsForm({ ...statsForm, patientsCount: e.target.value })}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
+                  placeholder="e.g. 25"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Lab Tests Conducted Today *</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={statsForm.labTestsCount}
+                  onChange={e => setStatsForm({ ...statsForm, labTestsCount: e.target.value })}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
+                  placeholder="e.g. 12"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Operations Performed Today *</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={statsForm.operationsCount}
+                  onChange={e => setStatsForm({ ...statsForm, operationsCount: e.target.value })}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
+                  placeholder="e.g. 2"
+                  required
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowStatsModal(false)}
+                  className="px-5 py-3 text-xs font-black uppercase tracking-wider text-gray-500 hover:bg-gray-100 rounded-2xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingStats}
+                  className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-100 transition-all"
+                >
+                  {submittingStats && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save Stats
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

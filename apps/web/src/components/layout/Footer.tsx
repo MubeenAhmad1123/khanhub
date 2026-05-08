@@ -106,11 +106,17 @@ export default function Footer() {
               <h4 className="font-black text-xs uppercase tracking-widest text-neutral-900">Organization</h4>
             </div>
             <ul className="space-y-4">
-              {['Media', 'About Us', 'Certificates', 'Affiliate Program', 'Departments'].map((item) => (
-                <li key={item} className="flex items-center gap-3 group">
+              {[
+                { label: 'Media', href: '/media' },
+                { label: 'About Us', href: '/about' },
+                { label: 'Certificates', href: '/certificates' },
+                { label: 'Affiliate Program', href: '/affiliate' },
+                { label: 'Departments', href: '/departments' }
+              ].map((item) => (
+                <li key={item.label} className="flex items-center gap-3 group">
                   <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-primary-500 transition-all duration-300 group-hover:scale-125"></div>
-                  <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-neutral-600 hover:text-primary-600 text-sm transition-all duration-300 group-hover:translate-x-1">
-                    {item}
+                  <Link href={item.href} className="text-neutral-600 hover:text-primary-600 text-sm transition-all duration-300 group-hover:translate-x-1">
+                    {item.label}
                   </Link>
                 </li>
               ))}
@@ -227,7 +233,7 @@ export default function Footer() {
           <div className="flex items-center gap-6 flex-wrap justify-center md:justify-end">
             <GoogleTranslateWidget />
             <Link href="/privacy-policy" className="hover:text-primary-600 transition-colors hover:underline underline-offset-2">Privacy Policy</Link>
-            <Link href="/terms-and-conditions" className="hover:text-primary-600 transition-colors hover:underline underline-offset-2">Terms & Conditions</Link>
+            <Link href="/terms" className="hover:text-primary-600 transition-colors hover:underline underline-offset-2">Terms & Conditions</Link>
           </div>
         </div>
       </div>

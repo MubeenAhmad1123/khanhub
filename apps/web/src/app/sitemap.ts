@@ -22,6 +22,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
         '/auth/signin',
         '/app-download',
         '/affiliate',
+        '/vehari',
+        '/multan',
+        '/lahore',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),

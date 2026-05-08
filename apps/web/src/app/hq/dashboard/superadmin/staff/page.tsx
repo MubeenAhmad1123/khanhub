@@ -6,19 +6,35 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { listStaffCards, type StaffDept, type StaffCardRow } from '@/lib/hq/superadmin/staff';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
-import { Users2, Award, Briefcase, Zap, ShieldCheck, ChevronRight, Star, TrendingUp } from 'lucide-react';
+import { 
+  Users2, 
+  Award, 
+  Briefcase, 
+  Zap, 
+  ShieldCheck, 
+  ChevronRight, 
+  Star, 
+  TrendingUp,
+  Search,
+  SlidersHorizontal,
+  X,
+  Sparkles,
+  Shirt,
+  Clock,
+  ChevronDown
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const DEPT_INFO: Record<string, { label: string; color: string; bg: string; text: string; gradient: string }> = {
-  hq: { label: 'HQ Governance', color: 'border-purple-200', bg: 'bg-purple-50', text: 'text-purple-600', gradient: 'from-purple-500/10 to-transparent' },
-  rehab: { label: 'Rehab Center', color: 'border-teal-200', bg: 'bg-teal-50', text: 'text-teal-600', gradient: 'from-teal-500/10 to-transparent' },
-  spims: { label: 'SPIMS Academy', color: 'border-sky-200', bg: 'bg-sky-50', text: 'text-sky-600', gradient: 'from-sky-500/10 to-transparent' },
-  hospital: { label: 'Khan Hospital', color: 'border-rose-200', bg: 'bg-rose-50', text: 'text-rose-600', gradient: 'from-rose-500/10 to-transparent' },
-  sukoon: { label: 'Sukoon Center', color: 'border-indigo-200', bg: 'bg-indigo-50', text: 'text-indigo-600', gradient: 'from-indigo-500/10 to-transparent' },
-  welfare: { label: 'Welfare', color: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-600', gradient: 'from-emerald-500/10 to-transparent' },
-  'job-center': { label: 'Job Center', color: 'border-amber-200', bg: 'bg-amber-50', text: 'text-amber-600', gradient: 'from-amber-500/10 to-transparent' },
-  'social-media': { label: 'Social Media', color: 'border-fuchsia-200', bg: 'bg-fuchsia-50', text: 'text-fuchsia-600', gradient: 'from-fuchsia-500/10 to-transparent' },
-  'it': { label: 'IT Department', color: 'border-violet-200', bg: 'bg-violet-50', text: 'text-violet-600', gradient: 'from-violet-500/10 to-transparent' },
+const DEPT_INFO: Record<string, { label: string; color: string; border: string; bg: string; text: string; gradient: string }> = {
+  hq: { label: 'HQ Governance', color: 'bg-purple-600', border: 'border-purple-200', bg: 'bg-purple-50', text: 'text-purple-600', gradient: 'from-purple-500/10 to-transparent' },
+  rehab: { label: 'Rehab Center', color: 'bg-teal-600', border: 'border-teal-200', bg: 'bg-teal-50', text: 'text-teal-600', gradient: 'from-teal-500/10 to-transparent' },
+  spims: { label: 'SPIMS Academy', color: 'bg-sky-600', border: 'border-sky-200', bg: 'bg-sky-50', text: 'text-sky-600', gradient: 'from-sky-500/10 to-transparent' },
+  hospital: { label: 'Khan Hospital', color: 'bg-rose-600', border: 'border-rose-200', bg: 'bg-rose-50', text: 'text-rose-600', gradient: 'from-rose-500/10 to-transparent' },
+  sukoon: { label: 'Sukoon Center', color: 'bg-indigo-600', border: 'border-indigo-200', bg: 'bg-indigo-50', text: 'text-indigo-600', gradient: 'from-indigo-500/10 to-transparent' },
+  welfare: { label: 'Welfare', color: 'bg-emerald-600', border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-600', gradient: 'from-emerald-500/10 to-transparent' },
+  'job-center': { label: 'Job Center', color: 'bg-amber-600', border: 'border-amber-200', bg: 'bg-amber-50', text: 'text-amber-600', gradient: 'from-amber-500/10 to-transparent' },
+  'social-media': { label: 'Social Media', color: 'bg-fuchsia-600', border: 'border-fuchsia-200', bg: 'bg-fuchsia-50', text: 'text-fuchsia-600', gradient: 'from-fuchsia-500/10 to-transparent' },
+  'it': { label: 'IT Department', color: 'bg-violet-600', border: 'border-violet-200', bg: 'bg-violet-50', text: 'text-violet-600', gradient: 'from-violet-500/10 to-transparent' },
 };
 
 const SENIORITY_RANKS: Record<string, number> = {
@@ -310,7 +326,7 @@ export default function SuperadminStaffPage() {
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return rows;
-    return rows.filter((r) => `${r.name} ${r.role} ${r.dept} ${r.seniority}`.toLowerCase().includes(s));
+    return rows.filter((r) => `${r.name} ${r.role} ${r.dept} ${r.seniority} ${r.designation || ''}`.toLowerCase().includes(s));
   }, [rows, q]);
 
   const groupedByDept = useMemo(() => {
@@ -326,38 +342,44 @@ export default function SuperadminStaffPage() {
     return groups;
   }, [filtered]);
 
-  const groupedBySeniority = useMemo(() => {
-    const groups: Record<string, StaffCardRow[]> = {};
-    filtered.forEach((r) => {
-      const s = r.seniority || 'Staff';
-      if (!groups[s]) groups[s] = [];
-      groups[s].push(r);
+  const deptCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: rows.length };
+    rows.forEach((r) => {
+      counts[r.dept] = (counts[r.dept] || 0) + 1;
     });
-    return groups;
-  }, [filtered]);
+    return counts;
+  }, [rows]);
+
+  const deptsList = ['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'] as const;
 
   return (
-    <div className="min-h-screen py-12 bg-[#FCFBF8] font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-500">
+    <div className="min-h-screen py-12 bg-[#FCFBF8] dark:bg-slate-950 font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-500">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
           <div className="space-y-4">
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 bg-gray-900 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-gray-200/50 group overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-20 h-20 bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-indigo-500/20 group overflow-hidden relative">
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Users2 className="text-white relative z-10" size={36} />
               </div>
               <div>
-                <h1 className="text-6xl font-black tracking-tighter text-gray-900 uppercase leading-none">Registry</h1>
-                <p className="mt-3 text-[10px] font-black text-indigo-600 uppercase tracking-[0.5em] italic pl-1">
-                  Global Personnel Management Matrix
+                <div className="flex items-center gap-2">
+                  <h1 className="text-5xl font-black tracking-tight bg-gradient-to-r from-gray-900 via-slate-800 to-indigo-900 dark:from-white dark:to-slate-300 bg-clip-text text-transparent uppercase leading-none">
+                    Personnel
+                  </h1>
+                  <Sparkles size={20} className="text-indigo-500 animate-pulse" />
+                </div>
+                <p className="mt-3 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.5em] italic pl-1">
+                  Global HQ Staff Registry Matrix
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-[2rem] border border-gray-100 shadow-sm">
+          {/* Navigation/Drill Level Controls */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
             <button
               onClick={() => {
                 setDrillLevel('overview');
@@ -365,11 +387,11 @@ export default function SuperadminStaffPage() {
                 setDrillDept(null);
               }}
               className={cn(
-                "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
-                drillLevel === 'overview' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-indigo-600"
+                "px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                drillLevel === 'overview' ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10" : "text-slate-400 hover:text-indigo-600 dark:text-slate-500"
               )}
             >
-              System Overview
+              Overview
             </button>
             <button
               onClick={() => {
@@ -378,34 +400,34 @@ export default function SuperadminStaffPage() {
                 setDrillDept(null);
               }}
               className={cn(
-                "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
-                drillLevel === 'list' && !drillDept ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-indigo-600"
+                "px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                drillLevel === 'list' && !drillDept ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10" : "text-slate-400 hover:text-indigo-600 dark:text-slate-500"
               )}
             >
               Full Roster
             </button>
             {drillLevel !== 'overview' && drillLevel !== 'list' && (
               <>
-                <ChevronRight size={14} className="text-gray-300" />
+                <ChevronRight size={14} className="text-slate-300 shrink-0" />
                 <button
                   onClick={() => {
                     setDrillLevel('presence');
                     setDrillDept(null);
                   }}
                   className={cn(
-                    "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
-                    drillLevel === 'presence' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-indigo-600"
+                    "px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                    drillLevel === 'presence' ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-indigo-600"
                   )}
                 >
-                  {drillPresence === 'present' ? 'Present Personnel' : 'Absent Personnel'}
+                  {drillPresence === 'present' ? 'Present' : 'Absent'}
                 </button>
               </>
             )}
             {drillDept && (
               <>
-                <ChevronRight size={14} className="text-gray-300" />
+                <ChevronRight size={14} className="text-slate-300 shrink-0" />
                 <button
-                  className="px-6 py-2 rounded-xl text-[10px] font-bold bg-indigo-600 text-white shadow-lg uppercase tracking-widest"
+                  className="px-5 py-2 rounded-full text-[10px] font-bold bg-indigo-600 text-white shadow-md uppercase tracking-widest whitespace-nowrap"
                 >
                   {DEPT_INFO[drillDept]?.label || drillDept.toUpperCase()}
                 </button>
@@ -414,49 +436,76 @@ export default function SuperadminStaffPage() {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
-          <div className="lg:col-span-2 relative group">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by name, ID or seniority..."
-              className="w-full h-20 pl-16 pr-8 rounded-[2.5rem] border border-gray-100 bg-white text-sm font-bold text-gray-900 outline-none focus:ring-8 focus:ring-indigo-500/5 transition-all shadow-2xl shadow-gray-200/50"
-            />
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400">
-              <Search size={28} />
+        {/* Filter & Search Control Hub */}
+        <div className="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-[2.5rem] border border-slate-100 dark:border-slate-800 p-6 shadow-xl shadow-slate-100/40 mb-12 space-y-6">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
+            <div className="flex-1 relative group">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search by name, designation, department or seniority..."
+                className="w-full h-16 pl-14 pr-12 rounded-full border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-sm font-bold text-slate-800 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-inner"
+              />
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
+                <Search size={20} />
+              </div>
+              {q && (
+                <button 
+                  onClick={() => setQ('')}
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => setStatus(status === 'active' ? 'all' : 'active')}
+              className={cn(
+                "h-16 px-8 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-3 shadow-sm hover:scale-[1.02]",
+                status === 'active'
+                  ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/10'
+                  : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
+              )}
+            >
+              <div className={cn("w-2.5 h-2.5 rounded-full", status === 'active' ? 'bg-white animate-pulse' : 'bg-slate-300 dark:bg-slate-700')} />
+              <span>{status === 'active' ? 'Active Matrix' : 'All Personnel'}</span>
+            </button>
+          </div>
+
+          <div className="border-t border-slate-50 dark:border-slate-800/50 pt-5">
+            <div className="flex items-center gap-2 mb-4">
+              <SlidersHorizontal size={14} className="text-slate-400" />
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Filter by Department</span>
+            </div>
+            
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent">
+              {deptsList.map((t) => {
+                const isActive = dept === t;
+                const count = deptCounts[t] || 0;
+                const info = DEPT_INFO[t] || { label: 'All Departments', color: 'bg-indigo-600', border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-600' };
+                
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setDept(t as any)}
+                    className={cn(
+                      "flex items-center gap-2.5 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all border shrink-0 whitespace-nowrap hover:scale-[1.02] shadow-sm",
+                      isActive 
+                        ? `${info.bg} ${info.text} ${info.border} dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-800/50 shadow-md font-black ring-2 ring-indigo-500/5` 
+                        : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
+                    )}
+                  >
+                    <span className={cn("w-2 h-2 rounded-full", info.color)} />
+                    <span>{info.label || 'All Departments'}</span>
+                    <span className="ml-1 px-2.5 py-0.5 rounded-full text-[9px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-500 font-extrabold shadow-inner">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-
-          <div className="flex gap-2">
-            {(['all', 'hq', 'rehab', 'spims', 'it'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setDept(t as any)}
-                className={cn(
-                  "flex-1 h-20 rounded-[2.5rem] text-[10px] font-black uppercase tracking-widest transition-all border",
-                  dept === t 
-                    ? 'bg-gray-900 text-white border-gray-900 shadow-2xl shadow-gray-200/50' 
-                    : 'bg-white text-gray-400 border-gray-100 hover:border-gray-900 shadow-xl shadow-gray-200/40'
-                )}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setStatus(status === 'active' ? 'all' : 'active')}
-            className={cn(
-              "h-20 rounded-[2.5rem] text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-3",
-              status === 'active'
-                ? 'bg-emerald-500 text-white border-emerald-500 shadow-2xl shadow-emerald-500/20'
-                : 'bg-white text-gray-400 border-gray-100 shadow-xl shadow-gray-200/40'
-            )}
-          >
-            <div className={cn("w-3 h-3 rounded-full", status === 'active' ? 'bg-white animate-pulse' : 'bg-gray-200')} />
-            {status === 'active' ? 'Active Matrix' : 'All Personnel'}
-          </button>
         </div>
 
         {/* Content Area */}
@@ -474,33 +523,33 @@ export default function SuperadminStaffPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div 
                   onClick={() => { setDrillLevel('presence'); setDrillPresence('present'); }}
-                  className="group relative p-12 rounded-[3rem] bg-white border border-gray-100 shadow-xl hover:shadow-2xl hover:border-indigo-500/20 transition-all cursor-pointer overflow-hidden"
+                  className="group relative p-12 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-indigo-500/20 transition-all cursor-pointer overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative z-10 flex flex-col items-center text-center gap-6">
-                    <div className="w-20 h-20 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
                       <ShieldCheck size={40} />
                     </div>
                     <div>
-                      <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tight mb-2">Total staff</h2>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Global personnel status matrix</p>
+                      <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-2">Total staff</h2>
+                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Global personnel status matrix</p>
                     </div>
-                    <div className="text-6xl font-black text-indigo-600 leading-none">
+                    <div className="text-6xl font-black text-indigo-600 dark:text-indigo-400 leading-none">
                       {filtered.length}
                     </div>
-                    <button className="px-8 py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] group-hover:bg-indigo-600 transition-colors">
+                    <button className="px-8 py-4 bg-gray-900 dark:bg-slate-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] group-hover:bg-indigo-600 transition-colors shadow-md shadow-indigo-600/5">
                       Enter Drill-down Matrix
                     </button>
                   </div>
                 </div>
 
-                <div className="p-12 rounded-[3rem] bg-gray-50/50 border border-dashed border-gray-200 flex flex-col items-center justify-center text-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center">
+                <div className="p-12 rounded-[3rem] bg-gray-50/50 dark:bg-slate-900/30 border border-dashed border-gray-200 dark:border-slate-800 flex flex-col items-center justify-center text-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-800 text-gray-400 flex items-center justify-center">
                     <TrendingUp size={32} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-400 uppercase tracking-tight">Analytics Sync</h3>
-                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">Personnel growth matrix active</p>
+                    <h3 className="text-xl font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tight">Analytics Sync</h3>
+                    <p className="text-[10px] font-medium text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">Personnel growth matrix active</p>
                   </div>
                 </div>
               </div>
@@ -533,17 +582,17 @@ export default function SuperadminStaffPage() {
                     <div 
                       key={d}
                       onClick={() => { setDrillDept(d as StaffDept); setDrillLevel('list'); }}
-                      className="group relative p-8 rounded-[2.5rem] bg-white border border-gray-100 shadow-lg hover:shadow-xl hover:border-indigo-500/20 transition-all cursor-pointer"
+                      className="group relative p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 shadow-lg hover:shadow-xl hover:border-indigo-500/20 transition-all cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-6">
                         <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center", info.bg, info.text)}>
                           <Briefcase size={28} />
                         </div>
-                        <div className="text-3xl font-black text-gray-900 leading-none">
+                        <div className="text-3xl font-black text-gray-900 dark:text-white leading-none">
                           {filteredMembers.length}
                         </div>
                       </div>
-                      <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{info.label}</h3>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{info.label}</h3>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">
                         {drillPresence === 'present' ? 'Present' : 'Absent'} Personnel
                       </p>
@@ -561,7 +610,7 @@ export default function SuperadminStaffPage() {
                     Syncing historical dossiers for {drillDept ? DEPT_INFO[drillDept]?.label : 'All Departments'}...
                   </div>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                   {(drillDept ? (groupedByDept[drillDept] || []) : filtered)
                     ?.filter(r => {
                       if (!drillPresence) return true;
@@ -581,14 +630,14 @@ export default function SuperadminStaffPage() {
             
             {activeChecklist && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-gray-100 shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full border border-slate-100 dark:border-slate-800 shadow-2xl animate-in zoom-in-95 duration-300">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-black uppercase tracking-tight text-gray-900">
+                    <h3 className="text-sm font-black uppercase tracking-tight text-gray-900 dark:text-white">
                       Update {activeChecklist.type === 'uniform' ? 'Dress' : 'Duty'} Items
                     </h3>
                     <button 
                       onClick={() => setActiveChecklist(null)}
-                      className="text-gray-400 hover:text-gray-600 font-bold text-lg"
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 font-bold text-lg"
                     >
                       ×
                     </button>
@@ -605,8 +654,8 @@ export default function SuperadminStaffPage() {
                           className={cn(
                             "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
                             isChecked 
-                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' 
-                              : 'bg-gray-50/50 border-gray-100 text-gray-700 hover:bg-gray-50'
+                              ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-400' 
+                              : 'bg-gray-50/50 dark:bg-slate-900/50 border-gray-100 dark:border-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
                           )}
                         >
                           <span className="text-xs font-bold">{item.label}</span>
@@ -628,7 +677,7 @@ export default function SuperadminStaffPage() {
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={() => setActiveChecklist(null)}
-                      className="flex-1 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-200"
+                      className="flex-1 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-200 dark:border-slate-800 dark:bg-slate-800"
                     >
                       Cancel
                     </button>
@@ -650,55 +699,61 @@ export default function SuperadminStaffPage() {
 }
 
 function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; onStatusChange: (row: StaffCardRow, type: 'uniform' | 'duty', status: any) => void }) {
-  const info = DEPT_INFO[r.dept] || { color: 'border-gray-200', bg: 'bg-gray-50', text: 'text-black', gradient: '' };
+  const info = DEPT_INFO[r.dept] || { color: 'bg-gray-600', border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-600', gradient: '' };
   
   const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
   
   return (
     <Link
       href={`/hq/dashboard/superadmin/staff/${r.id}`}
-      className="group relative flex flex-col justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 hover:shadow-md hover:border-indigo-200/50 transition-all h-full"
+      className="group relative flex flex-col justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-[2rem] p-5 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-200/50 transition-all duration-300 h-full"
     >
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
         {/* Department & Status Header */}
         <div className="flex items-center justify-between">
-          <span className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md", info.bg, info.text)}>
+          <span className={cn("text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm border", info.bg, info.text, info.border)}>
             {r.dept}
           </span>
           <span className={cn(
-            "flex flex-col items-center justify-center text-[9px] font-black uppercase px-2 py-0.5 rounded-md border text-center leading-none select-none min-w-[30px]",
+            "flex items-center gap-1.5 text-[9px] font-black uppercase px-3 py-1 rounded-full border shadow-sm select-none",
             isPresent 
-              ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-              : 'bg-rose-50 text-rose-600 border-rose-100'
+              ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
+              : 'bg-rose-50 text-rose-600 border-rose-200'
           )}>
-            <span className="text-[7px] font-bold opacity-75">Att</span>
-            <span className="text-[10px] font-black">{isPresent ? 'P' : 'A'}</span>
+            <span className={cn("w-1.5 h-1.5 rounded-full", isPresent ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
+            <span>{isPresent ? 'Present' : 'Absent'}</span>
           </span>
         </div>
 
         {/* Name & Avatar */}
-        <div className="flex items-center gap-2 mt-1">
-          <div className="w-10 h-10 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className={cn("w-14 h-14 rounded-2xl border bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner transition-transform group-hover:scale-105 duration-300", info.border)}>
             {r.photoUrl ? (
               <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
             ) : (
-              <Users2 size={16} className={info.text} />
+              <Users2 size={20} className={info.text} />
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 leading-tight truncate group-hover:text-indigo-600 transition-colors">
+            <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight truncate group-hover:text-indigo-600 transition-colors">
               {r.name}
             </h4>
-            <p className="text-[10px] font-medium text-slate-400 truncate tracking-tight">
+            <p className="text-[11px] font-semibold text-slate-400 truncate tracking-tight mt-0.5">
               {r.designation || r.role}
             </p>
+            <span className="inline-block px-2 py-0.5 rounded bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 text-[8px] font-bold text-slate-400 uppercase mt-1">
+              {r.seniority || 'Staff'}
+            </span>
           </div>
         </div>
 
         {/* Small Tags Matrix */}
-        <div className="grid grid-cols-2 gap-1.5 mt-1 border-t border-slate-50 pt-2">
+        <div className="grid grid-cols-2 gap-2 mt-2 border-t border-slate-50 dark:border-slate-800/40 pt-3">
           <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-slate-400 uppercase">Dress</span>
+            <div className="flex items-center gap-1">
+              <Shirt size={10} className="text-slate-400" />
+              <span className="text-[8px] font-bold text-slate-400 uppercase">Dress Code</span>
+            </div>
             <select
               onClick={(e) => {
                 e.stopPropagation();
@@ -707,7 +762,7 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
               onChange={(e) => onStatusChange(r, 'uniform', e.target.value as any)}
               value={r.todayUniformStatus || 'na'}
               className={cn(
-                "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center cursor-pointer border bg-white outline-none h-[22px]",
+                "text-[9px] font-black uppercase tracking-tight py-1 px-2 rounded-xl mt-1 text-center cursor-pointer border bg-white dark:bg-slate-800 outline-none h-[28px] transition-all hover:scale-[1.02]",
                 r.todayUniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                 r.todayUniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                 r.todayUniformStatus === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
@@ -715,14 +770,17 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
               )}
             >
               <option value="na">N/A</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-              <option value="incomplete">Inc</option>
+              <option value="yes">Uniform Yes</option>
+              <option value="no">Uniform No</option>
+              <option value="incomplete">Incomplete</option>
             </select>
           </div>
 
           <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-slate-400 uppercase">Duty</span>
+            <div className="flex items-center gap-1">
+              <Clock size={10} className="text-slate-400" />
+              <span className="text-[8px] font-bold text-slate-400 uppercase">Duty status</span>
+            </div>
             <select
               onClick={(e) => {
                 e.stopPropagation();
@@ -731,7 +789,7 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
               onChange={(e) => onStatusChange(r, 'duty', e.target.value as any)}
               value={r.todayDutyStatus || 'na'}
               className={cn(
-                "text-[9px] font-black uppercase tracking-tight py-0.5 px-1.5 rounded-md mt-0.5 text-center cursor-pointer border bg-white outline-none h-[22px]",
+                "text-[9px] font-black uppercase tracking-tight py-1 px-2 rounded-xl mt-1 text-center cursor-pointer border bg-white dark:bg-slate-800 outline-none h-[28px] transition-all hover:scale-[1.02]",
                 r.todayDutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                 r.todayDutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                 r.todayDutyStatus === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
@@ -739,28 +797,33 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
               )}
             >
               <option value="na">N/A</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-              <option value="incomplete">Inc</option>
+              <option value="yes">Duty Yes</option>
+              <option value="no">Duty No</option>
+              <option value="incomplete">Incomplete</option>
             </select>
           </div>
         </div>
       </div>
 
       {/* Dynamic Performance Matrix & Score */}
-      <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-2 mt-2">
-        <div className="flex items-center gap-1">
-          <span className="text-[8px] font-bold text-slate-400 uppercase">Score:</span>
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-xs font-black text-slate-800 dark:text-slate-100 leading-none">
+      <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-3 mt-4">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-bold text-slate-400 uppercase">Score:</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400">
+            <span className="text-xs font-black leading-none">
               {r.todayDailyScore || 0}
             </span>
-            <span className="text-[8px] font-bold text-slate-400">/5</span>
+            <span className="text-[9px] font-bold opacity-75">/5</span>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[8px] font-bold text-slate-400 uppercase">Fines:</span>
-          <span className="text-[9px] font-black text-slate-700 dark:text-slate-200">
+          <span className="text-[9px] font-bold text-slate-400 uppercase">Fines:</span>
+          <span className={cn(
+            "text-xs font-black px-2 py-0.5 rounded-full",
+            Number(r.totalFines || 0) > 0 
+              ? 'bg-rose-50 border border-rose-200 text-rose-700 font-extrabold' 
+              : 'text-slate-700 dark:text-slate-300'
+          )}>
             ₨{Number(r.totalFines || 0).toLocaleString()}
           </span>
         </div>
@@ -769,44 +832,6 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
   );
 }
 
-function MetricStatus({ label, status, color }: { label: string; status: string; color?: string }) {
-  const isOk = status === 'yes';
-  const isNa = status === 'na';
-  const isIncomplete = status === 'incomplete';
-  
-  const statusColors = isOk ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 
-                      isNa ? 'bg-gray-100 text-gray-400' : 
-                      isIncomplete ? 'bg-amber-500 text-white shadow-amber-500/20' : 
-                      'bg-rose-500 text-white shadow-rose-500/20';
-
-  return (
-    <div className="p-8 rounded-[2.5rem] bg-white border border-gray-100 flex flex-col items-center justify-center gap-4 shadow-xl shadow-gray-200/40 hover:scale-105 transition-transform">
-      <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", color)}>{label}</span>
-      <div className={cn("px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg", statusColors)}>
-        {status}
-      </div>
-    </div>
-  );
-}
-
-function Search({ size, className }: { size?: number, className?: string }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width={size || 24} 
-      height={size || 24} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="3" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-    </svg>
-  );
-}
 function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent', count: number, onClick: () => void }) {
   const isPresent = type === 'present';
   return (
@@ -814,16 +839,18 @@ function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent', co
       onClick={onClick}
       className={cn(
         "group relative p-4 sm:p-12 rounded-[2rem] sm:rounded-[3rem] border transition-all cursor-pointer overflow-hidden",
-        isPresent ? "bg-emerald-50 border-emerald-100 shadow-emerald-500/5 hover:border-emerald-500/20 shadow-xl hover:shadow-2xl" : "bg-rose-50 border-rose-100 shadow-rose-500/5 hover:border-rose-500/20 shadow-xl hover:shadow-2xl"
+        isPresent 
+          ? "bg-emerald-50 border-emerald-100 dark:bg-emerald-950/10 dark:border-emerald-800/30 shadow-emerald-500/5 hover:border-emerald-500/20 shadow-xl hover:shadow-2xl" 
+          : "bg-rose-50 border-rose-100 dark:bg-rose-950/10 dark:border-rose-800/30 shadow-rose-500/5 hover:border-rose-500/20 shadow-xl hover:shadow-2xl"
       )}
     >
       <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity", isPresent ? "from-emerald-500" : "from-rose-500")} />
       <div className="relative z-10 flex flex-col items-center text-center gap-3 sm:gap-6">
-        <div className={cn("w-10 h-10 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center", isPresent ? "bg-white text-emerald-600 shadow-lg shadow-emerald-500/10" : "bg-white text-rose-600 shadow-lg shadow-rose-500/10")}>
+        <div className={cn("w-10 h-10 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center shadow-lg", isPresent ? "bg-white text-emerald-600 shadow-emerald-500/10 dark:bg-slate-900" : "bg-white text-rose-600 shadow-rose-500/10 dark:bg-slate-900")}>
           {isPresent ? <ShieldCheck className="w-5 h-5 sm:w-10 sm:h-10" /> : <Zap className="w-5 h-5 sm:w-10 sm:h-10" />}
         </div>
         <div>
-          <h2 className={cn("text-xs sm:text-4xl font-black uppercase tracking-tight sm:mb-2", isPresent ? "text-emerald-900" : "text-rose-900")}>
+          <h2 className={cn("text-xs sm:text-4xl font-black uppercase tracking-tight sm:mb-2", isPresent ? "text-emerald-900 dark:text-emerald-400" : "text-rose-900 dark:text-rose-400")}>
             {isPresent ? 'Present Now' : 'Absent Units'}
           </h2>
           <p className="hidden sm:block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily attendance synchronization</p>
@@ -833,7 +860,7 @@ function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent', co
         </div>
         <button className={cn(
           "px-3 py-1.5 sm:px-8 sm:py-4 text-white rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-[0.2em] transition-all whitespace-nowrap",
-          isPresent ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+          isPresent ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/10" : "bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/10"
         )}>
           View Depts
         </button>
