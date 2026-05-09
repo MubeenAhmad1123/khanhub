@@ -5,7 +5,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { getStudent } from '@/lib/spims/students';
+import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
+import { query, collection, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toDate } from '@/lib/utils';
 import type { SpimsStudent } from '@/types/spims';
 import AdmissionTab from '@/components/spims/student-profile/AdmissionTab';
 import FeeRecordTab from '@/components/spims/student-profile/FeeRecordTab';
@@ -29,9 +32,112 @@ export default function StudentSelfServicePage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const s = await getStudent(studentId);
-    setStudent(s);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const [s, fees, txSnapPatient, txSnapStudent] = await Promise.all([
+        getUnifiedStudent(studentId),
+        fetchStudentFees(studentId),
+        getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', studentId))),
+        getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', studentId)))
+      ]);
+
+      const aggregatedPayments: any[] = [];
+      let totalReceived = 0;
+
+      if (s) {
+        const admission = toDate(s.admissionDate);
+        const now = new Date();
+        const billableMonths = (now.getFullYear() - admission.getFullYear()) * 12 + (now.getMonth() - admission.getMonth()) + 1;
+
+        const diffTimeMs = now.getTime() - admission.getTime();
+        const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+        const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'})`;
+
+        const monthlyFee = Number(s.monthlyFee || 0);
+        const dueTillDate = billableMonths * monthlyFee;
+
+        const syncedTxIds = new Set<string>();
+        const syncedFeeIds = new Set<string>();
+
+        fees.forEach(fee => {
+          const status = fee.status || 'approved';
+          if (status === 'approved') {
+            totalReceived += Number(fee.amount || 0);
+          }
+          syncedFeeIds.add(fee.id);
+          if (fee.linkedTransactionId) syncedTxIds.add(fee.linkedTransactionId);
+          
+          aggregatedPayments.push({
+            ...fee,
+            id: fee.id,
+            status
+          });
+        });
+
+        const txMap = new Map<string, any>();
+        txSnapPatient.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        txSnapStudent.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        const mergedTxDocs = Array.from(txMap.values());
+
+        mergedTxDocs.forEach(txData => {
+          const txId = txData.id;
+          const isFee = txData.category === 'fee' || txData.feePaymentId;
+          if (!isFee) return;
+
+          const isApproved = txData.status === 'approved';
+          const isSynced = syncedTxIds.has(txId) || (txData.feePaymentId && syncedFeeIds.has(txData.feePaymentId));
+
+          if (isApproved && !isSynced) {
+            totalReceived += Number(txData.amount || 0);
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date?.toDate ? txData.date.toDate() : txData.date,
+              receivedBy: txData.receivedBy || txData.createdByName || 'HQ',
+              note: txData.description || txData.note || '',
+              status: 'approved',
+              type: txData.feePaymentType || 'monthly',
+              linkedTransactionId: txId
+            });
+          } else if (!isApproved && !isSynced) {
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date?.toDate ? txData.date.toDate() : txData.date,
+              receivedBy: txData.receivedBy || txData.createdByName || 'HQ',
+              note: txData.description || txData.note || '',
+              status: txData.status || 'pending',
+              type: txData.feePaymentType || 'monthly',
+              linkedTransactionId: txId
+            });
+          }
+        });
+
+        let pendingAmount = 0;
+        aggregatedPayments.forEach(p => {
+          if (p.status === 'pending' || p.status === 'pending_cashier') {
+            pendingAmount += Number(p.amount || 0);
+          }
+        });
+
+        setStudent({
+          ...s,
+          billableMonths,
+          daysAdmitted,
+          durationFormatted,
+          dueTillDate,
+          totalReceived,
+          pendingAmount,
+          remaining: Math.max(0, (Number(s.totalPackage) || 0) - totalReceived)
+        });
+      } else {
+        setStudent(null);
+      }
+    } catch (err) {
+      console.error("Load error", err);
+    } finally {
+      setLoading(false);
+    }
   }, [studentId]);
 
   useEffect(() => {

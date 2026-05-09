@@ -61,17 +61,19 @@ export default function FeeRecordTab({
         if (cached) {
           list = cached;
         } else {
-          // Query transactions for this student
-          const q = query(
-            collection(db, 'spims_transactions'),
-            where('patientId', '==', student.id),
-            limit(100)
-          );
-          const snap = await getDocs(q);
-          list = snap.docs.map((d) => {
-            const x = d.data();
+          // Query transactions for this student on both patientId and studentId
+          const [snapPatient, snapStudent] = await Promise.all([
+            getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', student.id), limit(100))),
+            getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', student.id), limit(100)))
+          ]);
+          
+          const txMap = new Map<string, any>();
+          snapPatient.docs.forEach((doc) => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+          snapStudent.docs.forEach((doc) => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+          const mergedDocs = Array.from(txMap.values());
+
+          list = mergedDocs.map((x) => {
             return {
-              id: d.id,
               ...x,
               date: x.date?.toDate ? x.date.toDate() : x.date,
               createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : x.createdAt,

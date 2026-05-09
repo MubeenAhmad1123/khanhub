@@ -43,10 +43,11 @@ export default function AdminStudentProfilePage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [s, fees, txSnap] = await Promise.all([
+      const [s, fees, txSnapPatient, txSnapStudent] = await Promise.all([
         getUnifiedStudent(studentId),
         fetchStudentFees(studentId),
-        getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', studentId)))
+        getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', studentId))),
+        getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', studentId)))
       ]);
 
       const aggregatedPayments: any[] = [];
@@ -83,9 +84,13 @@ export default function AdminStudentProfilePage() {
           });
         });
 
-        txSnap.docs.forEach(doc => {
-          const txData = doc.data();
-          const txId = doc.id;
+        const txMap = new Map<string, any>();
+        txSnapPatient.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        txSnapStudent.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        const mergedTxDocs = Array.from(txMap.values());
+
+        mergedTxDocs.forEach(txData => {
+          const txId = txData.id;
           
           // Only process fee-related transactions
           const isFee = txData.category === 'fee' || txData.feePaymentId;
@@ -120,6 +125,13 @@ export default function AdminStudentProfilePage() {
           }
         });
 
+        let pendingAmount = 0;
+        aggregatedPayments.forEach(p => {
+          if (p.status === 'pending' || p.status === 'pending_cashier') {
+            pendingAmount += Number(p.amount || 0);
+          }
+        });
+
         setStudent({
           ...s,
           billableMonths,
@@ -127,7 +139,8 @@ export default function AdminStudentProfilePage() {
           durationFormatted,
           dueTillDate,
           totalReceived,
-          remaining: Math.max(0, dueTillDate - totalReceived)
+          pendingAmount,
+          remaining: Math.max(0, (Number(s.totalPackage) || 0) - totalReceived)
         });
       }
       setAllPayments(aggregatedPayments);

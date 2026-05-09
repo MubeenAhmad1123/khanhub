@@ -80,19 +80,49 @@ export default function ProfileHeader({ student, onGenerateReport }: ProfileHead
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pt-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 pt-4">
               <div className="bg-gray-50/50 p-4 rounded-xl md:rounded-2xl border border-gray-100/50 flex flex-col items-center md:items-start">
-                <div className="flex items-center gap-3 text-gray-400 mb-1">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
                   <Wallet size={14} className="text-[#1D9E75]" />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Total Package</span>
                 </div>
-                <p className="text-xl font-black text-[#1D9E75]">
+                <p className="text-lg md:text-xl font-black text-gray-900">
                   Rs {totalPkg.toLocaleString()}
                 </p>
               </div>
 
+              <div className="bg-emerald-50/50 p-4 rounded-xl md:rounded-2xl border border-emerald-100/50 flex flex-col items-center md:items-start">
+                <div className="flex items-center gap-2 text-emerald-600 mb-1">
+                  <Wallet size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Approved / Paid</span>
+                </div>
+                <p className="text-lg md:text-xl font-black text-emerald-700">
+                  Rs {(Number((student as any).totalReceived) || 0).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="bg-amber-50/50 p-4 rounded-xl md:rounded-2xl border border-amber-100/50 flex flex-col items-center md:items-start">
+                <div className="flex items-center gap-2 text-amber-600 mb-1">
+                  <Wallet size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Pending</span>
+                </div>
+                <p className="text-lg md:text-xl font-black text-amber-700">
+                  Rs {(Number((student as any).pendingAmount) || 0).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="bg-rose-50/50 p-4 rounded-xl md:rounded-2xl border border-rose-100/50 flex flex-col items-center md:items-start">
+                <div className="flex items-center gap-2 text-rose-600 mb-1">
+                  <Wallet size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Remaining Balance</span>
+                </div>
+                <p className="text-lg md:text-xl font-black text-rose-700">
+                  Rs {(Number((student as any).remaining) || 0).toLocaleString()}
+                </p>
+              </div>
+
               <div className="bg-gray-50/50 p-4 rounded-xl md:rounded-2xl border border-gray-100/50 flex flex-col items-center md:items-start">
-                <div className="flex items-center gap-3 text-gray-400 mb-1">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
                   <Calendar size={14} className="text-[#1D9E75]" />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Joined On</span>
                 </div>
@@ -101,8 +131,8 @@ export default function ProfileHeader({ student, onGenerateReport }: ProfileHead
                 </p>
               </div>
 
-              <div className="bg-gray-50/50 p-4 rounded-xl md:rounded-2xl border border-gray-100/50 flex flex-col items-center md:items-start sm:col-span-2 lg:col-span-1">
-                <div className="flex items-center gap-3 text-gray-400 mb-1">
+              <div className="bg-gray-50/50 p-4 rounded-xl md:rounded-2xl border border-gray-100/50 flex flex-col items-center md:items-start">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
                   <User size={14} className="text-[#1D9E75]" />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Guardian Contact</span>
                 </div>
