@@ -1,3 +1,4 @@
+// src/app/departments/sukoon/dashboard/admin/reports/page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { formatDateDMY } from '@/lib/utils';
 import {
-  FileBarChart, Download, Printer, Calendar,
+  FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3
 } from 'lucide-react';
 
@@ -38,11 +39,11 @@ export default function AdminReportsPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('sukoon_session');
+    if (!sessionData) { router.push('/departments/sukoon/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login'); return;
+      router.push('/departments/sukoon/login'); return;
     }
     setSession(parsed);
   }, [router]);
@@ -56,7 +57,7 @@ export default function AdminReportsPage() {
       const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'sukoon_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -105,12 +106,12 @@ export default function AdminReportsPage() {
   const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-[#FCFAF2] p-4 md:p-8 text-black">
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #sukoon-report-print, #sukoon-report-print * { visibility: visible; }
+          #sukoon-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
 
@@ -119,14 +120,14 @@ export default function AdminReportsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FileBarChart className="w-6 h-6 text-teal-600" /> Financial Reports
+            <h1 className="text-2xl font-black text-black flex items-center gap-2">
+              <FileBarChart className="w-6 h-6 text-purple-600" /> Financial Reports
             </h1>
             <p className="text-sm text-gray-500 mt-1">Generate monthly approved transaction reports</p>
           </div>
           {generated && (
             <div className="flex gap-3">
-              <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-900">
+              <button onClick={handlePrint} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2.5 rounded-xl text-sm font-black transition-colors hover:bg-purple-700 shadow-lg shadow-purple-100">
                 <Printer className="w-4 h-4" /> Print / Save PDF
               </button>
             </div>
@@ -134,34 +135,36 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Controls */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-teal-500" /> Select Period</h2>
+        <div className="bg-white rounded-[2rem] border border-gray-200 p-6 shadow-sm">
+          <h2 className="font-black text-black mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-purple-500" /> Select Period
+          </h2>
           <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="flex-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
+            <div className="flex-1 w-full">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
               <select
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(Number(e.target.value))}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 font-bold text-black"
               >
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
             </div>
-            <div className="flex-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
+            <div className="flex-1 w-full">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
               <input
                 type="number"
                 value={selectedYear}
                 onChange={e => setSelectedYear(Number(e.target.value))}
                 min={2020}
                 max={2100}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 font-bold text-black"
               />
             </div>
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="flex-1 sm:flex-none bg-teal-600 hover:bg-teal-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-black text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-purple-100"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
               Generate Report
@@ -171,21 +174,21 @@ export default function AdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
+          <div id="sukoon-report-print" ref={printRef} className="bg-white rounded-[2rem] border border-gray-200 p-6 md:p-10 space-y-8 shadow-sm">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">Khan Hub Rehab Center</h2>
-              <p className="text-lg font-bold text-teal-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
+              <h2 className="text-2xl font-black text-black">Khan Hub Sukoon Center</h2>
+              <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Income</div>
-                <div className="text-2xl font-black text-teal-800">{formatPKR(reportData.totalIncome)}</div>
+              <div className="bg-purple-50 border border-purple-100 p-5 rounded-2xl text-center">
+                <TrendingUp className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                <div className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Total Income</div>
+                <div className="text-2xl font-black text-purple-800">{formatPKR(reportData.totalIncome)}</div>
               </div>
               <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
                 <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
@@ -208,24 +211,26 @@ export default function AdminReportsPage() {
                 {/* Income Breakdown */}
                 {Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
+                    <h3 className="text-lg font-bold text-black mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-purple-500" /> Income Breakdown
+                    </h3>
                     <table className="w-full text-sm border-collapse border border-gray-200 rounded-xl overflow-hidden">
-                      <thead className="bg-teal-50">
+                      <thead className="bg-purple-50">
                         <tr>
-                          <th className="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">Category</th>
-                          <th className="border border-gray-200 px-4 py-3 text-right font-bold text-teal-800">Amount (PKR)</th>
+                          <th className="border border-gray-200 px-4 py-3 text-left font-black text-purple-800">Category</th>
+                          <th className="border border-gray-200 px-4 py-3 text-right font-black text-purple-800">Amount (PKR)</th>
                         </tr>
                       </thead>
                       <tbody>
                         {Object.entries(reportData.incomeByCategory).map(([cat, amt]: any) => (
                           <tr key={cat} className="hover:bg-gray-50">
                             <td className="border border-gray-200 px-4 py-3 text-gray-700">{formatCat(cat)}</td>
-                            <td className="border border-gray-200 px-4 py-3 text-right text-gray-900 font-medium">{formatPKR(amt)}</td>
+                            <td className="border border-gray-200 px-4 py-3 text-right text-black font-medium">{formatPKR(amt)}</td>
                           </tr>
                         ))}
-                        <tr className="bg-teal-50 font-bold">
-                          <td className="border border-gray-200 px-4 py-3 text-teal-800">Total Income</td>
-                          <td className="border border-gray-200 px-4 py-3 text-right text-teal-800">{formatPKR(reportData.totalIncome)}</td>
+                        <tr className="bg-purple-50 font-bold">
+                          <td className="border border-gray-200 px-4 py-3 text-purple-800">Total Income</td>
+                          <td className="border border-gray-200 px-4 py-3 text-right text-purple-800">{formatPKR(reportData.totalIncome)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -235,7 +240,9 @@ export default function AdminReportsPage() {
                 {/* Expense Breakdown */}
                 {Object.keys(reportData.expenseByCategory).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown</h3>
+                    <h3 className="text-lg font-bold text-black mb-3 flex items-center gap-2">
+                      <TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown
+                    </h3>
                     <table className="w-full text-sm border-collapse border border-gray-200 rounded-xl overflow-hidden">
                       <thead className="bg-red-50">
                         <tr>
@@ -247,7 +254,7 @@ export default function AdminReportsPage() {
                         {Object.entries(reportData.expenseByCategory).map(([cat, amt]: any) => (
                           <tr key={cat} className="hover:bg-gray-50">
                             <td className="border border-gray-200 px-4 py-3 text-gray-700">{formatCat(cat)}</td>
-                            <td className="border border-gray-200 px-4 py-3 text-right text-gray-900 font-medium">{formatPKR(amt)}</td>
+                            <td className="border border-gray-200 px-4 py-3 text-right text-black font-medium">{formatPKR(amt)}</td>
                           </tr>
                         ))}
                         <tr className="bg-red-50 font-bold">
@@ -261,9 +268,9 @@ export default function AdminReportsPage() {
 
                 {/* Transaction Detail */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
+                  <h3 className="text-lg font-bold text-black mb-3">Transaction Details</h3>
                   <div className="overflow-x-auto rounded-xl border border-gray-200">
-                    <table className="w-full text-xs border-collapse">
+                    <table className="w-full text-xs border-collapse text-black">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="border border-gray-200 px-3 py-3 text-left font-bold text-gray-600">Date</th>
@@ -279,11 +286,11 @@ export default function AdminReportsPage() {
                           <tr key={t.id} className="hover:bg-gray-50">
                             <td className="border border-gray-200 px-3 py-2 text-gray-600">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
                             <td className="border border-gray-200 px-3 py-2">
-                              <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
+                              <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-purple-50 text-purple-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[180px] truncate">{t.description || '—'}</td>
-                            <td className="border border-gray-200 px-3 py-2 text-right font-medium text-gray-900">{formatPKR(t.amount)}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-right font-medium text-black">{formatPKR(t.amount)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>
                         ))}

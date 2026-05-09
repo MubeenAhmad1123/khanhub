@@ -1,3 +1,4 @@
+// src/app/departments/sukoon/dashboard/admin/clients/new/page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createSukoonUserServer } from '@/app/departments/sukoon/actions/createSukoonUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Upload, 
@@ -16,7 +17,7 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
 
-export default function AdmitPatientPage() {
+export default function RegisterClientPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   
@@ -26,13 +27,12 @@ export default function AdmitPatientPage() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
-
   // SECTION 1: Login Credentials
   const [loginId, setLoginId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // SECTION 2: Patient Information
+  // SECTION 2: Client Information
   const [name, setName] = useState('');
   const [fatherName, setFatherName] = useState('');
   const [age, setAge] = useState('');
@@ -52,7 +52,7 @@ export default function AdmitPatientPage() {
   const [guardianPhone, setGuardianPhone] = useState('');
   const [guardianCnic, setGuardianCnic] = useState('');
 
-  // SECTION 4: Admission Details
+  // SECTION 4: Registration Details
   const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
   const [treatmentDuration, setTreatmentDuration] = useState('3 Months');
   const [customDuration, setCustomDuration] = useState('');
@@ -70,14 +70,14 @@ export default function AdmitPatientPage() {
   ];
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('sukoon_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/sukoon/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/sukoon/login');
       return;
     }
     setLoading(false);
@@ -113,16 +113,16 @@ export default function AdmitPatientPage() {
     setSubmitStatus('processing');
     setError('');
 
-    let patientDocId: string | null = null;
+    let clientDocId: string | null = null;
     try {
       // 1. Upload photo if selected
       let photoUrl = null;
       if (photoFile) {
-        photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/rehab/patients');
+        photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/sukoon/clients');
       }
 
-      // 2. Create patient document in Firestore
-      const patientData = {
+      // 2. Create client document in Firestore
+      const clientData = {
         name,
         fatherName,
         age: Number(age),
@@ -153,41 +153,41 @@ export default function AdmitPatientPage() {
         createdAt: Timestamp.now(),
       };
 
-      const patientRef = await addDoc(collection(db, 'rehab_patients'), patientData);
-      patientDocId = patientRef.id;
+      const clientRef = await addDoc(collection(db, 'sukoon_guests'), clientData);
+      clientDocId = clientRef.id;
 
-      // 3. Create family login account linked to this patient
-      const result = await createRehabUserServer(
+      // 3. Create family login account linked to this client
+      const result = await createSukoonUserServer(
         loginId.toUpperCase(),
         loginPassword,
         'family',
         name,
-        patientRef.id
+        clientRef.id
       );
 
       if (!result.success) {
-        if (patientRef.id) {
+        if (clientRef.id) {
           try {
-            await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
+            await deleteDoc(doc(db, 'sukoon_guests', clientRef.id));
           } catch {}
         }
 
         setSubmitStatus('error');
-        setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
+        setError(`Client registration failed: ${result.error}. Please choose a different Client Login ID.`);
         toast.error('Login account creation failed');
         return;
       }
 
       setSubmitStatus('success');
-      toast.success('Patient admitted successfully ✓');
+      toast.success('Client registered successfully ✓');
       setTimeout(() => {
-        router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+        router.push(`/departments/sukoon/dashboard/admin/clients/${clientRef.id}`);
       }, 1500);
     } catch (err: any) {
       console.error(err);
-      if (patientDocId) {
+      if (clientDocId) {
         try {
-          await deleteDoc(doc(db, 'rehab_patients', patientDocId));
+          await deleteDoc(doc(db, 'sukoon_guests', clientDocId));
         } catch {}
       }
       setSubmitStatus('error');
@@ -200,44 +200,44 @@ export default function AdmitPatientPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFAF2]">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
       </div>
     );
   }
 
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
     <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-      <Icon size={16} className="text-teal-500" />
+      <Icon size={16} className="text-purple-500" />
       <h3 className="font-black text-gray-700 text-sm uppercase tracking-widest">
         {title}
       </h3>
     </div>
   );
 
-  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm transition-all";
+  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 text-sm transition-all font-bold text-black";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-[#FCFAF2] p-4 md:p-8 text-black">
       <div className="max-w-3xl mx-auto space-y-6">
         
         {/* Header */}
         <div className="flex flex-col gap-4">
-          <Link href="/departments/rehab/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
+          <Link href="/departments/sukoon/dashboard/admin/clients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 transition-colors w-fit font-bold">
             <ArrowLeft className="w-4 h-4" />
-            Back to Patients
+            Back to Clients
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Plus className="w-6 h-6 text-teal-600" />
-              Admit New Patient
+            <h1 className="text-2xl font-black text-black flex items-center gap-2">
+              <Plus className="w-6 h-6 text-purple-600" />
+              Register New Client
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Register a new patient and set up family access.</p>
+            <p className="text-sm text-gray-500 mt-1">Register a new client and set up family access.</p>
           </div>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <form onSubmit={handleSubmit} className="p-6 md:p-8">
             
             {/* SECTION 1: Login Credentials */}
@@ -245,8 +245,8 @@ export default function AdmitPatientPage() {
               <SectionHeader icon={Shield} title="Login Credentials" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
-                  <input required placeholder="e.g. REHAB-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Client Login ID *</label>
+                  <input required placeholder="e.g. SUKOON-CLI-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>
@@ -258,12 +258,12 @@ export default function AdmitPatientPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 italic px-1">Family will use these to log in and view this patient's profile</p>
+              <p className="text-[10px] text-gray-400 italic px-1">Family will use these to log in and view this client's profile</p>
             </div>
 
-            {/* SECTION 2: Patient Information */}
+            {/* SECTION 2: Client Information */}
             <div className="space-y-4 mt-8">
-              <SectionHeader icon={User} title="Patient Information" />
+              <SectionHeader icon={User} title="Client Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Full Name *</label>
@@ -315,7 +315,7 @@ export default function AdmitPatientPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 mt-2">
+              <div className="space-y-1.5 mt-2 text-black">
                 <BrutalistCalendar
                   label="Date of Birth *"
                   value={dateOfBirth}
@@ -339,7 +339,7 @@ export default function AdmitPatientPage() {
               <div className="flex items-center gap-4 py-2">
                 <div 
                   onClick={() => fileRef.current?.click()}
-                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
+                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all overflow-hidden flex-shrink-0"
                 >
                   {photoPreview ? (
                     <img src={photoPreview} className="w-full h-full object-cover" alt="Preview" />
@@ -361,10 +361,10 @@ export default function AdmitPatientPage() {
                   setPhotoPreview(URL.createObjectURL(file));
                 }} />
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Patient Photo</p>
-                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG up to 5MB</p>
+                  <p className="text-sm font-black text-gray-700">Client Photo</p>
+                  <p className="text-xs text-gray-400 mt-0.5">WebP format up to 5MB</p>
                   {photoPreview && (
-                    <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview('') }} className="text-xs text-red-400 mt-1 hover:text-red-600 font-semibold">Remove</button>
+                    <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview('') }} className="text-xs text-red-500 mt-1 hover:text-red-700 font-bold">Remove</button>
                   )}
                 </div>
               </div>
@@ -417,7 +417,7 @@ export default function AdmitPatientPage() {
             <div className="space-y-4 mt-8">
               <SectionHeader icon={Calendar} title="Admission Details" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-black">
                   <BrutalistCalendar
                     label="Admission Date *"
                     value={admissionDate}
@@ -457,8 +457,8 @@ export default function AdmitPatientPage() {
                       onClick={() => toggleReason(r)}
                       className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
                         reasonsForAdmission.includes(r)
-                          ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-200'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-100'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-purple-200'
                       }`}
                     >
                       {r}
@@ -481,7 +481,7 @@ export default function AdmitPatientPage() {
 
             {error && (
               <div className="mt-6 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3 text-red-700 text-sm font-semibold">
-                <AlertTriangle size={18} />
+                <X size={18} />
                 {error}
               </div>
             )}
@@ -493,18 +493,18 @@ export default function AdmitPatientPage() {
                 className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 ${
                   submitStatus === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/20' :
                   submitStatus === 'error' ? 'bg-rose-600 text-white shadow-rose-500/20' :
-                  'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-900/20'
+                  'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-900/20'
                 }`}
               >
                 {submitting ? (
                   <>
                     <Loader2 size={20} className="animate-spin" />
-                    <span>ADMITTING...</span>
+                    <span>REGISTRATION...</span>
                   </>
                 ) : submitStatus === 'success' ? (
                   <>
                     <Shield size={20} className="text-emerald-200" />
-                    <span>ADMITTED</span>
+                    <span>REGISTERED</span>
                   </>
                 ) : submitStatus === 'error' ? (
                   <>
@@ -514,11 +514,11 @@ export default function AdmitPatientPage() {
                 ) : (
                   <>
                     <Save size={20} />
-                    <span>ADMIT PATIENT</span>
+                    <span>REGISTER CLIENT</span>
                   </>
                 )}
               </button>
-              <Link href="/departments/rehab/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors tracking-widest">
+              <Link href="/departments/sukoon/dashboard/admin/clients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors tracking-widest">
                 Cancel Registration
               </Link>
             </div>
@@ -528,8 +528,4 @@ export default function AdmitPatientPage() {
       </div>
     </div>
   );
-}
-
-function AlertTriangle({ size, className }: { size: number, className?: string }) {
-  return <X size={size} className={className} />;
 }

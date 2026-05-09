@@ -200,10 +200,10 @@ export default function SuperAdminUserManagement() {
       <section className="space-y-6">
         <div className="flex items-center justify-between px-4">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Administrative Roster</h2>
-            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">Manage system administrators and their security status</p>
+            <h2 className="text-3xl font-black text-gray-900 tracking-tight uppercase">Administrative Roster</h2>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Manage system administrators and their security status</p>
           </div>
-          <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-gray-100 dark:border-white/5">
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{admins.length} Total Admins</span>
           </div>
@@ -211,47 +211,47 @@ export default function SuperAdminUserManagement() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {admins.map((adm) => (
-            <div key={adm.uid} className="group relative bg-white dark:bg-black border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
+            <div key={adm.uid} className="group relative bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
               {/* Background Accent */}
               <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${adm.isActive ? 'bg-blue-500' : 'bg-red-500'}`} />
               
               <div className="relative z-10 space-y-6">
                 <div className="flex justify-between items-start">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${
-                    adm.isActive ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600' : 'bg-red-50 dark:bg-red-500/10 text-red-600'
+                    adm.isActive ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
                   }`}>
                     {adm.displayName?.[0]?.toUpperCase() || 'A'}
                   </div>
                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                     adm.isActive 
-                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 border-blue-100 dark:border-blue-500/20' 
-                      : 'bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100 dark:border-red-500/20'
+                      ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                      : 'bg-red-50 text-red-600 border-red-100'
                   }`}>
                     {adm.isActive ? '• Active' : '• Inactive'}
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors truncate">
+                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight group-hover:text-blue-600 transition-colors truncate">
                     {adm.displayName}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">System ID:</span>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-md">{adm.customId}</span>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">System ID:</span>
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{adm.customId}</span>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-50 dark:border-white/5 flex gap-3">
+                <div className="pt-4 border-t border-gray-50 flex gap-3">
                   <button 
                     onClick={() => handleResetPass(adm.uid)}
-                    className="flex-1 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                    className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
                   >
                     Reset Secret
                   </button>
                   {adm.isActive && (
                     <button 
                       onClick={() => handleDeactivate(adm.uid)}
-                      className="flex-1 bg-red-50 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm hover:shadow-lg hover:shadow-red-500/20"
+                      className="flex-1 bg-red-50 hover:bg-red-500 hover:text-white text-red-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm hover:shadow-lg hover:shadow-red-500/20"
                     >
                       Deactivate
                     </button>
@@ -261,8 +261,8 @@ export default function SuperAdminUserManagement() {
             </div>
           ))}
           {admins.length === 0 && (
-            <div className="col-span-full py-20 text-center bg-gray-50 dark:bg-white/5 rounded-[3rem] border border-dashed border-gray-200 dark:border-white/10">
-              <p className="text-gray-300 dark:text-gray-600 font-black uppercase tracking-widest">No Administrative Accounts Discovered</p>
+            <div className="col-span-full py-20 text-center bg-gray-50 rounded-[3rem] border border-dashed border-gray-200">
+              <p className="text-gray-300 font-black uppercase tracking-widest">No Administrative Accounts Discovered</p>
             </div>
           )}
         </div>

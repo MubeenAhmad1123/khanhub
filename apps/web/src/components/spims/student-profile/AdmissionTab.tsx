@@ -175,15 +175,6 @@ export default function AdmissionTab({
             />
           )}
           {fld(
-            'Father Name',
-            <input
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.fatherName ?? ''}
-              onChange={(e) => setForm({ ...form, fatherName: e.target.value })}
-            />
-          )}
-          {fld(
             'CNIC',
             <input
               disabled={!canEdit}
@@ -200,6 +191,15 @@ export default function AdmissionTab({
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
               value={form.contact ?? ''}
               onChange={(e) => setForm({ ...form, contact: e.target.value })}
+            />
+          )}
+          {fld(
+            'Father Name',
+            <input
+              disabled={!canEdit}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+              value={form.fatherName ?? ''}
+              onChange={(e) => setForm({ ...form, fatherName: e.target.value })}
             />
           )}
           {fld(
