@@ -3586,6 +3586,8 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
     fatherName: patient.fatherName || '',
+    guardianName: patient.guardianName || '',
+    contactNumber: patient.contactNumber || '',
     address: patient.address || '',
     monthlyPackage: Number(patient.monthlyPackage || patient.packageAmount || 0),
     billableMonths: patient.billableMonths || 1,
@@ -3679,6 +3681,22 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                       className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
                       value={reportData.fatherName}
                       onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Name</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                      value={reportData.guardianName}
+                      onChange={e => setReportData({ ...reportData, guardianName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Contact</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                      value={reportData.contactNumber}
+                      onChange={e => setReportData({ ...reportData, contactNumber: e.target.value })}
                     />
                   </div>
                   <div>

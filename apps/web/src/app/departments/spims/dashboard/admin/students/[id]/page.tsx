@@ -43,10 +43,14 @@ export default function AdminStudentProfilePage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [s, fees] = await Promise.all([
+      const [s, fees, txSnap] = await Promise.all([
         getUnifiedStudent(studentId),
-        fetchStudentFees(studentId)
+        fetchStudentFees(studentId),
+        getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', studentId)))
       ]);
+
+      const aggregatedPayments: any[] = [];
+      let totalReceived = 0;
 
       if (s) {
         // Calculate Billable Months (same as Rehab)
@@ -60,7 +64,61 @@ export default function AdminStudentProfilePage() {
 
         const monthlyFee = Number(s.monthlyFee || 0);
         const dueTillDate = billableMonths * monthlyFee;
-        const totalReceived = fees.filter(f => f.status === 'approved').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+        const syncedTxIds = new Set<string>();
+        const syncedFeeIds = new Set<string>();
+
+        fees.forEach(fee => {
+          const status = fee.status || 'approved';
+          if (status === 'approved') {
+            totalReceived += Number(fee.amount || 0);
+          }
+          syncedFeeIds.add(fee.id);
+          if (fee.linkedTransactionId) syncedTxIds.add(fee.linkedTransactionId);
+          
+          aggregatedPayments.push({
+            ...fee,
+            id: fee.id,
+            status
+          });
+        });
+
+        txSnap.docs.forEach(doc => {
+          const txData = doc.data();
+          const txId = doc.id;
+          
+          // Only process fee-related transactions
+          const isFee = txData.category === 'fee' || txData.feePaymentId;
+          if (!isFee) return;
+
+          const isApproved = txData.status === 'approved';
+          const isSynced = syncedTxIds.has(txId) || (txData.feePaymentId && syncedFeeIds.has(txData.feePaymentId));
+
+          if (isApproved && !isSynced) {
+            totalReceived += Number(txData.amount || 0);
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date?.toDate ? txData.date.toDate() : txData.date,
+              receivedBy: txData.receivedBy || txData.createdByName || 'HQ',
+              note: txData.description || txData.note || '',
+              status: 'approved',
+              type: txData.feePaymentType || 'monthly',
+              linkedTransactionId: txId
+            });
+          } else if (!isApproved && !isSynced) {
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date?.toDate ? txData.date.toDate() : txData.date,
+              receivedBy: txData.receivedBy || txData.createdByName || 'HQ',
+              note: txData.description || txData.note || '',
+              status: txData.status || 'pending',
+              type: txData.feePaymentType || 'monthly',
+              linkedTransactionId: txId
+            });
+          }
+        });
 
         setStudent({
           ...s,
@@ -72,7 +130,7 @@ export default function AdminStudentProfilePage() {
           remaining: Math.max(0, dueTillDate - totalReceived)
         });
       }
-      setAllPayments(fees);
+      setAllPayments(aggregatedPayments);
     } catch (err) {
       console.error("Load error", err);
     } finally {
@@ -442,6 +500,8 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
   const [reportData, setReportData] = useState({
     name: student.name,
     fatherName: student.fatherName || '',
+    fatherContact: student.fatherContact || '',
+    studentContact: student.contact || '',
     rollNo: student.rollNo || '',
     studentId: student.studentId || '',
     course: student.course || '',
@@ -532,6 +592,22 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                       className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
                       value={reportData.fatherName}
                       onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Contact</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                      value={reportData.fatherContact}
+                      onChange={e => setReportData({ ...reportData, fatherContact: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student Contact</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                      value={reportData.studentContact}
+                      onChange={e => setReportData({ ...reportData, studentContact: e.target.value })}
                     />
                   </div>
                   <div>
