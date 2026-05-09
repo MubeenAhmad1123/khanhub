@@ -3637,10 +3637,11 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-100 dark:bg-black/20">
-          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-8 sm:p-16 mx-auto w-full max-w-[850px] text-gray-900 font-sans min-h-[1100px] border border-gray-100">
-            {/* Report Header */}
-            <div className="flex justify-between items-start border-b-4 border-gray-900 pb-8 mb-10">
+        <div className="flex-1 overflow-y-auto p-4 bg-slate-100 dark:bg-black/20">
+          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-8 sm:p-10 mx-auto w-full max-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
+            <div>
+              {/* Report Header */}
+              <div className="flex justify-between items-start border-b-4 border-gray-900 pb-5 mb-6">
               <div className="space-y-1">
                 <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Financial</h1>
                 <h1 className="text-4xl font-black uppercase tracking-tighter text-teal-600 leading-none">Statement</h1>
@@ -3654,8 +3655,8 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
               </div>
             </div>
 
-            {/* Patient Details Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-12 mb-12">
+              {/* Patient Details Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Basic Information</h3>
                 <div className="space-y-4">
@@ -3737,8 +3738,8 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
               </div>
             </div>
 
-            {/* Financial Summary Box */}
-            <div className="bg-gray-50 rounded-3xl p-8 mb-12 border border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
+              {/* Financial Summary Box */}
+              <div className="bg-gray-50 rounded-3xl p-4 sm:p-5 mb-6 border border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
               <div className="relative">
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Package</label>
                 <div className="flex items-baseline gap-1">
@@ -3784,20 +3785,20 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-12">
-              <div className="p-8 bg-teal-50/50 rounded-3xl border-2 border-teal-100 flex flex-col justify-center">
-                <label className="text-[10px] font-black uppercase text-teal-600 block mb-1 tracking-widest">Received to Date</label>
-                <p className="text-3xl font-black text-teal-900 tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 bg-teal-50/50 rounded-3xl border-2 border-teal-100 flex flex-col justify-center">
+                  <label className="text-[10px] font-black uppercase text-teal-600 block mb-1 tracking-widest">Received to Date</label>
+                  <p className="text-2xl font-black text-teal-900 tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-red-50/50 rounded-3xl border-2 border-red-100 flex flex-col justify-center">
+                  <label className="text-[10px] font-black uppercase text-red-600 block mb-1 tracking-widest">Net Remaining</label>
+                  <p className="text-2xl font-black text-red-900 tracking-tighter">PKR {reportData.remainingAmount.toLocaleString()}</p>
+                </div>
               </div>
-              <div className="p-8 bg-red-50/50 rounded-3xl border-2 border-red-100 flex flex-col justify-center">
-                <label className="text-[10px] font-black uppercase text-red-600 block mb-1 tracking-widest">Net Remaining</label>
-                <p className="text-3xl font-black text-red-900 tracking-tighter">PKR {reportData.remainingAmount.toLocaleString()}</p>
-              </div>
-            </div>
 
-            {/* Transaction Log Table */}
-            <div className="mb-12">
-              <div className="flex items-center justify-between mb-6 border-b-2 border-gray-100 pb-4">
+              {/* Transaction Log Table */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4 border-b-2 border-gray-100 pb-2">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Payment Transaction Log</h3>
                 <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
               </div>
@@ -3813,9 +3814,9 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   <tbody className="divide-y divide-gray-50">
                     {reportData.transactions.map((p, idx) => (
                       <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
-                        <td className="py-4 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
-                        <td className="py-4 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
-                        <td className="py-4 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+                        <td className="py-2.5 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
+                        <td className="py-2.5 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
+                        <td className="py-2.5 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
                       </tr>
                     ))}
                     {reportData.transactions.length === 0 && (
@@ -3826,16 +3827,17 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   </tbody>
                   <tfoot>
                     <tr className="border-t-4 border-gray-900 font-black text-gray-900">
-                      <td colSpan={2} className="py-6 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
-                      <td className="py-6 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
+                      <td colSpan={2} className="py-4 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
+                      <td className="py-4 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
+              </div>
             </div>
 
             {/* Signature & Footer */}
-            <div className="mt-20 pt-12 border-t border-gray-100">
+            <div className="mt-6 pt-6 border-t border-gray-100">
               <div className="flex justify-between items-end">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-gray-900 uppercase">Khan Hub</p>
@@ -3845,7 +3847,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Authorized Signature</p>
                 </div>
               </div>
-              <div className="mt-12 text-center">
+              <div className="mt-4 text-center">
                 <p className="text-[9px] font-bold text-gray-300 uppercase tracking-[0.4em]">This statement is for informational purposes only</p>
               </div>
             </div>
