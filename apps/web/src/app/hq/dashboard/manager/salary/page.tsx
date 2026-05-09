@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Plus, FileText, CheckCircle, DollarSign } from 'lucide-react';
+import { Loader2, Plus, FileText, CheckCircle, DollarSign, Printer } from 'lucide-react';
 import type { HqStaff, SalarySlip } from '@/types/hq';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
@@ -31,6 +31,7 @@ export default function SalarySlipsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [editingSlip, setEditingSlip] = useState<SlipWithCol | null>(null);
   const [editValues, setEditValues] = useState({ bonus: 0, bonusReason: '', otherDeductions: 0, deductionReason: '' });
+  const [viewingSlip, setViewingSlip] = useState<SlipWithCol | null>(null);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -154,18 +155,19 @@ export default function SalarySlipsPage() {
     if (!editingSlip) return;
     const { bonus, bonusReason, otherDeductions, deductionReason } = editValues;
 
-    if (bonus > 0 && !bonusReason) {
-      alert('Please provide a reason for the bonus.');
+    const basePay = Math.round((editingSlip.dailyWage || 0) * (editingSlip.presentDays + (editingSlip.paidLeaveDays || 0)));
+    const netSalary = Math.round(basePay + Number(bonus) - Number(otherDeductions));
+
+    if ((Number(bonus) > 0 || netSalary > editingSlip.basicSalary) && !bonusReason) {
+      alert('The salary exceeds standard base pay. Please provide an official justification / reason for the bonus.');
       return;
     }
-    if (otherDeductions > 0 && !deductionReason) {
+    if (Number(otherDeductions) > 0 && !deductionReason) {
       alert('Please provide a reason for the deduction.');
       return;
     }
 
     setActionLoading(editingSlip.id);
-    const basePay = Math.round((editingSlip.dailyWage || 0) * (editingSlip.presentDays + (editingSlip.paidLeaveDays || 0)));
-    const netSalary = Math.round(basePay + Number(bonus) - Number(otherDeductions));
 
     const updates = {
       bonus: Number(bonus),
@@ -297,10 +299,19 @@ export default function SalarySlipsPage() {
                               });
                             }}
                             className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all shadow-sm active:scale-90"
+                            title="Edit Adjustments"
                           >
                             <Plus size={16} strokeWidth={2.5} />
                           </button>
                         )}
+
+                        <button
+                          onClick={() => setViewingSlip(slip)}
+                          className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-all shadow-sm active:scale-90"
+                          title="Print / View Slip"
+                        >
+                          <Printer size={16} strokeWidth={2.5} />
+                        </button>
 
                         {session?.role === 'superadmin' && slip.status === 'draft' && (
                           <button disabled={!!actionLoading} onClick={() => { void handleApprove(slip); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[9px] uppercase tracking-[0.2em] px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 shadow-sm">
@@ -408,6 +419,210 @@ export default function SalarySlipsPage() {
           </div>
         </div>
       )}
+
+      {viewingSlip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
+          <div className="bg-white border border-gray-100 rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-2xl my-8">
+            <div className="p-8 md:p-12 space-y-8">
+              {/* Header section (Non-printable controls) */}
+              <div className="flex items-center justify-between no-print">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Print Salary Slip</h2>
+                  <p className="text-gray-400 text-[9px] font-black uppercase tracking-[0.2em] mt-1">Official Financial Slip Report</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => window.print()}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-[0.2em] px-5 py-3 rounded-xl transition-all flex items-center gap-2 shadow-sm active:scale-95"
+                  >
+                    <Printer size={14} strokeWidth={2.5} /> Print Slip
+                  </button>
+                  <button
+                    onClick={() => setViewingSlip(null)}
+                    className="p-3 bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100 rounded-xl transition-all active:scale-90"
+                  >
+                    <Plus className="rotate-45" size={16} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Area */}
+              <div id="salary-slip-print" className="bg-white text-black p-4 md:p-8 border border-gray-100 rounded-[2rem] space-y-8">
+                {/* School Header */}
+                <div className="text-center space-y-1">
+                  <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 uppercase">KHAN EDUCATION SYSTEM</h1>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">Unified ERP & Fiscal Disbursement Control</p>
+                  <div className="h-[2px] bg-gray-900 w-24 mx-auto my-3" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">STAFF SALARY SLIP</h3>
+                </div>
+
+                {/* Meta details */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                  <div>
+                    <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">Employee ID</span>
+                    <span className="font-bold text-sm text-gray-900">{viewingSlip.employeeId || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">Employee Name</span>
+                    <span className="font-bold text-sm text-gray-900 uppercase">{viewingSlip.staffName}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">Department</span>
+                    <span className="font-bold text-sm text-gray-900 uppercase">{viewingSlip.department}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">Salary Month</span>
+                    <span className="font-bold text-sm text-gray-900">{viewingSlip.month}</span>
+                  </div>
+                </div>
+
+                {/* Metrics Breakdown Table */}
+                <div className="overflow-x-auto w-full border border-gray-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 text-[8px] font-black uppercase tracking-[0.25em]">
+                        <th className="py-4 px-6">Description / Attendance Breakdown</th>
+                        <th className="py-4 px-6 text-center">Value / Count</th>
+                        <th className="py-4 px-6 text-right">Amount (PKR)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
+                      <tr>
+                        <td className="py-4 px-6 text-gray-900 uppercase font-black text-[10px] tracking-tight">Basic Monthly Salary</td>
+                        <td className="py-4 px-6 text-center">-</td>
+                        <td className="py-4 px-6 text-right">Rs {viewingSlip.basicSalary?.toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6">Calendar Working Days</td>
+                        <td className="py-4 px-6 text-center font-black">{viewingSlip.workingDays} Days</td>
+                        <td className="py-4 px-6 text-right">-</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6">Active Days Present</td>
+                        <td className="py-4 px-6 text-center font-black text-emerald-600">{viewingSlip.presentDays} Days</td>
+                        <td className="py-4 px-6 text-right">-</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6">Paid Leaves Granted</td>
+                        <td className="py-4 px-6 text-center font-black text-indigo-600">{viewingSlip.paidLeaveDays || 0} Days</td>
+                        <td className="py-4 px-6 text-right">-</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6">Unpaid Leaves / Absents</td>
+                        <td className="py-4 px-6 text-center font-black text-red-500">{(viewingSlip.unpaidLeaveDays || 0) + (viewingSlip.absentDays || 0)} Days</td>
+                        <td className="py-4 px-6 text-right">-</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6 text-gray-900">Calculated Earned Pay</td>
+                        <td className="py-4 px-6 text-center">-</td>
+                        <td className="py-4 px-6 text-right">Rs {Math.round((viewingSlip.dailyWage || 0) * (viewingSlip.presentDays + (viewingSlip.paidLeaveDays || 0))).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6 text-emerald-700">Performance Incentive / Bonus</td>
+                        <td className="py-4 px-6 text-center">-</td>
+                        <td className="py-4 px-6 text-right text-emerald-700">+ Rs {viewingSlip.bonus?.toLocaleString() || '0'}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-4 px-6 text-red-700">Authorized Adjustments / Deductions</td>
+                        <td className="py-4 px-6 text-center">-</td>
+                        <td className="py-4 px-6 text-right text-red-700">- Rs {viewingSlip.otherDeductions?.toLocaleString() || '0'}</td>
+                      </tr>
+                      <tr className="bg-gray-50 font-black text-[11px] uppercase tracking-tight text-gray-900">
+                        <td className="py-5 px-6 uppercase font-black text-[12px]">Net Disbursed Amount</td>
+                        <td className="py-5 px-6 text-center">-</td>
+                        <td className="py-5 px-6 text-right text-lg font-black tracking-tight text-gray-900">Rs {viewingSlip.netSalary?.toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Rationales / Justifications */}
+                {(viewingSlip.bonus > 0 && viewingSlip.bonusReason) || (viewingSlip.otherDeductions > 0 && viewingSlip.deductionReason) ? (
+                  <div className="space-y-4 p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
+                    <h4 className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-400">Adjustment Rationales</h4>
+                    {viewingSlip.bonus > 0 && viewingSlip.bonusReason && (
+                      <div className="text-xs">
+                        <span className="font-black uppercase text-[8px] tracking-[0.1em] text-emerald-700 block mb-1">Bonus Credit Justification:</span>
+                        <p className="text-gray-700 italic font-medium">"{viewingSlip.bonusReason}"</p>
+                      </div>
+                    )}
+                    {viewingSlip.otherDeductions > 0 && viewingSlip.deductionReason && (
+                      <div className="text-xs">
+                        <span className="font-black uppercase text-[8px] tracking-[0.1em] text-red-700 block mb-1">Deduction Justification:</span>
+                        <p className="text-gray-700 italic font-medium">"{viewingSlip.deductionReason}"</p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* Print Signatures */}
+                <div className="grid grid-cols-3 gap-8 pt-16 text-center text-[10px] font-black uppercase tracking-widest text-gray-400">
+                  <div className="space-y-3">
+                    <div className="border-b border-gray-200 mx-auto w-3/4 h-8" />
+                    <span>PREPARED BY (CASHIER)</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="border-b border-gray-200 mx-auto w-3/4 h-8" />
+                    <span>AUTHORIZED (SUPERADMIN)</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="border-b border-gray-200 mx-auto w-3/4 h-8" />
+                    <span>RECEIVED BY (EMPLOYEE)</span>
+                  </div>
+                </div>
+
+                {/* Generation watermark */}
+                <div className="text-center pt-8 text-[8px] font-black uppercase tracking-[0.3em] text-gray-300">
+                  System Generated on {new Date(viewingSlip.createdAt).toLocaleString()} · KHANHUB ERP Payroll
+                </div>
+              </div>
+
+              {/* Action Controls Footer (Non-printable) */}
+              <div className="flex gap-3 justify-end no-print pt-4 border-t border-gray-50">
+                <button
+                  onClick={() => setViewingSlip(null)}
+                  className="px-6 py-3.5 rounded-xl border border-gray-200 text-gray-600 font-black text-xs uppercase tracking-[0.2em] hover:bg-gray-50 transition-all"
+                >
+                  Close Preview
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-[0.3em] px-6 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <Printer size={14} strokeWidth={2.5} /> Print/Download PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS style block for printing optimization */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #salary-slip-print, #salary-slip-print * {
+            visibility: visible !important;
+          }
+          #salary-slip-print {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            color: black !important;
+            padding: 2rem !important;
+            margin: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

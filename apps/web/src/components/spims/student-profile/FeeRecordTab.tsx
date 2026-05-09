@@ -230,7 +230,7 @@ export default function FeeRecordTab({
     );
   }
 
-  const visibleRows = readOnlyStudent ? rows.filter((r) => r.status === 'approved') : rows;
+  const visibleRows = rows;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -262,13 +262,13 @@ export default function FeeRecordTab({
                 <th className="px-4 py-3">Remaining</th>
                 <th className="px-4 py-3">Received by</th>
                 <th className="px-4 py-3">Type</th>
-                {!readOnlyStudent && <th className="px-4 py-3">Status</th>}
+                <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody>
               {visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={readOnlyStudent ? 6 : 7} className="px-4 py-10 text-center text-gray-400 font-medium">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400 font-medium">
                     No payments yet.
                   </td>
                 </tr>
@@ -281,15 +281,13 @@ export default function FeeRecordTab({
                     <td className="px-4 py-3 text-gray-600">Rs {(Number(r.remaining) || 0).toLocaleString()}</td>
                     <td className="px-4 py-3 text-gray-700">{r.receivedBy}</td>
                     <td className="px-4 py-3 capitalize text-gray-600">{r.type}</td>
-                    {!readOnlyStudent && (
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${statusClass(r.status)}`}
-                        >
-                          {r.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                    )}
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${statusClass(r.status)}`}
+                      >
+                        {r.status.replace('_', ' ')}
+                      </span>
+                    </td>
                   </tr>
                 ))
               )}
@@ -313,11 +311,9 @@ export default function FeeRecordTab({
                     </span>
                     <h4 className="text-lg font-black text-gray-900">Rs {(Number(r.amount) || 0).toLocaleString()}</h4>
                   </div>
-                  {!readOnlyStudent && (
-                    <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border ${statusClass(r.status)}`}>
-                      {r.status.replace('_', ' ')}
-                    </span>
-                  )}
+                  <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border ${statusClass(r.status)}`}>
+                    {r.status.replace('_', ' ')}
+                  </span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 pt-1">

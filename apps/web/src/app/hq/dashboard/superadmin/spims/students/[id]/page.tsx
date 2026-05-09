@@ -49,13 +49,25 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
         if (cachedTx) {
           txList = cachedTx;
         } else {
-          const q = query(
+          const qStudent = query(
             collection(db, 'spims_transactions'),
             where('studentId', '==', studentId),
             limit(50)
           );
-          const txSnap = await getDocs(q);
-          txList = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const qPatient = query(
+            collection(db, 'spims_transactions'),
+            where('patientId', '==', studentId),
+            limit(50)
+          );
+          const [snapStudent, snapPatient] = await Promise.all([
+            getDocs(qStudent),
+            getDocs(qPatient)
+          ]);
+          
+          const txMap = new Map<string, any>();
+          snapStudent.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+          snapPatient.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+          txList = Array.from(txMap.values());
           setCached(cacheKey, txList, 60);
         }
 
@@ -82,8 +94,10 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
   const totals = useMemo(() => {
     const approved = tx.filter((t) => String(t.status) === 'approved');
     const totalApproved = approved.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    const pendingCount = tx.filter((t) => String(t.status) === 'pending').length;
-    return { totalApproved, pendingCount };
+    const pending = tx.filter((t) => String(t.status) === 'pending' || String(t.status) === 'pending_cashier');
+    const pendingAmount = pending.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const pendingCount = pending.length;
+    return { totalApproved, pendingCount, pendingAmount };
   }, [tx]);
 
   if (loading) {
@@ -120,7 +134,9 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
     return '—';
   };
 
-  const remaining = Number(student.remaining ?? student.amountRemaining ?? 0) || 0;
+  const remaining = student.totalPackage !== undefined 
+    ? Math.max(0, (Number(student.totalPackage) || 0) - totals.totalApproved)
+    : (Number(student.remaining ?? student.amountRemaining ?? 0) || 0);
 
   // Render explicitly handled fields inside specific cards
   // Build a generic list for any other fields present in the database object.
@@ -173,8 +189,8 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
               <div className="text-xl font-black text-black dark:text-white tracking-tighter">{totals.pendingCount}</div>
             </div>
             <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-2">ID Fragment</div>
-              <div className="text-[10px] font-black font-mono text-black dark:text-black break-all">{studentId.substring(0, 16)}...</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-black mb-2">Pending Amount</div>
+              <div className="text-xl font-black text-black dark:text-white tracking-tighter">{formatPKR(totals.pendingAmount)}</div>
             </div>
           </div>
 
