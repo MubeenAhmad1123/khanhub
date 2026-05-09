@@ -3684,22 +3684,6 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Name</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.guardianName}
-                      onChange={e => setReportData({ ...reportData, guardianName: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Contact</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.contactNumber}
-                      onChange={e => setReportData({ ...reportData, contactNumber: e.target.value })}
-                    />
-                  </div>
-                  <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
                     <textarea
                       className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 resize-none"
@@ -3732,6 +3716,22 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   <div>
                     <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Duration Logic</label>
                     <p className="text-xs font-bold text-gray-500 uppercase italic">Monthly-based calculation (rounded up)</p>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Name</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                      value={reportData.guardianName}
+                      onChange={e => setReportData({ ...reportData, guardianName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Contact</label>
+                    <input
+                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                      value={reportData.contactNumber}
+                      onChange={e => setReportData({ ...reportData, contactNumber: e.target.value })}
+                    />
                   </div>
                 </div>
               </div>
