@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Plus, FileText, CheckCircle, DollarSign, Printer } from 'lucide-react';
+import { Loader2, Plus, FileText, CheckCircle, DollarSign, Printer, RefreshCw } from 'lucide-react';
 import type { HqStaff, SalarySlip } from '@/types/hq';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
@@ -94,20 +94,26 @@ export default function SalarySlipsPage() {
 
   const monthSlips = slips.filter(s => s.month === selectedMonth);
 
-  const generateSlip = async (member: HqStaff) => {
-    const existing = monthSlips.find(s => s.staffId === member.id);
-    if (existing) return;
+  const generateSlip = async (member: HqStaff, existingSlip?: SalarySlip) => {
+    if (!existingSlip) {
+      const redundant = monthSlips.find(s => s.staffId === member.id);
+      if (redundant) return;
+    }
     setGenerating(member.id);
 
     const dept = (member.department as StaffDept) || 'hq';
     const prefix = getDeptPrefix(dept);
     const salaryCol = `${prefix}_salary_records`;
 
-    const attSnap = await getDocs(
-      query(collection(db, `${prefix}_attendance`), where('staffId', '==', member.id))
-    ).catch(() => ({ docs: [] } as any));
+    // Fetch BOTH formats of staff ID to capture all attendance records accurately (fixes missed lookups)
+    const [attSnap1, attSnap2] = await Promise.all([
+      getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', member.id))).catch(() => ({ docs: [] } as any)),
+      getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', `${prefix}_${member.id}`))).catch(() => ({ docs: [] } as any))
+    ]);
 
-    const monthAttendance = attSnap.docs
+    const allDocs = [...attSnap1.docs, ...attSnap2.docs];
+
+    const monthAttendance = allDocs
       .map((d: any) => d.data())
       .filter((a: any) => {
         const dateVal = a.date;
@@ -130,11 +136,15 @@ export default function SalarySlipsPage() {
 
     const dailyWage = Math.floor((member.monthlySalary || 0) / 30);
     const absentDeduction = Math.round(absentDays * dailyWage);
-    const netSalary = Math.round((member.monthlySalary || 0) - absentDeduction);
+    
+    const currentBonus = existingSlip ? (existingSlip.bonus || 0) : 0;
+    const currentDeductions = existingSlip ? (existingSlip.otherDeductions || 0) : 0;
+    
+    const netSalary = Math.round((member.monthlySalary || 0) - absentDeduction + Number(currentBonus) - Number(currentDeductions));
 
-    const slip: Omit<SalarySlip, 'id'> = {
+    const slipData: any = {
       staffId: member.id,
-      employeeId: member.employeeId,
+      employeeId: member.employeeId || '',
       staffName: member.name,
       department: member.department,
       month: selectedMonth,
@@ -147,18 +157,31 @@ export default function SalarySlipsPage() {
       paidLeaveDays,
       unpaidLeaveDays,
       absentDeduction,
-      bonus: 0,
-      bonusReason: '',
-      otherDeductions: 0,
-      deductionReason: '',
+      bonus: currentBonus,
+      bonusReason: existingSlip?.bonusReason || '',
+      otherDeductions: currentDeductions,
+      deductionReason: existingSlip?.deductionReason || '',
       netSalary,
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      createdBy: session!.customId,
+      status: existingSlip?.status || 'draft',
+      createdAt: existingSlip?.createdAt || new Date().toISOString(),
+      createdBy: existingSlip?.createdBy || session!.customId,
+      updatedAt: new Date().toISOString(),
     };
 
-    const newDoc = await addDoc(collection(db, salaryCol), slip);
-    setSlips(prev => [...prev, { id: newDoc.id, _col: salaryCol, ...slip }]);
+    try {
+      if (existingSlip) {
+        const col = (existingSlip as any)._col || salaryCol;
+        await updateDoc(doc(db, col, existingSlip.id), slipData);
+        setSlips(prev => prev.map(s => s.id === existingSlip.id ? { ...s, ...slipData } : s));
+      } else {
+        const newDoc = await addDoc(collection(db, salaryCol), slipData);
+        setSlips(prev => [...prev, { id: newDoc.id, _col: salaryCol, ...slipData }]);
+      }
+    } catch (err) {
+      console.error('Error committing slip:', err);
+      alert('Failed to finalize slip operation. See console for details.');
+    }
+    
     setGenerating(null);
   };
 
@@ -313,6 +336,21 @@ export default function SalarySlipsPage() {
                             title="Edit Adjustments"
                           >
                             <Plus size={16} strokeWidth={2.5} />
+                          </button>
+                        )}
+
+                        {['manager', 'cashier'].includes(session?.role || '') && slip.status === 'draft' && (
+                          <button
+                            disabled={generating === member.id}
+                            onClick={() => { void generateSlip(member, slip); }}
+                            className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-all shadow-sm active:scale-90 disabled:opacity-50"
+                            title="Recalculate / Refresh Attendance Data"
+                          >
+                            {generating === member.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <RefreshCw size={16} strokeWidth={2.5} />
+                            )}
                           </button>
                         )}
 
