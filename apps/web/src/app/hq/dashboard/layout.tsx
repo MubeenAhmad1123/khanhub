@@ -366,36 +366,6 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         )}
 
-        {/* Navigation Mode Switcher - Modernized Pill */}
-        {role === 'superadmin' && activeDepts.length > 0 && (
-          <div className="px-4 pt-3 pb-2">
-            <div className="p-1 rounded-2xl bg-gray-50 flex flex-col gap-1">
-              <button
-                onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
-                  viewMode === 'hq'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                HQ Navigator
-              </button>
-              {activeDepts.map(dept => (
-                <button
-                  key={dept}
-                  onClick={() => setViewMode(dept)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
-                    viewMode === dept
-                      ? 'bg-white text-indigo-600 shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  {DEPT_INFO[dept]?.label} View
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto scrollbar-hide">
           <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-black/40">
