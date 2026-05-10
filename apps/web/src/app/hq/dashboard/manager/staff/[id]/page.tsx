@@ -263,6 +263,19 @@ export default function StaffProfilePage() {
     return Math.floor(Math.max(0, earnings - totalFines));
   }, [staff, attendance]);
 
+  const salaryDetails = useMemo(() => {
+    if (!staff) return { dailyWage: 0, absentDays: 0, absentDeduction: 0 };
+    const monthlySalary = Number(staff.monthlySalary) || 0;
+    const dailyWage = monthlySalary / 30;
+    const absentDays = attendance.filter(a => a.status === 'absent').length;
+    const absentDeduction = absentDays * dailyWage;
+    return {
+      dailyWage,
+      absentDays,
+      absentDeduction
+    };
+  }, [staff, attendance]);
+
   const presentDaysCount = useMemo(() => {
     return attendance.filter(a => a.status === 'present').length;
   }, [attendance]);
@@ -1447,12 +1460,27 @@ export default function StaffProfilePage() {
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] ${theme.light} ${theme.border} ${theme.shadow}`}>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Till Date Salary</p>
-                  <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>{presentDaysCount} Days</span>
+                  <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>{presentDaysCount} Present</span>
                 </div>
-                <p className={`text-xl font-black ${theme.text}`}>₨{tillDateSalary.toLocaleString()}</p>
-                <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-1">Calculated minus ₨{staff?.totalFines?.toLocaleString() || 0} fines</p>
+                <p className={`text-2xl font-black ${theme.text} mb-3`}>₨{tillDateSalary.toLocaleString()}</p>
+                
+                <div className="border-t border-dashed border-gray-200 pt-2.5 mt-2.5 space-y-1.5 text-[10px] uppercase font-bold text-gray-700">
+                  <div className="flex justify-between items-center">
+                    <span>Daily Wage (Base / 30):</span>
+                    <span className="font-black text-gray-900">₨{Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Absents:</span>
+                    <span className="font-black text-rose-500">{salaryDetails.absentDays} Days (-₨{Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Fines:</span>
+                    <span className="font-black text-rose-500">-₨{(staff?.totalFines || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Calculated dynamically for current marked attendance</p>
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-4 text-left border bg-amber-50/50 border-amber-100`}>

@@ -706,126 +706,92 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
   return (
     <Link
       href={`/hq/dashboard/superadmin/staff/${r.id}`}
-      className="group relative flex flex-col justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-[2rem] p-5 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-200/50 transition-all duration-300 h-full"
+      className="group flex flex-col bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full"
     >
-      <div className="flex flex-col gap-4">
-        {/* Department & Status Header */}
+      <div className="p-5 flex-1 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <span className={cn("text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm border", info.bg, info.text, info.border)}>
+          <span className={cn("text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-lg border shadow-sm", info.bg, info.text, info.border)}>
             {r.dept}
           </span>
-          <span className={cn(
-            "flex items-center gap-1.5 text-[9px] font-black uppercase px-3 py-1 rounded-full border shadow-sm select-none",
-            isPresent 
-              ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
-              : 'bg-rose-50 text-rose-600 border-rose-200'
-          )}>
-            <span className={cn("w-1.5 h-1.5 rounded-full", isPresent ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
-            <span>{isPresent ? 'Present' : 'Absent'}</span>
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={cn("w-2 h-2 rounded-full", isPresent ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
+            <span className={cn("text-[10px] font-bold uppercase", isPresent ? 'text-emerald-600' : 'text-rose-600')}>
+              {isPresent ? 'Online' : 'Offline'}
+            </span>
+          </div>
         </div>
 
-        {/* Name & Avatar */}
-        <div className="flex items-center gap-3">
-          <div className={cn("w-14 h-14 rounded-2xl border bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner transition-transform group-hover:scale-105 duration-300", info.border)}>
+        <div className="flex items-center gap-4">
+          <div className={cn("w-12 h-12 rounded-xl border bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden transition-transform duration-300 group-hover:scale-105", info.border)}>
             {r.photoUrl ? (
               <img src={r.photoUrl} alt={r.name} className="w-full h-full object-cover" />
             ) : (
-              <Users2 size={20} className={info.text} />
+              <Users2 size={20} className="text-gray-400" />
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight truncate group-hover:text-indigo-600 transition-colors">
+            <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
               {r.name}
             </h4>
-            <p className="text-[11px] font-semibold text-slate-400 truncate tracking-tight mt-0.5">
+            <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">
               {r.designation || r.role}
             </p>
-            <span className="inline-block px-2 py-0.5 rounded bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 text-[8px] font-bold text-slate-400 uppercase mt-1">
-              {r.seniority || 'Staff'}
-            </span>
           </div>
         </div>
 
-        {/* Small Tags Matrix */}
-        <div className="grid grid-cols-2 gap-2 mt-2 border-t border-slate-50 dark:border-slate-800/40 pt-3">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1">
-              <Shirt size={10} className="text-slate-400" />
-              <span className="text-[8px] font-bold text-slate-400 uppercase">Dress Code</span>
-            </div>
+        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-50">
+          <div onClick={(e) => e.preventDefault()}>
             <select
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
+              onClick={(e) => { e.stopPropagation(); }}
               onChange={(e) => onStatusChange(r, 'uniform', e.target.value as any)}
               value={r.todayUniformStatus || 'na'}
               className={cn(
-                "text-[9px] font-black uppercase tracking-tight py-1 px-2 rounded-xl mt-1 text-center cursor-pointer border bg-white dark:bg-slate-800 outline-none h-[28px] transition-all hover:scale-[1.02]",
-                r.todayUniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                r.todayUniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                r.todayUniformStatus === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                'bg-slate-50 text-slate-400 border-slate-100'
+                "w-full text-[10px] font-bold uppercase tracking-wide py-2 px-2 rounded-lg border bg-white appearance-none text-center cursor-pointer outline-none transition-all",
+                r.todayUniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                r.todayUniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                r.todayUniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                'bg-gray-50 text-gray-500 border-gray-200'
               )}
             >
-              <option value="na">N/A</option>
-              <option value="yes">Uniform Yes</option>
-              <option value="no">Uniform No</option>
-              <option value="incomplete">Incomplete</option>
+              <option value="na">Dress N/A</option>
+              <option value="yes">Dress OK</option>
+              <option value="no">Dress No</option>
+              <option value="incomplete">Dress Partial</option>
             </select>
           </div>
-
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1">
-              <Clock size={10} className="text-slate-400" />
-              <span className="text-[8px] font-bold text-slate-400 uppercase">Duty status</span>
-            </div>
+          <div onClick={(e) => e.preventDefault()}>
             <select
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
+              onClick={(e) => { e.stopPropagation(); }}
               onChange={(e) => onStatusChange(r, 'duty', e.target.value as any)}
               value={r.todayDutyStatus || 'na'}
               className={cn(
-                "text-[9px] font-black uppercase tracking-tight py-1 px-2 rounded-xl mt-1 text-center cursor-pointer border bg-white dark:bg-slate-800 outline-none h-[28px] transition-all hover:scale-[1.02]",
-                r.todayDutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                r.todayDutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                r.todayDutyStatus === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                'bg-slate-50 text-slate-400 border-slate-100'
+                "w-full text-[10px] font-bold uppercase tracking-wide py-2 px-2 rounded-lg border bg-white appearance-none text-center cursor-pointer outline-none transition-all",
+                r.todayDutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                r.todayDutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                r.todayDutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                'bg-gray-50 text-gray-500 border-gray-200'
               )}
             >
-              <option value="na">N/A</option>
-              <option value="yes">Duty Yes</option>
-              <option value="no">Duty No</option>
-              <option value="incomplete">Incomplete</option>
+              <option value="na">Duty N/A</option>
+              <option value="yes">Duty Done</option>
+              <option value="no">Duty Missed</option>
+              <option value="incomplete">Duty Partial</option>
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Dynamic Performance Matrix & Score */}
-      <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-3 mt-4">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-bold text-slate-400 uppercase">Score:</span>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400">
-            <span className="text-xs font-black leading-none">
-              {r.todayDailyScore || 0}
-            </span>
-            <span className="text-[9px] font-bold opacity-75">/5</span>
+        <div className="mt-auto flex items-center justify-between pt-3 border-t border-gray-50">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">Score</span>
+            <div className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[11px] font-extrabold">
+              {r.todayDailyScore || 0}/5
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[9px] font-bold text-slate-400 uppercase">Fines:</span>
-          <span className={cn(
-            "text-xs font-black px-2 py-0.5 rounded-full",
-            Number(r.totalFines || 0) > 0 
-              ? 'bg-rose-50 border border-rose-200 text-rose-700 font-extrabold' 
-              : 'text-slate-700 dark:text-slate-300'
-          )}>
-            ₨{Number(r.totalFines || 0).toLocaleString()}
-          </span>
+          {Number(r.totalFines || 0) > 0 && (
+            <span className="text-[11px] font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">
+              ₨{Number(r.totalFines || 0).toLocaleString()}
+            </span>
+          )}
         </div>
       </div>
     </Link>

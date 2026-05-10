@@ -35,7 +35,6 @@ const BASE_CATEGORIES = [
   { id: 'fee', name: 'Admission / Fees', appliesTo: 'income' },
   { id: 'donation', name: 'Donation', appliesTo: 'income' },
   { id: 'canteen', name: 'Canteen Funds', appliesTo: 'both' },
-  { id: 'staff_salary', name: 'Staff Salary', appliesTo: 'expense' },
   { id: 'utilities', name: 'Utilities', appliesTo: 'expense' },
   { id: 'maintenance', name: 'Maintenance', appliesTo: 'expense' },
   { id: 'other_income', name: 'Other Income', appliesTo: 'income' },
@@ -135,7 +134,7 @@ export default function CashierStationPage() {
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>('');
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [searchType, setSearchType] = useState<'patient' | 'student' | 'staff' | 'other'>('patient');
+  const [searchType, setSearchType] = useState<'patient' | 'student' | 'other'>('patient');
 
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
@@ -205,10 +204,14 @@ export default function CashierStationPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const activeDepartment = DEPARTMENTS.find((d) => d.code === departmentCode) || DEPARTMENTS[0];
-  const allCategories = useMemo(() => [...BASE_CATEGORIES, ...customCategories], [customCategories]);
+  const allCategories = useMemo(() => {
+    return [...BASE_CATEGORIES, ...customCategories].filter(
+      (c) => c.id !== 'staff_salary' && c.id !== 'salary' && !c.name.toLowerCase().includes('salary') && !c.name.toLowerCase().includes('staff')
+    );
+  }, [customCategories]);
   const selectedCategory = allCategories.find((c) => c.id === selectedCategoryId);
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
-  const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
+  const isStaffMode = false; // Cashiers cannot manage staff details or salaries
   
   // 1. Consolidated History Filtering & Sorting
   const historyFiltered = useMemo(() => {
@@ -376,7 +379,7 @@ export default function CashierStationPage() {
       const col = collection(db, dept.txCollection);
 
       let list: any[] = [];
-      const staffMode = entity._entityType === 'staff' || (targetDeptCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary');
+      const staffMode = entity._entityType === 'staff';
 
       if (targetDeptCode === 'spims' && !staffMode) {
         const [txSnap, feesSnap] = await Promise.all([
@@ -781,20 +784,6 @@ export default function CashierStationPage() {
         { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon' },
         { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
         { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center' },
-        { coll: 'hq_users', code: 'hq', label: 'HQ Users' },
-        { coll: 'rehab_users', code: 'rehab', label: 'Rehab Staff' },
-        { coll: 'spims_users', code: 'spims', label: 'SPIMS Staff' },
-        { coll: 'hospital_users', code: 'hospital', label: 'Hospital Staff' },
-        { coll: 'sukoon_users', code: 'sukoon-center', label: 'Sukoon Staff' },
-        { coll: 'welfare_users', code: 'welfare', label: 'Welfare Staff' },
-        { coll: 'jobcenter_users', code: 'job-center', label: 'Job Center Staff' },
-        { coll: 'hq_staff', code: 'hq', label: 'HQ Personnel' },
-        { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Personnel' },
-        { coll: 'spims_staff', code: 'spims', label: 'SPIMS Personnel' },
-        { coll: 'hospital_staff', code: 'hospital', label: 'Hospital Personnel' },
-        { coll: 'sukoon_staff', code: 'sukoon-center', label: 'Sukoon Personnel' },
-        { coll: 'welfare_staff', code: 'welfare', label: 'Welfare Personnel' },
-        { coll: 'jobcenter_staff', code: 'job-center', label: 'Job Center Personnel' },
       ];
 
       for (const source of sources) {
@@ -849,9 +838,6 @@ export default function CashierStationPage() {
       }
       if (searchType === 'student') {
         return (p._entityType === 'student' || p._deptCode === 'spims') && (p._entityType !== 'staff');
-      }
-      if (searchType === 'staff') {
-        return p._entityType === 'staff' || p._collection?.includes('users') || p._collection?.includes('staff');
       }
       return true;
     });
@@ -1012,34 +998,7 @@ export default function CashierStationPage() {
         }
       }
 
-      if (isStaffMode && selectedCategoryId === 'staff_salary' && selectedEntity) {
-        const prefix = departmentCode.replace('-', '_');
-        const entityCollection = prefix === 'hq' ? 'hq_users' : `${prefix}_staff`;
-        
-        await updateDoc(doc(db, entityCollection, selectedEntity.id), {
-          totalFines: 0,
-          presentDays: 0,
-          lastSalaryPaidAt: Timestamp.now()
-        }).catch(err => console.error("Failed to reset staff cycle:", err));
 
-        try {
-          const finesSnap = await getDocs(query(
-            collection(db, `${prefix}_fines`),
-            where('staffId', '==', selectedEntity.id),
-            where('status', '==', 'unpaid')
-          ));
-          
-          for (const fineDoc of finesSnap.docs) {
-            await updateDoc(fineDoc.ref, { 
-              status: 'paid', 
-              paidAt: Timestamp.now(),
-              paymentTxId: txRef.id 
-            });
-          }
-        } catch (err) {
-          console.error("Failed to mark fines as paid:", err);
-        }
-      }
 
       void sendHqPushNotification({
         recipientId: superadminRecipient.customId,
@@ -1193,7 +1152,7 @@ export default function CashierStationPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 p-2 bg-zinc-100 rounded-[2rem]">
-                  {(['patient', 'student', 'staff', 'other'] as const).map((t) => (
+                  {(['patient', 'student', 'other'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setSearchType(t)}

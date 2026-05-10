@@ -113,13 +113,11 @@ export default function SalarySlipsPage() {
     const legacyLeaveDays = monthAttendance.filter((a: any) => a.status === 'leave').length;
     const absentDays = monthAttendance.filter((a: any) => a.status === 'absent').length;
 
-    const [yearStr, monthStr] = selectedMonth.split('-');
-    const workingDays = new Date(Number(yearStr), Number(monthStr), 0).getDate();
+    const workingDays = 30;
 
-    const dailyWage = (member.monthlySalary || 0) / workingDays;
-    const totalPaidDays = presentDays + paidLeaveDays;
-    const basePay = Math.round(dailyWage * totalPaidDays);
-    const netSalary = basePay;
+    const dailyWage = Math.floor((member.monthlySalary || 0) / 30);
+    const absentDeduction = Math.round(absentDays * dailyWage);
+    const netSalary = Math.round((member.monthlySalary || 0) - absentDeduction);
 
     const slip: Omit<SalarySlip, 'id'> = {
       staffId: member.id,
@@ -135,7 +133,7 @@ export default function SalarySlipsPage() {
       leaveDays: paidLeaveDays + unpaidLeaveDays + legacyLeaveDays,
       paidLeaveDays,
       unpaidLeaveDays,
-      absentDeduction: 0,
+      absentDeduction,
       bonus: 0,
       bonusReason: '',
       otherDeductions: 0,
@@ -155,8 +153,8 @@ export default function SalarySlipsPage() {
     if (!editingSlip) return;
     const { bonus, bonusReason, otherDeductions, deductionReason } = editValues;
 
-    const basePay = Math.round((editingSlip.dailyWage || 0) * (editingSlip.presentDays + (editingSlip.paidLeaveDays || 0)));
-    const netSalary = Math.round(basePay + Number(bonus) - Number(otherDeductions));
+    const absentDeduction = Math.round((editingSlip.absentDays || 0) * (editingSlip.dailyWage || 0));
+    const netSalary = Math.round(editingSlip.basicSalary - absentDeduction - Number(otherDeductions) + Number(bonus));
 
     if ((Number(bonus) > 0 || netSalary > editingSlip.basicSalary) && !bonusReason) {
       alert('The salary exceeds standard base pay. Please provide an official justification / reason for the bonus.');
@@ -488,7 +486,7 @@ export default function SalarySlipsPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
                       <tr>
-                        <td className="py-4 px-6 text-gray-900 uppercase font-black text-[10px] tracking-tight">Basic Monthly Salary</td>
+                        <td className="py-4 px-6 text-gray-900">Basic Monthly Salary</td>
                         <td className="py-4 px-6 text-center">-</td>
                         <td className="py-4 px-6 text-right">Rs {viewingSlip.basicSalary?.toLocaleString()}</td>
                       </tr>
@@ -512,11 +510,13 @@ export default function SalarySlipsPage() {
                         <td className="py-4 px-6 text-center font-black text-red-500">{(viewingSlip.unpaidLeaveDays || 0) + (viewingSlip.absentDays || 0)} Days</td>
                         <td className="py-4 px-6 text-right">-</td>
                       </tr>
-                      <tr>
-                        <td className="py-4 px-6 text-gray-900">Calculated Earned Pay</td>
-                        <td className="py-4 px-6 text-center">-</td>
-                        <td className="py-4 px-6 text-right">Rs {Math.round((viewingSlip.dailyWage || 0) * (viewingSlip.presentDays + (viewingSlip.paidLeaveDays || 0))).toLocaleString()}</td>
-                      </tr>
+                      {viewingSlip.absentDeduction > 0 && (
+                        <tr>
+                          <td className="py-4 px-6 text-red-700">Absent Days Deduction</td>
+                          <td className="py-4 px-6 text-center text-red-700">{viewingSlip.absentDays || 0} Days</td>
+                          <td className="py-4 px-6 text-right text-red-700">- Rs {viewingSlip.absentDeduction?.toLocaleString()}</td>
+                        </tr>
+                      )}
                       <tr>
                         <td className="py-4 px-6 text-emerald-700">Performance Incentive / Bonus</td>
                         <td className="py-4 px-6 text-center">-</td>

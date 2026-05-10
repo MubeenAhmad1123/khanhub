@@ -27,6 +27,9 @@ import {
 import { toDate, formatDateDMY } from '@/lib/utils';
 import { EditStaffModal } from '@/components/hq/superadmin/EditStaffModal';
 import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
+import { logoutPortalUser } from '@/app/hq/actions/logoutPortalUser';
+import { deletePortalUser } from '@/app/hq/actions/deletePortalUser';
+
 
 export default function SuperadminStaffProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -37,6 +40,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
   // Modals
   const [showEdit, setShowEdit] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -122,6 +126,45 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
     window.location.href = url;
   };
 
+  const handleForceLogout = async () => {
+    if (!staff) return;
+    if (!confirm(`Are you sure you want to force logout ${staff.name}? This will revoke all active sessions.`)) return;
+    
+    setActionLoading(true);
+    try {
+      const res = await logoutPortalUser(staff.staffId, staff.dept as any);
+      if (res.success) {
+        alert('User successfully logged out of all devices.');
+      } else {
+        alert(res.error || 'Failed to logout user.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!staff) return;
+    if (!confirm(`CRITICAL WARNING: Are you sure you want to PERMANENTLY DELETE ${staff.name}'s profile and access? This action CANNOT be undone.`)) return;
+    
+    setActionLoading(true);
+    try {
+      const res = await deletePortalUser(staff.staffId, staff.dept as any);
+      if (res.success) {
+        alert('User profile has been successfully deleted.');
+        router.push('/hq/dashboard/superadmin/staff');
+      } else {
+        alert(res.error || 'Failed to delete user profile.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'An error occurred.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
@@ -196,6 +239,26 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
               <Edit2 className="h-4 w-4" />
               Edit Profile
             </button>
+          )}
+          {isSuperadmin && (
+            <>
+              <button
+                onClick={handleForceLogout}
+                disabled={actionLoading}
+                className="hidden sm:flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest text-zinc-700 transition-all hover:bg-zinc-50 shadow-sm disabled:opacity-50"
+              >
+                <Lock className="h-3 w-3" />
+                Force Logout
+              </button>
+              <button
+                onClick={handleDeleteProfile}
+                disabled={actionLoading}
+                className="hidden sm:flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-red-600 transition-all hover:bg-red-100 shadow-sm disabled:opacity-50"
+              >
+                <AlertTriangle className="h-3 w-3" />
+                Delete Profile
+              </button>
+            </>
           )}
           <Link 
             href={`/hq/dashboard/superadmin/audit?entity=${staff.name}`}
@@ -363,15 +426,64 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
 
           {/* Payroll History Section */}
           <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-xl shadow-gray-200/50 dark:border-white/5 dark:bg-[#111] dark:shadow-none">
-            <div className="border-b border-gray-50 bg-gray-50/50 px-6 py-4 dark:border-white/5 dark:bg-white/5">
+            <div className="border-b border-gray-50 bg-gray-50/50 px-6 py-4 dark:border-white/5 dark:bg-white/5 flex items-center justify-between">
                <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
                  <CreditCard className="h-4 w-4" />
-                 Payroll History
+                 Payroll &amp; Salary Estimation
                </h3>
+               <span className={`inline-flex items-center rounded-lg ${theme.accent} px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-white shadow-sm`}>
+                 Live Calculations
+               </span>
             </div>
-            <div className="p-8 text-center text-black dark:text-black">
-               <p className="font-bold text-sm">Connection to Payroll module pending.</p>
-               <p className="text-xs mt-1 opacity-70">Staff financial data and payouts will be listed here soon.</p>
+            <div className="p-8">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-2xl bg-gray-50 dark:bg-white/5 p-5 border border-gray-100 dark:border-white/10">
+                  <p className="text-[10px] font-black text-black dark:text-white opacity-40 uppercase tracking-widest mb-1">Monthly Base Salary</p>
+                  <p className="text-xl font-black text-gray-900 dark:text-white">₨{(Number(staff.monthlySalary) || 0).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Contractual Base Wage</p>
+                </div>
+                <div className="rounded-2xl bg-gray-50 dark:bg-white/5 p-5 border border-gray-100 dark:border-white/10">
+                  <p className="text-[10px] font-black text-black dark:text-white opacity-40 uppercase tracking-widest mb-1">Calculated Daily Rate</p>
+                  <p className="text-xl font-black text-gray-900 dark:text-white">₨{Math.floor((Number(staff.monthlySalary) || 0) / 30).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Divided by 30 Days standard</p>
+                </div>
+                <div className="rounded-2xl bg-gray-50 dark:bg-white/5 p-5 border border-gray-100 dark:border-white/10 sm:col-span-2 lg:col-span-1">
+                  <p className="text-[10px] font-black text-black dark:text-white opacity-40 uppercase tracking-widest mb-1">Current Month Attendance</p>
+                  <p className="text-xl font-black text-gray-900 dark:text-white">{staff.presentCount || 0} Present Days</p>
+                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">{Math.max(0, 30 - (staff.presentCount || 0))} days absent deduction</p>
+                </div>
+              </div>
+
+              <div className={`mt-6 rounded-[2rem] border-2 ${theme.border} ${theme.light} p-6 shadow-xl ${theme.shadow} transition-all hover:scale-[1.01]`}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Till-the-Date Earned Salary</p>
+                      <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>
+                        {staff.presentCount || 0} Days Present
+                      </span>
+                    </div>
+                    <p className={`text-3xl font-black ${theme.text}`}>
+                      ₨{Math.floor(Math.max(0, (Math.floor((Number(staff.monthlySalary) || 0) / 30) * (staff.presentCount || 0)) - (staff.totalFines || 0))).toLocaleString()}
+                    </p>
+                    <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-1">
+                      Formula: (Daily Rate × Present Days) - Unpaid Fines (₨{staff.totalFines || 0})
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:text-right">
+                    <div>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest">Fine Deductions</p>
+                      <p className="text-xs font-bold text-rose-600">- ₨{(staff.totalFines || 0).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-black uppercase tracking-widest">Absent Deductions</p>
+                      <p className="text-xs font-bold text-rose-600">
+                        - ₨{Math.floor(Math.max(0, 30 - (staff.presentCount || 0)) * Math.floor((Number(staff.monthlySalary) || 0) / 30)).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
