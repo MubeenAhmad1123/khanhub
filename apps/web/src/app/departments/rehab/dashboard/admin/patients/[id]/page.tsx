@@ -26,6 +26,7 @@ import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
+import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -1580,6 +1581,12 @@ export default function PatientDetailPage() {
 
   return (
     <div className="w-full overflow-x-hidden pb-20 bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen">
+      <SuperAdminPortalToolbar
+        dept="rehab"
+        entityId={patientId}
+        entityType="patient"
+        entityName={patient?.name}
+      />
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
 
         {/* Top Link - Back Navigation */}

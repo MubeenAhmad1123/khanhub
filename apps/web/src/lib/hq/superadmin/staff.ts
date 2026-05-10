@@ -210,11 +210,13 @@ export async function listStaffCards({
   status,
   role,
   fullEnrichment = false,
+  includeTodayStats = true,
 }: {
   dept: 'all' | StaffDept;
   status: 'all' | 'active' | 'inactive';
   role: 'all' | 'admin' | 'staff' | 'cashier' | 'personnel';
   fullEnrichment?: boolean;
+  includeTodayStats?: boolean;
 }): Promise<StaffCardRow[]> {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -261,11 +263,13 @@ export async function listStaffCards({
 
   // 2. Batch Fetch Today's Stats per Department
   const deptTodayStats: Record<string, Record<string, any>> = {};
-  await Promise.all(targetDepts.map(async (d) => {
-    const staffConfigs: Record<string, any> = {};
-    rows.filter(r => r._dept === d).forEach(r => staffConfigs[r.id] = r);
-    deptTodayStats[d] = await loadDeptTodayStats(d, todayStr, staffConfigs);
-  }));
+  if (includeTodayStats) {
+    await Promise.all(targetDepts.map(async (d) => {
+      const staffConfigs: Record<string, any> = {};
+      rows.filter(r => r._dept === d).forEach(r => staffConfigs[r.id] = r);
+      deptTodayStats[d] = await loadDeptTodayStats(d, todayStr, staffConfigs);
+    }));
+  }
 
   // 3. Enrich Rows
   const enriched = await Promise.all(

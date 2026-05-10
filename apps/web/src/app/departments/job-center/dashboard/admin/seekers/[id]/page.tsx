@@ -18,6 +18,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 
 import RegistrationTab from '@/components/job-center/seeker-profile/RegistrationTab';
 
@@ -692,6 +693,12 @@ export default function SeekerDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
       <div className="max-w-5xl mx-auto space-y-6">
+        <SuperAdminPortalToolbar 
+          dept="job-center"
+          entityId={seekerId}
+          entityType="seeker"
+          entityName={seeker?.name}
+        />
         
         {/* Top Link */}
         <Link 

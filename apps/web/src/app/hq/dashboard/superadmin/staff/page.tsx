@@ -300,10 +300,21 @@ export default function SuperadminStaffPage() {
     if (!session || session.role !== 'superadmin') return;
     let alive = true;
     setLoading(true);
-    // Initially fetch basic data only (No expensive historical enrichment)
-    listStaffCards({ dept, status, role: 'personnel', fullEnrichment: false })
-      .then((r) => alive && setRows(r))
-      .finally(() => alive && setLoading(false));
+    // Phase 1: Load base roster data immediately (Instant paint)
+    listStaffCards({ dept, status, role: 'personnel', fullEnrichment: false, includeTodayStats: false })
+      .then((r) => {
+        if (!alive) return;
+        setRows(r);
+        setLoading(false);
+        // Phase 2: Layer in real-time stats in background
+        listStaffCards({ dept, status, role: 'personnel', fullEnrichment: false, includeTodayStats: true })
+          .then((enriched) => {
+            if (alive) setRows(enriched);
+          });
+      })
+      .catch(() => {
+        if (alive) setLoading(false);
+      });
     return () => { alive = false; };
   }, [session, dept, status]);
 

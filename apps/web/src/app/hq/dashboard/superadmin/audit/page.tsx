@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { subscribeUnifiedAuditFeed } from '@/lib/hq/superadmin/audit';
 import { CsvExportButton } from '@/components/hq/superadmin/CsvExportButton';
@@ -70,9 +70,11 @@ export default function SuperadminAuditPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   
+  const searchParams = useSearchParams();
+  
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(searchParams.get('q') || '');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [actionType, setActionType] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<DateRange>('all');

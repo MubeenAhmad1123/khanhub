@@ -17,6 +17,7 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
+import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 
 import DailySheetTab from '@/components/welfare/child-profile/DailySheetTab';
 import ProgressTab from '@/components/welfare/child-profile/ProgressTab';
@@ -670,6 +671,12 @@ export default function ChildDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
       <div className="max-w-5xl mx-auto space-y-6">
+        <SuperAdminPortalToolbar 
+          dept="welfare"
+          entityId={childId}
+          entityType="child"
+          entityName={child?.name}
+        />
         
         {/* Top Link */}
         <Link 

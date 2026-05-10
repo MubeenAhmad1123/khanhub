@@ -28,6 +28,13 @@ export type PortalUserRow = {
   isActive: boolean;
   lastLoginAt?: unknown;
   createdAt?: unknown;
+  // Linked Entity Reference IDs
+  patientId?: string;
+  clientId?: string;
+  studentId?: string;
+  childId?: string;
+  seekerId?: string;
+  employerId?: string;
 };
 
 function normalizeUser(portal: Portal, uid: string, data: any): PortalUserRow {
@@ -43,6 +50,12 @@ function normalizeUser(portal: Portal, uid: string, data: any): PortalUserRow {
     isActive: data.isActive !== false,
     lastLoginAt: data.lastLoginAt,
     createdAt: data.createdAt,
+    patientId: data.patientId,
+    clientId: data.clientId,
+    studentId: data.studentId,
+    childId: data.childId,
+    seekerId: data.seekerId,
+    employerId: data.employerId,
   };
 }
 

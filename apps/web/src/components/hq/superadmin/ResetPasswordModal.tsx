@@ -7,7 +7,7 @@ import { resetPortalUserPassword } from '@/app/hq/actions/resetPortalUserPasswor
 
 interface ResetPasswordModalProps {
   uid: string;
-  portal: 'hq' | 'rehab' | 'spims';
+  portal: 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
   onClose: () => void;
   isPasswordSet?: boolean;
 }

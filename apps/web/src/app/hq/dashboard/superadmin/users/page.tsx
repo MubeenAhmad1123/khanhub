@@ -36,6 +36,7 @@ export default function SuperadminUsersPage() {
   const [resetTarget, setResetTarget] = useState<PortalUserRow | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [cache, setCache] = useState<Record<string, PortalUserRow[]>>({});
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -44,11 +45,21 @@ export default function SuperadminUsersPage() {
 
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
-    setLoading(true);
+    
+    // Instant Cache hydration
+    if (cache[tab]) {
+      setRows(cache[tab]);
+      setLoading(false);
+    } else {
+      setRows([]);
+      setLoading(true);
+    }
+
     const unsub = subscribePortalUsers(
       tab,
       (r) => {
         setRows(r);
+        setCache(prev => ({ ...prev, [tab]: r }));
         setLoading(false);
       },
       () => setLoading(false)
@@ -162,9 +173,20 @@ export default function SuperadminUsersPage() {
                 it: 'border-slate-200 bg-slate-50 text-slate-700',
               }[u.portal as string] || 'border-gray-200 bg-gray-50 text-gray-700';
 
+              // Determine deep link URL
+              let href = `/hq/dashboard/superadmin/staff/${u.id}`;
+              const p = u.portal;
+              if (p === 'rehab' && u.patientId) href = `/departments/rehab/dashboard/admin/patients/${u.patientId}`;
+              else if (p === 'hospital' && u.patientId) href = `/departments/hospital/dashboard/admin/patients/${u.patientId}`;
+              else if (p === 'sukoon' && u.clientId) href = `/departments/sukoon/dashboard/admin/clients/${u.clientId}`;
+              else if (p === 'welfare' && u.childId) href = `/departments/welfare/dashboard/admin/children/${u.childId}`;
+              else if (p === 'spims' && u.studentId) href = `/departments/spims/dashboard/admin/students/${u.studentId}`;
+              else if (p === 'job-center' && u.seekerId) href = `/departments/job-center/dashboard/admin/seekers/${u.seekerId}`;
+              else if (p === 'job-center' && u.employerId) href = `/departments/job-center/dashboard/admin/employers/${u.employerId}`;
+
               return (
                 <Link
-                  href={`/hq/dashboard/superadmin/staff/${u.id}`}
+                  href={href}
                   key={u.id}
                   className="group relative flex flex-col bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                 >
