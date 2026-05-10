@@ -351,8 +351,10 @@ export default function StaffProfilePage() {
       }
     });
 
-    // 5. Growth Points: Total points from history
-    const gpScore = growthHistory.reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+    // 5. Growth Points: Total points from history filtered by selected month
+    const gpScore = growthHistory
+      .filter(item => item.month === selectedMonth)
+      .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
 
     return {
       attendance: attScore,
@@ -362,7 +364,7 @@ export default function StaffProfilePage() {
       growthPoint: gpScore,
       workingDays: days.length
     };
-  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth]);
+  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth, selectedMonth]);
 
   const fetchData = useCallback(async () => {
     if (!staffId) return;
@@ -897,14 +899,7 @@ export default function StaffProfilePage() {
         }
       }
 
-      // Sync to primary staff document for dashboard visibility
-      const staffDocRef = doc(db, `${slug}_users`, uid);
-      await updateDoc(staffDocRef, {
-        dressCodeConfig: nextItems,
-        updatedAt: serverTimestamp()
-      }).catch(() => {
-        console.warn(`Could not sync dress to ${slug}_users/${uid}`);
-      });
+      // Sync step removed to protect master configuration from historical overrides.
     } catch (err) {
       toast.error("Update failed");
       fetchData();
@@ -945,14 +940,7 @@ export default function StaffProfilePage() {
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      // Sync to primary staff document for dashboard visibility
-      const staffDocRef = doc(db, `${slug}_users`, uid);
-      await updateDoc(staffDocRef, {
-        duties: nextDuties,
-        updatedAt: serverTimestamp()
-      }).catch(() => {
-        console.warn(`Could not sync duties to ${slug}_users/${uid}`);
-      });
+      // Sync step removed to protect master configuration from historical overrides.
 
       // Check if ALL duties are marked as 'done'
       const config = staff.dutyConfig || [];
@@ -3205,9 +3193,21 @@ export default function StaffProfilePage() {
                               </div>
                             </div>
 
-                            <div className="md:text-right">
-                              <p className={`text-2xl font-black text-gray-900`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
-                              <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Net Payable Amount</p>
+                            <div className="flex items-center gap-4 md:self-start">
+                              <button
+                                onClick={() => {
+                                  const prefix = getDeptPrefix(staff?.dept as StaffDept);
+                                  window.open(`/hq/print-salary/${prefix}/${record.id}`, '_blank');
+                                }}
+                                className="p-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm active:scale-90"
+                                title="Print Salary Slip"
+                              >
+                                <Printer size={18} strokeWidth={2.5} />
+                              </button>
+                              <div className="md:text-right">
+                                <p className={`text-2xl font-black text-gray-900`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
+                                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">Net Payable Amount</p>
+                              </div>
                             </div>
                           </div>
 
@@ -3268,7 +3268,7 @@ export default function StaffProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest bg-gray-900 text-white`}>
-                        Total Score: {computedScores.attendance + computedScores.punctuality + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                        Total Score: {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
                       </span>
                       <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
                         <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
@@ -3278,10 +3278,10 @@ export default function StaffProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                      { label: 'Attendance', score: computedScores.attendance, max: (computedScores.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
-                      { label: 'Punctuality', score: computedScores.punctuality, max: (computedScores.workingDays || 0) * 1, icon: <Clock size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                      { label: 'Uniform', score: computedScores.uniform, max: (computedScores.workingDays || 0) * 1, icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                      { label: 'Duties', score: computedScores.working, max: (computedScores.workingDays || 0) * 1, icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      { label: 'Attendance', score: computedScores.attendance, max: (computedScores.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                      { label: 'Uniform', score: computedScores.uniform, max: (computedScores.workingDays || 0) * 1, icon: <Shield size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      { label: 'Working', score: computedScores.working, max: (computedScores.workingDays || 0) * 1, icon: <ClipboardList size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                      { label: 'Growth Point', score: computedScores.growthPoint, max: (computedScores.workingDays || 0) * 1, icon: <TrendingUp size={18} />, color: 'text-orange-500', bg: 'bg-orange-500/10' },
                     ].map((stat, i) => (
                       <div key={i} className={`p-6 rounded-3xl border bg-gray-50 border-gray-200/50 flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>

@@ -38,9 +38,16 @@ export async function awardStaffPoint(
     const app = getAdminApp();
     const db = getFirestore(app);
     
-    const prefix = dept.replace('-', '_');
+    const getPrefix = (d: string) => {
+      const norm = String(d || '').toLowerCase();
+      if (norm === 'job-center') return 'jobcenter';
+      if (norm === 'social-media') return 'media';
+      return norm.replace('-', '_');
+    };
+    
+    const prefix = getPrefix(dept);
     const pointsCol = `${prefix}_growth_points`;
-    const usersCol = dept === 'hq' ? 'hq_users' : (dept === 'job-center' ? 'jobcenter_users' : `${prefix}_users`);
+    const usersCol = `${prefix}_users`;
     
     // 1. Check if already awarded for this category/date
     const existing = await db.collection(pointsCol)
