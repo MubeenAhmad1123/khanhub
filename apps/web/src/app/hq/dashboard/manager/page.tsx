@@ -9,7 +9,7 @@ import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
   ArrowRight, Loader2, AlertTriangle, TrendingUp,
-  ChevronRight, KeyRound, Calendar, Send, Activity
+  ChevronRight, KeyRound, Calendar, Send, Activity, Lock
 } from 'lucide-react';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -161,7 +161,7 @@ export default function ManagerOverviewPage() {
   }, [session, sessionLoading, router]);
 
   useEffect(() => {
-    if (!session || session.role !== 'manager') return;
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) return;
 
     const fetchData = async () => {
       try {
@@ -472,7 +472,8 @@ export default function ManagerOverviewPage() {
                 { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-indigo-600" /> },
                 { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-emerald-600" /> },
                 { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-blue-600" /> },
-                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-amber-600" /> }
+                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-amber-600" /> },
+                { href: '/hq/dashboard/manager/passwords', label: 'Credential Hub', icon: <Lock className="text-rose-600" /> }
               ].map((op, i) => (
                 <Link key={i} href={op.href} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all group">
                   <div className="flex items-center gap-4">

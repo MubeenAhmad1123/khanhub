@@ -194,7 +194,7 @@ export default function ManagerUsersPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'manager') {
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
       router.push('/hq/login');
       return;
     }
@@ -227,7 +227,7 @@ export default function ManagerUsersPage() {
   };
 
   useEffect(() => {
-    if (!session || session.role !== 'manager') return;
+    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) return;
     fetchUsers();
     fetchCounts();
   }, [session, formData.department, activeTab]);

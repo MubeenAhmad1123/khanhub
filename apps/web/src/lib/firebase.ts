@@ -24,7 +24,8 @@ export const db = typeof window !== 'undefined'
   ? initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
-      })
+      }),
+      experimentalForceLongPolling: true
     })
   : getFirestore(app);
 

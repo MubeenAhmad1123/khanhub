@@ -374,7 +374,7 @@ export default function StaffProfilePage() {
       
       // Safety timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Fetch timeout after 20s")), 20000)
+        setTimeout(() => reject(new Error("Fetch timeout after 60s")), 60000)
       );
 
       const profilePromise = fetchStaffProfile(staffId);
