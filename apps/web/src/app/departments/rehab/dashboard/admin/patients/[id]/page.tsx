@@ -3615,10 +3615,21 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(reportRef.current, {
+      const node = reportRef.current;
+      const dataUrl = await toPng(node, {
         cacheBust: true,
         backgroundColor: '#fff',
-        pixelRatio: 2
+        pixelRatio: 2,
+        width: 794,
+        style: {
+          width: '794px',
+          minWidth: '794px',
+          maxWidth: '794px',
+          margin: '0',
+          padding: '40px',
+          transform: 'none',
+          boxShadow: 'none'
+        }
       });
       const link = document.createElement('a');
       link.download = `Report-${reportData.name}-${new Date().toLocaleDateString()}.png`;
@@ -3645,8 +3656,8 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 bg-slate-100 dark:bg-black/20">
-          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-8 sm:p-10 mx-auto w-full max-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center">
+          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
             <div>
               {/* Report Header */}
               <div className="flex justify-between items-start border-b-4 border-gray-900 pb-5 mb-6">
@@ -3664,7 +3675,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             </div>
 
               {/* Patient Details Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+              <div className="grid grid-cols-2 gap-6 mb-6">
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Basic Information</h3>
                 <div className="space-y-4">
@@ -3747,7 +3758,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             </div>
 
               {/* Financial Summary Box */}
-              <div className="bg-gray-50 rounded-3xl p-4 sm:p-5 mb-6 border border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
+              <div className="bg-gray-50 rounded-3xl p-5 mb-6 border border-gray-100 grid grid-cols-3 gap-8">
               <div className="relative">
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Package</label>
                 <div className="flex items-baseline gap-1">
@@ -3793,7 +3804,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
               </div>
             </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="p-4 bg-teal-50/50 rounded-3xl border-2 border-teal-100 flex flex-col justify-center">
                   <label className="text-[10px] font-black uppercase text-teal-600 block mb-1 tracking-widest">Received to Date</label>
                   <p className="text-2xl font-black text-teal-900 tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>

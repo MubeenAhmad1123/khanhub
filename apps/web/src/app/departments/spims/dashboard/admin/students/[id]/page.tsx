@@ -539,10 +539,21 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(reportRef.current, {
+      const node = reportRef.current;
+      const dataUrl = await toPng(node, {
         cacheBust: true,
         backgroundColor: '#fff',
-        pixelRatio: 2
+        pixelRatio: 2,
+        width: 794,
+        style: {
+          width: '794px',
+          minWidth: '794px',
+          maxWidth: '794px',
+          margin: '0',
+          padding: '40px',
+          transform: 'none',
+          boxShadow: 'none'
+        }
       });
       const link = document.createElement('a');
       link.download = `Student-Report-${reportData.name}-${new Date().toLocaleDateString()}.png`;
@@ -569,17 +580,17 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 bg-slate-100 dark:bg-black/20 w-full">
-          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-8 sm:p-10 mx-auto w-full max-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 w-full flex justify-center">
+          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
             <div>
               {/* Report Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-4 border-gray-900 pb-5 mb-6 w-full">
+              <div className="flex flex-row justify-between items-start border-b-4 border-gray-900 pb-5 mb-6 w-full">
               <div className="space-y-1">
-                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
-                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
+                <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
+                <h1 className="text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">SPIMS Medical Institute</p>
               </div>
-              <div className="text-left sm:text-right">
+              <div className="text-right">
                 <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
                   Official Report
                 </div>
@@ -588,7 +599,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
             </div>
 
               {/* Student Details Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 w-full">
+              <div className="grid grid-cols-2 gap-6 mb-6 w-full">
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Student Information</h3>
                 <div className="space-y-4">
@@ -674,7 +685,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
               </div>
             </div>
               {/* Financial Summary Box */}
-              <div className="bg-gray-50 rounded-3xl p-4 sm:p-5 mb-6 border border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
+              <div className="bg-gray-50 rounded-3xl p-5 mb-6 border border-gray-100 grid grid-cols-3 gap-6 w-full">
               <div className="relative">
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Fee</label>
                 <div className="flex items-baseline gap-1">
@@ -694,13 +705,13 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                     }}
                   />
                 </div>
-                <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+                <div className="block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
               </div>
-              <div className="relative text-left sm:text-center">
+              <div className="relative text-center">
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Billable</label>
                 <input
                   type="number"
-                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-left sm:text-center text-gray-900"
+                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-center text-gray-900"
                   value={reportData.billableMonths}
                   onChange={e => {
                     const val = Number(e.target.value);
@@ -712,15 +723,15 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                     }));
                   }}
                 />
-                <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+                <div className="block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
               </div>
-              <div className="text-left sm:text-right">
+              <div className="text-right">
                 <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Due</label>
                 <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
               </div>
             </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 w-full">
+              <div className="grid grid-cols-2 gap-4 mb-6 w-full">
                 <div className="p-4 bg-[#1D9E75]/5 rounded-3xl border-2 border-[#1D9E75]/10 flex flex-col justify-center">
                   <label className="text-[10px] font-black uppercase text-[#1D9E75] block mb-1 tracking-widest">Total Received</label>
                   <p className="text-2xl font-black text-[#1D9E75] tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
@@ -733,12 +744,12 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
 
               {/* Transaction Log Table */}
               <div className="mb-6 w-full">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b-2 border-gray-100 pb-2 w-full">
+                <div className="flex flex-row items-center justify-between gap-2 mb-4 border-b-2 border-gray-100 pb-2 w-full">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fee Payment History</h3>
                 <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
               </div>
               <div className="overflow-x-auto w-full no-scrollbar">
-                <table className="w-full text-left text-sm border-collapse min-w-[500px] sm:min-w-full">
+                <table className="w-full text-left text-sm border-collapse">
                   <thead>
                     <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
                       <th className="py-4 px-2">Date</th>
@@ -773,12 +784,12 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
 
             {/* Signature & Footer */}
             <div className="mt-6 pt-6 border-t border-gray-100 w-full">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 sm:gap-0 w-full">
+              <div className="flex flex-row justify-between items-end gap-0 w-full">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-gray-900 uppercase">SPIMS Institute</p>
                   <p className="text-[9px] font-bold text-gray-400 uppercase">Medical Sciences & Technology</p>
                 </div>
-                <div className="w-full sm:w-48 border-b-2 border-gray-200 pb-2 text-center">
+                <div className="w-48 border-b-2 border-gray-200 pb-2 text-center">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Registrar Signature</p>
                 </div>
               </div>
