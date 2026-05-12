@@ -190,9 +190,14 @@ export interface SalarySlip {
   /** Any additional bonuses or overtime */
   bonus: number;
   bonusReason?: string;
+  incentive?: number;
   /** Any other approved deductions */
   otherDeductions: number;
   deductionReason?: string;
+  fine?: number;
+  advance?: number;
+  otherEarnings?: number;
+  otherEarningsReason?: string;
   /** Net payable = ((basicSalary / 30) * presentDays) - otherDeductions + bonus */
   netSalary: number;
   /** 'draft' until approved by manager/superadmin */

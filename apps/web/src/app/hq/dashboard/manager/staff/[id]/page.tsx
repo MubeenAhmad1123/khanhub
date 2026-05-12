@@ -221,9 +221,13 @@ export default function StaffProfilePage() {
     month: new Date().toISOString().slice(0, 7),
     basicSalary: 0,
     presentDays: 30,
-    bonuses: 0,
-    bonusReason: '',
-    deductions: 0,
+    incentive: 0,
+    otherEarnings: 0,
+    otherEarningsReason: '',
+    fine: 0,
+    advance: 0,
+    absentDeduction: 0,
+    otherDeductions: 0,
     deductionReason: '',
   });
 
@@ -1052,7 +1056,11 @@ export default function StaffProfilePage() {
       if (!staff) return;
       const [y, m] = payrollForm.month.split('-');
       const workingDays = new Date(Number(y), Number(m), 0).getDate();
-      const netSalary = Math.round((payrollForm.basicSalary / workingDays) * payrollForm.presentDays) + payrollForm.bonuses - payrollForm.deductions;
+      
+      const proRatedBase = Math.round((payrollForm.basicSalary / workingDays) * payrollForm.presentDays);
+      const totalAdditions = (payrollForm.incentive || 0) + (payrollForm.otherEarnings || 0);
+      const totalDeductions = (payrollForm.fine || 0) + (payrollForm.advance || 0) + (payrollForm.absentDeduction || 0) + (payrollForm.otherDeductions || 0);
+      const netSalary = proRatedBase + totalAdditions - totalDeductions;
 
       const slip: Partial<SalarySlip> = {
         staffId: staff.staffId,
@@ -1066,11 +1074,15 @@ export default function StaffProfilePage() {
         presentDays: payrollForm.presentDays,
         absentDays: workingDays - payrollForm.presentDays,
         leaveDays: 0,
-        absentDeduction: 0,
-        bonus: payrollForm.bonuses,
-        bonusReason: payrollForm.bonusReason,
-        otherDeductions: payrollForm.deductions,
-        deductionReason: payrollForm.deductionReason,
+        absentDeduction: payrollForm.absentDeduction || 0,
+        incentive: payrollForm.incentive || 0,
+        otherEarnings: payrollForm.otherEarnings || 0,
+        otherEarningsReason: payrollForm.otherEarningsReason || '',
+        fine: payrollForm.fine || 0,
+        advance: payrollForm.advance || 0,
+        otherDeductions: payrollForm.otherDeductions || 0,
+        deductionReason: payrollForm.deductionReason || '',
+        bonus: 0, // deprecated but keep for safety
         netSalary,
         status: 'draft',
         createdAt: new Date().toISOString(),
@@ -3121,34 +3133,70 @@ export default function StaffProfilePage() {
                   {showPayrollModal && (
                     <div className={`p-6 rounded-3xl border mb-8 bg-amber-50/50 border-amber-100`}>
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Month (YYYY-MM)</label>
                           <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.month} onChange={e => setPayrollForm({ ...payrollForm, month: e.target.value })} />
                         </div>
                         <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Basic Salary (PKR)</label>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Gross Salary (PKR)</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({ ...payrollForm, basicSalary: Number(e.target.value) })} />
                         </div>
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Present Days</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.presentDays} onChange={e => setPayrollForm({ ...payrollForm, presentDays: Number(e.target.value) })} />
                         </div>
-                        <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Bonuses (PKR)</label>
-                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.bonuses} onChange={e => setPayrollForm({ ...payrollForm, bonuses: Number(e.target.value) })} />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+                          <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">Additions</h5>
+                          <div className="grid gap-3">
+                            <div>
+                              <label className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 ml-2 mb-1 block">Incentive (PKR)</label>
+                              <input type="number" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.incentive} onChange={e => setPayrollForm({ ...payrollForm, incentive: Number(e.target.value) })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 ml-2 mb-1 block">Other / Custom</label>
+                                <input type="number" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.otherEarnings} onChange={e => setPayrollForm({ ...payrollForm, otherEarnings: Number(e.target.value) })} />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 ml-2 mb-1 block">Reason</label>
+                                <input type="text" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.otherEarningsReason} onChange={e => setPayrollForm({ ...payrollForm, otherEarningsReason: e.target.value })} placeholder="Reason" />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Bonus Reason</label>
-                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({ ...payrollForm, bonusReason: e.target.value })} placeholder="e.g. Performance" />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Deductions (PKR)</label>
-                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.deductions} onChange={e => setPayrollForm({ ...payrollForm, deductions: Number(e.target.value) })} />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Deduction Reason</label>
-                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({ ...payrollForm, deductionReason: e.target.value })} placeholder="e.g. Absences" />
+
+                        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100">
+                          <h5 className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-3">Deductions</h5>
+                          <div className="grid gap-3">
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-rose-600 ml-2 mb-1 block">Fine (PKR)</label>
+                                <input type="number" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.fine} onChange={e => setPayrollForm({ ...payrollForm, fine: Number(e.target.value) })} />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-rose-600 ml-2 mb-1 block">Advance</label>
+                                <input type="number" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.advance} onChange={e => setPayrollForm({ ...payrollForm, advance: Number(e.target.value) })} />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-rose-600 ml-2 mb-1 block">Absent (-)</label>
+                                <input type="number" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.absentDeduction} onChange={e => setPayrollForm({ ...payrollForm, absentDeduction: Number(e.target.value) })} />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-rose-600 ml-2 mb-1 block">Other / Custom</label>
+                                <input type="number" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.otherDeductions} onChange={e => setPayrollForm({ ...payrollForm, otherDeductions: Number(e.target.value) })} />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-rose-600 ml-2 mb-1 block">Reason</label>
+                                <input type="text" className="w-full rounded-xl px-4 py-2 text-sm font-bold border-none bg-white text-gray-900" value={payrollForm.deductionReason} onChange={e => setPayrollForm({ ...payrollForm, deductionReason: e.target.value })} placeholder="Reason" />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <button onClick={handleGenerateSlip} className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20">Finalize Slip</button>

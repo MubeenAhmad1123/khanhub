@@ -95,46 +95,76 @@ export function SalarySlipPrintable({ slip, showActionControls = false }: Props)
                 <td className="py-4 px-6 text-right font-mono text-[13px]">Rs {formatCurrency(slip.basicSalary)}</td>
               </tr>
               <tr>
-                <td className="py-4 px-6">Calendar Working Days</td>
-                <td className="py-4 px-6 text-center font-black">{slip.workingDays} Days</td>
+                <td className="py-4 px-6">Attendance Period</td>
+                <td className="py-4 px-6 text-center font-black">{slip.presentDays} / {slip.workingDays} Days</td>
                 <td className="py-4 px-6 text-right">-</td>
               </tr>
-              <tr>
-                <td className="py-4 px-6">Active Days Present</td>
-                <td className="py-4 px-6 text-center font-black text-emerald-600 print:text-black">{slip.presentDays} Days</td>
-                <td className="py-4 px-6 text-right">-</td>
+              
+              <tr className="bg-gray-50/50">
+                <td className="py-4 px-6 text-gray-900 font-black">Earned Prorated Salary</td>
+                <td className="py-4 px-6 text-center font-medium">Days Present</td>
+                <td className="py-4 px-6 text-right font-black text-[13px]">Rs {formatCurrency(Math.round((slip.basicSalary / (slip.workingDays || 30)) * (slip.presentDays || 0)))}</td>
               </tr>
-              <tr>
-                <td className="py-4 px-6">Paid Leaves Granted</td>
-                <td className="py-4 px-6 text-center font-black text-indigo-600 print:text-black">{slip.paidLeaveDays || 0} Days</td>
-                <td className="py-4 px-6 text-right">-</td>
-              </tr>
-              <tr>
-                <td className="py-4 px-6">Unpaid Leaves / Absents</td>
-                <td className="py-4 px-6 text-center font-black text-red-500 print:text-black">{(slip.unpaidLeaveDays || 0) + (slip.absentDays || 0)} Days</td>
-                <td className="py-4 px-6 text-right">-</td>
-              </tr>
-              {slip.absentDeduction > 0 && (
-                <tr className="text-red-700 print:text-black">
-                  <td className="py-4 px-6">Absent Days Deduction</td>
-                  <td className="py-4 px-6 text-center">{slip.absentDays || 0} Days</td>
-                  <td className="py-4 px-6 text-right font-mono text-[13px]">- Rs {formatCurrency(slip.absentDeduction)}</td>
+
+              {/* Additions */}
+              {((slip.incentive || 0) > 0) && (
+                <tr className="text-emerald-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Incentive (+)</td>
+                  <td className="py-4 px-6 text-center">-</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">+ Rs {formatCurrency(slip.incentive || 0)}</td>
                 </tr>
               )}
-              <tr className={slip.bonus > 0 ? "text-emerald-700 print:text-black" : ""}>
-                <td className="py-4 px-6">Performance Incentive / Bonus</td>
-                <td className="py-4 px-6 text-center">-</td>
-                <td className="py-4 px-6 text-right font-mono text-[13px]">+ Rs {formatCurrency(slip.bonus || 0)}</td>
-              </tr>
-              <tr className={slip.otherDeductions > 0 ? "text-red-700 print:text-black" : ""}>
-                <td className="py-4 px-6">Authorized Adjustments / Deductions</td>
-                <td className="py-4 px-6 text-center">-</td>
-                <td className="py-4 px-6 text-right font-mono text-[13px]">- Rs {formatCurrency(slip.otherDeductions || 0)}</td>
-              </tr>
-              <tr className="bg-gray-50 font-black text-[11px] uppercase tracking-tight text-gray-900 print:bg-white print:border-t-2 print:border-black">
+              {((slip.otherEarnings || 0) > 0) && (
+                <tr className="text-emerald-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Other Earnings / Custom (+)</td>
+                  <td className="py-4 px-6 text-center">-</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">+ Rs {formatCurrency(slip.otherEarnings || 0)}</td>
+                </tr>
+              )}
+
+              {/* Legacy fallback check just in case older records exist */}
+              {((slip.bonus || 0) > 0) && (
+                <tr className="text-emerald-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Bonuses / Other (+)</td>
+                  <td className="py-4 px-6 text-center">-</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">+ Rs {formatCurrency(slip.bonus || 0)}</td>
+                </tr>
+              )}
+
+              {/* Deductions */}
+              {((slip.absentDeduction || 0) > 0) && (
+                <tr className="text-red-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Absent Deduction (-)</td>
+                  <td className="py-4 px-6 text-center">Applied</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">- Rs {formatCurrency(slip.absentDeduction || 0)}</td>
+                </tr>
+              )}
+              {((slip.fine || 0) > 0) && (
+                <tr className="text-red-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Fine / Penalty (-)</td>
+                  <td className="py-4 px-6 text-center">-</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">- Rs {formatCurrency(slip.fine || 0)}</td>
+                </tr>
+              )}
+              {((slip.advance || 0) > 0) && (
+                <tr className="text-red-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Advance Salary Adjustment (-)</td>
+                  <td className="py-4 px-6 text-center">-</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">- Rs {formatCurrency(slip.advance || 0)}</td>
+                </tr>
+              )}
+              {((slip.otherDeductions || 0) > 0) && (
+                <tr className="text-red-700 print:text-black">
+                  <td className="py-4 px-6 font-bold">Other / Custom Deductions (-)</td>
+                  <td className="py-4 px-6 text-center">-</td>
+                  <td className="py-4 px-6 text-right font-mono text-[13px]">- Rs {formatCurrency(slip.otherDeductions || 0)}</td>
+                </tr>
+              )}
+
+              <tr className="bg-gray-900 font-black text-[11px] uppercase tracking-tight text-white print:bg-white print:text-black print:border-t-2 print:border-black">
                 <td className="py-5 px-6 uppercase font-black text-[12px]">Net Disbursed Amount</td>
                 <td className="py-5 px-6 text-center">-</td>
-                <td className="py-5 px-6 text-right text-lg font-black tracking-tight text-gray-900 font-mono">
+                <td className="py-5 px-6 text-right text-lg font-black tracking-tight font-mono">
                   Rs {formatCurrency(slip.netSalary)}
                 </td>
               </tr>
@@ -143,21 +173,27 @@ export function SalarySlipPrintable({ slip, showActionControls = false }: Props)
         </div>
 
         {/* Rationales */}
-        {((slip.bonus > 0 && slip.bonusReason) || (slip.otherDeductions > 0 && slip.deductionReason)) && (
+        {((slip.bonusReason) || (slip.otherEarningsReason) || (slip.deductionReason)) && (
           <div className="space-y-4 p-6 bg-gray-50/50 rounded-2xl border border-gray-100 print:bg-white print:rounded-none print:border-gray-200">
             <h4 className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-400 print:text-gray-600">
-              Adjustment Rationales
+              Detailed Justifications
             </h4>
-            {slip.bonus > 0 && slip.bonusReason && (
+            {slip.otherEarningsReason && (
               <div className="text-xs">
-                <span className="font-black uppercase text-[8px] tracking-[0.1em] text-emerald-700 block mb-1 print:text-black">Bonus Credit Justification:</span>
-                <p className="text-gray-700 italic font-medium print:text-black">"{slip.bonusReason}"</p>
+                <span className="font-black uppercase text-[8px] tracking-[0.1em] text-emerald-700 block mb-1 print:text-black">Earning Reason:</span>
+                <p className="text-gray-700 italic font-medium print:text-black">"{slip.otherEarningsReason}"</p>
               </div>
             )}
-            {slip.otherDeductions > 0 && slip.deductionReason && (
+            {slip.deductionReason && (
               <div className="text-xs">
-                <span className="font-black uppercase text-[8px] tracking-[0.1em] text-red-700 block mb-1 print:text-black">Deduction Justification:</span>
+                <span className="font-black uppercase text-[8px] tracking-[0.1em] text-red-700 block mb-1 print:text-black">Deduction Reason:</span>
                 <p className="text-gray-700 italic font-medium print:text-black">"{slip.deductionReason}"</p>
+              </div>
+            )}
+            {slip.bonusReason && !slip.otherEarningsReason && (
+              <div className="text-xs">
+                <span className="font-black uppercase text-[8px] tracking-[0.1em] text-emerald-700 block mb-1 print:text-black">Note:</span>
+                <p className="text-gray-700 italic font-medium print:text-black">"{slip.bonusReason}"</p>
               </div>
             )}
           </div>
