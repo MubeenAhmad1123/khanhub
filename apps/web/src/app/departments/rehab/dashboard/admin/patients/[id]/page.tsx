@@ -394,6 +394,7 @@ export default function PatientDetailPage() {
             const status = p.status || 'approved';
             if (status === 'approved') overallReceived += Number(p.amount || 0);
             if (p.transactionId) syncedTxIds.add(p.transactionId);
+            if (p.id) syncedTxIds.add(p.id); // Support legacy/manual entry ID field for deduplication
             aggregatedPayments.push({
               id: `${doc.id}_${p.date}`,
               ...p,

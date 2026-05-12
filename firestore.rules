@@ -1182,6 +1182,9 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
       return exists(path) ? get(path).data.get('staffId', null) : null;
     }
+    function isOwnHospitalStaffRecord(staffId) {
+      return isHospitalRole('staff') && (staffId == request.auth.uid || staffId == hospitalStaffId());
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  HOSPITAL PORTAL COLLECTIONS
@@ -1271,13 +1274,28 @@ service cloud.firestore {
     }
 
     match /hospital_dress_logs/{logId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager();
+      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
       allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
     }
 
     match /hospital_duty_logs/{logId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager();
+      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
       allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
+    }
+
+    match /hospital_growth_points/{docId} {
+      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
+      allow create, update, delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
+    }
+
+    match /hospital_fines/{docId} {
+      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
+      allow create, update, delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
+    }
+
+    match /hospital_special_tasks/{docId} {
+      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
+      allow create, update, delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
     }
 
     match /hospital_audit/{docId} {
@@ -1287,7 +1305,7 @@ service cloud.firestore {
     }
 
     match /hospital_salary_records/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHqTier1();
+      allow read: if isHospitalAdminOrAbove() || isHqTier1() || isOwnHospitalStaffRecord(resource.data.staffId);
       allow write: if isHospitalAdminOrAbove() || isHqTier1();
       allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
     }

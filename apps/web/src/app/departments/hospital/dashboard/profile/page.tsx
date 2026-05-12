@@ -123,24 +123,24 @@ export default function ProfilePage() {
         growthSnap1, growthSnap2,
         salarySnap
       ] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', prefixedId))),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', prefixedId))),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', prefixedId))),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', prefixedId))),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', prefixedId))),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId))),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', prefixedId))),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', sId))),
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
       ]);
 
       // Helper to properly merge, deduplicate, and sort data from both lookup streams
       const mergeAndSort = (snap1: any, snap2: any, dateField: string = 'date') => {
-        const combined = [...snap1.docs, ...snap2.docs].map(d => ({ id: d.id, ...d.data() }));
+        const combined = [...snap1.docs, ...snap2.docs].map((d: any) => ({ id: d.id, ...d.data() }));
         const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
         return unique.sort((a: any, b: any) => {
           const da = a[dateField] || '';
@@ -155,7 +155,7 @@ export default function ProfilePage() {
       setSpecialTasks(mergeAndSort(taskSnap1, taskSnap2, 'createdAt') as any);
       setFines(mergeAndSort(fineSnap1, fineSnap2, 'date') as any);
       setGrowthHistory(mergeAndSort(growthSnap1, growthSnap2, 'date') as any);
-      setSalaryRecords(salarySnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)).sort((a,b) => b.month.localeCompare(a.month)));
+      setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)).sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month)));
 
     } catch (error) {
       console.error("Critical sync failure in fetchMetrics:", error);
