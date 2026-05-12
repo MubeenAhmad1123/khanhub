@@ -1464,7 +1464,7 @@ export default function HqApprovalsPage() {
                             setSearchOpen(true);
                           }}
                           onFocus={() => setSearchOpen(true)}
-                          placeholder="Search patient / student / seeker name..."
+                          placeholder="Search name or ID (Roll No / Inpatient No)..."
                           className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#D1D5DB] dark:border-gray-700 text-sm outline-none focus:border-purple-400 dark:bg-gray-900 text-[#111827] dark:text-gray-100 font-bold"
                         />
                       </div>

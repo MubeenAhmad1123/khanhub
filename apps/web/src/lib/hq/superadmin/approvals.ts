@@ -2,7 +2,9 @@
 
 import {
   collection,
+  doc,
   endAt,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -119,8 +121,8 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
   };
 }
 
-export const PENDING_STATUSES = ['pending'];
-export const REJECT_STATUSES = ['rejected'];
+export const PENDING_STATUSES = ['pending', 'pending_cashier'];
+export const REJECT_STATUSES = ['rejected', 'rejected_cashier'];
 
 function getAmountBucketPredicate(bucket: AmountBucket) {
   return (tx: UnifiedTx) => {
@@ -245,7 +247,6 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
       query(
         collection(db, col),
         where('status', 'in', [...PENDING_STATUSES]),
-        orderBy('createdAt', 'desc'),
         limit(150)
       ),
     ];
@@ -255,7 +256,6 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
       query(
         collection(db, col),
         where('status', '==', 'approved'),
-        orderBy('createdAt', 'desc'),
         limit(150)
       ),
     ];
@@ -265,7 +265,6 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
       query(
         collection(db, col),
         where('status', 'in', [...REJECT_STATUSES]),
-        orderBy('createdAt', 'desc'),
         limit(150)
       ),
     ];
@@ -483,8 +482,7 @@ export function subscribePendingApprovalsCount({
     const q = query(
       collection(db, col),
       where('status', 'in', [...PENDING_STATUSES]),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(150)
     );
 
     return onSnapshot(
@@ -510,20 +508,88 @@ export async function searchEntitiesByNamePrefix({
   const p = namePrefix.trim();
   if (!p) return [];
   const col = dept === 'rehab' ? 'rehab_patients' : dept === 'spims' ? 'spims_students' : 'job_center_seekers';
-  const field = 'name';
-  const q = query(
+
+  // Build array of query promises to run in parallel
+  const queries: Promise<any[]>[] = [];
+
+  // 1. Search by Name Prefix
+  const qName = query(
     collection(db, col),
-    orderBy(field),
+    orderBy('name'),
     startAt(p),
     endAt(p + '\uf8ff'),
     limit(12)
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    id: d.id,
-    name: String((d.data() as Record<string, unknown>)?.name || '—'),
-    dept,
-  }));
+  queries.push(getDocs(qName).then(s => s.docs));
+
+  // 2. Try Fetching directly by Document ID
+  try {
+    queries.push(getDoc(doc(db, col, p)).then(s => s.exists() ? [s] : []));
+  } catch {}
+
+  // 3. Search by ID fields depending on department
+  const pUpper = p.toUpperCase();
+  if (dept === 'rehab') {
+    // Search by inpatientNumber prefix
+    const qInpatient = query(
+      collection(db, col),
+      orderBy('inpatientNumber'),
+      startAt(pUpper),
+      endAt(pUpper + '\uf8ff'),
+      limit(10)
+    );
+    queries.push(getDocs(qInpatient).then(s => s.docs));
+
+    // If numeric, search by serialNumber exact
+    if (/^\d+$/.test(p)) {
+      const qSerial = query(
+        collection(db, col),
+        where('serialNumber', '==', Number(p)),
+        limit(5)
+      );
+      queries.push(getDocs(qSerial).then(s => s.docs));
+    }
+  } else if (dept === 'spims') {
+    // Search by rollNo prefix
+    const qRoll = query(
+      collection(db, col),
+      orderBy('rollNo'),
+      startAt(pUpper),
+      endAt(pUpper + '\uf8ff'),
+      limit(10)
+    );
+    queries.push(getDocs(qRoll).then(s => s.docs));
+  }
+
+  const results = await Promise.all(queries);
+  const mergedDocs = results.flat();
+  
+  // Deduplicate by ID and map to result interface
+  const unique = new Map<string, { id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }>();
+  
+  mergedDocs.forEach(d => {
+    if (!d) return;
+    const data = d.data() as Record<string, unknown>;
+    if (!unique.has(d.id)) {
+      const finalName = String(data.name || data.fullName || '—');
+      
+      let idTag = '';
+      if (dept === 'rehab') {
+        idTag = String(data.inpatientNumber || (data.serialNumber ? `SN: ${data.serialNumber}` : ''));
+      } else if (dept === 'spims') {
+        idTag = String(data.rollNo || '');
+      }
+
+      const nameWithId = idTag ? `${finalName} (${idTag})` : finalName;
+      unique.set(d.id, {
+        id: d.id,
+        name: nameWithId,
+        dept,
+      });
+    }
+  });
+
+  return Array.from(unique.values());
 }
 
 export async function searchEntitiesCombined(
