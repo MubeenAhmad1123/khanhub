@@ -1393,7 +1393,7 @@ export default function ClientDetailPage() {
 
       {/* Upload Modal */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -1460,7 +1460,7 @@ export default function ClientDetailPage() {
       )}
       {/* Initialize Fee Modal */}
       {showAddFeeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900">Initialize Fee</h2>
@@ -1507,7 +1507,7 @@ export default function ClientDetailPage() {
 
       {/* Add Payment Modal */}
       {showAddPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900">Add Payment</h2>
@@ -1550,7 +1550,7 @@ export default function ClientDetailPage() {
       )}
       {/* Canteen Entry Modal */}
       {canteenModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900">
@@ -1605,7 +1605,7 @@ export default function ClientDetailPage() {
       )}
       {/* Add Visit Modal */}
       {showAddVisitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
@@ -1666,7 +1666,7 @@ export default function ClientDetailPage() {
 
       {/* Edit Visit Modal */}
       {editVisitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
