@@ -378,6 +378,7 @@ export default function PatientDetailPage() {
 
       // Fetch all fees to calculate total received
       let overallReceived = 0;
+      let totalMedicineCharges = 0;
       const aggregatedPayments: any[] = [];
       try {
         const allFeesQ = query(
@@ -409,7 +410,6 @@ export default function PatientDetailPage() {
           collection(db, 'rehab_transactions'),
           where('patientId', '==', patientId)
         );
-        let totalMedicineCharges = 0;
         const txSnap = await getDocs(txQ);
         txSnap.docs.forEach(doc => {
           const txData = doc.data();
