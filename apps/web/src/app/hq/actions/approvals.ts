@@ -61,11 +61,15 @@ async function updateEntityTotals(
   const isIncome = txData.type === 'income';
   const diff = isIncome ? amount : -amount;
 
-  const update: Record<string, any> = {
-    totalReceived: FieldValue.increment(diff),
-  };
+  const update: Record<string, any> = {};
 
-  if (dept === 'spims' && isIncome) {
+  if (dept === 'rehab' && txData.category === 'medicine_charge') {
+    update.medicineCharges = FieldValue.increment(amount);
+  } else {
+    update.totalReceived = FieldValue.increment(diff);
+  }
+
+  if (dept === 'spims' && isIncome && txData.category !== 'medicine_charge') {
     const subtype = txData.spimsFeeSubtype;
     if (subtype === 'admission') update.admissionPaid = FieldValue.increment(amount);
     if (subtype === 'registration') update.registrationPaid = FieldValue.increment(amount);
@@ -77,12 +81,60 @@ async function updateEntityTotals(
   // Re-read to sync 'remaining' balance field if it exists
   const updatedSnap = await ref.get();
   const updatedData = updatedSnap.data() as any;
-  const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+  const medCharges = Number(updatedData?.medicineCharges) || 0;
   const received = Number(updatedData?.totalReceived) || 0;
   
+  let totalObligation = 0;
+  if (dept === 'rehab') {
+    const monthlyPkg = Number(updatedData?.monthlyPackage || updatedData?.packageAmount) || 0;
+    let admissionDate = new Date();
+    const ad = updatedData?.admissionDate;
+    if (ad) {
+      if (typeof ad.toDate === 'function') admissionDate = ad.toDate();
+      else if (typeof ad.seconds === 'number') admissionDate = new Date(ad.seconds * 1000);
+      else if (ad && typeof ad._seconds === 'number') admissionDate = new Date(ad._seconds * 1000);
+      else {
+        const parsed = new Date(ad);
+        if (!isNaN(parsed.getTime())) admissionDate = parsed;
+      }
+    }
+    
+    let endDate = new Date();
+    if (updatedData?.isActive === false && updatedData?.dischargeDate) {
+      const dd = updatedData.dischargeDate;
+      if (typeof dd.toDate === 'function') endDate = dd.toDate();
+      else if (typeof dd.seconds === 'number') endDate = new Date(dd.seconds * 1000);
+      else if (dd && typeof dd._seconds === 'number') endDate = new Date(dd._seconds * 1000);
+      else {
+        const parsed = new Date(dd);
+        if (!isNaN(parsed.getTime())) endDate = parsed;
+      }
+    }
+    
+    const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+    let completedMonths = rawMonths;
+    let hasExtraDays = false;
+
+    if (endDate.getDate() < admissionDate.getDate()) {
+      completedMonths = rawMonths - 1;
+      hasExtraDays = true;
+    } else if (endDate.getDate() > admissionDate.getDate()) {
+      completedMonths = rawMonths;
+      hasExtraDays = true;
+    } else {
+      completedMonths = rawMonths;
+      hasExtraDays = false;
+    }
+    const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+    totalObligation = (billableMonths * monthlyPkg) + medCharges;
+  } else {
+    const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+    totalObligation = pkg + medCharges;
+  }
+  
   await ref.update({
-    remaining: Math.max(0, pkg - received),
-    remainingBalance: Math.max(0, pkg - received), // Support both naming conventions
+    remaining: Math.max(0, totalObligation - received),
+    remainingBalance: Math.max(0, totalObligation - received), // Support both naming conventions
   });
 }
 
@@ -120,12 +172,13 @@ async function syncRehabRecords(
     console.log('[syncRehabRecords] Parsed date:', txDate, 'month:', month);
 
     const isFeeCategory = 
-      txData.type === 'income' ||
+      txData.category !== 'medicine_charge' &&
+      (txData.type === 'income' ||
       txData.category === 'patient_fee' || 
       txData.category === 'fee' || 
       String(txData.category || '').toLowerCase().includes('fee') ||
       String(txData.categoryName || '').toLowerCase().includes('fee') ||
-      String(txData.categoryName || '').toLowerCase().includes('admission');
+      String(txData.categoryName || '').toLowerCase().includes('admission'));
 
     if (isFeeCategory && patientId) {
       const feesRef = adminDb.collection('rehab_fees');

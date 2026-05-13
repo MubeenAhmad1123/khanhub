@@ -20,7 +20,7 @@ import { BrutalistCalendar } from '@/components/ui';
 type TxnType = 'income' | 'expense';
 type DateMode = 'today' | 'all' | 'range' | 'created_today' | 'yesterday';
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
-type PaymentMethod = 'cash' | 'bank_transfer' | 'jazzcash' | 'easypaisa' | 'other';
+type PaymentMethod = 'cash' | 'bank_transfer' | 'jazzcash' | 'easypaisa' | 'credit' | 'other';
 
 const DEPARTMENTS = [
   { code: 'rehab', label: 'Rehab Center', txCollection: 'rehab_transactions', entityCollection: 'rehab_patients' },
@@ -33,6 +33,7 @@ const DEPARTMENTS = [
 
 const BASE_CATEGORIES = [
   { id: 'fee', name: 'Admission / Fees', appliesTo: 'income' },
+  { id: 'medicine_charge', name: 'Medicine / Treatment Charge', appliesTo: 'income' },
   { id: 'donation', name: 'Donation', appliesTo: 'income' },
   { id: 'canteen', name: 'Canteen Funds', appliesTo: 'both' },
   { id: 'utilities', name: 'Utilities', appliesTo: 'expense' },
@@ -67,11 +68,15 @@ async function reverseEntityTotals(db: any, deptCode: string, txData: any) {
     const isIncome = txData.type === 'income' || txData.type === undefined;
     const diff = isIncome ? -amount : amount;
 
-    const update: Record<string, any> = {
-      totalReceived: increment(diff),
-    };
+    const update: Record<string, any> = {};
 
-    if (deptCode === 'spims' && isIncome) {
+    if (deptCode === 'rehab' && txData.category === 'medicine_charge') {
+      update.medicineCharges = increment(-amount);
+    } else {
+      update.totalReceived = increment(diff);
+    }
+
+    if (deptCode === 'spims' && isIncome && txData.category !== 'medicine_charge') {
       const subtype = txData.spimsFeeSubtype;
       if (subtype === 'admission') update.admissionPaid = increment(-amount);
       if (subtype === 'registration') update.registrationPaid = increment(-amount);
@@ -83,11 +88,13 @@ async function reverseEntityTotals(db: any, deptCode: string, txData: any) {
     const updatedSnap = await getDoc(ref);
     const updatedData = updatedSnap.data() as any;
     const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+    const medCharges = Number(updatedData?.medicineCharges) || 0;
+    const totalObligation = pkg + medCharges;
     const received = Number(updatedData?.totalReceived) || 0;
 
     await updateDoc(ref, {
-      remaining: Math.max(0, pkg - received),
-      remainingBalance: Math.max(0, pkg - received),
+      remaining: Math.max(0, totalObligation - received),
+      remainingBalance: Math.max(0, totalObligation - received),
     });
   } catch (err) {
     console.error('[Cashier] reverseEntityTotals error:', err);
@@ -213,6 +220,14 @@ export default function CashierStationPage() {
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   const isStaffMode = false; // Cashiers cannot manage staff details or salaries
   
+  useEffect(() => {
+    if (selectedCategoryId === 'medicine_charge') {
+      setPaymentMethod('credit');
+    } else {
+      setPaymentMethod(prev => prev === 'credit' ? 'cash' : prev);
+    }
+  }, [selectedCategoryId]);
+
   // 1. Consolidated History Filtering & Sorting
   const historyFiltered = useMemo(() => {
     let result = historyTxns.filter((tx) => {
@@ -1594,6 +1609,32 @@ export default function CashierStationPage() {
                           placeholder="0.00"
                           className="w-full h-16 md:h-32 lg:h-40 bg-zinc-50 border-2 md:border-4 border-transparent rounded-[1.2rem] md:rounded-[2.5rem] lg:rounded-[3.5rem] pl-14 md:pl-24 pr-6 md:pr-12 text-xl md:text-5xl lg:text-7xl font-[1000] text-zinc-900 outline-none focus:ring-8 md:focus:ring-[24px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
                         />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Settlement Route / Method</label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {([
+                          { id: 'cash', label: 'Cash' },
+                          { id: 'bank_transfer', label: 'Bank Transfer' },
+                          { id: 'jazzcash', label: 'JazzCash' },
+                          { id: 'easypaisa', label: 'EasyPaisa' },
+                          { id: 'credit', label: 'On Account / Credit' },
+                          { id: 'other', label: 'Other' },
+                        ] as const).map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setPaymentMethod(m.id)}
+                            className={cn(
+                              "py-4 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                              paymentMethod === m.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                            )}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 

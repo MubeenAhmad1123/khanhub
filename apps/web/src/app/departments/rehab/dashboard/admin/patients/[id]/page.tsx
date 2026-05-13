@@ -409,6 +409,7 @@ export default function PatientDetailPage() {
           collection(db, 'rehab_transactions'),
           where('patientId', '==', patientId)
         );
+        let totalMedicineCharges = 0;
         const txSnap = await getDocs(txQ);
         txSnap.docs.forEach(doc => {
           const txData = doc.data();
@@ -416,8 +417,24 @@ export default function PatientDetailPage() {
           
           const isApproved = txData.status === 'approved';
           const isSynced = syncedTxIds.has(txId);
+          const isMedicineCharge = txData.category === 'medicine_charge';
           
-          if (isApproved && !isSynced) {
+          if (isMedicineCharge) {
+            if (isApproved) {
+              totalMedicineCharges += Number(txData.amount || 0);
+            }
+            aggregatedPayments.push({
+              id: txId,
+              amount: Number(txData.amount || 0),
+              date: txData.date || txData.createdAt,
+              cashierId: txData.cashierId || txData.createdByName || 'Office',
+              note: txData.description || txData.categoryName || 'Medicine / Treatment Charge',
+              status: txData.status || 'approved',
+              isMedicineCharge: true,
+              isPendingTransaction: txData.status !== 'approved' && txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
+              method: txData.paymentMethod || txData.method || 'Credit'
+            });
+          } else if (isApproved && !isSynced) {
             overallReceived += Number(txData.amount || 0);
             aggregatedPayments.push({
               id: txId,
@@ -426,9 +443,9 @@ export default function PatientDetailPage() {
               cashierId: txData.cashierId || txData.createdByName || 'Office',
               note: txData.description || txData.categoryName || '',
               status: 'approved',
-              method: txData.method || 'Cash'
+              method: txData.paymentMethod || txData.method || 'Cash'
             });
-          } else if (!isApproved) {
+          } else if (!isApproved && !isSynced) {
             aggregatedPayments.push({
               id: txId,
               amount: Number(txData.amount || 0),
@@ -437,7 +454,7 @@ export default function PatientDetailPage() {
               note: txData.description || txData.categoryName || '',
               status: txData.status || 'pending',
               isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
-              method: txData.method || 'Cash'
+              method: txData.paymentMethod || txData.method || 'Cash'
             });
           }
         });
@@ -455,7 +472,8 @@ export default function PatientDetailPage() {
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const dailyRate = Math.floor(monthlyPkg / 30);
       const dueTillDate = billableMonths * monthlyPkg;
-      const overallRemaining = dueTillDate - overallReceived;
+      const finalMedicineCharges = typeof data.medicineCharges === 'number' ? data.medicineCharges : totalMedicineCharges;
+      const overallRemaining = (dueTillDate + finalMedicineCharges) - overallReceived;
 
       setPatient({
         id: pDoc.id,
@@ -463,6 +481,7 @@ export default function PatientDetailPage() {
         daysAdmitted,
         durationFormatted,
         overallReceived,
+        medicineCharges: finalMedicineCharges,
         overallRemaining,
         dailyRate,
         dueTillDate,
@@ -956,7 +975,7 @@ export default function PatientDetailPage() {
           dailyRate,
           dueTillDate,
           billableMonths,
-          overallRemaining: dueTillDate - (prev.overallReceived || 0),
+          overallRemaining: (dueTillDate + Number(prev.medicineCharges || 0)) - (prev.overallReceived || 0),
           photoUrl: photoUrl,
           dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null
         };
@@ -1666,8 +1685,13 @@ export default function PatientDetailPage() {
                   <span className="text-sm">📅</span> {patient.durationFormatted}
                 </div>
                 <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-black bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-900/10 text-xs uppercase tracking-tight">
-                  <span className="text-sm">💰</span> Total Due: PKR {patient.dueTillDate?.toLocaleString()}
+                  <span className="text-sm">💰</span> Pkg Due: PKR {patient.dueTillDate?.toLocaleString()}
                 </div>
+                {Number(patient.medicineCharges || 0) > 0 && (
+                  <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 font-black bg-purple-50 dark:bg-purple-900/20 px-4 py-2 rounded-xl border border-purple-100 dark:border-purple-900/10 text-xs uppercase tracking-tight">
+                    <span className="text-sm">💊</span> Meds / Extra: PKR {patient.medicineCharges?.toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1906,7 +1930,12 @@ export default function PatientDetailPage() {
                     <span className="font-black text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-1.5 rounded-lg inline-block text-sm">
                       PKR {patient.overallRemaining?.toLocaleString()}
                     </span>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Total Due till today: PKR {patient.dueTillDate?.toLocaleString()}</p>
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 space-y-0.5">
+                      <p>Package Due: PKR {patient.dueTillDate?.toLocaleString()}</p>
+                      {Number(patient.medicineCharges || 0) > 0 && (
+                        <p className="font-bold text-amber-600 dark:text-amber-400">Medicine / Extra: PKR {patient.medicineCharges?.toLocaleString()}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
@@ -3593,12 +3622,15 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     serialNumber: patient.serialNumber || 'None',
     stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
+    dischargeDate: patient.dischargeDate ? formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate) : '',
+    status: patient.status || 'active',
     fatherName: patient.fatherName || '',
     guardianName: patient.guardianName || '',
     contactNumber: patient.contactNumber || '',
     address: patient.address || '',
     monthlyPackage: Number(patient.monthlyPackage || patient.packageAmount || 0),
     billableMonths: patient.billableMonths || 1,
+    medicineCharges: patient.medicineCharges || 0,
     totalDue: patient.dueTillDate || 0,
     receivedAmount: patient.overallReceived || 0,
     remainingAmount: patient.overallRemaining || 0,
@@ -3676,142 +3708,227 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
 
               {/* Patient Details Section */}
               <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Basic Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
-                    <input
-                      className="text-lg font-black w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.name}
-                      onChange={e => setReportData({ ...reportData, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
-                      value={reportData.patientId}
-                      onChange={e => setReportData({ ...reportData, patientId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.fatherName}
-                      onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
-                    <textarea
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 resize-none"
-                      rows={2}
-                      value={reportData.address}
-                      onChange={e => setReportData({ ...reportData, address: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2">Stay Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.admissionDate}
-                      onChange={e => setReportData({ ...reportData, admissionDate: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Stay Duration</label>
-                    <input
-                      className="text-sm font-black w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-teal-600"
-                      value={reportData.stayDuration}
-                      onChange={e => setReportData({ ...reportData, stayDuration: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Duration Logic</label>
-                    <p className="text-xs font-bold text-gray-500 uppercase italic">Monthly-based calculation (rounded up)</p>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Name</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.guardianName}
-                      onChange={e => setReportData({ ...reportData, guardianName: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Contact</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
-                      value={reportData.contactNumber}
-                      onChange={e => setReportData({ ...reportData, contactNumber: e.target.value })}
-                    />
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2 flex items-center gap-2">
+                    <User className="w-3 h-3" /> Basic Information
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
+                      <input
+                        className="text-lg font-black w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.name}
+                        onChange={e => setReportData({ ...reportData, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
+                        <input
+                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
+                          value={reportData.patientId}
+                          onChange={e => setReportData({ ...reportData, patientId: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Serial #</label>
+                        <input
+                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
+                          value={reportData.serialNumber}
+                          onChange={e => setReportData({ ...reportData, serialNumber: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.fatherName}
+                        onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
+                      <textarea
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 resize-none"
+                        rows={2}
+                        value={reportData.address}
+                        onChange={e => setReportData({ ...reportData, address: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-              {/* Financial Summary Box */}
-              <div className="bg-gray-50 rounded-3xl p-5 mb-6 border border-gray-100 grid grid-cols-3 gap-8">
-              <div className="relative">
-                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Package</label>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[10px] font-black text-gray-400">PKR</span>
-                  <input
-                    type="number"
-                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-teal-500 outline-none py-1"
-                    value={reportData.monthlyPackage}
-                    onChange={e => {
-                      const val = Number(e.target.value);
-                      setReportData(prev => ({
-                        ...prev,
-                        monthlyPackage: val,
-                        totalDue: val * prev.billableMonths,
-                        remainingAmount: (val * prev.billableMonths) - prev.receivedAmount
-                      }));
-                    }}
-                  />
-                </div>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
-              </div>
-              <div className="relative text-center">
-                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Counted</label>
-                <input
-                  type="number"
-                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-teal-500 outline-none py-1 text-center"
-                  value={reportData.billableMonths}
-                  onChange={e => {
-                    const val = Number(e.target.value);
-                    setReportData(prev => ({
-                      ...prev,
-                      billableMonths: val,
-                      totalDue: val * prev.monthlyPackage,
-                      remainingAmount: (val * prev.monthlyPackage) - prev.receivedAmount
-                    }));
-                  }}
-                />
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
-              </div>
-              <div className="text-right">
-                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Payable</label>
-                <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
-              </div>
-            </div>
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2 flex items-center gap-2">
+                    <Clock className="w-3 h-3" /> Stay & Contact Info
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
+                        <input
+                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                          value={reportData.admissionDate}
+                          onChange={e => setReportData({ ...reportData, admissionDate: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Status</label>
+                        <div className="flex items-center mt-1">
+                          <span className={`text-[9px] px-2.5 py-0.5 font-black rounded-full uppercase tracking-wider border ${reportData.status === 'discharged' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-teal-50 text-teal-700 border-teal-100'}`}>
+                            {reportData.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-4 bg-teal-50/50 rounded-3xl border-2 border-teal-100 flex flex-col justify-center">
-                  <label className="text-[10px] font-black uppercase text-teal-600 block mb-1 tracking-widest">Received to Date</label>
-                  <p className="text-2xl font-black text-teal-900 tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</p>
+                    {reportData.status === 'discharged' && (
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-rose-500 block mb-1">Discharge Date</label>
+                        <input
+                          className="text-sm font-black w-full border-b border-rose-200 text-rose-700 focus:border-rose-500 outline-none transition-colors py-1"
+                          value={reportData.dischargeDate}
+                          onChange={e => setReportData({ ...reportData, dischargeDate: e.target.value })}
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Stay Duration</label>
+                      <input
+                        className="text-sm font-black w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-teal-600"
+                        value={reportData.stayDuration}
+                        onChange={e => setReportData({ ...reportData, stayDuration: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Name</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.guardianName}
+                        onChange={e => setReportData({ ...reportData, guardianName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Guardian Contact</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1"
+                        value={reportData.contactNumber}
+                        onChange={e => setReportData({ ...reportData, contactNumber: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="p-4 bg-red-50/50 rounded-3xl border-2 border-red-100 flex flex-col justify-center">
-                  <label className="text-[10px] font-black uppercase text-red-600 block mb-1 tracking-widest">Net Remaining</label>
-                  <p className="text-2xl font-black text-red-900 tracking-tighter">PKR {reportData.remainingAmount.toLocaleString()}</p>
+              </div>
+
+              {/* Financial Breakdown - Inputs Section */}
+              <div className="bg-gray-50 border border-gray-100 rounded-[2rem] p-6 mb-6">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 border-b border-teal-100 pb-2 mb-5 flex items-center gap-2">
+                  <DollarSign className="w-3 h-3" />
+                  Financial Parameter Configuration
+                </h3>
+                
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="relative pr-4">
+                    <label className="text-[9px] font-black uppercase text-gray-500 block mb-1.5">Base Monthly Package</label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400">PKR</span>
+                      <input
+                        type="number"
+                        className="text-xl font-black w-full bg-transparent border-b-2 border-gray-200 focus:border-teal-500 outline-none py-1"
+                        value={reportData.monthlyPackage}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          setReportData(prev => {
+                            const newTotal = (val * prev.billableMonths) + Number(prev.medicineCharges);
+                            return {
+                              ...prev,
+                              monthlyPackage: val,
+                              totalDue: newTotal,
+                              remainingAmount: newTotal - prev.receivedAmount
+                            };
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200/60"></div>
+                  </div>
+
+                  <div className="relative px-4 text-center">
+                    <label className="text-[9px] font-black uppercase text-gray-500 block mb-1.5">Billable Months</label>
+                    <input
+                      type="number"
+                      className="text-xl font-black w-24 bg-transparent border-b-2 border-gray-200 focus:border-teal-500 outline-none py-1 text-center mx-auto"
+                      value={reportData.billableMonths}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setReportData(prev => {
+                          const newTotal = (prev.monthlyPackage * val) + Number(prev.medicineCharges);
+                          return {
+                            ...prev,
+                            billableMonths: val,
+                            totalDue: newTotal,
+                            remainingAmount: newTotal - prev.receivedAmount
+                          };
+                        });
+                      }}
+                    />
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200/60"></div>
+                  </div>
+
+                  <div className="pl-4">
+                    <label className="text-[9px] font-black uppercase text-amber-600 block mb-1.5 flex items-center gap-1">
+                      <span>💊</span> Medicine / Extra
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400">PKR</span>
+                      <input
+                        type="number"
+                        className="text-xl font-black w-full bg-transparent border-b-2 border-amber-200 focus:border-amber-500 text-amber-700 outline-none py-1"
+                        value={reportData.medicineCharges}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          setReportData(prev => {
+                            const newTotal = (prev.monthlyPackage * prev.billableMonths) + val;
+                            return {
+                              ...prev,
+                              medicineCharges: val,
+                              totalDue: newTotal,
+                              remainingAmount: newTotal - prev.receivedAmount
+                            };
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Final Summary Statistics Box Grid */}
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="p-5 bg-blue-50/50 border-2 border-blue-100/50 rounded-[1.5rem] flex flex-col">
+                  <span className="text-[9px] font-black uppercase text-blue-600 tracking-widest mb-1">Total Computed Due</span>
+                  <span className="text-[8px] text-blue-400 mb-2 uppercase tracking-wider">(Package × Months) + Extra</span>
+                  <span className="text-xl lg:text-2xl font-black text-blue-950 tracking-tight mt-auto">PKR {reportData.totalDue.toLocaleString()}</span>
+                </div>
+
+                <div className="p-5 bg-teal-50/50 border-2 border-teal-100/50 rounded-[1.5rem] flex flex-col">
+                  <span className="text-[9px] font-black uppercase text-teal-600 tracking-widest mb-1">Consolidated Received</span>
+                  <span className="text-[8px] text-teal-400 mb-2 uppercase tracking-wider">All Approved Ledger Payments</span>
+                  <span className="text-xl lg:text-2xl font-black text-teal-950 tracking-tight mt-auto">PKR {reportData.receivedAmount.toLocaleString()}</span>
+                </div>
+
+                <div className={`p-5 border-2 rounded-[1.5rem] flex flex-col ${reportData.remainingAmount > 0 ? 'bg-rose-50/60 border-rose-100' : 'bg-emerald-50/60 border-emerald-100'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest mb-1 ${reportData.remainingAmount > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                    {reportData.remainingAmount >= 0 ? 'Net Remaining Balance' : 'Surplus Credit Balance'}
+                  </span>
+                  <span className={`text-[8px] mb-2 uppercase tracking-wider ${reportData.remainingAmount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    Total Due − Total Received
+                  </span>
+                  <span className={`text-xl lg:text-2xl font-black tracking-tight mt-auto ${reportData.remainingAmount > 0 ? 'text-rose-950' : 'text-emerald-950'}`}>
+                    PKR {Math.abs(reportData.remainingAmount).toLocaleString()}
+                  </span>
                 </div>
               </div>
 

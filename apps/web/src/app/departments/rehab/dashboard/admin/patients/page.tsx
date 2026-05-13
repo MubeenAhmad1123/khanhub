@@ -141,14 +141,32 @@ export default function PatientsListPage() {
         const pCanteen = canteenMap[d.id] || [];
         
         const pkgAmount = Number(data.monthlyPackage) || Number(data.packageAmount) || 0;
-        const dailyRate = Math.round(pkgAmount / 30);
         
         const endDate = data.isActive === false && data.dischargeDate 
           ? toDate(data.dischargeDate) 
           : new Date();
           
         const daysSinceAdmission = Math.max(0, Math.floor((endDate.getTime() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
-        const totalDueTillDate = dailyRate * daysSinceAdmission;
+        
+        // ── UNIFIED MONTHLY DUES LOGIC (MATCHES PROFILE & REPORTS) ──
+        const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+        let completedMonths = rawMonths;
+        let hasExtraDays = false;
+
+        if (endDate.getDate() < admissionDate.getDate()) {
+          completedMonths = rawMonths - 1;
+          hasExtraDays = true;
+        } else if (endDate.getDate() > admissionDate.getDate()) {
+          completedMonths = rawMonths;
+          hasExtraDays = true;
+        } else {
+          completedMonths = rawMonths;
+          hasExtraDays = false;
+        }
+
+        const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+        const totalDueTillDate = billableMonths * pkgAmount;
+        const medCharges = Number(data.medicineCharges || 0);
         
         let totalReceived = 0;
         pFees.forEach(f => {
@@ -158,7 +176,7 @@ export default function PatientsListPage() {
           });
         });
 
-        const remaining = totalDueTillDate - totalReceived;
+        const remaining = (totalDueTillDate + medCharges) - totalReceived;
 
         const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (Number(c.totalDeposited) || 0), 0);
         const totalCanteenSpent = pCanteen.reduce((a, c) => a + (Number(c.totalSpent) || 0), 0);
