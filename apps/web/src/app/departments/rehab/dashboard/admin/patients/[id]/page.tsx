@@ -3623,7 +3623,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
     dischargeDate: patient.dischargeDate ? formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate) : '',
-    status: patient.status || 'active',
+    status: patient.isActive === false ? 'discharged' : 'active',
     fatherName: patient.fatherName || '',
     guardianName: patient.guardianName || '',
     contactNumber: patient.contactNumber || '',
@@ -3780,19 +3780,18 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                             {reportData.status}
                           </span>
                         </div>
+                        {reportData.status === 'discharged' && (
+                          <div className="mt-2">
+                            <label className="text-[9px] font-black uppercase text-rose-500 block mb-1">Discharge Date</label>
+                            <input
+                              className="text-sm font-black w-full border-b border-rose-200 text-rose-700 focus:border-rose-500 outline-none transition-colors py-1"
+                              value={reportData.dischargeDate}
+                              onChange={e => setReportData({ ...reportData, dischargeDate: e.target.value })}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    {reportData.status === 'discharged' && (
-                      <div>
-                        <label className="text-[9px] font-black uppercase text-rose-500 block mb-1">Discharge Date</label>
-                        <input
-                          className="text-sm font-black w-full border-b border-rose-200 text-rose-700 focus:border-rose-500 outline-none transition-colors py-1"
-                          value={reportData.dischargeDate}
-                          onChange={e => setReportData({ ...reportData, dischargeDate: e.target.value })}
-                        />
-                      </div>
-                    )}
 
                     <div>
                       <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Stay Duration</label>
