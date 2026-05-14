@@ -1,7 +1,7 @@
 // src/app/departments/welfare/dashboard/staff/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWelfareSession } from '@/hooks/welfare/useWelfareSession';
 import {
@@ -13,7 +13,7 @@ import { formatDateDMY, toDate } from '@/lib/utils';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2, AlertCircle,
-  Trophy, User as UserIcon, Sparkles, Activity
+  Trophy, User as UserIcon, Sparkles, Activity, Shirt
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -23,6 +23,9 @@ export default function StaffSelfPage() {
 
   const [staffProfile, setStaffProfile] = useState<any>(null);
   const [todayRecord, setTodayRecord] = useState<any>(null);
+  const [todayDressLog, setTodayDressLog] = useState<any>(null);
+  const [todayDutyLog, setTodayDutyLog] = useState<any>(null);
+  const [approvedContribToday, setApprovedContribToday] = useState<any[]>([]);
   const [contributions, setContributions] = useState<any[]>([]);
   const [contributionText, setContributionText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -137,12 +140,76 @@ export default function StaffSelfPage() {
         )
       );
       setSpecialTasks(tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      // 6. Fetch Manager Evaluation (Dress Code + Duties) for today
+      const dressLogRef = doc(db, 'welfare_dress_logs', `${staffId}_${today}`);
+      const dutyLogRef = doc(db, 'welfare_duty_logs', `${staffId}_${today}`);
+      
+      const [dressSnap, dutySnap] = await Promise.all([
+        getDoc(dressLogRef).catch(() => null),
+        getDoc(dutyLogRef).catch(() => null)
+      ]);
+
+      if (dressSnap && dressSnap.exists()) {
+        setTodayDressLog(dressSnap.data());
+      } else {
+        setTodayDressLog(null);
+      }
+
+      if (dutySnap && dutySnap.exists()) {
+        setTodayDutyLog(dutySnap.data());
+      } else {
+        setTodayDutyLog(null);
+      }
+
+      // Extract approved contributions for today
+      const approvedToday = contribDocs.filter((d: any) => d.date === today && d.isApproved);
+      setApprovedContribToday(approvedToday);
+
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
   }, [user, today]);
+
+  // 4-Point Score Calculation
+  const computedTodayScore = useMemo(() => {
+    if (!staffProfile) return { attendance: 0, dress: 0, duty: 0, contribution: 0, total: 0 };
+    
+    // 1. Attendance point: present/late or checked in today
+    const hasAtt = todayRecord?.status === 'present' || todayRecord?.isLate || !!todayRecord?.checkInTime;
+    const attPoint = hasAtt ? 1 : 0;
+
+    // 2. Dress Compliance point
+    const dressConfig = staffProfile.dressCodeConfig || [];
+    const dressItems = todayDressLog?.items || [];
+    const missingDress = dressConfig.filter((c: any) => {
+      const item = dressItems.find((i: any) => i.key === c.key);
+      return !item || item.status === 'no';
+    });
+    const dressPoint = (dressConfig.length > 0 && missingDress.length === 0) ? 1 : 0;
+
+    // 3. Duty Compliance point
+    const dutyConfig = staffProfile.dutyConfig || [];
+    const loggedDuties = todayDutyLog?.duties || [];
+    const pendingDuties = dutyConfig.filter((c: any) => {
+      const item = loggedDuties.find((d: any) => d.key === c.key);
+      return !item || item.status === 'not_done';
+    });
+    const dutyPoint = (dutyConfig.length > 0 && pendingDuties.length === 0) ? 1 : 0;
+
+    // 4. Contribution point
+    const contribPoint = approvedContribToday.length > 0 ? 1 : 0;
+
+    return {
+      attendance: attPoint,
+      dress: dressPoint,
+      duty: dutyPoint,
+      contribution: contribPoint,
+      total: attPoint + dressPoint + dutyPoint + contribPoint
+    };
+  }, [staffProfile, todayRecord, todayDressLog, todayDutyLog, approvedContribToday]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -319,6 +386,83 @@ export default function StaffSelfPage() {
           </button>
 
           <Clock size={90} className="absolute right-[-15px] bottom-[-15px] text-white/5 select-none pointer-events-none rotate-12" />
+        </div>
+
+        {/* 4-Point Daily Performance Card */}
+        <div className={`${cardStyle}`}>
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-emerald-600" />
+              <h2 className="text-sm font-bold text-slate-800">Today's Track Score</h2>
+            </div>
+            <div className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold tracking-wide uppercase">
+              {computedTodayScore.total} / 4 Points
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Attendance */}
+            <div className={`p-3 rounded-xl border text-center ${computedTodayScore.attendance === 1 ? 'bg-emerald-50/40 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center mb-2 ${computedTodayScore.attendance === 1 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                <Clock size={14} />
+              </div>
+              <p className="text-[11px] font-bold text-slate-800">Attendance</p>
+              <p className={`text-[10px] font-medium mt-0.5 ${computedTodayScore.attendance === 1 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {computedTodayScore.attendance === 1 ? 'Scored' : 'Pending'}
+              </p>
+            </div>
+
+            {/* Dress */}
+            <div className={`p-3 rounded-xl border text-center ${computedTodayScore.dress === 1 ? 'bg-emerald-50/40 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center mb-2 ${computedTodayScore.dress === 1 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                <Shirt size={14} />
+              </div>
+              <p className="text-[11px] font-bold text-slate-800">Dress Code</p>
+              <p className={`text-[10px] font-medium mt-0.5 ${computedTodayScore.dress === 1 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {computedTodayScore.dress === 1 ? 'Compliant' : !todayDressLog ? 'Awaiting Audit' : 'Deficient'}
+              </p>
+            </div>
+
+            {/* Duty */}
+            <div className={`p-3 rounded-xl border text-center ${computedTodayScore.duty === 1 ? 'bg-emerald-50/40 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center mb-2 ${computedTodayScore.duty === 1 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                <List size={14} />
+              </div>
+              <p className="text-[11px] font-bold text-slate-800">Work Duties</p>
+              <p className={`text-[10px] font-medium mt-0.5 ${computedTodayScore.duty === 1 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {computedTodayScore.duty === 1 ? 'Complete' : !todayDutyLog ? 'Awaiting Audit' : 'Incomplete'}
+              </p>
+            </div>
+
+            {/* Contribution */}
+            <div className={`p-3 rounded-xl border text-center ${computedTodayScore.contribution === 1 ? 'bg-emerald-50/40 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center mb-2 ${computedTodayScore.contribution === 1 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                <Trophy size={14} />
+              </div>
+              <p className="text-[11px] font-bold text-slate-800">Bonus Extra</p>
+              <p className={`text-[10px] font-medium mt-0.5 ${computedTodayScore.contribution === 1 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {computedTodayScore.contribution === 1 ? 'Approved' : 'None approved'}
+              </p>
+            </div>
+          </div>
+
+          {/* Alert for non-compliant audit values */}
+          {(todayDressLog || todayDutyLog) && (computedTodayScore.dress === 0 || computedTodayScore.duty === 0) && (
+            <div className="mt-3 p-3 bg-amber-50 text-amber-800 border border-amber-100 rounded-xl flex items-start gap-2 text-[11px] leading-relaxed">
+              <AlertCircle size={12} className="mt-0.5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-bold text-amber-900">Compliance Audit Feedback:</p>
+                <ul className="list-disc list-inside mt-1 text-amber-800 space-y-0.5 font-medium">
+                  {computedTodayScore.dress === 0 && todayDressLog?.items?.filter((i: any) => i.status === 'no').map((i: any) => (
+                    <li key={i.key}>Uniform issue: {i.label} checked "No"</li>
+                  ))}
+                  {computedTodayScore.duty === 0 && todayDutyLog?.duties?.filter((d: any) => d.status === 'not_done').map((d: any) => (
+                    <li key={d.key}>Duty issue: {d.label} not complete</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stat Tracker Rows */}
