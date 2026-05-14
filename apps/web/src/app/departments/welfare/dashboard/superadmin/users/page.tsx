@@ -8,6 +8,7 @@ import EyePasswordInput from '@/components/welfare/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { WelfareUser } from '@/types/welfare';
+import { Shield, Wallet, UserX, KeyRound, Plus, Loader2 } from 'lucide-react';
 
 export default function SuperAdminUserManagement() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function SuperAdminUserManagement() {
     setActionLoading(true);
     const res = await createWelfareUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
     if (res.success) {
-      setMessage({ type: 'success', text: `Admin ${adminForm.id} created!` });
+      setMessage({ type: 'success', text: `Admin ${adminForm.id} created successfully!` });
       setAdminForm({ name: '', id: 'WELFARE-ADM-001', pass: '' });
       fetchData();
     } else {
@@ -68,7 +69,7 @@ export default function SuperAdminUserManagement() {
     setActionLoading(true);
     const res = await createWelfareUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
     if (res.success) {
-      setMessage({ type: 'success', text: 'Cashier created successfully!' });
+      setMessage({ type: 'success', text: 'Cashier account has been provisioned.' });
       setCashierForm({ id: 'WELFARE-CSH-001', pass: '' });
       fetchData();
     } else {
@@ -78,195 +79,246 @@ export default function SuperAdminUserManagement() {
   };
 
   const handleDeactivate = async (uid: string) => {
-    if (!confirm('Are you sure? This user will lose all access.')) return;
+    if (!confirm('Are you sure? This user will instantly lose all dashboard access.')) return;
     setActionLoading(true);
     const res = await deactivateWelfareUser(uid);
     if (res.success) {
-      setMessage({ type: 'success', text: 'User deactivated successfully' });
+      setMessage({ type: 'success', text: 'User successfully deactivated.' });
       fetchData();
     }
     setActionLoading(false);
   };
 
   const handleResetPass = async (uid: string) => {
-    const newPass = prompt('Enter new password (min 6 chars):');
+    const newPass = prompt('Enter a new password (minimum 6 characters):');
     if (!newPass || newPass.length < 6) return;
     setActionLoading(true);
     const res = await resetWelfarePassword(uid, newPass);
-    if (res.success) setMessage({ type: 'success', text: 'Password reset successful' });
+    if (res.success) setMessage({ type: 'success', text: 'Credentials have been reset.' });
     setActionLoading(false);
   };
 
-  if (sessionLoading || loading) return <div className="p-20 text-center animate-pulse font-black text-gray-300 tracking-widest uppercase">Initializing Interface...</div>;
+  if (sessionLoading || loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="w-6 h-6 animate-spin" />
+        <span className="text-sm font-light">Syncing directory...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-12 pb-20 max-w-6xl mx-auto">
+    <div className="max-w-5xl mx-auto space-y-10 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
       <div>
-        <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-2">Authority Center</h1>
-        <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.3em]">Master User & Role Distribution</p>
+        <h1 className="text-3xl font-medium text-slate-900 tracking-tight">Directory Control</h1>
+        <p className="text-sm text-slate-500 font-light mt-1">Provision administrative access and manage operator credentials.</p>
       </div>
 
       {message.text && (
-        <div className={`p-6 rounded-[2rem] border font-bold flex items-center gap-4 animate-in fade-in slide-in-from-top-4 ${
-          message.type === 'success' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
+        <div className={`p-4 rounded-xl border text-sm transition-all ${
+          message.type === 'success' 
+            ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' 
+            : 'bg-rose-50 border-rose-100 text-rose-800'
         }`}>
-          <span className="w-8 h-8 rounded-xl bg-white/50 flex items-center justify-center text-sm">{message.type === 'success' ? '✓' : '!'}</span>
-          {message.text}
+          <div className="flex items-center gap-2 font-medium">
+            <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current"></span>
+            {message.text}
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* SECTION A: Admin Creation */}
-        <section className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
-          <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">🛡️</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Section A: Provision Admin */}
+        <section className="bg-white border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] rounded-2xl flex flex-col">
+          <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center">
+              <Shield size={18} />
+            </div>
             <div>
-              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Provision Admin</h2>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Global Managers</p>
+              <h2 className="text-base font-medium text-slate-900">Provision Admin</h2>
+              <p className="text-xs text-slate-400 font-light">Add system administrators</p>
             </div>
           </div>
-          <form onSubmit={handleCreateAdmin} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-               <div className="col-span-2 space-y-1">
-                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Full Name</label>
-                 <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-gray-200" placeholder="e.g. Administrator Ahmad" value={adminForm.name} onChange={e => setAdminForm({...adminForm, name: e.target.value})} />
-               </div>
-               <div className="space-y-1">
-                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Custom ID</label>
-                 <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100" value={adminForm.id} onChange={e => setAdminForm({...adminForm, id: e.target.value})} />
-               </div>
-               <div className="space-y-1">
-                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Access Secret</label>
-                 <EyePasswordInput 
-                   required 
-                   className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-gray-200" 
-                   value={adminForm.pass} 
-                   onChange={e => setAdminForm({...adminForm, pass: e.target.value})} 
-                 />
-               </div>
+          <form onSubmit={handleCreateAdmin} className="p-6 space-y-5 flex-1 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600">Full Name</label>
+                <input 
+                  required 
+                  className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-300" 
+                  placeholder="e.g. Mohammad Ahmad" 
+                  value={adminForm.name} 
+                  onChange={e => setAdminForm({...adminForm, name: e.target.value})} 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600">Username/ID</label>
+                  <input 
+                    required 
+                    className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all" 
+                    value={adminForm.id} 
+                    onChange={e => setAdminForm({...adminForm, id: e.target.value})} 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600">Password</label>
+                  <EyePasswordInput 
+                    required 
+                    className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all" 
+                    value={adminForm.pass} 
+                    onChange={e => setAdminForm({...adminForm, pass: e.target.value})} 
+                  />
+                </div>
+              </div>
             </div>
-            <button disabled={actionLoading} className="w-full bg-blue-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Admin Account</button>
+            <button 
+              disabled={actionLoading} 
+              className="w-full mt-6 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-sm font-medium shadow-sm transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            >
+              <Plus size={15} />
+              Create Admin Profile
+            </button>
           </form>
         </section>
 
-        {/* SECTION B: Cashier Management */}
-        <section className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
-          <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
-            <div className="w-12 h-12 bg-[#1D9E75]/10 text-[#1D9E75] rounded-2xl flex items-center justify-center text-xl shadow-sm">💰</div>
+        {/* Section B: Cashier Control */}
+        <section className="bg-white border border-slate-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] rounded-2xl flex flex-col">
+          <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Wallet size={18} />
+            </div>
             <div>
-              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Cashier Control</h2>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Financial Operatives</p>
+              <h2 className="text-base font-medium text-slate-900">Cashier Control</h2>
+              <p className="text-xs text-slate-400 font-light">Manage active financial cashier</p>
             </div>
           </div>
           
-          {cashier ? (
-            <div className="bg-[#1D9E75]/5 p-8 rounded-3xl border border-[#1D9E75]/10 flex flex-col gap-6">
-               <div className="flex justify-between items-start">
+          <div className="p-6 flex-1 flex flex-col justify-center">
+            {cashier ? (
+              <div className="bg-slate-50/75 rounded-xl border border-slate-100 p-5 space-y-5 animate-in fade-in duration-300">
+                <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-2xl font-black text-gray-900">{cashier.displayName}</p>
-                    <p className="text-[10px] font-black text-[#1D9E75] uppercase tracking-widest mt-1">ID: {cashier.customId}</p>
+                    <h3 className="text-sm font-semibold text-slate-900">{cashier.displayName}</h3>
+                    <p className="text-xs text-emerald-600 font-medium font-mono mt-0.5">ID: {cashier.customId}</p>
                   </div>
-                  <span className="bg-[#1D9E75] text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">Active</span>
-               </div>
-               <div className="flex gap-4">
-                  <button onClick={() => handleResetPass(cashier.uid)} className="flex-1 bg-white border border-gray-100 text-gray-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">Password</button>
-                  <button onClick={() => handleDeactivate(cashier.uid)} className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Deactivate</button>
-               </div>
-            </div>
-          ) : (
-            <form onSubmit={handleCreateCashier} className="space-y-6 animate-in slide-in-from-right-4">
-               <div className="space-y-4">
-                 <div className="space-y-1">
-                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cashier ID</label>
-                   <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" value={cashierForm.id} onChange={e => setCashierForm({...cashierForm, id: e.target.value})} />
-                 </div>
-                 <div className="space-y-1">
-                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Initial Secret</label>
-                   <EyePasswordInput 
-                     required 
-                     className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" 
-                     value={cashierForm.pass} 
-                     onChange={e => setCashierForm({...cashierForm, pass: e.target.value})} 
-                   />
-                 </div>
-               </div>
-               <button disabled={actionLoading} className="w-full bg-gray-900 text-white py-5 rounded-[1.5rem] font-black shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Cashier Account</button>
-            </form>
-          )}
+                  <span className="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider">Active</span>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => handleResetPass(cashier.uid)} 
+                    className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                  >
+                    <KeyRound size={13} /> Password
+                  </button>
+                  <button 
+                    onClick={() => handleDeactivate(cashier.uid)} 
+                    className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <UserX size={13} /> Deactivate
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateCashier} className="space-y-4 w-full">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600">Cashier ID</label>
+                  <input 
+                    required 
+                    className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all" 
+                    value={cashierForm.id} 
+                    onChange={e => setCashierForm({...cashierForm, id: e.target.value})} 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600">Initial Password</label>
+                  <EyePasswordInput 
+                    required 
+                    className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all" 
+                    value={cashierForm.pass} 
+                    onChange={e => setCashierForm({...cashierForm, pass: e.target.value})} 
+                  />
+                </div>
+                <button 
+                  disabled={actionLoading} 
+                  className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Plus size={15} /> Provision Cashier Account
+                </button>
+              </form>
+            )}
+          </div>
         </section>
       </div>
 
-      {/* SECTION C: Admin Roster */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-4">
+      {/* Section C: Admin Roster */}
+      <section className="space-y-4 pt-4">
+        <div className="flex items-end justify-between border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Administrative Roster</h2>
-            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">Manage system administrators and their security status</p>
+            <h2 className="text-lg font-medium text-slate-900">Administrative Directory</h2>
+            <p className="text-xs text-slate-400 font-light">Review and update active administrator status.</p>
           </div>
-          <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-2xl border border-gray-100 dark:border-white/5">
-             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{admins.length} Total Admins</span>
+          <div className="text-[11px] font-medium text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+            {admins.length} Active Profiles
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {admins.map((adm) => (
-            <div key={adm.uid} className="group relative bg-white dark:bg-black border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
-              {/* Background Accent */}
-              <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${adm.isActive ? 'bg-blue-500' : 'bg-red-500'}`} />
-              
-              <div className="relative z-10 space-y-6">
-                <div className="flex justify-between items-start">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${
-                    adm.isActive ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600' : 'bg-red-50 dark:bg-red-500/10 text-red-600'
+        {admins.length === 0 ? (
+          <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <p className="text-slate-400 text-sm font-light">No administrators registered in the system directory.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {admins.map((adm) => (
+              <div key={adm.uid} className="bg-white border border-slate-100 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.04)] rounded-2xl p-5 flex flex-col justify-between space-y-5 group hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.08)] transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-semibold ${
+                    adm.isActive ? 'bg-slate-100 text-slate-700' : 'bg-rose-50 text-rose-600'
                   }`}>
                     {adm.displayName?.[0]?.toUpperCase() || 'A'}
                   </div>
-                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded-full border ${
                     adm.isActive 
-                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 border-blue-100 dark:border-blue-500/20' 
-                      : 'bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100 dark:border-red-500/20'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                      : 'bg-slate-50 text-slate-500 border-slate-100'
                   }`}>
-                    {adm.isActive ? '• Active' : '• Inactive'}
-                  </div>
+                    {adm.isActive ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors truncate">
+                  <h3 className="text-sm font-semibold text-slate-900 group-hover:text-slate-800 truncate">
                     {adm.displayName}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">System ID:</span>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-md">{adm.customId}</span>
+                  <div className="flex items-center gap-1.5 mt-1 font-mono">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">ID:</span>
+                    <span className="text-[10px] font-medium text-slate-600">{adm.customId}</span>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-50 dark:border-white/5 flex gap-3">
+                <div className="pt-4 border-t border-slate-50 flex gap-2">
                   <button 
                     onClick={() => handleResetPass(adm.uid)}
-                    className="flex-1 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                    className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-600 py-1.5 rounded-lg text-xs font-medium transition-all"
                   >
-                    Reset Secret
+                    Reset Creds
                   </button>
                   {adm.isActive && (
                     <button 
                       onClick={() => handleDeactivate(adm.uid)}
-                      className="flex-1 bg-red-50 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm hover:shadow-lg hover:shadow-red-500/20"
+                      className="flex-1 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 text-rose-600 py-1.5 rounded-lg text-xs font-medium transition-all"
                     >
                       Deactivate
                     </button>
                   )}
                 </div>
               </div>
-            </div>
-          ))}
-          {admins.length === 0 && (
-            <div className="col-span-full py-20 text-center bg-gray-50 dark:bg-white/5 rounded-[3rem] border border-dashed border-gray-200 dark:border-white/10">
-              <p className="text-gray-300 dark:text-gray-600 font-black uppercase tracking-widest">No Administrative Accounts Discovered</p>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
+
