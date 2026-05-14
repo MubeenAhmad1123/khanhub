@@ -16,6 +16,17 @@ import StaffNotifications from '@/components/layout/StaffNotifications';
 
 type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin';
 
+function normalizeWelfareRole(rawRole: string): WelfareRole {
+  const lower = (rawRole || '').toLowerCase();
+  if (lower === 'admin') return 'admin';
+  if (lower === 'superadmin') return 'superadmin';
+  if (lower === 'family') return 'family';
+  if (lower === 'staff' || lower.includes('staff') || lower.includes('contractor') || lower.includes('internee')) {
+    return 'staff';
+  }
+  return rawRole as WelfareRole;
+}
+
 interface NavItem {
   label: string;
   href: string;
@@ -123,7 +134,10 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
 
-        setUser(parsed);
+        setUser({
+          ...parsed,
+          role: normalizeWelfareRole(parsed.role)
+        });
         setIsChecking(false);
       } catch (err) {
         handleSignOut();
@@ -143,7 +157,9 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
         return;
       }
       const data = snap.data();
-      if (data?.isActive === false || data?.role !== user.role) {
+      const snapRole = normalizeWelfareRole(data?.role || '');
+      
+      if (data?.isActive === false || snapRole !== user.role) {
         handleSignOut();
         return;
       }

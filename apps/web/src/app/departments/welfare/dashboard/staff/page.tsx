@@ -145,7 +145,12 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') {
+    
+    // Validate session and roles properly
+    const rawRole = String(user?.role || '').toLowerCase();
+    const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contractor') || rawRole.includes('internee');
+
+    if (!user || !isStaff) {
       router.push('/departments/welfare/login');
       return;
     }

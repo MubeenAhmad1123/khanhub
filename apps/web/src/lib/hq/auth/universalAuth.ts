@@ -455,8 +455,12 @@ export function getDashboardPath(deptId: string, role: string, patientId?: strin
   }
 
   const base = `/departments/${deptId}/dashboard`;
+  
+  // Handle staff variations (including contractor, internee, etc.) first to route them to /staff
+  const isAnyStaff = normalizedRole === 'staff' || normalizedRole.includes('staff') || normalizedRole.includes('contractor') || normalizedRole.includes('internee');
+  if (isAnyStaff) return `${base}/staff`;
+
   // Handle common roles directly
-  if (normalizedRole === 'staff') return `${base}/staff`;
   if (normalizedRole === 'admin') return `${base}/admin`;
   if (normalizedRole === 'cashier') return `${base}/cashier`;
   if (normalizedRole === 'superadmin') return `${base}/superadmin`;

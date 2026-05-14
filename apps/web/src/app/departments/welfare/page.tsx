@@ -23,10 +23,12 @@ export default function WelfareRootPage() {
       }
 
       // Redirect based on role to the last known dashboard
-      const role = user.role;
+      const role = (user.role || '').toLowerCase();
+      const isStaff = role === 'staff' || role.includes('staff') || role.includes('contractor') || role.includes('internee');
+
       if (role === 'family') {
         router.push(`/departments/welfare/dashboard/child/${user.childId}`);
-      } else if (role === 'staff') {
+      } else if (isStaff) {
         router.push('/departments/welfare/dashboard/staff');
       } else if (role === 'cashier') {
         router.push('/departments/welfare/dashboard/cashier');

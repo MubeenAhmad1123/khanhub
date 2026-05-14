@@ -79,6 +79,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
 
     const dept = staff.dept;
     const role = staff.role;
+    const normalizedRole = (role || '').toLowerCase();
 
     // Build correct role-based dashboard URL
     let url: string;
@@ -90,11 +91,13 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
       else url = '/hq/dashboard';
     } else {
       // Department portals — role maps to sub-route
-      if (role === 'admin' || role === 'superadmin') {
+      const isStaff = normalizedRole === 'staff' || normalizedRole.includes('staff') || normalizedRole.includes('contractor') || normalizedRole.includes('internee');
+
+      if (normalizedRole === 'admin' || normalizedRole === 'superadmin') {
         url = `/departments/${dept}/dashboard/admin`;
-      } else if (role === 'staff') {
+      } else if (isStaff) {
         url = `/departments/${dept}/dashboard/staff`;
-      } else if (role === 'cashier') {
+      } else if (normalizedRole === 'cashier') {
         url = `/departments/${dept}/dashboard/cashier`;
       } else {
         // Each dept has its own non-admin user sub-route
