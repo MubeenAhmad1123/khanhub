@@ -1,8 +1,7 @@
+// apps/web/src/app/layout.tsx
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
-import { Analytics } from "@vercel/analytics/react"
-import { SpeedInsights } from "@vercel/speed-insights/next"
 import ConditionalShell from '@/components/layout/ConditionalShell'
 
 // ─── Viewport ────────────────────────────────────────────────────────────────
@@ -137,8 +136,6 @@ export const metadata: Metadata = {
   },
 }
 
-
-
 import { AuthProvider } from '@/components/providers/AuthProvider'
 
 // ─── Root Layout ──────────────────────────────────────────────────────────────
@@ -156,8 +153,6 @@ export default function RootLayout({
           </ConditionalShell>
         </AuthProvider>
         <Toaster position="bottom-right" />
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   )

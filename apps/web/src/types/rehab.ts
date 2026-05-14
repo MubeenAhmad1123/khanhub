@@ -122,6 +122,7 @@ export interface Patient {
   packageAmount: number;           // (Legacy) monthly PKR fee
   dailyRate: number;               // monthlyPackage / 30
   otherExpenses?: number;          // extra charges like transport
+  medicineCharges?: number;        // charges for medicine and extras
 
   // Health Status
   healthStatus?: {
@@ -480,4 +481,3 @@ export interface LeaveRecord {
   status?: string;
   [key: string]: any;
 }
-
