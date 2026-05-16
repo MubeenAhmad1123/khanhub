@@ -3685,53 +3685,72 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md p-4 pt-8 sm:pt-16 overflow-y-auto no-print">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md p-4 pt-8 sm:pt-16 overflow-y-auto report-modal-root">
       <style>{`
         @media print {
-          @page { size: auto; margin: 0; }
-          body * { visibility: hidden; }
-          .printable-report, .printable-report * { 
-            visibility: visible; 
-            color: black !important;
-            border-color: #e5e7eb !important; /* light gray borders for structure */
+          @page { size: A4; margin: 0; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
           }
-          .printable-report {
-            position: absolute;
-            left: 0;
-            top: 0;
+          /* Hide EVERYTHING in the body */
+          body > * {
+            display: none !important;
+          }
+          /* Except our modal root */
+          body > .report-modal-root {
+            display: block !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             width: 100% !important;
+            height: auto !important;
+            background: white !important;
+            z-index: 9999 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+          }
+          /* Hide everything inside the modal root that isn't the report */
+          .report-modal-root .no-print {
+            display: none !important;
+          }
+          /* Ensure the report itself is visible and correctly styled */
+          .printable-report {
+            display: flex !important;
+            flex-direction: column !important;
+            position: static !important;
+            width: 100% !important;
+            min-height: 29.7cm !important;
             margin: 0 !important;
             padding: 1.5cm !important;
             box-shadow: none !important;
             border: none !important;
-          }
-          .no-print { display: none !important; }
-          .no-print * { display: none !important; }
-          
-          /* Ensure text is black and remove colored backgrounds */
-          .printable-report .text-teal-600, 
-          .printable-report .text-blue-600, 
-          .printable-report .text-rose-600, 
-          .printable-report .text-amber-600,
-          .printable-report .text-rose-700,
-          .printable-report .text-teal-700 {
+            visibility: visible !important;
             color: black !important;
           }
-          .printable-report .bg-teal-50,
-          .printable-report .bg-blue-50,
-          .printable-report .bg-rose-50,
-          .printable-report .bg-gray-50,
-          .printable-report .bg-emerald-50,
-          .printable-report .bg-amber-50 {
+          .printable-report * {
+            visibility: visible !important;
+            color: black !important;
+          }
+          /* Force text color reset for common Tailwind classes */
+          .text-teal-600, .text-blue-600, .text-rose-600, .text-amber-600, .text-gray-900, .text-gray-400 {
+            color: black !important;
+          }
+          .bg-teal-50, .bg-blue-50, .bg-rose-50, .bg-gray-50 {
             background-color: white !important;
-            border: 1px solid #e5e7eb !important;
+            border: 1px solid #eee !important;
           }
           input, textarea {
             border: none !important;
             background: transparent !important;
             color: black !important;
+            appearance: none;
+            -webkit-appearance: none;
           }
-          /* Hide empty medicine charges in print */
           .hide-if-zero-print[data-value="0"] {
             display: none !important;
           }
@@ -3937,16 +3956,19 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                           e.preventDefault();
                           e.stopPropagation();
                           setReportData(prev => {
-                            const newTotal = (Number(prev.monthlyPackage) * Number(prev.billableMonths));
+                            const pkg = Number(prev.monthlyPackage || 0);
+                            const months = Number(prev.billableMonths || 0);
+                            const received = Number(prev.receivedAmount || 0);
+                            const newTotal = pkg * months;
                             return {
                               ...prev,
                               medicineCharges: 0,
                               totalDue: newTotal,
-                              remainingAmount: newTotal - Number(prev.receivedAmount)
+                              remainingAmount: newTotal - received
                             };
                           });
                         }}
-                        className="p-1 hover:bg-amber-100 rounded text-amber-600 transition-all no-print flex items-center justify-center"
+                        className="p-1 hover:bg-amber-100 rounded text-amber-600 transition-all no-print flex items-center justify-center z-50 cursor-pointer"
                         title="Remove Medicine Charges"
                       >
                         <X className="w-3 h-3 pointer-events-none" />
