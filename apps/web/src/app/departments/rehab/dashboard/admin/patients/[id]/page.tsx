@@ -3691,23 +3691,22 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
       <style>{`
         @media print {
           @page { 
-            size: A4; 
-            margin: 1cm; 
+            size: A4 portrait; 
+            margin: 0; 
           }
           
-          /* Isolation: Hide EVERYTHING except the report modal */
-          body > *, 
-          .patient-detail-root > *:not(.report-modal-root),
+          /* Isolation: Hide only known UI elements instead of hiding everything via body > * */
           .no-print, 
           button, 
           .close-button, 
           header, 
-          nav {
+          nav,
+          .fixed.inset-0:not(.report-modal-root) {
             display: none !important;
           }
 
           /* Reset root layout for print */
-          html, body, .patient-detail-root {
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
@@ -3716,16 +3715,31 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             display: block !important;
           }
 
+          /* Ensure the root containers are visible */
+          .patient-detail-root {
+            display: block !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+          }
+
+          /* Hide everything inside patient-detail-root EXCEPT our modal */
+          .patient-detail-root > *:not(.report-modal-root) {
+            display: none !important;
+          }
+
           /* Force the modal into a standard block flow instead of fixed/absolute */
           .report-modal-root {
             display: block !important;
-            position: static !important;
+            position: relative !important;
             width: 100% !important;
             height: auto !important;
             padding: 0 !important;
             margin: 0 !important;
             background: white !important;
             box-shadow: none !important;
+            overflow: visible !important;
           }
 
           .modal-box-container {
@@ -3752,13 +3766,18 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           }
 
           .printable-report {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
             width: 100% !important;
+            max-width: 100% !important;
+            min-height: 297mm !important;
+            height: auto !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 1cm !important;
             border: none !important;
             background: white !important;
             box-shadow: none !important;
+            border-radius: 0 !important;
           }
 
           /* EXTREME CLARITY: Force all text to DEEP BLACK */
@@ -3766,10 +3785,15 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             color: #000000 !important;
             -webkit-text-fill-color: #000000 !important;
             border-color: #000000 !important;
-            background: transparent !important;
-            font-weight: 700 !important;
+            background-color: transparent !important;
             text-shadow: none !important;
             box-shadow: none !important;
+          }
+
+          /* Reset input styles for print */
+          input, textarea {
+            border-bottom: 1px solid #000 !important;
+            padding: 2px 0 !important;
           }
 
           /* Ensure table borders are thick and black */
@@ -3780,7 +3804,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           }
           th, td {
             border: 1pt solid black !important;
-            padding: 8pt !important;
+            padding: 6pt 8pt !important;
             color: black !important;
           }
           thead {
@@ -3788,7 +3812,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           }
 
           /* Maintain section backgrounds but in LIGHT GRAYSCALE for readability */
-          .bg-blue-50\\/50, .bg-teal-50\\/50, .bg-rose-50\\/60, .bg-emerald-50\\/60, .bg-gray-50, .bg-gray-50\\/50 {
+          .bg-blue-50\/50, .bg-teal-50\/50, .bg-rose-50\/60, .bg-emerald-50\/60, .bg-gray-50, .bg-gray-50\/50 {
             background-color: #f0f0f0 !important;
             border: 1pt solid black !important;
             -webkit-print-color-adjust: exact !important;
@@ -3801,7 +3825,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           }
 
           /* Page break handling */
-          .grid, tr, .printable-report > div {
+          .grid, tr {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
