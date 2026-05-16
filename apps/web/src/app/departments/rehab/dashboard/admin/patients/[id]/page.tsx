@@ -3652,6 +3652,12 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
         backgroundColor: '#fff',
         pixelRatio: 2,
         width: 794,
+        filter: (node) => {
+          if (node instanceof HTMLElement && node.classList.contains('no-print')) {
+            return false;
+          }
+          return true;
+        },
         style: {
           width: '794px',
           minWidth: '794px',
@@ -3700,6 +3706,8 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             border: none !important;
           }
           .no-print { display: none !important; }
+          .no-print * { display: none !important; }
+          
           /* Ensure text is black and remove colored backgrounds */
           .printable-report .text-teal-600, 
           .printable-report .text-blue-600, 
@@ -3721,6 +3729,11 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           input, textarea {
             border: none !important;
             background: transparent !important;
+            color: black !important;
+          }
+          /* Hide empty medicine charges in print */
+          .hide-if-zero-print[data-value="0"] {
+            display: none !important;
           }
         }
       `}</style>
@@ -3913,27 +3926,30 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200/60"></div>
                   </div>
 
-                  <div className="pl-4">
+                  <div className={`pl-4 hide-if-zero-print`} data-value={reportData.medicineCharges}>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-[9px] font-black uppercase text-amber-600 flex items-center gap-1">
                         <span>💊</span> Medicine / Extra
                       </label>
                       <button 
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setReportData(prev => {
-                            const newTotal = (prev.monthlyPackage * prev.billableMonths);
+                            const newTotal = (Number(prev.monthlyPackage) * Number(prev.billableMonths));
                             return {
                               ...prev,
                               medicineCharges: 0,
                               totalDue: newTotal,
-                              remainingAmount: newTotal - prev.receivedAmount
+                              remainingAmount: newTotal - Number(prev.receivedAmount)
                             };
                           });
                         }}
-                        className="p-1 hover:bg-amber-100 rounded text-amber-600 transition-all no-print"
+                        className="p-1 hover:bg-amber-100 rounded text-amber-600 transition-all no-print flex items-center justify-center"
                         title="Remove Medicine Charges"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3 h-3 pointer-events-none" />
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
@@ -3943,14 +3959,14 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                         className="text-xl font-black w-full bg-transparent border-b-2 border-amber-200 focus:border-amber-500 text-amber-700 outline-none py-1"
                         value={reportData.medicineCharges}
                         onChange={e => {
-                          const val = Number(e.target.value);
+                          const val = Number(e.target.value) || 0;
                           setReportData(prev => {
-                            const newTotal = (prev.monthlyPackage * prev.billableMonths) + val;
+                            const newTotal = (Number(prev.monthlyPackage) * Number(prev.billableMonths)) + val;
                             return {
                               ...prev,
                               medicineCharges: val,
                               totalDue: newTotal,
-                              remainingAmount: newTotal - prev.receivedAmount
+                              remainingAmount: newTotal - Number(prev.receivedAmount)
                             };
                           });
                         }}
