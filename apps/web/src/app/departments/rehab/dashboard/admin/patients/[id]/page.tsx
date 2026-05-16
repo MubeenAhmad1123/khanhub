@@ -3688,69 +3688,112 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md p-4 pt-8 sm:pt-16 overflow-y-auto report-modal-root">
       <style>{`
         @media print {
-          @page { size: A4; margin: 0; }
+          @page { 
+            size: A4; 
+            margin: 0; 
+          }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
-            overflow: visible !important;
             background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
-          /* Hide EVERYTHING in the body */
-          body > * {
-            display: none !important;
+          
+          /* Hide everything by default using visibility */
+          body * {
+            visibility: hidden !important;
           }
-          /* Except our modal root */
-          body > .report-modal-root {
-            display: block !important;
+          
+          /* Show only the report modal and its content */
+          .report-modal-root, 
+          .report-modal-root * {
+            visibility: visible !important;
+          }
+
+          /* Position the report modal at the very top of the print page */
+          .report-modal-root {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
             height: auto !important;
             background: white !important;
-            z-index: 9999 !important;
+            display: block !important;
             padding: 0 !important;
             margin: 0 !important;
-            overflow: visible !important;
+            z-index: 99999 !important;
           }
-          /* Hide everything inside the modal root that isn't the report */
-          .report-modal-root .no-print {
+
+          /* Hide UI elements and controls */
+          .no-print, 
+          .no-print *,
+          button {
             display: none !important;
-          }
-          /* Ensure the report itself is visible and correctly styled */
-          .printable-report {
-            display: flex !important;
-            flex-direction: column !important;
-            position: static !important;
-            width: 100% !important;
-            min-height: 29.7cm !important;
+            height: 0 !important;
             margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Optimize the actual report container for A4 */
+          .printable-report {
+            display: block !important;
+            position: relative !important;
+            width: 21cm !important;
+            min-height: 29.7cm !important;
+            margin: 0 auto !important;
             padding: 1.5cm !important;
             box-shadow: none !important;
             border: none !important;
-            visibility: visible !important;
-            color: black !important;
+            background: white !important;
           }
+
+          /* Force High Contrast for all text and borders */
           .printable-report * {
-            visibility: visible !important;
             color: black !important;
+            background-color: transparent !important;
+            border-color: black !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
           }
-          /* Force text color reset for common Tailwind classes */
-          .text-teal-600, .text-blue-600, .text-rose-600, .text-amber-600, .text-gray-900, .text-gray-400 {
+
+          /* Override Tailwind color classes specifically to ensure they are black */
+          .text-teal-600, .text-teal-700, .text-blue-600, .text-rose-600, .text-rose-700, .text-amber-600, 
+          .text-emerald-700, .text-emerald-950, .text-rose-950, .text-blue-950,
+          .text-gray-900, .text-gray-500, .text-gray-400 {
             color: black !important;
+            font-weight: bold !important;
           }
-          .bg-teal-50, .bg-blue-50, .bg-rose-50, .bg-gray-50 {
-            background-color: white !important;
-            border: 1px solid #eee !important;
+
+          /* Boxes for financial data - light gray background for distinction */
+          .bg-blue-50\/50, .bg-teal-50\/50, .bg-rose-50\/60, .bg-emerald-50\/60, .bg-gray-50 {
+            background-color: #f2f2f2 !important;
+            border: 1pt solid black !important;
           }
+
+          /* Table Styling for Print */
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          th, td {
+            border-bottom: 1pt solid black !important;
+            padding: 6pt 4pt !important;
+          }
+          .border-b-4 { border-bottom: 3pt solid black !important; }
+          .border-b-2 { border-bottom: 1.5pt solid black !important; }
+          .border-t-4 { border-top: 3pt solid black !important; }
+
+          /* Field inputs */
           input, textarea {
             border: none !important;
+            border-bottom: 0.5pt solid #ccc !important;
             background: transparent !important;
             color: black !important;
-            appearance: none;
-            -webkit-appearance: none;
+            font-weight: bold !important;
           }
+
           .hide-if-zero-print[data-value="0"] {
             display: none !important;
           }
