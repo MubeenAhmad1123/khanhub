@@ -1600,7 +1600,7 @@ export default function PatientDetailPage() {
   if (!patient) return null;
 
   return (
-    <div className="w-full overflow-x-hidden pb-20 bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen">
+    <div className="w-full overflow-x-hidden pb-20 bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen patient-detail-root">
       <SuperAdminPortalToolbar
         dept="rehab"
         entityId={patientId}
@@ -3701,49 +3701,50 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             print-color-adjust: exact !important;
           }
           
-          /* Hide everything by default using visibility */
-          body * {
-            visibility: hidden !important;
-          }
-          
-          /* Show only the report modal and its content */
-          .report-modal-root, 
-          .report-modal-root * {
-            visibility: visible !important;
+          /* Hide all dashboard content except the report modal */
+          .patient-detail-root > *:not(.report-modal-root) {
+            display: none !important;
           }
 
-          /* Position the report modal at the very top of the print page */
+          /* Optimize the report modal container for print */
           .report-modal-root {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
             height: auto !important;
-            background: white !important;
             display: block !important;
+            background: white !important;
             padding: 0 !important;
             margin: 0 !important;
             z-index: 99999 !important;
           }
 
-          /* Hide UI elements and controls */
-          .no-print, 
-          .no-print *,
-          button {
+          /* Hide UI elements within the modal */
+          .no-print {
             display: none !important;
             height: 0 !important;
-            margin: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+          }
+
+          /* The scrollable wrapper should not scroll or have background in print */
+          .flex-1.overflow-y-auto {
+            overflow: visible !important;
             padding: 0 !important;
+            background: white !important;
+            display: block !important;
           }
 
           /* Optimize the actual report container for A4 */
           .printable-report {
             display: block !important;
             position: relative !important;
-            width: 21cm !important;
+            width: 100% !important; /* Full width for print */
+            max-width: 21cm !important;
             min-height: 29.7cm !important;
             margin: 0 auto !important;
-            padding: 1.5cm !important;
+            padding: 1cm !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
@@ -3810,7 +3811,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center no-print">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center">
           <div ref={reportRef} className="printable-report bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
             <div>
               {/* Report Header */}
