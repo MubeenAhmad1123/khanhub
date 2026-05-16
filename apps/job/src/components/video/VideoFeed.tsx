@@ -65,7 +65,6 @@ export function VideoFeed() {
 
   // ── ui state ──────────────────────────────────────────────────
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [forceStopAll, setForceStopAll] = useState(false);
   const activeIndexRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const playingRef = useRef<number | null>(null);
@@ -158,6 +157,7 @@ export function VideoFeed() {
   const hasLoadedOnce = useRef(false);
   const ioActiveIndexRef = useRef(0);
   const lastUpdatedVideoRef = useRef<string | null>(null);
+  const pauseCallbacksRef = useRef<Map<number, () => void>>(new Map());
 
   if (videoRefs.current.length < displayVideos.length) {
     videoRefs.current = [
@@ -325,7 +325,6 @@ export function VideoFeed() {
             // Synchronously set ID ref to prevent any other video playing
             activeVideoIdRef.current = videos[resumeIdx]?.id ?? '';
             setTimeout(() => {
-              setForceStopAll(false);
               activeIndexRef.current = resumeIdx;
               playingRef.current = resumeIdx;
               ioActiveIndexRef.current = resumeIdx;
@@ -419,16 +418,17 @@ export function VideoFeed() {
           // Guard: only activate if this index is still the pending one
           if (pendingIndex !== idx) return;
 
-          // Briefly force-stop all then release — ensures iOS audio session 
-          // is cut on the previously playing video before new one starts. 
-          setForceStopAll(true);
-          setTimeout(() => {
-            setForceStopAll(false);
-            activeIndexRef.current = idx;
-            playingRef.current = idx;
-            ioActiveIndexRef.current = idx;
-            setActiveIndex(idx);
-          }, 80);
+          // Immediately pause the previous video imperatively (no state, no re-render)
+          if (playingRef.current !== null && playingRef.current !== idx) {
+            pauseCallbacksRef.current.get(playingRef.current)?.();
+          }
+          // Update refs synchronously
+          activeVideoIdRef.current = displayVideos[idx]?.id ?? '';
+          activeIndexRef.current = idx;
+          playingRef.current = idx;
+          ioActiveIndexRef.current = idx;
+          // Only ONE setState — just setActiveIndex
+          setActiveIndex(idx);
 
           const currentVideo = displayVideos[idx];
           if (currentVideo && !currentVideo.isPlaceholder) {
@@ -447,7 +447,7 @@ export function VideoFeed() {
               if (count >= 3) setShowGuestWall(true);
             }
           }
-        }, 80);
+        }, 150);
       });
     };
 
@@ -467,8 +467,9 @@ export function VideoFeed() {
           // Sync set ID ref immediately to kill previous video's attemptPlay
           activeVideoIdRef.current = displayVideos[next]?.id ?? '';
           videoRefs.current[next]?.scrollIntoView({ behavior: 'instant' });
-          setForceStopAll(true);
+          
           if (playingRef.current !== null && playingRef.current !== next) {
+            pauseCallbacksRef.current.get(playingRef.current)?.();
             const prevContainer = videoRefs.current[playingRef.current];
             if (prevContainer) {
               const prevVidEl = prevContainer.querySelector('video');
@@ -484,12 +485,11 @@ export function VideoFeed() {
           }
           if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
           debounceTimerRef.current = setTimeout(() => {
-            setForceStopAll(false);
             activeIndexRef.current = next;
             playingRef.current = next;
             setActiveIndex(next);
             ioActiveIndexRef.current = next;
-          }, 80);
+          }, 150);
         }
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -499,8 +499,9 @@ export function VideoFeed() {
           // Sync set ID ref immediately to kill previous video's attemptPlay
           activeVideoIdRef.current = displayVideos[prev]?.id ?? '';
           videoRefs.current[prev]?.scrollIntoView({ behavior: 'instant' });
-          setForceStopAll(true);
+          
           if (playingRef.current !== null && playingRef.current !== prev) {
+            pauseCallbacksRef.current.get(playingRef.current)?.();
             const prevContainer = videoRefs.current[playingRef.current];
             if (prevContainer) {
               const prevVidEl = prevContainer.querySelector('video');
@@ -516,12 +517,11 @@ export function VideoFeed() {
           }
           if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
           debounceTimerRef.current = setTimeout(() => {
-            setForceStopAll(false);
             activeIndexRef.current = prev;
             playingRef.current = prev;
             setActiveIndex(prev);
             ioActiveIndexRef.current = prev;
-          }, 80);
+          }, 150);
         }
       }
     };
@@ -557,9 +557,9 @@ export function VideoFeed() {
 
       if (idx !== activeIndex) {
         videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
-        setForceStopAll(true);
-
+        
         if (playingRef.current !== null && playingRef.current !== idx) {
+          pauseCallbacksRef.current.get(playingRef.current)?.();
           const prevContainer = videoRefs.current[playingRef.current];
           if (prevContainer) {
             const prevVidEl = prevContainer.querySelector('video');
@@ -576,12 +576,11 @@ export function VideoFeed() {
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {
-          setForceStopAll(false);
           activeIndexRef.current = idx;
           playingRef.current = idx;
           setActiveIndex(idx);
           ioActiveIndexRef.current = idx;
-        }, 80);
+        }, 150);
       }
     } else {
       const fetchAndPrepend = async () => {
@@ -609,7 +608,6 @@ export function VideoFeed() {
           activeVideoIdRef.current = activeDeeplinkId;
 
           setTimeout(() => {
-            setForceStopAll(false);
             activeIndexRef.current = 0;
             playingRef.current = 0;
             setActiveIndex(0);
@@ -708,16 +706,40 @@ export function VideoFeed() {
 
   // ── video slides ──────────────────────────────────────────────
   const renderedVideos = useMemo(() => {
+    const RENDER_AHEAD = 2;
+    const RENDER_BEHIND = 2;
+
     return displayVideos.map((video, index) => {
       const { isActive, isAdjacent } = getVideoState(index);
+      const shouldRender =
+        index >= activeIndex - RENDER_BEHIND &&
+        index <= activeIndex + RENDER_AHEAD;
+
+      if (!shouldRender) {
+        pauseCallbacksRef.current.delete(index);
+        return (
+          <div
+            key={video.id || index}
+            ref={(el) => { videoRefs.current[index] = el; }}
+            style={{
+              height: '100dvh',
+              minHeight: '100dvh',
+              background: '#000',
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              flexShrink: 0,
+            }}
+          />
+        );
+      }
 
       return (
         <div
           key={video.id}
           ref={el => { videoRefs.current[index] = el; }}
-          style={{
+            style={{
             height: '100dvh',
-            minHeight: '100vh',
+            minHeight: '100dvh',
             scrollSnapAlign: 'start',
             scrollSnapStop: 'always',
             position: 'relative',
@@ -756,10 +778,12 @@ export function VideoFeed() {
               videoId={video.id}
               userHasInteracted={userHasInteracted}
               isMobileDevice={false}
-              forceStop={forceStopAll}
               globalMuted={globalMuted}
               onToggleMute={handleToggleMute}
               activeVideoIdRef={activeVideoIdRef}
+              onRegisterPause={(pauseFn) => {
+                pauseCallbacksRef.current.set(index, pauseFn);
+              }}
             />
           </div>
 
@@ -792,11 +816,10 @@ export function VideoFeed() {
     activeIndex,
     globalMuted,
     userHasInteracted,
-    router,
     handleToggleMute,
-    forceStopAll,
     getVideoState,
   ]);
+
 
   // ── render ────────────────────────────────────────────────────
   return (
@@ -881,7 +904,6 @@ export function VideoFeed() {
           className="feed-container no-scrollbar"
           style={{
             height: '100dvh',
-            minHeight: '-webkit-fill-available',
             overflowY: 'scroll',
             scrollSnapType: 'y mandatory',
             scrollBehavior: 'auto',

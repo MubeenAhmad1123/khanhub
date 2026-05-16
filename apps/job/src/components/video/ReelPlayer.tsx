@@ -21,12 +21,12 @@ interface ReelPlayerProps {
     videoId: string;
     userHasInteracted?: boolean;
     isMobileDevice?: boolean;
-    forceStop?: boolean;
     globalMuted: boolean;
     onToggleMute: () => void;
     // Live ref from VideoFeed — always holds the currently active video ID.
     // Async code reads this to abort immediately when video changes.
     activeVideoIdRef: React.MutableRefObject<string>;
+    onRegisterPause: (pauseFn: () => void) => void;
 }
 
 const MIN_LOADING_MS = 800;
@@ -38,10 +38,10 @@ const ReelPlayer = memo(function ReelPlayer({
     isAdjacent,
     videoId,
     userHasInteracted,
-    forceStop = false,
     globalMuted,
     onToggleMute,
     activeVideoIdRef,
+    onRegisterPause,
 }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -157,6 +157,21 @@ const ReelPlayer = memo(function ReelPlayer({
         [onToggleMute],
     );
 
+    // ── Register imperative pause function ────────────────────────
+    useEffect(() => {
+        onRegisterPause(() => {
+            const video = videoRef.current;
+            if (!video) return;
+            try {
+                video.pause();
+                video.muted = true;
+                video.setAttribute('muted', '');
+                video.volume = 0;
+            } catch (e) { }
+            setIsPaused(true);
+        });
+    }, [onRegisterPause]);
+
     // ── Active / inactive state ───────────────────────────────────
     useEffect(() => {
         const video = videoRef.current;
@@ -167,7 +182,7 @@ const ReelPlayer = memo(function ReelPlayer({
         const isCurrentSession = () => mySession === activeSessionRef.current;
 
         // Point 2 & 5: Immediate synchronous closure
-        if (!isActive || forceStop) {
+        if (!isActive) {
             video.muted = true;
             video.setAttribute('muted', '');
             video.volume = 0;
@@ -257,7 +272,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 // Re-check after MIN_LOADING_MS delay
-                if (!isMine() || userPausedRef.current || forceStop) {
+                if (!isMine() || userPausedRef.current) {
                     vid.muted = true;
                     vid.setAttribute('muted', '');
                     vid.volume = 0;
@@ -307,7 +322,11 @@ const ReelPlayer = memo(function ReelPlayer({
                 if (retryCount < 2) {
                     setTimeout(() => attemptPlay(retryCount + 1), 400);
                 } else {
-                    if (videoRef.current) videoRef.current.muted = true;
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.setAttribute('muted', '');
+                        videoRef.current.volume = 0;
+                    }
                 }
             }
         };
@@ -327,7 +346,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 videoRef.current.volume = 0;
             }
         };
-    }, [isActive, isAdjacent, userHasInteracted, forceStop, activeVideoIdRef, globalMuted, videoId]);
+    }, [isActive, isAdjacent, userHasInteracted, activeVideoIdRef, globalMuted, videoId]);
 
     // ── Auto-unmute when userHasInteracted first fires ────────────
     useEffect(() => {
