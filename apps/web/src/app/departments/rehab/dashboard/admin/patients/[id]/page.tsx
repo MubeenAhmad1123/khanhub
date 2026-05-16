@@ -1601,13 +1601,15 @@ export default function PatientDetailPage() {
 
   return (
     <div className="w-full overflow-x-hidden pb-20 bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen patient-detail-root">
-      <SuperAdminPortalToolbar
-        dept="rehab"
-        entityId={patientId}
-        entityType="patient"
-        entityName={patient?.name}
-      />
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
+      <div className="no-print">
+        <SuperAdminPortalToolbar
+          dept="rehab"
+          entityId={patientId}
+          entityType="patient"
+          entityName={patient?.name}
+        />
+      </div>
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0 no-print">
 
         {/* Top Link - Back Navigation */}
         <div className="px-4 sm:px-0 mt-4 leading-none">
@@ -3690,41 +3692,43 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
         @media print {
           @page { 
             size: A4; 
-            margin: 1.5cm; 
+            margin: 1cm; 
           }
           
-          /* Reset root layout */
-          html, body {
+          /* Isolation: Hide EVERYTHING except the report modal */
+          body > *, 
+          .patient-detail-root > *:not(.report-modal-root),
+          .no-print, 
+          button, 
+          .close-button, 
+          header, 
+          nav {
+            display: none !important;
+          }
+
+          /* Reset root layout for print */
+          html, body, .patient-detail-root {
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
             background: white !important;
             overflow: visible !important;
+            display: block !important;
           }
 
-          /* STRICT ISOLATION: Hide everything that isn't the report or its parent */
-          body > *:not(.patient-detail-root),
-          .patient-detail-root > *:not(.report-modal-root),
-          .no-print {
-            display: none !important;
-          }
-
-          /* Ensure the report modal root is the only visible content */
+          /* Force the modal into a standard block flow instead of fixed/absolute */
           .report-modal-root {
             display: block !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
+            position: static !important;
             width: 100% !important;
             height: auto !important;
             padding: 0 !important;
             margin: 0 !important;
             background: white !important;
-            z-index: auto !important;
+            box-shadow: none !important;
           }
 
           .modal-box-container {
-            position: relative !important;
             display: block !important;
             width: 100% !important;
             height: auto !important;
@@ -3747,64 +3751,53 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             background: white !important;
           }
 
-          /* Optimization for the actual paper area */
           .printable-report {
             display: block !important;
             width: 100% !important;
-            min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
-            box-shadow: none !important;
             background: white !important;
+            box-shadow: none !important;
           }
 
-          /* Force Deep Black for all text and elements */
+          /* EXTREME CLARITY: Force all text to DEEP BLACK */
           .printable-report * {
-            color: black !important;
-            -webkit-text-fill-color: black !important;
-            border-color: black !important;
-            background-color: transparent !important;
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            border-color: #000000 !important;
+            background: transparent !important;
+            font-weight: 700 !important;
             text-shadow: none !important;
             box-shadow: none !important;
-            font-weight: 700 !important; /* Make everything a bit bolder for print clarity */
           }
 
-          /* Hide UI controls and non-essential elements */
-          .no-print, .no-print *, button, .close-button {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            width: 0 !important;
+          /* Ensure table borders are thick and black */
+          table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+            border: 1.5pt solid black !important;
           }
-
-          /* Specific overrides for common colors to ensure they are black */
-          .text-teal-600, .text-teal-700, .text-blue-600, .text-rose-600, .text-rose-700, .text-amber-600, 
-          .text-emerald-700, .text-emerald-950, .text-rose-950, .text-blue-950,
-          .text-gray-900, .text-gray-500, .text-gray-400 {
+          th, td {
+            border: 1pt solid black !important;
+            padding: 8pt !important;
             color: black !important;
           }
+          thead {
+            display: table-header-group !important;
+          }
 
-          /* Maintain section backgrounds but in grayscale */
-          .bg-blue-50\/50, .bg-teal-50\/50, .bg-rose-50\/60, .bg-emerald-50\/60, .bg-gray-50 {
-            background-color: #f5f5f5 !important;
+          /* Maintain section backgrounds but in LIGHT GRAYSCALE for readability */
+          .bg-blue-50\\/50, .bg-teal-50\\/50, .bg-rose-50\\/60, .bg-emerald-50\\/60, .bg-gray-50, .bg-gray-50\\/50 {
+            background-color: #f0f0f0 !important;
             border: 1pt solid black !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
 
-          /* Table fixes */
-          table {
-            border-collapse: collapse !important;
-            width: 100% !important;
-          }
-          th, td {
-            border: 0.5pt solid black !important;
-            padding: 6pt !important;
-            color: black !important;
-          }
-          thead {
-            display: table-header-group !important;
+          /* Force specific headings that might be colored */
+          .text-teal-600, .text-blue-600, .text-rose-600, .text-emerald-700 {
+            color: #000000 !important;
           }
 
           /* Page break handling */
