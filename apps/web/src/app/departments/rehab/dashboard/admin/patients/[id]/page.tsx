@@ -3690,44 +3690,37 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
         @media print {
           @page { 
             size: A4; 
-            margin: 1cm; 
+            margin: 1.5cm; 
           }
           
-          /* Hide EVERYTHING by default */
-          html, body, #__next, .patient-detail-root {
+          /* Reset root layout */
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
-            min-height: 0 !important;
             background: white !important;
             overflow: visible !important;
           }
 
-          body * {
-            visibility: hidden !important;
+          /* STRICT ISOLATION: Hide everything that isn't the report or its parent */
+          body > *:not(.patient-detail-root),
+          .patient-detail-root > *:not(.report-modal-root),
+          .no-print {
+            display: none !important;
           }
 
-          /* Show only the report modal and its necessary contents */
-          .report-modal-root, 
-          .report-modal-root *,
-          .printable-report,
-          .printable-report * {
-            visibility: visible !important;
-          }
-
-          /* Position the modal for print - convert from fixed to static/relative */
+          /* Ensure the report modal root is the only visible content */
           .report-modal-root {
+            display: block !important;
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
             height: auto !important;
-            display: block !important;
-            background: white !important;
             padding: 0 !important;
             margin: 0 !important;
+            background: white !important;
             z-index: auto !important;
-            overflow: visible !important;
           }
 
           .modal-box-container {
