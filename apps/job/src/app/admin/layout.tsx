@@ -21,12 +21,12 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const { user, loading, logout, isAdmin } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const role = ((user as any)?.role || '') as string;
     const isCashier = role === 'cashier';
     const canAccessPayments = isAdmin || isCashier;
     const cashierRouteAllowed = pathname?.startsWith('/admin/payments');
-    const router = useRouter();
-    const pathname = usePathname();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { toast } = useToast();
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useAdminNotifications();
