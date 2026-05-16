@@ -3690,23 +3690,32 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
         @media print {
           @page { 
             size: A4; 
-            margin: 0; 
+            margin: 1cm; 
           }
-          html, body {
+          
+          /* Hide EVERYTHING by default */
+          html, body, #__next, .patient-detail-root {
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
+            min-height: 0 !important;
             background: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          /* Hide all dashboard content except the report modal */
-          .patient-detail-root > *:not(.report-modal-root) {
-            display: none !important;
+            overflow: visible !important;
           }
 
-          /* Optimize the report modal container for print */
+          body * {
+            visibility: hidden !important;
+          }
+
+          /* Show only the report modal and its necessary contents */
+          .report-modal-root, 
+          .report-modal-root *,
+          .printable-report,
+          .printable-report * {
+            visibility: visible !important;
+          }
+
+          /* Position the modal for print - convert from fixed to static/relative */
           .report-modal-root {
             position: absolute !important;
             top: 0 !important;
@@ -3717,82 +3726,98 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             background: white !important;
             padding: 0 !important;
             margin: 0 !important;
-            z-index: 99999 !important;
-          }
-
-          /* Hide UI elements within the modal */
-          .no-print {
-            display: none !important;
-            height: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
-          }
-
-          /* The scrollable wrapper should not scroll or have background in print */
-          .flex-1.overflow-y-auto {
+            z-index: auto !important;
             overflow: visible !important;
-            padding: 0 !important;
-            background: white !important;
-            display: block !important;
           }
 
-          /* Optimize the actual report container for A4 */
-          .printable-report {
-            display: block !important;
+          .modal-box-container {
             position: relative !important;
-            width: 100% !important; /* Full width for print */
-            max-width: 21cm !important;
-            min-height: 29.7cm !important;
-            margin: 0 auto !important;
-            padding: 1cm !important;
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
-          /* Force High Contrast for all text and borders */
+          .report-scroll-wrapper {
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+
+          /* Optimization for the actual paper area */
+          .printable-report {
+            display: block !important;
+            width: 100% !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+          }
+
+          /* Force Deep Black for all text and elements */
           .printable-report * {
             color: black !important;
-            background-color: transparent !important;
+            -webkit-text-fill-color: black !important;
             border-color: black !important;
+            background-color: transparent !important;
             text-shadow: none !important;
             box-shadow: none !important;
+            font-weight: 700 !important; /* Make everything a bit bolder for print clarity */
           }
 
-          /* Override Tailwind color classes specifically to ensure they are black */
+          /* Hide UI controls and non-essential elements */
+          .no-print, .no-print *, button, .close-button {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+          }
+
+          /* Specific overrides for common colors to ensure they are black */
           .text-teal-600, .text-teal-700, .text-blue-600, .text-rose-600, .text-rose-700, .text-amber-600, 
           .text-emerald-700, .text-emerald-950, .text-rose-950, .text-blue-950,
           .text-gray-900, .text-gray-500, .text-gray-400 {
             color: black !important;
-            font-weight: bold !important;
           }
 
-          /* Boxes for financial data - light gray background for distinction */
+          /* Maintain section backgrounds but in grayscale */
           .bg-blue-50\/50, .bg-teal-50\/50, .bg-rose-50\/60, .bg-emerald-50\/60, .bg-gray-50 {
-            background-color: #f2f2f2 !important;
+            background-color: #f5f5f5 !important;
             border: 1pt solid black !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
-          /* Table Styling for Print */
+          /* Table fixes */
           table {
-            width: 100% !important;
             border-collapse: collapse !important;
+            width: 100% !important;
           }
           th, td {
-            border-bottom: 1pt solid black !important;
-            padding: 6pt 4pt !important;
-          }
-          .border-b-4 { border-bottom: 3pt solid black !important; }
-          .border-b-2 { border-bottom: 1.5pt solid black !important; }
-          .border-t-4 { border-top: 3pt solid black !important; }
-
-          /* Field inputs */
-          input, textarea {
-            border: none !important;
-            border-bottom: 0.5pt solid #ccc !important;
-            background: transparent !important;
+            border: 0.5pt solid black !important;
+            padding: 6pt !important;
             color: black !important;
-            font-weight: bold !important;
+          }
+          thead {
+            display: table-header-group !important;
+          }
+
+          /* Page break handling */
+          .grid, tr, .printable-report > div {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
           .hide-if-zero-print[data-value="0"] {
@@ -3800,7 +3825,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           }
         }
       `}</style>
-      <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
+      <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-white/20 modal-box-container">
         <div className="p-8 border-b dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5 no-print">
           <div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Report Preview</h2>
@@ -3811,7 +3836,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center report-scroll-wrapper">
           <div ref={reportRef} className="printable-report bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
             <div>
               {/* Report Header */}
