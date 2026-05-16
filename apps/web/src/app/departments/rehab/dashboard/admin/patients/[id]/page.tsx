@@ -12,7 +12,7 @@ import {
   ArrowLeft, User, DollarSign, ShoppingCart, Video,
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
   ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, CheckCircle2,
-  Clock
+  Clock, Printer
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -3619,7 +3619,6 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
   const [reportData, setReportData] = useState({
     name: patient.name,
     patientId: patient.patientId || 'None',
-    serialNumber: patient.serialNumber || 'None',
     stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
     dischargeDate: patient.dischargeDate ? formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate) : '',
@@ -3675,10 +3674,58 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md p-4 pt-8 sm:pt-16 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md p-4 pt-8 sm:pt-16 overflow-y-auto no-print">
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 0; }
+          body * { visibility: hidden; }
+          .printable-report, .printable-report * { 
+            visibility: visible; 
+            color: black !important;
+            border-color: #e5e7eb !important; /* light gray borders for structure */
+          }
+          .printable-report {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 1.5cm !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          .no-print { display: none !important; }
+          /* Ensure text is black and remove colored backgrounds */
+          .printable-report .text-teal-600, 
+          .printable-report .text-blue-600, 
+          .printable-report .text-rose-600, 
+          .printable-report .text-amber-600,
+          .printable-report .text-rose-700,
+          .printable-report .text-teal-700 {
+            color: black !important;
+          }
+          .printable-report .bg-teal-50,
+          .printable-report .bg-blue-50,
+          .printable-report .bg-rose-50,
+          .printable-report .bg-gray-50,
+          .printable-report .bg-emerald-50,
+          .printable-report .bg-amber-50 {
+            background-color: white !important;
+            border: 1px solid #e5e7eb !important;
+          }
+          input, textarea {
+            border: none !important;
+            background: transparent !important;
+          }
+        }
+      `}</style>
       <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
-        <div className="p-8 border-b dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+        <div className="p-8 border-b dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5 no-print">
           <div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Report Preview</h2>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Review and Edit Before Downloading</p>
@@ -3688,8 +3735,8 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center">
-          <div ref={reportRef} className="bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center no-print">
+          <div ref={reportRef} className="printable-report bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
             <div>
               {/* Report Header */}
               <div className="flex justify-between items-start border-b-4 border-gray-900 pb-5 mb-6">
@@ -3721,23 +3768,13 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                         onChange={e => setReportData({ ...reportData, name: e.target.value })}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
-                        <input
-                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
-                          value={reportData.patientId}
-                          onChange={e => setReportData({ ...reportData, patientId: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Serial #</label>
-                        <input
-                          className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
-                          value={reportData.serialNumber}
-                          onChange={e => setReportData({ ...reportData, serialNumber: e.target.value })}
-                        />
-                      </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Patient ID</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-teal-500 outline-none transition-colors py-1 text-gray-800"
+                        value={reportData.patientId}
+                        onChange={e => setReportData({ ...reportData, patientId: e.target.value })}
+                      />
                     </div>
                     <div>
                       <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
@@ -3877,9 +3914,28 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   </div>
 
                   <div className="pl-4">
-                    <label className="text-[9px] font-black uppercase text-amber-600 block mb-1.5 flex items-center gap-1">
-                      <span>💊</span> Medicine / Extra
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[9px] font-black uppercase text-amber-600 flex items-center gap-1">
+                        <span>💊</span> Medicine / Extra
+                      </label>
+                      <button 
+                        onClick={() => {
+                          setReportData(prev => {
+                            const newTotal = (prev.monthlyPackage * prev.billableMonths);
+                            return {
+                              ...prev,
+                              medicineCharges: 0,
+                              totalDue: newTotal,
+                              remainingAmount: newTotal - prev.receivedAmount
+                            };
+                          });
+                        }}
+                        className="p-1 hover:bg-amber-100 rounded text-amber-600 transition-all no-print"
+                        title="Remove Medicine Charges"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-gray-400">PKR</span>
                       <input
@@ -3989,9 +4045,16 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </div>
         </div>
 
-        <div className="p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4">
+        <div className="p-8 border-t dark:border-white/5 bg-white dark:bg-gray-900 flex justify-end gap-4 no-print">
           <button onClick={onClose} className="px-8 py-4 rounded-2xl font-black text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all uppercase tracking-widest active:scale-95">
             Close
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-10 py-4 bg-gray-900 hover:bg-black text-white rounded-2xl font-black text-xs flex items-center gap-3 shadow-2xl active:scale-95 transition-all uppercase tracking-widest"
+          >
+            <Printer className="w-5 h-5" />
+            Print Report
           </button>
           <button
             onClick={downloadReport}
@@ -3999,7 +4062,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             className="px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs flex items-center gap-3 shadow-2xl shadow-teal-600/30 active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest"
           >
             {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-            {isDownloading ? 'Generating...' : 'Download Statement'}
+            {isDownloading ? 'Generating...' : 'Download Image'}
           </button>
         </div>
       </div>
