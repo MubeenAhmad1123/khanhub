@@ -757,7 +757,7 @@ export function VideoFeed() {
             flexDirection: 'column',
             alignItems: 'center',
             paddingTop: '112px',
-            paddingBottom: '0px',
+            paddingBottom: '60px',
           }}
         >
           <div
@@ -907,6 +907,7 @@ export function VideoFeed() {
             msOverflowStyle: 'none',
             position: 'relative',
             background: '#000',
+            zIndex: 0,
           }}
         >
           {videosLoading ? (
@@ -987,7 +988,7 @@ export function VideoFeed() {
               left: 0,
               right: 0,
               bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-              zIndex: 2000,
+              zIndex: 9400,
               maxWidth: '480px',
               margin: '0 auto',
               background:
@@ -1012,7 +1013,7 @@ export function VideoFeed() {
               position: 'fixed',
               right: 10,
               bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
-              zIndex: 2500,
+              zIndex: 9400,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -1099,7 +1100,7 @@ export function VideoFeed() {
               position: 'fixed',
               right: 10,
               bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 20px)',
-              zIndex: 2400,
+              zIndex: 9400,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',

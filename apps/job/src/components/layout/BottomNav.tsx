@@ -18,11 +18,11 @@ export default function BottomNav() {
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
       height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-      background: '#FFFFFF',
-      borderTop: '1px solid #F0F0F0',
+      background: '#000000',
+      borderTop: '1px solid rgba(255, 255, 255, 0.05)',
       display: 'flex', alignItems: 'flex-start',
       paddingTop: '8px',
-      zIndex: 9999,
+      zIndex: 9600,
       // GPU acceleration for smoother transitions:
       WebkitTransform: 'translateZ(0)',
       transform: 'translateZ(0)',
@@ -66,12 +66,12 @@ export default function BottomNav() {
           }}>
             <Icon
               size={22}
-              color={isActive ? '#FF0069' : '#888'}
+              color={isActive ? '#FF0069' : 'rgba(255, 255, 255, 0.6)'}
               strokeWidth={isActive ? 2.5 : 1.8}
             />
             <span style={{
               fontSize: '10px',
-              color: isActive ? '#FF0069' : '#888',
+              color: isActive ? '#FF0069' : 'rgba(255, 255, 255, 0.6)',
               fontWeight: isActive ? 700 : 400,
             }}>
               {label}
@@ -82,4 +82,3 @@ export default function BottomNav() {
     </nav>
   )
 }
-

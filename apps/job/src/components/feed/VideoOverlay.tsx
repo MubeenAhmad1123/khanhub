@@ -29,8 +29,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
     const router = useRouter();
     const overlay = data?.overlayData || {};
 
-    // ── Field resolution with explicit "not provided" fallbacks ──
-    const title       = data.title || overlay.title || 'Untitled';
+    const title       = data.title || overlay.title || 'Unavailable';
     const fatherName  = data.fatherName || '';
     const skills      = Array.isArray(data.skills) && data.skills.length > 0
                           ? data.skills
@@ -53,22 +52,15 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
         if (userId) router.push(`/profile/landing/${userId}`);
     };
 
-    // Shared "not provided" chip style
-    const naStyle: React.CSSProperties = {
-        color: 'rgba(255,255,255,0.4)',
-        fontStyle: 'italic',
-        fontWeight: 400,
-    };
-
     return (
         <div
             className="w-full px-4"
             style={{
-                paddingBottom: '16px',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
+                paddingBottom: '20px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)',
             }}
         >
-            {/* ── Row 1: Avatar + Name + Connect button ── */}
+            {/* ── Row 1: DP + Name + Connect Button ── */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -102,135 +94,122 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     </div>
                 )}
 
-                {/* Name + father name */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{
-                            fontSize: 13, fontWeight: 700, color: '#fff',
-                            fontFamily: 'Poppins',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            maxWidth: '140px',
-                        }}>
-                            {userName}
-                        </span>
-                        {isVerified && (
-                            <span style={{ color: '#00C853', fontSize: 13, flexShrink: 0 }}>✓</span>
-                        )}
-                    </div>
-                    {fatherName && (
-                        <div style={{
-                            fontSize: 10, color: 'rgba(255,255,255,0.55)',
-                            fontFamily: 'DM Sans', marginTop: -1,
-                        }}>
-                            S/O {fatherName}
-                        </div>
+                {/* Name + Connect button directly beside it */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    flex: 1,
+                    minWidth: 0,
+                }}>
+                    <span style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: '#fff',
+                        fontFamily: 'Poppins',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '140px',
+                    }}>
+                        {userName}
+                    </span>
+                    {isVerified && (
+                        <span style={{ color: '#00C853', fontSize: 13, flexShrink: 0, marginLeft: -4 }}>✓</span>
+                    )}
+
+                    {userId && (
+                        <motion.button
+                            whileTap={{ scale: 0.93 }}
+                            onClick={handleConnectClick}
+                            style={{
+                                background: '#FF0069',
+                                border: 'none',
+                                borderRadius: '20px',
+                                padding: '4px 12px',
+                                color: '#fff',
+                                fontSize: 10,
+                                fontWeight: 800,
+                                fontFamily: 'Poppins',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                letterSpacing: '0.02em',
+                                boxShadow: '0 2px 10px rgba(255,0,105,0.45)',
+                                WebkitTapHighlightColor: 'transparent',
+                            }}
+                        >
+                            Connect
+                        </motion.button>
                     )}
                 </div>
-
-                {/* Connect button — always visible, solid style */}
-                {userId && (
-                    <motion.button
-                        whileTap={{ scale: 0.93 }}
-                        onClick={handleConnectClick}
-                        style={{
-                            background: '#FF0069',
-                            border: 'none',
-                            borderRadius: '20px',
-                            padding: '7px 16px',
-                            color: '#fff',
-                            fontSize: 11,
-                            fontWeight: 800,
-                            fontFamily: 'Poppins',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            letterSpacing: '0.02em',
-                            boxShadow: '0 2px 12px rgba(255,0,105,0.45)',
-                            WebkitTapHighlightColor: 'transparent',
-                        }}
-                    >
-                        Connect
-                    </motion.button>
-                )}
             </div>
 
-            {/* ── Row 2: Category + Intent badges ── */}
-            {(catConfig || intent) && (
-                <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                    {catConfig && (
-                        <span style={{
-                            background: 'rgba(0,0,0,0.45)',
-                            backdropFilter: 'blur(4px)',
-                            padding: '3px 10px',
-                            borderRadius: '6px',
-                            fontSize: 10, fontWeight: 700,
-                            color: '#fff', fontFamily: 'Poppins',
-                            textTransform: 'uppercase',
-                            border: '1px solid rgba(255,255,255,0.12)',
-                        }}>
-                            {catConfig.emoji} {catConfig.label}
-                        </span>
-                    )}
-                    {intent && (
-                        <span style={{
-                            background: catConfig?.accent || '#FF0069',
-                            padding: '3px 10px',
-                            borderRadius: '6px',
-                            fontSize: 10, fontWeight: 700,
-                            color: '#fff', fontFamily: 'Poppins',
-                            textTransform: 'uppercase',
-                        }}>
-                            {intent}
-                        </span>
-                    )}
-                </div>
-            )}
+            {/* ── Row 2: Role / Intent (e.g. 💼 Hiring / Jobs) ── */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#fff',
+                fontFamily: 'Poppins',
+                textTransform: 'uppercase',
+                marginBottom: 6,
+            }}>
+                <span>💼</span>
+                <span>{intent || 'Job Seeker / Company'}</span>
+            </div>
 
-            {/* ── Row 3: Title ── */}
-            <h3 style={{
-                fontFamily: 'Poppins', fontWeight: 700,
-                fontSize: 16, color: '#fff',
-                marginBottom: company ? 2 : 8,
+            {/* ── Row 3: Headline / Post Title (e.g. 🧠 Muslim Entrepreneur) ── */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#fff',
+                fontFamily: 'Poppins',
+                marginBottom: 8,
                 lineHeight: 1.25,
             }}>
-                {title}
-            </h3>
-            {company && (
-                <div style={{
-                    color: 'rgba(255,255,255,0.75)', fontSize: 12,
-                    marginBottom: 8, fontFamily: 'DM Sans', fontWeight: 500,
-                }}>
-                    at {company}
-                </div>
-            )}
+                <span>🧠</span>
+                <span>{title}</span>
+            </div>
 
-            {/* ── Row 4: Salary + Experience — always shown ── */}
-            <div style={{ display: 'flex', gap: 14, marginBottom: 6, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'DM Sans' }}>
-                    <span>💰</span>
-                    {salary ? (
-                        <span style={{ color: '#fff', fontWeight: 600 }}>{salary}</span>
-                    ) : (
-                        <span style={naStyle}>Not provided</span>
-                    )}
+            {/* ── Row 4: Professional Metadata (Salary, Location, Experience) ── */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                marginBottom: 10,
+                fontSize: 11,
+                fontFamily: 'DM Sans',
+                color: 'rgba(255,255,255,0.9)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ opacity: 0.8 }}>💰 Salary:</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>{salary || 'Unavailable'}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'DM Sans' }}>
-                    <span>⏳</span>
-                    {experience ? (
-                        <span style={{ color: '#fff', fontWeight: 600 }}>{experience}</span>
-                    ) : (
-                        <span style={naStyle}>Not provided</span>
-                    )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ opacity: 0.8 }}>📍 Location:</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>{city || 'Unavailable'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ opacity: 0.8 }}>⏳ Experience:</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>{experience || 'Unavailable'}</span>
                 </div>
             </div>
 
-            {/* ── Row 5: Skills pills ── */}
+            {/* ── Row 5: Skills pills (for professional identification) ── */}
             {skills.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {skills.slice(0, 4).map((skill: string, idx: number) => (
                         <span key={idx} style={{
                             background: 'rgba(255,255,255,0.1)',
-                            padding: '2px 8px', borderRadius: '4px',
-                            fontSize: 10, color: 'rgba(255,255,255,0.85)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: 10,
+                            color: 'rgba(255,255,255,0.85)',
                             fontFamily: 'DM Sans',
                             border: '1px solid rgba(255,255,255,0.08)',
                         }}>
@@ -239,25 +218,6 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     ))}
                 </div>
             )}
-
-            {/* ── Row 6: Location — always shown ── */}
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                fontSize: 11, fontFamily: 'DM Sans',
-            }}>
-                <span>📍</span>
-                {city ? (
-                    <span style={{
-                        color: 'rgba(255,255,255,0.6)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                    }}>
-                        {city}
-                    </span>
-                ) : (
-                    <span style={naStyle}>Not provided</span>
-                )}
-            </div>
         </div>
     );
 }

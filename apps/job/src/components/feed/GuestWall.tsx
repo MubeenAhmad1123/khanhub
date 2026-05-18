@@ -51,7 +51,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-white/95 backdrop-blur-2xl z-[5000] flex flex-col items-center justify-center px-8 text-center text-[#0A0A0A]"
+                    className="fixed inset-0 bg-white/95 backdrop-blur-2xl z-[9400] flex flex-col items-center justify-center px-8 text-center text-[#0A0A0A]"
                 >
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[--accent] rounded-full blur-[120px] opacity-20 pointer-events-none" />
 
