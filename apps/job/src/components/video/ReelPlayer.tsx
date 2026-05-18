@@ -545,23 +545,35 @@ const ReelPlayer = memo(function ReelPlayer({
                 </div>
             )}
 
-            {loadingTooLong && (
+            {loadingTooLong && !isSlowConnection && (
                 <div
                     style={{
-                        position: 'absolute',
-                        bottom: '200px',
+                        position: 'fixed',
+                        top: '50%',
                         left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'rgba(0,0,0,0.7)',
-                        borderRadius: '20px',
-                        padding: '8px 16px',
-                        zIndex: 15,
-                        color: 'white',
-                        fontSize: '13px',
-                        whiteSpace: 'nowrap',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 9000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 10,
+                        background: 'rgba(0,0,0,0.82)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 20,
+                        padding: '22px 28px',
+                        pointerEvents: 'none',
+                        maxWidth: '260px',
+                        textAlign: 'center',
                     }}
                 >
-                    Slow connection — loading...
+                    <span style={{ fontSize: 28 }}>⏳</span>
+                    <div style={{
+                        color: 'rgba(255,255,255,0.7)',
+                        fontSize: 12, fontFamily: 'DM Sans', lineHeight: 1.4,
+                    }}>
+                        Taking longer than usual — still loading...
+                    </div>
                 </div>
             )}
 
@@ -722,22 +734,42 @@ const ReelPlayer = memo(function ReelPlayer({
             {isSlowConnection && (isBuffering || showInitialLoading) && (
                 <div
                     style={{
-                        position: 'absolute',
-                        top: 12,
+                        position: 'fixed',
+                        top: '50%',
                         left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'rgba(180,120,0,0.9)',
-                        color: '#fff',
-                        padding: '6px 14px',
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontFamily: 'DM Sans',
-                        fontWeight: 600,
-                        zIndex: 30,
-                        whiteSpace: 'nowrap',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 9000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 12,
+                        background: 'rgba(0,0,0,0.82)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 20,
+                        padding: '24px 32px',
+                        pointerEvents: 'none',
+                        maxWidth: '260px',
+                        textAlign: 'center',
                     }}
                 >
-                    ⚡ Slow connection — buffering
+                    <span style={{ fontSize: 32 }}>📶</span>
+                    <div>
+                        <div style={{
+                            color: '#fff', fontSize: 14,
+                            fontFamily: 'Poppins', fontWeight: 700,
+                            marginBottom: 4,
+                        }}>
+                            Slow Connection
+                        </div>
+                        <div style={{
+                            color: 'rgba(255,255,255,0.55)',
+                            fontSize: 12, fontFamily: 'DM Sans',
+                            lineHeight: 1.4,
+                        }}>
+                            Video is loading — tap anywhere to play when ready
+                        </div>
+                    </div>
                 </div>
             )}
 
