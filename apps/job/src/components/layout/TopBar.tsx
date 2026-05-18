@@ -96,220 +96,417 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 12px',
                 maxWidth: '600px', margin: '0 auto',
+                width: '100%',
             }}>
-                {/* Left: Brand */}
-                <div className="flex items-center gap-3">
-                    <Link
-                        href="/"
-                        style={{
-                            fontSize: '14px', // Reduced for better mobile fit
-                            fontWeight: 900,
-                            letterSpacing: '-0.5px',
-                            color: iconColor,
-                            textTransform: 'uppercase',
-                            fontStyle: 'italic',
-                            textDecoration: 'none',
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                        }}
-                    >
-                        KHAN HUB
-                    </Link>
-                </div>
-
-                {/* Center: Category Dropdown */}
-                {!hideCategorySwitcher && (
-                    <div className="relative">
-                        <button
-                            ref={switcherTriggerRef}
-                            onClick={() => {
-                                if (!showSwitcher && switcherTriggerRef.current) {
-                                    const rect = switcherTriggerRef.current.getBoundingClientRect();
-                                    const dropdownWidth = 240; 
-                                    let leftPos = rect.left;
-                                    if (leftPos + dropdownWidth > window.innerWidth - 16) {
-                                        leftPos = window.innerWidth - dropdownWidth - 16;
-                                    }
-                                    if (leftPos < 8) leftPos = 8;
-                                    setDropdownPos({
-                                        top: rect.bottom + 8,
-                                        left: leftPos,
-                                    });
-                                }
-                                setShowSwitcher(!showSwitcher);
-                            }}
-                            className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-4 py-2 rounded-full hover:border-[--accent] transition-all min-h-[44px]"
-                            style={{
-                                opacity: searchOpen ? 0 : 1,
-                                pointerEvents: searchOpen ? 'none' : 'auto',
-                                transition: 'opacity 0.2s ease',
-                            }}
-                        >
-                            <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
-                                Connect: {categoryConfig?.label || 'All'}
-                            </span>
-                            <ChevronDown className={`w-3.5 h-3.5 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
-                        </button>
-
-                        <AnimatePresence>
-                            {showSwitcher && (
-                                <motion.div
-                                    ref={switcherRef}
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    style={{
-                                        position: 'fixed',
-                                        top: dropdownPos.top,
-                                        left: dropdownPos.left,
-                                        minWidth: '200px',
-                                        width: 'max-content',
-                                        maxWidth: '240px',
-                                        zIndex: 9999,
-                                    }}
-                                    className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
-                                >
-                                    <div className="px-5 py-3 border-b border-[#F0F0F0] mb-2">
-                                        <p className="text-[10px] font-black text-[#FF0069] uppercase tracking-[0.2em] mb-1">Connect</p>
-                                        <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
-                                    </div>
-                                    {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
-                                        <button
-                                            key={key}
-                                            onClick={() => {
-                                                setShowSwitcher(false);
-                                                setCategory(key as CategoryKey);
-                                            }}
-                                            className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all whitespace-nowrap ${activeCategory === key
-                                                ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
-                                                : 'hover:bg-black/5 text-[#444444]'
-                                                }`}
-                                        >
-                                            <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
-                                                {config.imageUrl ? (
-                                                    <Image src={config.imageUrl} alt={config.label} fill className="object-cover" />
-                                                ) : (
-                                                    <span className="text-sm">{config.emoji}</span>
-                                                )}
-                                            </div>
-                                            <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">{config.label}</span>
-                                            {activeCategory === key && (
-                                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
-                                            )}
-                                        </button>
-                                    ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                )}
-
-                {/* Right: Icons & Menu */}
-                <div className="flex items-center gap-1.5 flex-1 justify-end">
-
-                    {/* Expanding search container */}
-                    <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        <div style={{
-                            overflow: 'hidden',
-                            width: searchOpen ? '100%' : '0px',
-                            maxWidth: searchOpen ? 'calc(100vw - 160px)' : '0px', // Prevent overflow on small screens
-                            transition: 'width 0.3s ease, max-width 0.3s ease',
-                            marginRight: searchOpen ? '8px' : '0px',
-                        }}>
-                            <input
-                                ref={searchInputRef}
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter' && searchQuery.trim()) {
-                                        router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
-                                        setSearchOpen(false);
-                                        setSearchQuery('');
-                                    }
-                                    if (e.key === 'Escape') {
-                                        setSearchOpen(false);
-                                        setSearchQuery('');
-                                    }
-                                }}
-                                placeholder="Search..."
+                {isFeed ? (
+                    <>
+                        {/* FEED MODE: Left = Logo + Category Dropdown */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {/* Logo */}
+                            <Link
+                                href="/"
                                 style={{
-                                    width: '100%',
-                                    background: isFeed ? 'rgba(255,255,255,0.2)' : '#F0F0F0',
-                                    border: 'none',
-                                    borderRadius: '20px',
-                                    padding: '7px 14px',
-                                    fontSize: '13px',
-                                    color: iconColor,
-                                    outline: 'none',
+                                    fontSize: '15px',
+                                    fontWeight: 900,
+                                    letterSpacing: '-0.5px',
+                                    color: '#FFFFFF',
+                                    textTransform: 'uppercase',
+                                    fontStyle: 'italic',
+                                    textDecoration: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    lineHeight: 1,
                                 }}
-                                className="placeholder-current"
-                            />
+                            >
+                                KHAN HUB
+                            </Link>
+
+                            {/* Compact Category Dropdown — same logic as before */}
+                            <div className="relative">
+                                <button
+                                    ref={switcherTriggerRef}
+                                    onClick={() => {
+                                        if (!showSwitcher && switcherTriggerRef.current) {
+                                            const rect = switcherTriggerRef.current.getBoundingClientRect();
+                                            const dropdownWidth = 220;
+                                            let leftPos = rect.left;
+                                            if (leftPos + dropdownWidth > window.innerWidth - 16) {
+                                                leftPos = window.innerWidth - dropdownWidth - 16;
+                                            }
+                                            if (leftPos < 8) leftPos = 8;
+                                            setDropdownPos({ top: rect.bottom + 8, left: leftPos });
+                                        }
+                                        setShowSwitcher(!showSwitcher);
+                                    }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        background: 'rgba(255,255,255,0.15)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: 20,
+                                        padding: '5px 10px',
+                                        cursor: 'pointer',
+                                        minHeight: 32,
+                                    }}
+                                >
+                                    <span style={{ fontSize: 14 }}>
+                                        {categoryConfig?.emoji}
+                                    </span>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 800,
+                                        color: '#fff', fontFamily: 'Poppins',
+                                        textTransform: 'uppercase', letterSpacing: '0.04em',
+                                    }}>
+                                        {categoryConfig?.label || 'All'}
+                                    </span>
+                                    <ChevronDown
+                                        size={12}
+                                        color="#fff"
+                                        style={{
+                                            transform: showSwitcher ? 'rotate(180deg)' : 'none',
+                                            transition: 'transform 0.2s',
+                                        }}
+                                    />
+                                </button>
+
+                                {/* Dropdown portal — same AnimatePresence/motion.div as existing */}
+                                <AnimatePresence>
+                                    {showSwitcher && (
+                                        <motion.div
+                                            ref={switcherRef}
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            style={{
+                                                position: 'fixed',
+                                                top: dropdownPos.top,
+                                                left: dropdownPos.left,
+                                                minWidth: '200px',
+                                                width: 'max-content',
+                                                maxWidth: '240px',
+                                                zIndex: 9999,
+                                            }}
+                                            className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
+                                        >
+                                            <div className="px-5 py-3 border-b border-[#F0F0F0] mb-2">
+                                                <p className="text-[10px] font-black text-[#FF0069] uppercase tracking-[0.2em] mb-1">Connect</p>
+                                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
+                                            </div>
+                                            {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => {
+                                                        setShowSwitcher(false);
+                                                        setCategory(key as CategoryKey);
+                                                    }}
+                                                    className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all whitespace-nowrap ${
+                                                        activeCategory === key
+                                                            ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
+                                                            : 'hover:bg-black/5 text-[#444444]'
+                                                    }`}
+                                                >
+                                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
+                                                        {config.imageUrl ? (
+                                                            <Image src={config.imageUrl} alt={config.label} fill className="object-cover" />
+                                                        ) : (
+                                                            <span className="text-sm">{config.emoji}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">
+                                                        {config.label}
+                                                    </span>
+                                                    {activeCategory === key && (
+                                                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
 
-                        <button
-                            onClick={handleSearchToggle}
-                            style={{
-                                background: 'none', border: 'none',
-                                cursor: 'pointer', padding: '10px', // Larger tap target
-                                display: 'flex', alignItems: 'center',
-                                color: iconColor,
-                                minWidth: '44px', minHeight: '44px',
-                            }}
-                        >
-                            {searchOpen
-                                ? <X size={22} />
-                                : <Search size={22} />
-                            }
-                        </button>
-                    </div>
+                        {/* FEED MODE: Right = Search + Hamburger only (NO bell) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            {/* Expanding search */}
+                            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                <div style={{
+                                    overflow: 'hidden',
+                                    width: searchOpen ? '140px' : '0px',
+                                    transition: 'width 0.3s ease',
+                                    marginRight: searchOpen ? '6px' : '0px',
+                                }}>
+                                    <input
+                                        ref={searchInputRef}
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && searchQuery.trim()) {
+                                                router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+                                                setSearchOpen(false);
+                                                setSearchQuery('');
+                                            }
+                                            if (e.key === 'Escape') {
+                                                setSearchOpen(false);
+                                                setSearchQuery('');
+                                            }
+                                        }}
+                                        placeholder="Search..."
+                                        style={{
+                                            width: '100%',
+                                            background: 'rgba(255,255,255,0.18)',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            borderRadius: 20,
+                                            padding: '6px 12px',
+                                            fontSize: 13,
+                                            color: '#fff',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSearchToggle}
+                                    style={{
+                                        background: 'none', border: 'none',
+                                        cursor: 'pointer', padding: '10px',
+                                        display: 'flex', alignItems: 'center',
+                                        minWidth: 44, minHeight: 44,
+                                    }}
+                                >
+                                    {searchOpen
+                                        ? <X size={22} color="#fff" />
+                                        : <Search size={22} color="#fff" />
+                                    }
+                                </button>
+                            </div>
 
-                    {/* Notification Bell */}
-                    <button
-                        ref={triggerNotifRef}
-                        onClick={() => setNotifOpen(prev => !prev)}
-                        style={{
-                            position: 'relative', background: 'none',
-                            border: 'none', cursor: 'pointer', padding: '10px',
-                            display: 'flex', alignItems: 'center',
-                            minWidth: '44px', minHeight: '44px',
-                        }}
-                    >
-                        <Bell size={22} color={iconColor} />
-                        {unreadCount > 0 && (
-                            <span style={{
-                                position: 'absolute', top: '0px', right: '0px',
-                                background: '#FF0000', color: 'white',
-                                borderRadius: '50%', minWidth: '16px', height: '16px',
-                                fontSize: '10px', fontWeight: 700,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: '1.5px solid white', lineHeight: 1,
-                            }}>
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </span>
+                            {/* Hamburger */}
+                            <button
+                                onClick={() => setDrawerOpen(true)}
+                                style={{
+                                    background: 'none', border: 'none',
+                                    cursor: 'pointer', padding: '10px',
+                                    display: 'flex', alignItems: 'center',
+                                    minWidth: 44, minHeight: 44,
+                                }}
+                            >
+                                <Menu size={24} color="#fff" />
+                            </button>
+
+                            <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {/* NON-FEED MODE: keep existing left/center/right layout exactly as it is now */}
+                        {/* Left: Brand */}
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href="/"
+                                style={{
+                                    fontSize: '14px',
+                                    fontWeight: 900,
+                                    letterSpacing: '-0.5px',
+                                    color: iconColor,
+                                    textTransform: 'uppercase',
+                                    fontStyle: 'italic',
+                                    textDecoration: 'none',
+                                    minHeight: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                }}
+                            >
+                                KHAN HUB
+                            </Link>
+                        </div>
+
+                        {/* Center: Category Dropdown (non-feed only) */}
+                        {!hideCategorySwitcher && (
+                            <div className="relative">
+                                <button
+                                    ref={switcherTriggerRef}
+                                    onClick={() => {
+                                        if (!showSwitcher && switcherTriggerRef.current) {
+                                            const rect = switcherTriggerRef.current.getBoundingClientRect();
+                                            const dropdownWidth = 240;
+                                            let leftPos = rect.left;
+                                            if (leftPos + dropdownWidth > window.innerWidth - 16) {
+                                                leftPos = window.innerWidth - dropdownWidth - 16;
+                                            }
+                                            if (leftPos < 8) leftPos = 8;
+                                            setDropdownPos({ top: rect.bottom + 8, left: leftPos });
+                                        }
+                                        setShowSwitcher(!showSwitcher);
+                                    }}
+                                    className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-4 py-2 rounded-full hover:border-[--accent] transition-all min-h-[44px]"
+                                    style={{
+                                        opacity: searchOpen ? 0 : 1,
+                                        pointerEvents: searchOpen ? 'none' : 'auto',
+                                        transition: 'opacity 0.2s ease',
+                                    }}
+                                >
+                                    <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
+                                        Connect: {categoryConfig?.label || 'All'}
+                                    </span>
+                                    <ChevronDown className={`w-3.5 h-3.5 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                <AnimatePresence>
+                                    {showSwitcher && (
+                                        <motion.div
+                                            ref={switcherRef}
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            style={{
+                                                position: 'fixed',
+                                                top: dropdownPos.top,
+                                                left: dropdownPos.left,
+                                                minWidth: '200px',
+                                                width: 'max-content',
+                                                maxWidth: '240px',
+                                                zIndex: 9999,
+                                            }}
+                                            className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
+                                        >
+                                            <div className="px-5 py-3 border-b border-[#F0F0F0] mb-2">
+                                                <p className="text-[10px] font-black text-[#FF0069] uppercase tracking-[0.2em] mb-1">Connect</p>
+                                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
+                                            </div>
+                                            {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => {
+                                                        setShowSwitcher(false);
+                                                        setCategory(key as CategoryKey);
+                                                    }}
+                                                    className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all whitespace-nowrap ${
+                                                        activeCategory === key
+                                                            ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
+                                                            : 'hover:bg-black/5 text-[#444444]'
+                                                    }`}
+                                                >
+                                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
+                                                        {config.imageUrl ? (
+                                                            <Image src={config.imageUrl} alt={config.label} fill className="object-cover" />
+                                                        ) : (
+                                                            <span className="text-sm">{config.emoji}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">
+                                                        {config.label}
+                                                    </span>
+                                                    {activeCategory === key && (
+                                                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         )}
-                    </button>
 
-                    <NotificationDropdown 
-                        isOpen={notifOpen} 
-                        onClose={() => setNotifOpen(false)} 
-                        triggerRef={triggerNotifRef}
-                    />
+                        {/* Right: Search + Bell + Hamburger (non-feed) */}
+                        <div className="flex items-center gap-1.5 flex-1 justify-end">
+                            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                <div style={{
+                                    overflow: 'hidden',
+                                    width: searchOpen ? '100%' : '0px',
+                                    maxWidth: searchOpen ? 'calc(100vw - 160px)' : '0px',
+                                    transition: 'width 0.3s ease, max-width 0.3s ease',
+                                    marginRight: searchOpen ? '8px' : '0px',
+                                }}>
+                                    <input
+                                        ref={searchInputRef}
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && searchQuery.trim()) {
+                                                router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+                                                setSearchOpen(false);
+                                                setSearchQuery('');
+                                            }
+                                            if (e.key === 'Escape') {
+                                                setSearchOpen(false);
+                                                setSearchQuery('');
+                                            }
+                                        }}
+                                        placeholder="Search..."
+                                        style={{
+                                            width: '100%',
+                                            background: '#F0F0F0',
+                                            border: 'none',
+                                            borderRadius: '20px',
+                                            padding: '7px 14px',
+                                            fontSize: '13px',
+                                            color: iconColor,
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSearchToggle}
+                                    style={{
+                                        background: 'none', border: 'none',
+                                        cursor: 'pointer', padding: '10px',
+                                        display: 'flex', alignItems: 'center',
+                                        color: iconColor,
+                                        minWidth: '44px', minHeight: '44px',
+                                    }}
+                                >
+                                    {searchOpen ? <X size={22} /> : <Search size={22} />}
+                                </button>
+                            </div>
 
-                    <button
-                        onClick={() => setDrawerOpen(true)}
-                        style={{
-                            background: 'none', border: 'none',
-                            cursor: 'pointer', padding: '10px',
-                            display: 'flex', alignItems: 'center',
-                            minWidth: '44px', minHeight: '44px',
-                        }}
-                    >
-                        <Menu size={24} color={iconColor} />
-                    </button>
+                            <button
+                                ref={triggerNotifRef}
+                                onClick={() => setNotifOpen(prev => !prev)}
+                                style={{
+                                    position: 'relative', background: 'none',
+                                    border: 'none', cursor: 'pointer', padding: '10px',
+                                    display: 'flex', alignItems: 'center',
+                                    minWidth: '44px', minHeight: '44px',
+                                }}
+                            >
+                                <Bell size={22} color={iconColor} />
+                                {unreadCount > 0 && (
+                                    <span style={{
+                                        position: 'absolute', top: '0px', right: '0px',
+                                        background: '#FF0000', color: 'white',
+                                        borderRadius: '50%', minWidth: '16px', height: '16px',
+                                        fontSize: '10px', fontWeight: 700,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        border: '1.5px solid white', lineHeight: 1,
+                                    }}>
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
 
-                    <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
-                </div>
+                            <NotificationDropdown
+                                isOpen={notifOpen}
+                                onClose={() => setNotifOpen(false)}
+                                triggerRef={triggerNotifRef}
+                            />
+
+                            <button
+                                onClick={() => setDrawerOpen(true)}
+                                style={{
+                                    background: 'none', border: 'none',
+                                    cursor: 'pointer', padding: '10px',
+                                    display: 'flex', alignItems: 'center',
+                                    minWidth: '44px', minHeight: '44px',
+                                }}
+                            >
+                                <Menu size={24} color={iconColor} />
+                            </button>
+
+                            <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+                        </div>
+                    </>
+                )}
             </div>
         </header>
     );
