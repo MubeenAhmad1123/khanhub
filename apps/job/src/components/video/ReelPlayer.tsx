@@ -319,14 +319,25 @@ const ReelPlayer = memo(function ReelPlayer({
                 if (!isMine()) return;
                 if (err?.name === 'AbortError') return;
 
+                // NotAllowedError = browser blocked autoplay before user gesture.
+                // Retrying will not help. Hide the loader and show tap-to-play icon
+                // so the user knows to tap. handleVideoTap() will resume play inside
+                // a user gesture handler, which the browser allows.
+                if (err?.name === 'NotAllowedError') {
+                    setShowInitialLoading(false);
+                    setIsBuffering(false);
+                    setIsPaused(true);
+                    return;
+                }
+
                 if (retryCount < 2) {
                     setTimeout(() => attemptPlay(retryCount + 1), 400);
                 } else {
-                    if (videoRef.current) {
-                        videoRef.current.muted = true;
-                        videoRef.current.setAttribute('muted', '');
-                        videoRef.current.volume = 0;
-                    }
+                    // All retries exhausted — hide loader so user isn't stuck.
+                    setShowInitialLoading(false);
+                    setIsBuffering(false);
+                    setIsPaused(true);
+                    if (videoRef.current) videoRef.current.muted = true;
                 }
             }
         };

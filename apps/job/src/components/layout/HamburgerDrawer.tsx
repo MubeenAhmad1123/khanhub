@@ -39,6 +39,9 @@ export default function HamburgerDrawer({
         className="hamburger-drawer-backdrop"
         onClick={onClose}
         style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99998,
           backgroundColor: 'rgba(0,0,0,0.5)',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'all' : 'none',
@@ -51,17 +54,20 @@ export default function HamburgerDrawer({
       <div 
         className="hamburger-drawer-panel"
         style={{
-        backgroundColor: '#FFFFFF',
-        right: 0,
-        width: '280px',
-        height: '100%',
-        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '-8px 0 40px rgba(0,0,0,0.12)',
-        overflowY: 'auto',
-      }}>
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          zIndex: 99999,
+          backgroundColor: '#FFFFFF',
+          width: '280px',
+          height: '100%',
+          transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '-8px 0 40px rgba(0,0,0,0.12)',
+          overflowY: 'auto',
+        }}>
 
         {/* Header */}
         <div style={{

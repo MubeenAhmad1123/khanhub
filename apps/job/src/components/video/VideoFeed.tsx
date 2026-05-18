@@ -138,7 +138,15 @@ export function VideoFeed() {
 
   // ── interaction detection ─────────────────────────────────────
   useEffect(() => {
-    const mark = () => setUserHasInteracted(true);
+    const mark = () => {
+      setUserHasInteracted(true);
+      // Auto-unmute on first real user interaction.
+      // We keep globalMuted=true initially so muted autoplay works.
+      // The moment the user touches the screen, flip to unmuted.
+      // The globalMuted sync effect in ReelPlayer will immediately
+      // apply this to the active video element.
+      setGlobalMuted(false);
+    };
     document.addEventListener('click', mark, { once: true });
     document.addEventListener('keydown', mark, { once: true });
     document.addEventListener('scroll', mark, { once: true });
