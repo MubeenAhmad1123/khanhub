@@ -22,7 +22,7 @@ export default function BottomNav() {
       borderTop: '1px solid #F0F0F0',
       display: 'flex', alignItems: 'flex-start',
       paddingTop: '8px',
-      zIndex: 500,
+      zIndex: 9999,
       // GPU acceleration for smoother transitions:
       WebkitTransform: 'translateZ(0)',
       transform: 'translateZ(0)',

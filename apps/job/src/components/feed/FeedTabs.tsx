@@ -15,7 +15,7 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
     const tabs = CATEGORY_FEED_TABS[activeCategory] || ['Job Seeker', 'Company', 'For You'];
 
     return (
-        <div className="w-full flex justify-center items-center py-2 bg-transparent z-[1000]">
+        <div className="fixed top-16 left-0 right-0 mx-auto max-w-[480px] h-12 flex justify-center items-center bg-black/40 backdrop-blur-md border-b border-white/5 z-[9500]">
             <div className="flex items-center gap-2 sm:gap-4 select-none">
                 {tabs.map((tab, i) => (
                     <React.Fragment key={tab}>

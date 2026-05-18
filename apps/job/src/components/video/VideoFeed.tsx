@@ -756,7 +756,7 @@ export function VideoFeed() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            paddingTop: '50px',
+            paddingTop: '112px',
             paddingBottom: '0px',
           }}
         >
@@ -870,41 +870,28 @@ export function VideoFeed() {
           boxShadow: '0 0 100px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Top overlay: tabs + stories bar */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            background:
-              'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 30%, transparent 100%)',
-            pointerEvents: 'none',
-          }}
-        >
-          <div style={{ pointerEvents: 'all' }}>
-            <div className="flex items-center p-2 pt-4">
-              <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
-            </div>
-            <AnimatePresence>
-              {showStoriesBar && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  style={{
-                    background: 'rgba(0,0,0,0.6)',
-                    backdropFilter: 'blur(8px)',
-                    paddingBottom: 8,
-                  }}
-                >
-                  <CategoryStoriesBar onCategoryChange={() => { }} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+        {/* Fixed Category Tabs */}
+        <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
+
+        {/* Stories bar rendering directly under fixed tabs */}
+        <AnimatePresence>
+          {showStoriesBar && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="fixed left-0 right-0 mx-auto max-w-[480px] z-[9400]"
+              style={{
+                top: '112px', // 64px navbar + 48px tabs
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                paddingBottom: 8,
+              }}
+            >
+              <CategoryStoriesBar onCategoryChange={() => { }} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Scrollable feed */}
         <div
@@ -1000,7 +987,7 @@ export function VideoFeed() {
               left: 0,
               right: 0,
               bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-              zIndex: 2,
+              zIndex: 2000,
               maxWidth: '480px',
               margin: '0 auto',
               background:
@@ -1025,7 +1012,7 @@ export function VideoFeed() {
               position: 'fixed',
               right: 10,
               bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
-              zIndex: 300,
+              zIndex: 2500,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -1112,7 +1099,7 @@ export function VideoFeed() {
               position: 'fixed',
               right: 10,
               bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 20px)',
-              zIndex: 199,
+              zIndex: 2400,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',

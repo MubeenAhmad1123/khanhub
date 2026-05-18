@@ -208,7 +208,7 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
         <nav
             role="navigation"
             aria-label="Main navigation"
-            className={`sticky top-0 z-[100] w-full transition-all duration-300 ${
+            className={`sticky top-0 z-[9600] w-full transition-all duration-300 ${
                 isFeed 
                     ? 'bg-transparent border-transparent' 
                     : 'bg-white/80 backdrop-blur-md border-b border-gray-100'
