@@ -48,6 +48,7 @@ const ReelPlayer = memo(function ReelPlayer({
     const userPausedRef = useRef(false);
 
     const [isPaused, setIsPaused] = useState(false);
+    const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
     const [showInitialLoading, setShowInitialLoading] = useState(true);
     const [isBuffering, setIsBuffering] = useState(true);
     const [showTapIcon, setShowTapIcon] = useState(false);
@@ -137,11 +138,13 @@ const ReelPlayer = memo(function ReelPlayer({
                     setShowInitialLoading(false);
                     setIsBuffering(false);
                     setIsPaused(false);
+                    setIsAutoplayBlocked(false);
                 })
                 .catch(() => {
                     setIsPaused(true);
                     setShowInitialLoading(false);
                     setIsBuffering(false);
+                    setIsAutoplayBlocked(true);
                 });
             return;
         }
@@ -151,12 +154,14 @@ const ReelPlayer = memo(function ReelPlayer({
 
         if (video.paused) {
             userPausedRef.current = false;
+            setIsAutoplayBlocked(false);
             video
                 .play()
                 .then(() => setIsPaused(false))
                 .catch(() => { });
         } else {
             userPausedRef.current = true;
+            setIsAutoplayBlocked(false);
             video.pause();
             setIsPaused(true);
             setShowTapIcon(true);
@@ -208,6 +213,7 @@ const ReelPlayer = memo(function ReelPlayer({
             video.volume = 0;
             try { video.pause(); } catch { }
             setIsPaused(false);
+            setIsAutoplayBlocked(false);
 
             // Point 2: Stop loading if not adjacent
             if (hlsRef.current && !isAdjacent) {
@@ -313,6 +319,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 setIsPaused(false);
+                setIsAutoplayBlocked(false);
                 setShowInitialLoading(false);
 
                 // Wait for the iOS audio pipeline start window (50-200ms).
@@ -339,25 +346,14 @@ const ReelPlayer = memo(function ReelPlayer({
                 if (!isMine()) return;
                 if (err?.name === 'AbortError') return;
 
-                // NotAllowedError = browser blocked autoplay before user gesture.
-                // Retrying will not help. Hide the loader and show tap-to-play icon
-                // so the user knows to tap. handleVideoTap() will resume play inside
-                // a user gesture handler, which the browser allows.
-                if (err?.name === 'NotAllowedError') {
-                    setShowInitialLoading(false);
-                    setIsBuffering(false);
-                    setIsPaused(true);
-                    return;
-                }
-
-                if (retryCount < 2) {
-                    setTimeout(() => attemptPlay(retryCount + 1), 400);
-                } else {
-                    // All retries exhausted — hide loader so user isn't stuck.
-                    setShowInitialLoading(false);
-                    setIsBuffering(false);
-                    setIsPaused(true);
-                    if (videoRef.current) videoRef.current.muted = true;
+                // Browser blocked autoplay or failed to load.
+                // Hide the loader, stop buffering, and show centered tap-to-play overlay immediately.
+                setShowInitialLoading(false);
+                setIsBuffering(false);
+                setIsPaused(true);
+                setIsAutoplayBlocked(true);
+                if (videoRef.current) {
+                    videoRef.current.muted = true;
                 }
             }
         };
@@ -819,17 +815,19 @@ const ReelPlayer = memo(function ReelPlayer({
                         >
                             Tap to play
                         </div>
-                        <div
-                            style={{
-                                color: 'rgba(255, 255, 255, 0.7)',
-                                fontSize: '12px',
-                                fontFamily: 'DM Sans, sans-serif',
-                                marginTop: '4px',
-                                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-                            }}
-                        >
-                            Autoplay blocked by browser
-                        </div>
+                        {isAutoplayBlocked && (
+                            <div
+                                style={{
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    fontSize: '12px',
+                                    fontFamily: 'DM Sans, sans-serif',
+                                    marginTop: '4px',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                                }}
+                            >
+                                Autoplay blocked by browser
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
