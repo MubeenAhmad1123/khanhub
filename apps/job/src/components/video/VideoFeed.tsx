@@ -73,7 +73,7 @@ export function VideoFeed() {
   // All async attemptPlay calls read this — immune to closure staleness.
   const activeVideoIdRef = useRef<string>('');
 
-  const [activeTab, setActiveTab] = useState(2);
+  const [activeTab, setActiveTab] = useState(0);
   const [showGuestWall, setShowGuestWall] = useState(false);
   const [showStoriesBar, setShowStoriesBar] = useState(true);
   const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
@@ -201,7 +201,7 @@ export function VideoFeed() {
     if (process.env.NODE_ENV === 'development') {
       console.log('[RESET] Feed reset requested');
     }
-    setActiveTab(2);
+    setActiveTab(0);
     sessionStorage.removeItem('feed_reset_requested');
     const t = setTimeout(
       () => videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' }),
@@ -223,7 +223,7 @@ export function VideoFeed() {
       if (displayVideos.length === 0) setVideosLoading(true);
       hasLoadedOnce.current = false;
 
-      const isForYou = activeTab === 2;
+      const isForYou = activeTab === 0;
       const deeplinkVid = activeDeeplinkIdRef.current;
       const deeplinkCat = mountCategoryId.current;
 
@@ -266,9 +266,11 @@ export function VideoFeed() {
       }
 
       const getTabFilter = (tabIndex: number) => {
-        if (tabIndex === 2) return null;
-        if (activeCategory === 'jobs') return tabIndex === 0 ? 'seeker' : 'provider';
-        return tabIndex === 0 ? 'provider' : 'seeker';
+        // Tab 0 is always "For You" — no role filter
+        if (tabIndex === 0) return null;
+        // Tab 1 = first role, Tab 2 = second role
+        if (activeCategory === 'jobs') return tabIndex === 1 ? 'seeker' : 'provider';
+        return tabIndex === 1 ? 'provider' : 'seeker';
       };
 
       try {

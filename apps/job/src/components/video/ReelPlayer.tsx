@@ -55,6 +55,7 @@ const ReelPlayer = memo(function ReelPlayer({
     const [isOffline, setIsOffline] = useState(false);
     const [isSlowConnection, setIsSlowConnection] = useState(false);
     const [showRetry, setShowRetry] = useState(false);
+    const [hasShownUnmutePill, setHasShownUnmutePill] = useState(false);
 
     const activeSessionRef = useRef(0);
 
@@ -127,8 +128,26 @@ const ReelPlayer = memo(function ReelPlayer({
         const video = videoRef.current;
         if (!video) return;
 
-        // While black loading screen is visible, ignore all taps
-        if (showInitialLoading) return;
+        // If loading has taken too long, allow tap to force-attempt play
+        if (loadingTooLong && (showInitialLoading || isBuffering)) {
+            setLoadingTooLong(false);
+            setShowRetry(false);
+            video.play()
+                .then(() => {
+                    setShowInitialLoading(false);
+                    setIsBuffering(false);
+                    setIsPaused(false);
+                })
+                .catch(() => {
+                    setIsPaused(true);
+                    setShowInitialLoading(false);
+                    setIsBuffering(false);
+                });
+            return;
+        }
+
+        // While black loading screen is visible (and not timed out), ignore taps
+        if (showInitialLoading && !loadingTooLong) return;
 
         if (video.paused) {
             userPausedRef.current = false;
@@ -143,7 +162,7 @@ const ReelPlayer = memo(function ReelPlayer({
             setShowTapIcon(true);
             setTimeout(() => setShowTapIcon(false), 1000);
         }
-    }, [showInitialLoading]);
+    }, [showInitialLoading, loadingTooLong, isBuffering]);
 
     // ── Mute button handler ───────────────────────────────────────
     // stopPropagation prevents the click from reaching handleVideoTap
@@ -179,6 +198,7 @@ const ReelPlayer = memo(function ReelPlayer({
 
         activeSessionRef.current += 1;
         const mySession = activeSessionRef.current;
+        setHasShownUnmutePill(false);
         const isCurrentSession = () => mySession === activeSessionRef.current;
 
         // Point 2 & 5: Immediate synchronous closure
@@ -188,7 +208,7 @@ const ReelPlayer = memo(function ReelPlayer({
             video.volume = 0;
             try { video.pause(); } catch { }
             setIsPaused(false);
-            
+
             // Point 2: Stop loading if not adjacent
             if (hlsRef.current && !isAdjacent) {
                 hlsRef.current.stopLoad();
@@ -219,7 +239,7 @@ const ReelPlayer = memo(function ReelPlayer({
             setIsBuffering(true);
         }
         const loadingStart = performance.now();
-        
+
         // Point 2: Call hls.startLoad() if needed
         if (hlsRef.current) {
             hlsRef.current.startLoad();
@@ -258,7 +278,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     vid.muted = true;
                     vid.setAttribute('muted', '');
                     vid.volume = 0;
-                    try { vid.pause(); } catch {}
+                    try { vid.pause(); } catch { }
                     return;
                 }
 
@@ -276,7 +296,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     vid.muted = true;
                     vid.setAttribute('muted', '');
                     vid.volume = 0;
-                    try { vid.pause(); } catch {}
+                    try { vid.pause(); } catch { }
                     return;
                 }
 
@@ -288,7 +308,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     vid.muted = true;
                     vid.setAttribute('muted', '');
                     vid.volume = 0;
-                    try { vid.pause(); } catch {}
+                    try { vid.pause(); } catch { }
                     return;
                 }
 
@@ -304,7 +324,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     vid.muted = true;
                     vid.setAttribute('muted', '');
                     vid.volume = 0;
-                    try { vid.pause(); } catch {}
+                    try { vid.pause(); } catch { }
                     return;
                 }
 
@@ -448,8 +468,16 @@ const ReelPlayer = memo(function ReelPlayer({
             setLoadingTooLong(false);
             return;
         }
+        // Clear immediately when video has loaded
+        if (!isBuffering && !showInitialLoading) {
+            setLoadingTooLong(false);
+            return;
+        }
         const timer = setTimeout(() => {
-            if (isBuffering || showInitialLoading) setLoadingTooLong(true);
+            // Re-check at timeout — video may have loaded by then
+            setLoadingTooLong(prev =>
+                (isBuffering || showInitialLoading) ? true : prev
+            );
         }, 8000);
         return () => clearTimeout(timer);
     }, [isActive, isBuffering, showInitialLoading]);
@@ -562,7 +590,8 @@ const ReelPlayer = memo(function ReelPlayer({
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 20,
                         padding: '22px 28px',
-                        pointerEvents: 'none',
+                        pointerEvents: 'auto',
+                        cursor: 'pointer',
                         maxWidth: '260px',
                         textAlign: 'center',
                     }}
@@ -573,6 +602,18 @@ const ReelPlayer = memo(function ReelPlayer({
                         fontSize: 12, fontFamily: 'DM Sans', lineHeight: 1.4,
                     }}>
                         Taking longer than usual — still loading...
+                    </div>
+                    <div style={{
+                        marginTop: 8,
+                        background: '#FF0069',
+                        color: '#fff',
+                        fontSize: 12,
+                        fontFamily: 'Poppins',
+                        fontWeight: 700,
+                        padding: '6px 16px',
+                        borderRadius: 20,
+                    }}>
+                        Tap to play
                     </div>
                 </div>
             )}
@@ -656,6 +697,139 @@ const ReelPlayer = memo(function ReelPlayer({
                                 <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Overlay 1: Tap to Unmute Pill */}
+            {isActive && !isPaused && !isBuffering && !showInitialLoading && globalMuted && !hasShownUnmutePill && (
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleMute();
+                        setHasShownUnmutePill(true);
+                    }}
+                    style={{
+                        position: 'absolute',
+                        bottom: '140px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 25,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '999px',
+                        padding: '8px 14px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                        userSelect: 'none',
+                        animation: 'pillFadeIn 0.3s ease-out',
+                        maxWidth: '90%',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    <VolumeX size={16} color="#fff" />
+                    <span
+                        style={{
+                            color: '#fff',
+                            fontSize: '12px',
+                            fontFamily: 'DM Sans, sans-serif',
+                            fontWeight: 600,
+                            letterSpacing: '0.2px',
+                        }}
+                    >
+                        Tap to unmute
+                    </span>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setHasShownUnmutePill(true);
+                        }}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            cursor: 'pointer',
+                            padding: '2px 4px',
+                            marginLeft: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontFamily: 'sans-serif',
+                            fontWeight: 'bold',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#fff';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            {/* Overlay 2: Tap to Play Full Overlay */}
+            {isActive && isPaused && !showInitialLoading && !isBuffering && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 20,
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '16px',
+                        animation: 'overlayFadeIn 0.3s ease-out',
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '72px',
+                            height: '72px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 0, 105, 0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 0 20px rgba(255, 0, 105, 0.6)',
+                            animation: 'pulse 2s infinite',
+                        }}
+                    >
+                        <Play size={32} color="#fff" fill="#fff" style={{ marginLeft: '4px' }} />
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                        <div
+                            style={{
+                                color: '#fff',
+                                fontSize: '18px',
+                                fontFamily: 'Poppins, sans-serif',
+                                fontWeight: 700,
+                                textShadow: '0 2px 4px rgba(0,0,0,0.6)',
+                            }}
+                        >
+                            Tap to play
+                        </div>
+                        <div
+                            style={{
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                fontSize: '12px',
+                                fontFamily: 'DM Sans, sans-serif',
+                                marginTop: '4px',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                            }}
+                        >
+                            Autoplay blocked by browser
+                        </div>
                     </div>
                 </div>
             )}
@@ -777,6 +951,28 @@ const ReelPlayer = memo(function ReelPlayer({
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        @keyframes pillFadeIn {
+          from { opacity: 0; transform: translate(-50%, 10px); }
+          to   { opacity: 1; transform: translate(-50%, 0); }
+        }
+        @keyframes overlayFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes pulse {
+          0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(255, 0, 105, 0.7);
+          }
+          70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 16px rgba(255, 0, 105, 0);
+          }
+          100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(255, 0, 105, 0);
+          }
         }
       `}</style>
         </div>

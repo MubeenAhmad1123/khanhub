@@ -19,7 +19,13 @@ import NotificationDropdown from './NotificationDropdown';
 import HamburgerDrawer from './HamburgerDrawer';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
-export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?: boolean }) {
+export function TopBar({ 
+    hideCategorySwitcher = false,
+    onMenuOpen
+}: { 
+    hideCategorySwitcher?: boolean;
+    onMenuOpen?: () => void;
+}) {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
     const router = useRouter();
     const pathname = usePathname();
@@ -82,7 +88,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
 
     return (
         <header style={{
-            position: 'sticky', top: 0, zIndex: 1000,
+            position: 'sticky', top: 0, zIndex: 9600,
             background: isFeed ? 'transparent' : '#FFFFFF',
             backdropFilter: isFeed ? 'none' : 'blur(10px)',
             borderBottom: isFeed ? 'none' : '1px solid #F0F0F0',
@@ -106,7 +112,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                             <Link
                                 href="/"
                                 style={{
-                                    fontSize: '15px',
+                                    fontSize: '13px',
                                     fontWeight: 900,
                                     letterSpacing: '-0.5px',
                                     color: '#FFFFFF',
@@ -145,16 +151,16 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                         background: 'rgba(255,255,255,0.15)',
                                         border: '1px solid rgba(255,255,255,0.2)',
                                         borderRadius: 20,
-                                        padding: '5px 10px',
+                                        padding: '4px 8px',
                                         cursor: 'pointer',
-                                        minHeight: 32,
+                                        minHeight: 28,
                                     }}
                                 >
-                                    <span style={{ fontSize: 14 }}>
+                                    <span style={{ fontSize: 12 }}>
                                         {categoryConfig?.emoji}
                                     </span>
                                     <span style={{
-                                        fontSize: 11, fontWeight: 800,
+                                        fontSize: 10, fontWeight: 700,
                                         color: '#fff', fontFamily: 'Poppins',
                                         textTransform: 'uppercase', letterSpacing: '0.04em',
                                     }}>
@@ -283,7 +289,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
 
                             {/* Hamburger */}
                             <button
-                                onClick={() => setDrawerOpen(true)}
+                                onClick={onMenuOpen || (() => setDrawerOpen(true))}
                                 style={{
                                     background: 'none', border: 'none',
                                     cursor: 'pointer', padding: '10px',
@@ -294,7 +300,9 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                 <Menu size={24} color="#fff" />
                             </button>
 
-                            <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+                            {!onMenuOpen && (
+                                <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+                            )}
                         </div>
                     </>
                 ) : (
@@ -492,7 +500,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                             />
 
                             <button
-                                onClick={() => setDrawerOpen(true)}
+                                onClick={onMenuOpen || (() => setDrawerOpen(true))}
                                 style={{
                                     background: 'none', border: 'none',
                                     cursor: 'pointer', padding: '10px',
@@ -503,7 +511,9 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                 <Menu size={24} color={iconColor} />
                             </button>
 
-                            <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+                            {!onMenuOpen && (
+                                <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+                            )}
                         </div>
                     </>
                 )}

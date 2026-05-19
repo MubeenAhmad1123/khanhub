@@ -64,7 +64,11 @@ export default function ClientLayout({
         <AuthProviderWrapper>
             <CategoryProvider>
                 <ToastProvider>
-                    {showTopBar && <ImprovedNavbar onMenuOpen={() => setDrawerOpen(true)} />}
+                    {showTopBar && (
+                        isFeedRoute 
+                            ? <TopBar onMenuOpen={() => setDrawerOpen(true)} /> 
+                            : <ImprovedNavbar onMenuOpen={() => setDrawerOpen(true)} />
+                    )}
 
                     {/* Desktop sidebar */}
                     {showNav && (
