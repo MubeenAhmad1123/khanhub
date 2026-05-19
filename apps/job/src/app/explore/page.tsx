@@ -35,7 +35,7 @@ const unselectedChipStyle = {
 
 import { CATEGORY_CONFIG } from '@/lib/categories';
 
-export default function ExplorePage() {
+function ExploreContent() {
     const { activeCategory: globalCategory } = useCategory();
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('q') || '';
@@ -97,5 +97,13 @@ export default function ExplorePage() {
 
             <BottomNav />
         </div>
+    );
+}
+
+export default function ExplorePage() {
+    return (
+        <React.Suspense fallback={null}>
+            <ExploreContent />
+        </React.Suspense>
     );
 }

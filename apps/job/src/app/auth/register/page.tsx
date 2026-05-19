@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { useAuth } from '@/hooks/useAuth';
 
-export default function RegisterPage() {
+function RegisterContent() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -148,5 +148,13 @@ export default function RegisterPage() {
                 }
             `}</style>
         </div>
+    );
+}
+
+export default function RegisterPage() {
+    return (
+        <React.Suspense fallback={null}>
+            <RegisterContent />
+        </React.Suspense>
     );
 }

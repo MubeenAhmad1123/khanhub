@@ -222,11 +222,11 @@ const ReelPlayer = memo(function ReelPlayer({
 
             // Explicit synchronous cleanup
             return () => {
-                if (videoRef.current) {
-                    videoRef.current.pause();
-                    videoRef.current.muted = true;
-                    videoRef.current.setAttribute('muted', '');
-                    videoRef.current.volume = 0;
+                if (video) {
+                    video.pause();
+                    video.muted = true;
+                    video.setAttribute('muted', '');
+                    video.volume = 0;
                 }
             };
         }
@@ -370,11 +370,11 @@ const ReelPlayer = memo(function ReelPlayer({
 
         return () => {
             clearTimeout(timer);
-            if (videoRef.current) {
-                videoRef.current.pause();
-                videoRef.current.muted = true;
-                videoRef.current.setAttribute('muted', '');
-                videoRef.current.volume = 0;
+            if (video) {
+                video.pause();
+                video.muted = true;
+                video.setAttribute('muted', '');
+                video.volume = 0;
             }
         };
     }, [isActive, isAdjacent, userHasInteracted, activeVideoIdRef, globalMuted, videoId]);

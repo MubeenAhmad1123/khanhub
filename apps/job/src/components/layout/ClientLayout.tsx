@@ -66,7 +66,11 @@ export default function ClientLayout({
                 <ToastProvider>
                     {showTopBar && (
                         isFeedRoute 
-                            ? <TopBar onMenuOpen={() => setDrawerOpen(true)} /> 
+                            ? (
+                                <Suspense fallback={<div className="h-16 bg-[#000]" />}>
+                                    <TopBar onMenuOpen={() => setDrawerOpen(true)} />
+                                </Suspense>
+                            )
                             : <ImprovedNavbar onMenuOpen={() => setDrawerOpen(true)} />
                     )}
 

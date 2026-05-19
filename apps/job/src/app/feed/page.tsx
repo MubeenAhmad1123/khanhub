@@ -3,7 +3,7 @@
 import { VideoFeed } from '@/components/video/VideoFeed';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
 export default function FeedPage() {
     const { user, loading, firebaseUser, error, logout } = useAuth();
@@ -103,7 +103,9 @@ export default function FeedPage() {
     return (
         <div className="feed-wrapper">
             <div className="feed-inner">
-                <VideoFeed />
+                <Suspense fallback={null}>
+                    <VideoFeed />
+                </Suspense>
             </div>
         </div>
     );
