@@ -41,6 +41,16 @@ const TABS = [
   { id: 'visits', label: 'Visits', icon: Users },
 ];
 
+const formatStayDuration = (days: number) => {
+  if (days <= 0) return '0 Days';
+  const months = Math.floor(days / 30);
+  const remainingDays = days % 30;
+  if (months > 0) {
+    return `${months} ${months === 1 ? 'Month' : 'Months'}${remainingDays > 0 ? `, ${remainingDays} ${remainingDays === 1 ? 'Day' : 'Days'}` : ''}`;
+  }
+  return `${days} ${days === 1 ? 'Day' : 'Days'}`;
+};
+
 export default function PatientDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -374,7 +384,7 @@ export default function PatientDetailPage() {
       }
 
       const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-      const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'} counted)`;
+      const durationFormatted = formatStayDuration(daysAdmitted);
 
       // Fetch all fees to calculate total received
       let overallReceived = 0;
@@ -959,7 +969,7 @@ export default function PatientDetailPage() {
         }
 
         const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-        const durationFormatted = `${daysAdmitted} Days (${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'} counted)`;
+        const durationFormatted = formatStayDuration(daysAdmitted);
         const dailyRate = Math.floor(monthlyPkg / 30);
         const dueTillDate = billableMonths * monthlyPkg;
 
@@ -1691,7 +1701,7 @@ export default function PatientDetailPage() {
                 </div>
                 {Number(patient.medicineCharges || 0) > 0 && (
                   <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 font-black bg-purple-50 dark:bg-purple-900/20 px-4 py-2 rounded-xl border border-purple-100 dark:border-purple-900/10 text-xs uppercase tracking-tight">
-                    <span className="text-sm">💊</span> Meds / Extra: PKR {patient.medicineCharges?.toLocaleString()}
+                    <span className="text-sm">💊</span> Medicine / Extra Treatment: PKR {patient.medicineCharges?.toLocaleString()}
                   </div>
                 )}
               </div>
@@ -1935,7 +1945,7 @@ export default function PatientDetailPage() {
                     <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 space-y-0.5">
                       <p>Package Due: PKR {patient.dueTillDate?.toLocaleString()}</p>
                       {Number(patient.medicineCharges || 0) > 0 && (
-                        <p className="font-bold text-amber-600 dark:text-amber-400">Medicine / Extra: PKR {patient.medicineCharges?.toLocaleString()}</p>
+                        <p className="font-bold text-amber-600 dark:text-amber-400">Medicine / Extra Treatment: PKR {patient.medicineCharges?.toLocaleString()}</p>
                       )}
                     </div>
                   </div>
@@ -3621,12 +3631,16 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
   const [reportData, setReportData] = useState({
     name: patient.name,
     patientId: patient.patientId || 'None',
-    stayDuration: patient.durationFormatted || `${patient.daysAdmitted || 0} Days (${patient.billableMonths || 1} Months)`,
+    stayDuration: patient.durationFormatted || formatStayDuration(patient.daysAdmitted || 0),
     admissionDate: formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate),
     dischargeDate: patient.dischargeDate ? formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate) : '',
     status: patient.isActive === false ? 'discharged' : 'active',
     fatherName: patient.fatherName || '',
-    guardianName: patient.guardianName || '',
+    guardianName: patient.guardianName 
+      ? (patient.guardianRelation || patient.guardianRelationship 
+        ? `${patient.guardianName} (${patient.guardianRelation || patient.guardianRelationship})` 
+        : patient.guardianName)
+      : '',
     contactNumber: patient.contactNumber || '',
     address: patient.address || '',
     monthlyPackage: Number(patient.monthlyPackage || patient.packageAmount || 0),
@@ -4027,7 +4041,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   <div className={`pl-4 hide-if-zero-print`} data-value={reportData.medicineCharges}>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-[9px] font-black uppercase text-amber-600 flex items-center gap-1">
-                        <span>💊</span> Medicine / Extra
+                        <span>💊</span> Medicine / Extra Treatment
                       </label>
                       <button 
                         type="button"

@@ -303,12 +303,12 @@ export default function SuperadminFinancePage() {
   }, [dailyResult, data]);
 
   // ── Load today's summary ───────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (force = false) => {
     setLoading(true);
     try {
       const [financeData, summaryData] = await Promise.all([
-        fetchFinanceHubData(),
-        fetchFinanceSummary(),
+        fetchFinanceHubData(force),
+        fetchFinanceSummary(force),
       ]);
       setData(financeData);
       setSummary(summaryData);
@@ -443,7 +443,7 @@ export default function SuperadminFinancePage() {
           </div>
 
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             disabled={loading}
             className="p-5 rounded-[1.5rem] bg-white hover:bg-black text-gray-400 hover:text-white transition-all border border-gray-100 active:scale-90 disabled:opacity-50 group shadow-xl shadow-gray-200/50"
           >
