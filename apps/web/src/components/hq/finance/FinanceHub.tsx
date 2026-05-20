@@ -10,10 +10,11 @@ import { FinanceDrillDown } from './FinanceDrillDown';
 
 interface FinanceHubProps {
   departments: DeptBreakdown[];
+  selectedDate?: string;
   onUpdate: () => Promise<void>;
 }
 
-export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate }) => {
+export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, selectedDate, onUpdate }) => {
   const [selectedDept, setSelectedDept] = useState<DeptBreakdown | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -152,6 +153,7 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
         {selectedDept && (
           <FinanceDrillDown
             dept={selectedDept}
+            selectedDate={selectedDate}
             onClose={() => setSelectedDept(null)}
             onUpdate={onUpdate}
           />

@@ -721,7 +721,7 @@ export default function SuperadminFinancePage() {
             >
               <div className="absolute inset-0 bg-grid-black/[0.01] pointer-events-none" />
               <div className="w-full relative z-10 p-1 sm:p-4 lg:p-8">
-                <FinanceHub departments={hubDepts} onUpdate={loadData} />
+                <FinanceHub departments={hubDepts} selectedDate={selectedDate} onUpdate={loadData} />
               </div>
             </motion.div>
           ) : (

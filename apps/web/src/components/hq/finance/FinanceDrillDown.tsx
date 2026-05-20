@@ -12,24 +12,50 @@ import {
   CreditCard,
   User,
   Hash,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { DeptBreakdown, approveTransaction } from '@/lib/hq/superadmin/finance';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, toDate } from '@/lib/utils';
 
 interface DrillDownProps {
   dept: DeptBreakdown | null;
+  selectedDate?: string;
   onClose: () => void;
   onUpdate: () => void;
 }
 
-export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUpdate }) => {
+export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, selectedDate, onClose, onUpdate }) => {
   const [pending, setPending] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [approving, setApproving] = React.useState<string | null>(null);
+
+  const [approved, setApproved] = React.useState<any[]>([]);
+  const [loadingApproved, setLoadingApproved] = React.useState(false);
+
+  // Time zone safe date helpers (Asia/Karachi)
+  const todayStr = React.useMemo(() => {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Karachi",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  }, []);
+
+  const targetDateStr = selectedDate || todayStr;
+
+  const dayKey = React.useCallback((d: Date) => {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Karachi',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+  }, []);
 
   const fetchPending = React.useCallback(async () => {
     if (!dept) return;
@@ -39,11 +65,26 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
       if (dept.deptId === 'rehab') col = 'rehab_transactions';
       else if (dept.deptId === 'spims') col = 'spims_transactions';
       else if (dept.deptId === 'job-center') col = 'job_center_transactions';
+      else if (dept.deptId === 'hospital') col = 'hospital_transactions';
       else col = 'cashierTransactions';
 
-      const q = query(collection(db, col), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+      // Always sort client-side after query to prevent composite index errors
+      const q = query(collection(db, col), where('status', '==', 'pending'));
       const snap = await getDocs(q);
-      setPending(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const docsMapped = snap.docs.map(d => {
+        const data = d.data();
+        return { 
+          id: d.id, 
+          ...data,
+          _date: toDate(data.transactionDate || data.date || data.dateStr || data.createdAt)
+        };
+      }).sort((a, b) => {
+        const ta = a._date?.getTime?.() ?? 0;
+        const tb = b._date?.getTime?.() ?? 0;
+        return tb - ta; // Descending
+      });
+      
+      setPending(docsMapped);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load pending transactions");
@@ -52,9 +93,98 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
     }
   }, [dept]);
 
+  const fetchApproved = React.useCallback(async () => {
+    if (!dept) return;
+    setLoadingApproved(true);
+    try {
+      let col = '';
+      if (dept.deptId === 'rehab') col = 'rehab_transactions';
+      else if (dept.deptId === 'spims') col = 'spims_transactions';
+      else if (dept.deptId === 'job-center') col = 'job_center_transactions';
+      else if (dept.deptId === 'hospital') col = 'hospital_transactions';
+      else col = 'cashierTransactions';
+
+      const [y, m, d] = targetDateStr.split('-').map(Number);
+      const targetDate = new Date(y, m - 1, d, 12, 0, 0); // Noon to avoid TZ edge issues
+
+      const dayStartPKT = new Date(targetDate);
+      dayStartPKT.setHours(0, 0, 0, 0);
+      const utcStart = new Date(dayStartPKT.getTime() - 5 * 60 * 60 * 1000);
+      const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
+
+      const tsStart = Timestamp.fromDate(utcStart);
+      const tsEnd   = Timestamp.fromDate(utcEnd);
+
+      // Perform single-field Firestore range queries to strictly avoid composite index errors
+      const q1 = query(
+        collection(db, col),
+        where('createdAt', '>=', tsStart),
+        where('createdAt', '<', tsEnd)
+      );
+
+      const q2 = query(
+        collection(db, col),
+        where('transactionDate', '>=', tsStart),
+        where('transactionDate', '<', tsEnd)
+      );
+
+      const q3 = query(
+        collection(db, col),
+        where('approvedAt', '>=', tsStart),
+        where('approvedAt', '<', tsEnd)
+      );
+
+      const [snap1, snap2, snap3] = await Promise.all([
+        getDocs(q1).catch(() => ({ docs: [] as any[] })),
+        getDocs(q2).catch(() => ({ docs: [] as any[] })),
+        getDocs(q3).catch(() => ({ docs: [] as any[] })),
+      ]);
+
+      const seen = new Set<string>();
+      const rawDocs: any[] = [];
+      for (const snap of [snap1, snap2, snap3]) {
+        for (const doc of snap.docs) {
+          if (!seen.has(doc.id)) {
+            seen.add(doc.id);
+            rawDocs.push({ id: doc.id, ...doc.data() });
+          }
+        }
+      }
+
+      // Map, filter, and sort client-side (fully rule-compliant)
+      const mapped = rawDocs.map((tx: any) => {
+        return {
+          ...tx,
+          _date: toDate(tx.transactionDate || tx.date || tx.dateStr || tx.createdAt),
+          _approvedDate: tx.approvedAt ? toDate(tx.approvedAt) : null,
+        };
+      }).filter((tx: any) => {
+        if (tx.status !== 'approved') return false;
+        
+        const isCreatedTarget = tx._date && dayKey(tx._date) === targetDateStr;
+        const isApprovedTarget = tx._approvedDate && dayKey(tx._approvedDate) === targetDateStr;
+        return isCreatedTarget || isApprovedTarget;
+      }).sort((a: any, b: any) => {
+        const ta = a._date?.getTime?.() ?? 0;
+        const tb = b._date?.getTime?.() ?? 0;
+        return tb - ta; // Newest first
+      });
+
+      setApproved(mapped);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load approved transactions");
+    } finally {
+      setLoadingApproved(false);
+    }
+  }, [dept, targetDateStr, dayKey]);
+
   React.useEffect(() => {
-    if (dept) fetchPending();
-  }, [dept, fetchPending]);
+    if (dept) {
+      fetchPending();
+      fetchApproved();
+    }
+  }, [dept, fetchPending, fetchApproved]);
 
   const handleApprove = async (txId: string) => {
     if (!dept) return;
@@ -63,6 +193,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
       await approveTransaction(dept.deptId, txId);
       toast.success("Transaction Approved");
       setPending(prev => prev.filter(t => t.id !== txId));
+      fetchApproved(); // Refresh approved list too!
       onUpdate();
     } catch (err) {
       toast.error("Approval failed");
@@ -102,7 +233,9 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
               <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tight">
                 {dept.deptName} <span className="text-indigo-600 tracking-normal font-black">Audit</span>
               </h2>
-              <p className="text-gray-500 mt-2 text-xs font-bold uppercase tracking-widest">Deep departmental flow analysis and authorization portal.</p>
+              <p className="text-gray-500 mt-2 text-xs font-bold uppercase tracking-widest">
+                Deep departmental flow analysis and authorization portal.
+              </p>
             </div>
             
             <button 
@@ -194,8 +327,8 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
               </div>
             </div>
 
-            {/* Pending Transactions List */}
-            <div>
+            {/* Pending Ledger Verifications */}
+            <div className="mb-14">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-l-4 border-amber-500 pl-4 font-black">Pending Ledger Verifications</h3>
                 <div className="bg-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider">{pending.length} Items Found</div>
@@ -206,60 +339,136 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
                   {[1,2,3].map(i => <div key={i} className="h-24 w-full animate-pulse bg-gray-100 rounded-[2rem] border border-gray-100" />)}
                 </div>
               ) : pending.length === 0 ? (
-                <div className="text-center py-24 border border-dashed border-gray-200 rounded-[3rem] bg-gray-50/50 group">
+                <div className="text-center py-20 border border-dashed border-gray-200 rounded-[3rem] bg-gray-50/50 group">
                   <CheckCircle2 className="w-16 h-16 text-emerald-500/30 mx-auto mb-6 group-hover:scale-110 group-hover:text-emerald-500/50 transition-all duration-500" />
                   <p className="font-black text-xs text-gray-400 uppercase tracking-widest">All system operations are verified. Clean state.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {pending.map((tx) => (
-                    <motion.div
-                      layout
-                      key={tx.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="group p-8 rounded-[2.5rem] border border-gray-100 bg-white hover:bg-gray-50 transition-all flex flex-wrap items-center justify-between gap-8 shadow-sm hover:-translate-y-1"
-                    >
-                      <div className="flex items-center gap-6">
-                         <div className={cn(
-                           "p-5 rounded-[1.5rem] transition-all duration-500 group-hover:scale-110 border border-gray-100",
-                           tx.type === 'expense' ? "bg-rose-50 text-rose-600 rotate-6" : "bg-emerald-50 text-emerald-600 -rotate-6"
-                         )}>
-                           {tx.type === 'expense' ? <ArrowDownRight className="w-6 h-6" strokeWidth={3} /> : <ArrowUpRight className="w-6 h-6" strokeWidth={3} />}
-                         </div>
-                         <div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl font-black tracking-tight text-gray-900">Rs. {(tx.amount || 0).toLocaleString()}</span>
-                              <div className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider">
-                                {tx.category || tx.categoryName || 'General Revenue'}
+                  {pending.map((tx) => {
+                    const isExp = tx.type === 'expense' || String(tx.categoryName || tx.category || '').toLowerCase().includes('expense');
+                    return (
+                      <motion.div
+                        layout
+                        key={tx.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="group p-8 rounded-[2.5rem] border border-gray-100 bg-white hover:bg-gray-50 transition-all flex flex-wrap items-center justify-between gap-8 shadow-sm hover:-translate-y-1"
+                      >
+                        <div className="flex items-center gap-6">
+                           <div className={cn(
+                             "p-5 rounded-[1.5rem] transition-all duration-500 group-hover:scale-110 border border-gray-100",
+                             isExp ? "bg-rose-50 text-rose-600 rotate-6" : "bg-emerald-50 text-emerald-600 -rotate-6"
+                           )}>
+                             {isExp ? <ArrowDownRight className="w-6 h-6" strokeWidth={3} /> : <ArrowUpRight className="w-6 h-6" strokeWidth={3} />}
+                           </div>
+                           <div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl font-black tracking-tight text-gray-900">Rs. {(tx.amount || 0).toLocaleString()}</span>
+                                <div className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider">
+                                  {tx.category || tx.categoryName || 'General Revenue'}
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-[10px] font-bold text-gray-500 flex items-center gap-5 mt-2 uppercase tracking-wider">
-                               <span className="flex items-center gap-2"><User className="w-4 h-4 text-gray-400" /> {tx.collectedBy || tx.staffName || 'Automated System'}</span>
-                               <span className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-gray-400" /> {tx.paymentMethod || 'Direct Ledger'}</span>
-                               <span className="flex items-center gap-2 font-mono opacity-50">#{tx.id.slice(-8).toUpperCase()}</span>
-                            </div>
-                         </div>
-                      </div>
+                              <div className="text-[10px] font-bold text-gray-500 flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 uppercase tracking-wider">
+                                 <span className="flex items-center gap-2 text-indigo-600 font-black"><User className="w-4 h-4" /> {tx.patientName || tx.studentName || tx.seekerName || tx.name || tx.description || 'General Ledger'} {tx.patientId || tx.fileNumber || tx.studentId ? `(#${tx.patientId || tx.fileNumber || tx.studentId})` : ''}</span>
+                                 <span className="flex items-center gap-2"><User className="w-4 h-4 text-gray-400" /> Cashier: {tx.collectedBy || tx.staffName || 'Automated System'}</span>
+                                 <span className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-gray-400" /> {tx.paymentMethod || 'Direct Ledger'}</span>
+                                 <span className="flex items-center gap-2 font-mono opacity-50">#{tx.id.slice(-8).toUpperCase()}</span>
+                              </div>
+                           </div>
+                        </div>
 
-                      <div className="flex items-center gap-4">
-                        <button 
-                          onClick={() => handleApprove(tx.id)}
-                          disabled={approving === tx.id}
-                          className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-[10px] h-12 px-8 shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-3"
-                        >
-                          {approving === tx.id ? (
-                            <Clock className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <CheckCircle2 className="w-4 h-4 text-white" />
-                              Authorize
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={() => handleApprove(tx.id)}
+                            disabled={approving === tx.id}
+                            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-[10px] h-12 px-8 shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-3"
+                          >
+                            {approving === tx.id ? (
+                              <Clock className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-white" />
+                                Authorize
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Verified Inflow Ledger List */}
+            <div>
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-l-4 border-emerald-500 pl-4 font-black">Verified Ledger Details</h3>
+                  <div className="text-[9px] text-indigo-500 font-bold uppercase tracking-wider pl-4">Target Date: {targetDateStr}</div>
+                </div>
+                <div className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider">{approved.length} Items Found</div>
+              </div>
+
+              {loadingApproved ? (
+                <div className="space-y-6">
+                  {[1,2,3].map(i => <div key={i} className="h-24 w-full animate-pulse bg-gray-100 rounded-[2rem] border border-gray-100" />)}
+                </div>
+              ) : approved.length === 0 ? (
+                <div className="text-center py-20 border border-dashed border-gray-200 rounded-[3rem] bg-gray-50/50">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-6" />
+                  <p className="font-black text-xs text-gray-400 uppercase tracking-widest">No verified transactions found for this period.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {approved.map((tx) => {
+                    const isExp = tx.type === 'expense' || String(tx.categoryName || tx.category || '').toLowerCase().includes('expense');
+                    return (
+                      <motion.div
+                        layout
+                        key={tx.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="group p-8 rounded-[2.5rem] border border-gray-100 bg-white hover:bg-gray-50 transition-all flex flex-wrap items-center justify-between gap-8 shadow-sm hover:-translate-y-1"
+                      >
+                        <div className="flex items-center gap-6">
+                           <div className={cn(
+                             "p-5 rounded-[1.5rem] border transition-all duration-500 group-hover:scale-110",
+                             isExp ? "bg-rose-50 text-rose-600 border-rose-100 rotate-6" : "bg-emerald-50 text-emerald-600 border-emerald-100 -rotate-6"
+                           )}>
+                             {isExp ? <ArrowDownRight className="w-6 h-6" strokeWidth={3} /> : <ArrowUpRight className="w-6 h-6" strokeWidth={3} />}
+                           </div>
+                           <div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl font-black tracking-tight text-gray-900">
+                                  Rs. {(tx.amount || 0).toLocaleString()}
+                                </span>
+                                <div className={cn(
+                                  "px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider",
+                                  isExp ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
+                                )}>
+                                  {tx.category || tx.categoryName || 'General Revenue'}
+                                </div>
+                              </div>
+                              <div className="text-[10px] font-bold text-gray-500 flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 uppercase tracking-wider">
+                                 <span className="flex items-center gap-2 text-indigo-600 font-black"><User className="w-4 h-4" /> {tx.patientName || tx.studentName || tx.seekerName || tx.name || tx.description || 'General Ledger'} {tx.patientId || tx.fileNumber || tx.studentId ? `(#${tx.patientId || tx.fileNumber || tx.studentId})` : ''}</span>
+                                 <span className="flex items-center gap-2"><User className="w-4 h-4 text-gray-400" /> Cashier: {tx.collectedBy || tx.staffName || 'Automated System'}</span>
+                                 <span className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-gray-400" /> {tx.paymentMethod || 'Direct Ledger'}</span>
+                                 <span className="flex items-center gap-2 font-mono opacity-50">#{tx.id.slice(-8).toUpperCase()}</span>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-right">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Authorization Timestamp</span>
+                          <span className="text-xs font-black text-gray-800 uppercase tracking-tight">
+                            {tx._approvedDate ? tx._approvedDate.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : (tx._date ? tx._date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—')}
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>
