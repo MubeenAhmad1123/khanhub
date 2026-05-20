@@ -21,11 +21,11 @@ export interface PublicJobSeeker {
     year: string;
   }[];
   skills: string[];
-  experience: {
+  experience: ({
     title: string;
     company: string;
     duration: string;
-  }[];
+  }[]) | string;
   jobInterests: string[];
   availability: string;
   isActive: boolean;

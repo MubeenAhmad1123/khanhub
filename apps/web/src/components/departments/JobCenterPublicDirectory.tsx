@@ -41,7 +41,12 @@ function getCompleteness(s: PublicJobSeeker) {
   let score = 0;
   if (s.photoUrl) score += 10;
   if (s.skills && s.skills.length > 0) score += s.skills.length * 2;
-  if (s.experience && s.experience.length > 0) score += 5;
+  
+  const hasExp = Array.isArray(s.experience) 
+    ? s.experience.length > 0 
+    : typeof s.experience === 'string' && s.experience.trim().length > 0;
+  if (hasExp) score += 5;
+
   if (s.education && s.education.length > 0) score += 5;
   if (s.jobInterests && s.jobInterests.length > 0) score += s.jobInterests.length * 2;
   return score;
@@ -91,7 +96,17 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
     // Experience Filter logic
     let matchesExp = true;
     if (selectedExp !== 'all') {
-      const expCount = s.experience?.length || 0;
+      let expCount = 0;
+      if (Array.isArray(s.experience)) {
+        expCount = s.experience.length;
+      } else if (typeof s.experience === 'string') {
+        const matches = s.experience.toLowerCase().match(/(\d+)\s*year/);
+        if (matches) {
+          expCount = parseInt(matches[1], 10);
+        } else if (s.experience.trim().length > 0) {
+          expCount = 1;
+        }
+      }
       if (selectedExp === '<1') matchesExp = expCount < 1;
       else if (selectedExp === '1-3') matchesExp = expCount >= 1 && expCount <= 3;
       else if (selectedExp === '3+') matchesExp = expCount > 3;
@@ -362,18 +377,22 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                     </div>
                   </div>
                   
-                  {s.experience && s.experience.length > 0 && (
+                  {s.experience && (Array.isArray(s.experience) ? s.experience.length > 0 : typeof s.experience === 'string' && s.experience.trim().length > 0) && (
                     <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 bg-neutral-100 border-neutral-200 group-hover:bg-white group-hover:border-primary-100">
                       <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
                         <Briefcase size={14} className="text-primary-500 sm:w-4 sm:h-4" style={{ color: theme.primary }} />
                         <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Experience</span>
                       </div>
                       <div className="text-[10px] sm:text-xs text-neutral-700 font-bold leading-relaxed line-clamp-2">
-                        {(s.experience || []).map((exp: any, idx: number) => (
-                          <div key={idx} className={idx > 0 ? "mt-1 pt-1 border-t border-neutral-200/50" : ""}>
-                            {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
-                          </div>
-                        ))}
+                        {Array.isArray(s.experience) ? (
+                          s.experience.map((exp: any, idx: number) => (
+                            <div key={idx} className={idx > 0 ? "mt-1 pt-1 border-t border-neutral-200/50" : ""}>
+                              {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
+                            </div>
+                          ))
+                        ) : (
+                          <div>{String(s.experience)}</div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -604,13 +623,17 @@ export default function JobCenterPublicDirectory({ theme, previewMode = false }:
                         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                           <p className="text-xs font-bold text-neutral-400 uppercase mb-1">Experience</p>
                           <div className="font-bold text-neutral-900">
-                            {selectedProfile.experience?.length ? (
-                            (selectedProfile.experience || []).map((exp: any, i: number) => (
-                                <div key={i} className={i > 0 ? "mt-1" : ""}>
-                                  • {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
-                                </div>
-                              ))
-                            ) : 'Not specified'}
+                            {Array.isArray(selectedProfile.experience) ? (
+                              selectedProfile.experience.length > 0 ? (
+                                selectedProfile.experience.map((exp: any, i: number) => (
+                                  <div key={i} className={i > 0 ? "mt-1" : ""}>
+                                    • {typeof exp === 'object' ? `${exp.title} @ ${exp.company} (${exp.duration})` : String(exp)}
+                                  </div>
+                                ))
+                              ) : 'Not specified'
+                            ) : (
+                              selectedProfile.experience ? String(selectedProfile.experience) : 'Not specified'
+                            )}
                           </div>
                         </div>
                         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
