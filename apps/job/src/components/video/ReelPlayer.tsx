@@ -10,7 +10,7 @@ import React, {
 import Hls from 'hls.js';
 import { motion } from 'framer-motion';
 import NextImage from 'next/image';
-import { Volume2, VolumeX, Play, Pause, Maximize2, RotateCcw, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { VolumeX, Play } from 'lucide-react';
 import { getHlsUrl, getOptimizedVideoUrl } from '@/lib/services/cloudinary';
 
 interface ReelPlayerProps {
@@ -57,6 +57,11 @@ const ReelPlayer = memo(function ReelPlayer({
     const [isSlowConnection, setIsSlowConnection] = useState(false);
     const [showRetry, setShowRetry] = useState(false);
     const [hasShownUnmutePill, setHasShownUnmutePill] = useState(false);
+
+    // Dynamic premium loading transitions
+    const [showLoaderReason, setShowLoaderReason] = useState(false);
+    const [loaderReasonText, setLoaderReasonText] = useState('');
+    const [showCenterPlayOverlay, setShowCenterPlayOverlay] = useState(false);
 
     const activeSessionRef = useRef(0);
 
@@ -129,10 +134,12 @@ const ReelPlayer = memo(function ReelPlayer({
         const video = videoRef.current;
         if (!video) return;
 
-        // If loading has taken too long, allow tap to force-attempt play
-        if (loadingTooLong && (showInitialLoading || isBuffering)) {
+        // If loading has taken too long or we show centered play overlay, allow tap to force-attempt play
+        if ((loadingTooLong || showCenterPlayOverlay) && (showInitialLoading || isBuffering || video.paused)) {
             setLoadingTooLong(false);
             setShowRetry(false);
+            setShowCenterPlayOverlay(false);
+            setShowLoaderReason(false);
             video.play()
                 .then(() => {
                     setShowInitialLoading(false);
@@ -145,16 +152,18 @@ const ReelPlayer = memo(function ReelPlayer({
                     setShowInitialLoading(false);
                     setIsBuffering(false);
                     setIsAutoplayBlocked(true);
+                    setShowCenterPlayOverlay(true);
                 });
             return;
         }
 
-        // While black loading screen is visible (and not timed out), ignore taps
-        if (showInitialLoading && !loadingTooLong) return;
+        // While black loading screen is visible (and not timed out), ignore taps unless showCenterPlayOverlay is active
+        if (showInitialLoading && !loadingTooLong && !showCenterPlayOverlay) return;
 
         if (video.paused) {
             userPausedRef.current = false;
             setIsAutoplayBlocked(false);
+            setShowCenterPlayOverlay(false);
 
             // Agar video abhi load nahi hua toh spinner show karo — play mat karo
             if (video.readyState < 2) {
@@ -172,12 +181,13 @@ const ReelPlayer = memo(function ReelPlayer({
         } else {
             userPausedRef.current = true;
             setIsAutoplayBlocked(false);
+            setShowCenterPlayOverlay(true);
             video.pause();
             setIsPaused(true);
             setShowTapIcon(true);
             setTimeout(() => setShowTapIcon(false), 1000);
         }
-    }, [showInitialLoading, loadingTooLong, isBuffering]);
+    }, [showInitialLoading, loadingTooLong, isBuffering, showCenterPlayOverlay]);
 
     // ── Mute button handler ───────────────────────────────────────
     // stopPropagation prevents the click from reaching handleVideoTap
@@ -216,6 +226,10 @@ const ReelPlayer = memo(function ReelPlayer({
         setHasShownUnmutePill(false);
         const isCurrentSession = () => mySession === activeSessionRef.current;
 
+        const isMine = () =>
+            mySession === activeSessionRef.current &&
+            activeVideoIdRef.current === videoId;
+
         // Point 2 & 5: Immediate synchronous closure
         if (!isActive) {
             video.muted = true;
@@ -224,6 +238,8 @@ const ReelPlayer = memo(function ReelPlayer({
             try { video.pause(); } catch { }
             setIsPaused(false);
             setIsAutoplayBlocked(false);
+            setShowCenterPlayOverlay(false);
+            setShowLoaderReason(false);
 
             // Point 2: Stop loading if not adjacent
             if (hlsRef.current && !isAdjacent) {
@@ -253,6 +269,8 @@ const ReelPlayer = memo(function ReelPlayer({
         if (!alreadyBuffered) {
             setShowInitialLoading(true);
             setIsBuffering(true);
+            setShowCenterPlayOverlay(false);
+            setShowLoaderReason(false);
         }
         const loadingStart = performance.now();
 
@@ -261,15 +279,32 @@ const ReelPlayer = memo(function ReelPlayer({
             hlsRef.current.startLoad();
         }
 
-        const attemptPlay = async (retryCount = 0) => {
-            // Helper: am I still the intended active video RIGHT NOW?
-            // Checks BOTH the session counter AND the live activeVideoIdRef.
-            // activeVideoIdRef is updated synchronously on every scroll,
-            // so this is immune to all closure-staleness race conditions.
-            const isMine = () =>
-                mySession === activeSessionRef.current &&
-                activeVideoIdRef.current === videoId;
+        // Timer to detect slow connections or long load times
+        const loadingReasonTimeout = setTimeout(() => {
+            if (!isMine()) return;
+            if (videoRef.current && (videoRef.current.paused || videoRef.current.readyState < 3)) {
+                if (isSlowConnection) {
+                    setLoaderReasonText('Slow connection detected — loading...');
+                } else {
+                    setLoaderReasonText('Connecting to stream...');
+                }
+                setShowLoaderReason(true);
 
+                // Transition to centered tap-to-play after another 1.8 seconds of displaying reason
+                setTimeout(() => {
+                    if (!isMine()) return;
+                    if (videoRef.current && (videoRef.current.paused || videoRef.current.readyState < 3)) {
+                        setShowLoaderReason(false);
+                        setShowCenterPlayOverlay(true);
+                        setShowInitialLoading(false);
+                        setIsBuffering(false);
+                        setIsPaused(true);
+                    }
+                }, 1800);
+            }
+        }, 2200);
+
+        const attemptPlay = async (retryCount = 0) => {
             if (!isMine()) return;
             const vid = videoRef.current;
             if (!vid) return;
@@ -331,6 +366,10 @@ const ReelPlayer = memo(function ReelPlayer({
                 setIsPaused(false);
                 setIsAutoplayBlocked(false);
                 setShowInitialLoading(false);
+                setIsBuffering(false);
+                setShowCenterPlayOverlay(false);
+                setShowLoaderReason(false);
+                clearTimeout(loadingReasonTimeout);
 
                 // Wait for the iOS audio pipeline start window (50-200ms).
                 // Only after this are we sure no ghost audio will leak.
@@ -357,11 +396,20 @@ const ReelPlayer = memo(function ReelPlayer({
                 if (err?.name === 'AbortError') return;
 
                 // Browser blocked autoplay or failed to load.
-                // Hide the loader, stop buffering, and show centered tap-to-play overlay immediately.
-                setShowInitialLoading(false);
-                setIsBuffering(false);
-                setIsPaused(true);
                 setIsAutoplayBlocked(true);
+                setLoaderReasonText('Autoplay paused by browser');
+                setShowLoaderReason(true);
+                clearTimeout(loadingReasonTimeout);
+
+                setTimeout(() => {
+                    if (!isMine()) return;
+                    setShowLoaderReason(false);
+                    setShowCenterPlayOverlay(true);
+                    setShowInitialLoading(false);
+                    setIsBuffering(false);
+                    setIsPaused(true);
+                }, 1800);
+
                 if (videoRef.current) {
                     videoRef.current.muted = true;
                 }
@@ -376,12 +424,7 @@ const ReelPlayer = memo(function ReelPlayer({
 
         return () => {
             clearTimeout(timer);
-            if (video) {
-                video.pause();
-                video.muted = true;
-                video.setAttribute('muted', '');
-                video.volume = 0;
-            }
+            clearTimeout(loadingReasonTimeout);
         };
     }, [isActive, isAdjacent, userHasInteracted, activeVideoIdRef, globalMuted, videoId]);
 
@@ -553,74 +596,91 @@ const ReelPlayer = memo(function ReelPlayer({
             }}
             className="video-slide"
         >
-            {/* Black loading overlay + spinner */}
+            {/* Black loading overlay + premium logo spinner */}
             {(showInitialLoading || isBuffering) && (
                 <div
                     style={{
                         position: 'absolute',
                         inset: 0,
-                        zIndex: 2,
+                        zIndex: 10,
                         background: '#000',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <div
-                        style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            border: '3px solid rgba(255,255,255,0.2)',
-                            borderTop: '3px solid #fff',
-                            animation: 'spin 0.75s linear infinite',
-                        }}
-                    />
-                </div>
-            )}
-
-            {loadingTooLong && !isSlowConnection && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 9000,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 10,
-                        background: 'rgba(0,0,0,0.82)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 20,
-                        padding: '22px 28px',
-                        pointerEvents: 'auto',
-                        cursor: 'pointer',
-                        maxWidth: '260px',
-                        textAlign: 'center',
+                        justifyContent: 'center',
+                        gap: '20px',
                     }}
                 >
-                    <span style={{ fontSize: 28 }}>⏳</span>
-                    <div style={{
-                        color: 'rgba(255,255,255,0.7)',
-                        fontSize: 12, fontFamily: 'DM Sans', lineHeight: 1.4,
+                    {/* Premium Circular Logo Loader */}
+                    <div style={{ 
+                        position: 'relative', 
+                        width: '90px', 
+                        height: '90px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
                     }}>
-                        Taking longer than usual — still loading...
+                        {/* Outer rotating gradient border */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                inset: 0,
+                                borderRadius: '50%',
+                                border: '3.5px solid rgba(255, 255, 255, 0.08)',
+                                borderTop: '3.5px solid #FF0069',
+                                borderRight: '3.5px solid #FF0069',
+                                animation: 'spin 0.85s cubic-bezier(0.4, 0.15, 0.3, 0.85) infinite',
+                            }}
+                        />
+                        {/* Inner static round logo */}
+                        <div style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            background: '#111',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        }}>
+                            <img
+                                src="/logo.webp"
+                                alt="KhanHub"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    borderRadius: '50%',
+                                }}
+                            />
+                        </div>
                     </div>
-                    <div style={{
-                        marginTop: 8,
-                        background: '#FF0069',
-                        color: '#fff',
-                        fontSize: 12,
-                        fontFamily: 'Poppins',
-                        fontWeight: 700,
-                        padding: '6px 16px',
-                        borderRadius: 20,
-                    }}>
-                        Tap to play
-                    </div>
+
+                    {/* Status notification reason text under the logo */}
+                    {showLoaderReason && loaderReasonText && (
+                        <div
+                            style={{
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                fontSize: '13px',
+                                fontFamily: 'DM Sans, sans-serif',
+                                fontWeight: 500,
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(8px)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                borderRadius: '20px',
+                                padding: '6px 16px',
+                                textAlign: 'center',
+                                animation: 'overlayFadeIn 0.3s ease-out',
+                                pointerEvents: 'none',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                                maxWidth: '240px',
+                            }}
+                        >
+                            {loaderReasonText}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -642,6 +702,8 @@ const ReelPlayer = memo(function ReelPlayer({
                             setShowRetry(false);
                             setShowInitialLoading(true);
                             setIsBuffering(true);
+                            setShowCenterPlayOverlay(false);
+                            setShowLoaderReason(false);
                             video.load();
                             video.play().catch(() => { });
                         }}
@@ -663,7 +725,7 @@ const ReelPlayer = memo(function ReelPlayer({
             )}
 
             {/* Play/pause icon overlay */}
-            {(isPaused || showTapIcon) && !showInitialLoading && (
+            {(isPaused || showTapIcon) && !showInitialLoading && !isBuffering && !showCenterPlayOverlay && (
                 <div
                     style={{
                         position: 'absolute',
@@ -781,14 +843,14 @@ const ReelPlayer = memo(function ReelPlayer({
             )}
 
             {/* Overlay 2: Tap to Play Full Overlay */}
-            {isActive && isPaused && !showInitialLoading && !isBuffering && (
+            {isActive && (isPaused || showCenterPlayOverlay) && !showInitialLoading && !isBuffering && (
                 <div
                     style={{
                         position: 'absolute',
                         inset: 0,
                         zIndex: 20,
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        backdropFilter: 'blur(4px)',
+                        background: 'rgba(0, 0, 0, 0.45)',
+                        backdropFilter: 'blur(6px)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -803,11 +865,11 @@ const ReelPlayer = memo(function ReelPlayer({
                             width: '72px',
                             height: '72px',
                             borderRadius: '50%',
-                            background: 'rgba(255, 0, 105, 0.9)',
+                            background: 'rgba(255, 0, 105, 0.95)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            boxShadow: '0 0 20px rgba(255, 0, 105, 0.6)',
+                            boxShadow: '0 0 25px rgba(255, 0, 105, 0.7)',
                             animation: 'pulse 2s infinite',
                         }}
                     >
@@ -879,7 +941,11 @@ const ReelPlayer = memo(function ReelPlayer({
                     if (isActive) setIsBuffering(true);
                 }}
                 onPlaying={() => {
-                    if (isActive) setIsBuffering(false);
+                    if (isActive) {
+                        setIsBuffering(false);
+                        setShowCenterPlayOverlay(false);
+                        setShowLoaderReason(false);
+                    }
                 }}
                 style={{
                     width: '100%',
@@ -913,47 +979,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 </div>
             )}
 
-            {isSlowConnection && (isBuffering || showInitialLoading) && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 9000,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 12,
-                        background: 'rgba(0,0,0,0.82)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        borderRadius: 20,
-                        padding: '24px 32px',
-                        pointerEvents: 'none',
-                        maxWidth: '260px',
-                        textAlign: 'center',
-                    }}
-                >
-                    <span style={{ fontSize: 32 }}>📶</span>
-                    <div>
-                        <div style={{
-                            color: '#fff', fontSize: 14,
-                            fontFamily: 'Poppins', fontWeight: 700,
-                            marginBottom: 4,
-                        }}>
-                            Slow Connection
-                        </div>
-                        <div style={{
-                            color: 'rgba(255,255,255,0.55)',
-                            fontSize: 12, fontFamily: 'DM Sans',
-                            lineHeight: 1.4,
-                        }}>
-                            Video is loading — tap anywhere to play when ready
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             <style>{`
         @keyframes spin {
