@@ -159,7 +159,7 @@ export default function IntroVideoPage() {
         if (!file) return;
 
         // Validate file
-        const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+        const MAX_SIZE = 30 * 1024 * 1024; // 30MB
         const ALLOWED_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
 
         if (!ALLOWED_TYPES.includes(file.type)) {
@@ -168,7 +168,7 @@ export default function IntroVideoPage() {
         }
 
         if (file.size > MAX_SIZE) {
-            setError('File too large. Maximum size is 50MB.');
+            setError('File too large. Maximum size is 30MB.');
             return;
         }
 
@@ -301,7 +301,7 @@ export default function IntroVideoPage() {
                                     Choose Video File
                                 </Button>
                                 <p className="mt-4 text-sm text-jobs-dark/50">
-                                    Max file size: 50MB • Formats: MP4, WebM, MOV, AVI
+                                    Max file size: 30MB • Formats: MP4, WebM, MOV, AVI
                                 </p>
                             </div>
                         ) : null}

@@ -37,7 +37,7 @@ export async function uploadVideoToCloudinary(
     }
 
     // Validate file
-    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    const MAX_SIZE = 30 * 1024 * 1024; // 30MB
     const ALLOWED_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
 
     console.log('[Cloudinary Debug] File details:', {
@@ -64,6 +64,8 @@ export async function uploadVideoToCloudinary(
     // Request HLS transcoding profile
     formData.append('eager', 'sp_hd/m3u8');
     formData.append('eager_async', 'false');
+    // Resolution compression / encoding transformation
+    formData.append('transformation', 'w_720,h_1280,c_limit,q_auto:good,vc_h264');
 
     console.log('[Cloudinary Debug] Uploading to:', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
     console.log('[Cloudinary Debug] Upload preset: auto-filled');

@@ -76,9 +76,9 @@ export async function uploadToCloudinary(
         if (!validTypes.includes(file.type)) {
             throw new Error('Invalid video type. Please upload MP4, WebM, or MOV');
         }
-        // Validate file size (100MB max for videos)
-        if (file.size > 100 * 1024 * 1024) {
-            throw new Error('Video size must be less than 100MB');
+        // Validate file size (30MB max for videos)
+        if (file.size > 30 * 1024 * 1024) {
+            throw new Error('Video size must be less than 30MB');
         }
     }
 
@@ -89,6 +89,13 @@ export async function uploadToCloudinary(
         formData.append('file', file);
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', folder);
+
+        // Add HLS, synchronous eagerly-processed transcoding, and 720p H.264 compression transformations for videos
+        if (actualType === 'video') {
+            formData.append('eager', 'sp_hd/m3u8');
+            formData.append('eager_async', 'false');
+            formData.append('transformation', 'w_720,h_1280,c_limit,q_auto:good,vc_h264');
+        }
 
         // Add timestamp to filename to make it unique and sanitize
         const timestamp = Date.now();
@@ -310,7 +317,7 @@ export const CLOUDINARY_FOLDERS = {
 export const MAX_FILE_SIZES = {
     IMAGE: 10,  // MB
     CV: 5,      // MB
-    VIDEO: 100, // MB
+    VIDEO: 30, // MB
 } as const;
 
 export const ALLOWED_IMAGE_TYPES = [

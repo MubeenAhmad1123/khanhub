@@ -868,7 +868,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 playsInline
                 muted
                 loop
-                preload="none"
+                preload={isAdjacent ? "metadata" : "none"}
                 onCanPlay={() => {
                     if (isActive) {
                         setIsBuffering(false);

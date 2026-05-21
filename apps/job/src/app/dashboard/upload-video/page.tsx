@@ -21,7 +21,7 @@ import { INDUSTRY_CATEGORIES } from '@/lib/data/categories';
 const validateVideo = (file: File, duration: number): string | null => {
     const valid = ['video/mp4', 'video/webm', 'video/quicktime'];
     if (!valid.includes(file.type)) return 'Please upload MP4, MOV, or WebM format';
-    if (file.size > 200 * 1024 * 1024) return 'Video must be under 200 MB';
+    if (file.size > 30 * 1024 * 1024) return 'Video must be under 30 MB';
     if (duration > 80) return 'Video must be 80 seconds or less';
     return null;
 };
@@ -750,8 +750,8 @@ export default function UploadVideoPage() {
             setValidationError('Please upload MP4, MOV, or WebM format');
             return;
         }
-        if (file.size > 200 * 1024 * 1024) {
-            setValidationError('Video must be under 200 MB');
+        if (file.size > 30 * 1024 * 1024) {
+            setValidationError('Video must be under 30 MB');
             return;
         }
         const duration = await getVideoDuration(file);
@@ -805,7 +805,8 @@ export default function UploadVideoPage() {
                 const thumbResult = await uploadToCloudinary(frameFile, 'jobreel_thumbnails', () => { });
                 thumbnailUrl = thumbResult.secureUrl;
             } else {
-                thumbnailUrl = getCloudinaryThumb(result.secureUrl);
+                const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'mubeen-ahmad';
+                thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/so_0/${result.publicId}.jpg`;
             }
 
             // 3. Build overlay data
@@ -993,7 +994,7 @@ export default function UploadVideoPage() {
                                     Tap to select your video
                                 </p>
                                 <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 12 }}>
-                                    MP4, MOV, WebM · Max 80s · Max 200MB
+                                    MP4, MOV, WebM · Max 80s · Max 30MB
                                 </p>
                             </div>
                         ) : (
