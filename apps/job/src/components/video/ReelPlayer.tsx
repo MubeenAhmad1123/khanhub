@@ -155,6 +155,16 @@ const ReelPlayer = memo(function ReelPlayer({
         if (video.paused) {
             userPausedRef.current = false;
             setIsAutoplayBlocked(false);
+
+            // Agar video abhi load nahi hua toh spinner show karo — play mat karo
+            if (video.readyState < 2) {
+                setShowInitialLoading(true);
+                setIsBuffering(true);
+                setIsPaused(false); // overlay hatao
+                // canplay event fire hogi tab play hoga — ReelPlayer ka onCanPlay handle karega
+                return;
+            }
+
             video
                 .play()
                 .then(() => setIsPaused(false))

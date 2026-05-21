@@ -49,7 +49,7 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-const PRELOAD_AHEAD = 1;
+const PRELOAD_AHEAD = 2;
 const PRELOAD_BEHIND = 1;
 
 // ─── component ──────────────────────────────────────────────────────────────
@@ -716,8 +716,8 @@ export function VideoFeed() {
 
   // ── video slides ──────────────────────────────────────────────
   const renderedVideos = useMemo(() => {
-    const RENDER_AHEAD = 2;
-    const RENDER_BEHIND = 2;
+    const RENDER_AHEAD = 3;
+    const RENDER_BEHIND = 1;
 
     return displayVideos.map((video, index) => {
       const { isActive, isAdjacent } = getVideoState(index);

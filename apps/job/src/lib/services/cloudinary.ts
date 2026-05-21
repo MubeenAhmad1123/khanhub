@@ -63,7 +63,7 @@ export async function uploadVideoToCloudinary(
     formData.append('upload_preset', 'auto-filled'); // Must be an Unsigned preset
     // Request HLS transcoding profile
     formData.append('eager', 'sp_hd/m3u8');
-    formData.append('eager_async', 'true');
+    formData.append('eager_async', 'false');
 
     console.log('[Cloudinary Debug] Uploading to:', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
     console.log('[Cloudinary Debug] Upload preset: auto-filled');
