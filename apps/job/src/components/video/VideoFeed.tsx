@@ -1026,8 +1026,8 @@ export function VideoFeed() {
             <div
               onClick={handleToggleMute}
               style={{
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 borderRadius: '50%',
                 background: 'rgba(0,0,0,0.5)',
                 display: 'flex',
@@ -1038,8 +1038,8 @@ export function VideoFeed() {
               }}
             >
               {globalMuted
-                ? <VolumeX size={22} color="#fff" />
-                : <Volume2 size={22} color="#fff" />}
+                ? <VolumeX size={18} color="#fff" />
+                : <Volume2 size={18} color="#fff" />}
             </div>
 
             <div
@@ -1054,8 +1054,8 @@ export function VideoFeed() {
                 src={displayVideos[activeIndex].userPhoto || '/default-avatar.svg'}
                 alt="profile"
                 style={{
-                  width: 44,
-                  height: 44,
+                  width: 36,
+                  height: 36,
                   borderRadius: '50%',
                   border: '2px solid #fff',
                   objectFit: 'cover',
@@ -1064,17 +1064,17 @@ export function VideoFeed() {
               <div
                 style={{
                   position: 'absolute',
-                  bottom: -6,
+                  bottom: -4,
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: 18,
-                  height: 18,
+                  width: 14,
+                  height: 14,
                   borderRadius: '50%',
                   background: '#FF0069',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 12,
+                  fontSize: 10,
                   color: '#fff',
                   fontWeight: 700,
                 }}

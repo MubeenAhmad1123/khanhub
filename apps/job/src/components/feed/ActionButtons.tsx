@@ -281,13 +281,13 @@ export function ActionButtons({
                 WebkitTapHighlightColor: 'transparent',
             }}>
                 <Heart
-                    size={26}
+                    size={22}
                     fill={liked ? '#FF0069' : 'none'}
                     stroke={liked ? '#FF0069' : '#fff'}
                     strokeWidth={liked ? 0 : 2.5}
                     style={{ filter: ICON_SHADOW }}
                 />
-                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
+                <span style={{ fontSize: 10, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
                     {fmt(likeCount)}
                 </span>
             </div>
@@ -303,13 +303,13 @@ export function ActionButtons({
                 WebkitTapHighlightColor: 'transparent',
             }}>
                 <Bookmark
-                    size={26}
+                    size={22}
                     fill={saved ? '#fff' : 'none'}
                     stroke="#fff"
                     strokeWidth={2.5}
                     style={{ filter: ICON_SHADOW }}
                 />
-                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
+                <span style={{ fontSize: 10, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
                     {fmt(saveCount)}
                 </span>
             </div>
@@ -326,12 +326,12 @@ export function ActionButtons({
                 WebkitTapHighlightColor: 'transparent',
             }}>
                 <Send
-                    size={26}
+                    size={22}
                     stroke="#fff"
                     strokeWidth={2.5}
                     style={{ filter: ICON_SHADOW }}
                 />
-                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
+                <span style={{ fontSize: 10, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
                     {fmt(shares)}
                 </span>
             </div>
@@ -381,13 +381,13 @@ export function ActionButtons({
             }}>
                 <div style={{
                     background: 'rgba(0,0,0,0.45)',
-                    padding: 8,
+                    padding: 6,
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}>
-                    <MoreVertical size={26} stroke="#fff" strokeWidth={2.5} />
+                    <MoreVertical size={20} stroke="#fff" strokeWidth={2.5} />
                 </div>
             </div>
             {showMenu && (
@@ -453,7 +453,7 @@ export function ActionButtons({
                         WebkitTapHighlightColor: 'transparent',
                     }}>
                         <Send
-                            size={26}
+                            size={22}
                             stroke="#fff"
                             strokeWidth={2.5}
                             style={{ filter: ICON_SHADOW }}
@@ -472,7 +472,7 @@ export function ActionButtons({
                         background: 'rgba(0,0,0,0.45)',
                         border: 'none',
                         cursor: 'pointer',
-                        padding: 7,
+                        padding: 5,
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -480,7 +480,7 @@ export function ActionButtons({
                         WebkitTapHighlightColor: 'transparent',
                     }}>
                         <MoreVertical
-                            size={22}
+                            size={18}
                             stroke="#fff"
                             strokeWidth={2.5}
                             style={{ filter: ICON_SHADOW }}
@@ -500,7 +500,7 @@ export function ActionButtons({
                         style={{ position: 'relative', cursor: 'pointer' }}
                     >
                         <div style={{
-                            width: 48, height: 48, borderRadius: '50%',
+                            width: 38, height: 38, borderRadius: '50%',
                             overflow: 'hidden',
                             border: '2px solid #fff',
                             filter: ICON_SHADOW,
@@ -508,8 +508,8 @@ export function ActionButtons({
                             <Image
                                 src={videoUserPhoto || `https://ui-avatars.com/api/?name=U&background=333&color=fff`}
                                 alt="User profile"
-                                width={48}
-                                height={48}
+                                width={38}
+                                height={38}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                         </div>
@@ -522,18 +522,18 @@ export function ActionButtons({
                                 exit={{ scale: 0, opacity: 0 }}
                                 onClick={handleFollow}
                                 style={{
-                                    position: 'absolute', bottom: -7, left: '50%',
+                                    position: 'absolute', bottom: -5, left: '50%',
                                     transform: 'translateX(-50%)',
-                                    width: 20, height: 20, borderRadius: '50%',
+                                    width: 15, height: 15, borderRadius: '50%',
                                     background: following ? '#00C853' : 'var(--accent, #FF0069)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 13, color: '#fff', fontWeight: 800,
+                                    fontSize: 10, color: '#fff', fontWeight: 800,
                                     border: '1.5px solid #000',
                                     filter: ICON_SHADOW,
                                     zIndex: 2,
                                 }}
                             >
-                                {following ? <Check size={12} strokeWidth={4} /> : '+'}
+                                {following ? <Check size={9} strokeWidth={4} /> : '+'}
                             </motion.div>
                         </AnimatePresence>
                     </div>
@@ -545,14 +545,14 @@ export function ActionButtons({
                         WebkitTapHighlightColor: 'transparent',
                     }}>
                         <Heart
-                            size={32}
+                            size={26}
                             fill={liked ? '#FF0069' : 'none'}
                             stroke={liked ? '#FF0069' : '#fff'}
                             strokeWidth={liked ? 0 : 2.5}
                             style={{ filter: ICON_SHADOW }}
                         />
                         <span style={{
-                            color: '#fff', fontSize: 13,
+                            color: '#fff', fontSize: 11,
                             fontFamily: 'DM Sans', fontWeight: 700,
                             textShadow: TEXT_SHADOW,
                         }}>
@@ -567,14 +567,14 @@ export function ActionButtons({
                         WebkitTapHighlightColor: 'transparent',
                     }}>
                         <Bookmark
-                            size={30}
+                            size={24}
                             fill={saved ? '#fff' : 'none'}
                             stroke="#fff"
                             strokeWidth={2.5}
                             style={{ filter: ICON_SHADOW }}
                         />
                         <span style={{
-                            color: '#fff', fontSize: 13,
+                            color: '#fff', fontSize: 11,
                             fontFamily: 'DM Sans', fontWeight: 700,
                             textShadow: TEXT_SHADOW,
                         }}>

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CATEGORY_CONFIG } from '@/lib/categories';
@@ -60,40 +59,13 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                 background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)',
             }}
         >
-            {/* ── Row 1: DP + Name + Connect Button ── */}
+            {/* ── Row 1: Name + Connect Button ── */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 marginBottom: 10,
             }}>
-                {/* Avatar */}
-                {userPhoto ? (
-                    <Image
-                        src={userPhoto}
-                        alt={userName}
-                        width={38}
-                        height={38}
-                        style={{
-                            borderRadius: '50%',
-                            border: '2px solid rgba(255,255,255,0.9)',
-                            objectFit: 'cover',
-                            width: 38,
-                            height: 38,
-                            flexShrink: 0,
-                        }}
-                    />
-                ) : (
-                    <div style={{
-                        width: 38, height: 38, borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.15)',
-                        display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', fontSize: 16, flexShrink: 0,
-                    }}>
-                        👤
-                    </div>
-                )}
-
                 {/* Name + Connect button directly beside it */}
                 <div style={{
                     display: 'flex',
