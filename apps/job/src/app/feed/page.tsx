@@ -5,6 +5,52 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState, Suspense } from 'react';
 
+function FeedLoader() {
+    return (
+        <div style={{
+            height: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#000',
+            gap: 20,
+        }}>
+            {/* Logo with spinning ring */}
+            <div style={{ position: 'relative', width: 72, height: 72 }}>
+                {/* Spinning ring */}
+                <div style={{
+                    position: 'absolute',
+                    inset: -4,
+                    borderRadius: '50%',
+                    border: '3px solid transparent',
+                    borderTop: '3px solid #FF0069',
+                    borderRight: '3px solid rgba(255,0,105,0.3)',
+                    animation: 'spin 0.9s linear infinite',
+                }} />
+                {/* Logo image */}
+                <img
+                    src="/logo-circle.webp"
+                    alt="Khan Hub"
+                    width={72}
+                    height={72}
+                    style={{
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        display: 'block',
+                    }}
+                />
+            </div>
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to   { transform: rotate(360deg); }
+                }
+            `}</style>
+        </div>
+    );
+}
+
 export default function FeedPage() {
     const { user, loading, firebaseUser, error, logout } = useAuth();
     const [mounted, setMounted] = useState(false);
@@ -15,50 +61,9 @@ export default function FeedPage() {
     }, [user, firebaseUser, loading, error]);
 
     // Don't render anything until mounted to avoid hydration mismatch
-    if (!mounted) {
-        return (
-            <div style={{
-                height: '100dvh', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: '#000'
-            }}>
-                <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    border: '3px solid #333', borderTop: '3px solid #FF0069',
-                    animation: 'spin 0.75s linear infinite'
-                }} />
-                <style>{`
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                `}</style>
-            </div>
-        );
-    }
+    if (!mounted) return <FeedLoader />;
 
-    if (loading) {
-        return (
-            <div style={{
-                height: '100dvh', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: '#000'
-            }}>
-                <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    border: '3px solid #333', borderTop: '3px solid #FF0069',
-                    animation: 'spin 0.75s linear infinite'
-                }} />
-                <style>{`
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                `}</style>
-            </div>
-        );
-    }
-
+    if (loading) return <FeedLoader />;
 
     // NEW: profile failed to load but user IS authenticated
     if (error === 'profile_load_failed' && firebaseUser) {

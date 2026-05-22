@@ -1,46 +1,24 @@
-// Cloudinary Upload Utility - For Payment Screenshots & Images
-// Alternative to Firebase Storage
-
-/**
- * Upload image to Cloudinary (client-side upload)
- * 
- * Setup Instructions:
- * 1. Sign up at https://cloudinary.com (free tier: 25GB storage, 25GB bandwidth/month)
- * 2. Get your cloud name from Dashboard
- * 3. Enable unsigned uploads:
- *    - Go to Settings > Upload
- *    - Scroll to "Upload presets"
- *    - Click "Add upload preset"
- *    - Set Mode: "Unsigned"
- *    - Set Folder: "khanhub_payments" (optional)
- *    - Save and copy the preset name
- * 4. Add to .env.local:
- *    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
- *    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_unsigned_preset
- */
+// Cloudinary Upload Utility - For Payment Screenshots, Images & Videos
 
 export interface CloudinaryUploadResult {
-    url: string;           // Full HTTPS URL
-    secureUrl: string;     // Secure HTTPS URL
-    publicId: string;      // Cloudinary public ID
+    url: string;
+    secureUrl: string;
+    publicId: string;
     width?: number;
     height?: number;
-    duration?: number;     // Added for videos
-    format: string;        // jpg, png, etc.
-    resourceType: string;  // image, video, etc.
+    duration?: number;
+    format: string;
+    resourceType: string;
     bytes: number;
     createdAt: string;
 }
 
 export interface UploadProgress {
-    loaded: number;    // Bytes uploaded
-    total: number;     // Total bytes
-    percentage: number; // 0-100
+    loaded: number;
+    total: number;
+    percentage: number;
 }
 
-/**
- * Upload image or video to Cloudinary
- */
 export async function uploadToCloudinary(
     file: File,
     folder: string = 'payments',
@@ -56,18 +34,15 @@ export async function uploadToCloudinary(
         );
     }
 
-    // Determine actual resource type if 'auto'
     const actualType = resourceType === 'auto'
         ? (file.type.startsWith('video/') ? 'video' : 'image')
         : resourceType;
 
-    // Validate file type
     if (actualType === 'image') {
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!validTypes.includes(file.type)) {
             throw new Error('Invalid file type. Please upload JPG, PNG, or WebP');
         }
-        // Validate file size (10MB max for images)
         if (file.size > 10 * 1024 * 1024) {
             throw new Error('Image size must be less than 10MB');
         }
@@ -76,40 +51,32 @@ export async function uploadToCloudinary(
         if (!validTypes.includes(file.type)) {
             throw new Error('Invalid video type. Please upload MP4, WebM, or MOV');
         }
-        // Validate file size (30MB max for videos)
         if (file.size > 30 * 1024 * 1024) {
             throw new Error('Video size must be less than 30MB');
         }
     }
 
-
     try {
-        // Create form data
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', folder);
 
-        // Add HLS, synchronous eagerly-processed transcoding, and 720p H.264 compression transformations for videos
-        if (actualType === 'video') {
-            formData.append('eager', 'sp_hd/m3u8');
-            formData.append('eager_async', 'false');
-            formData.append('transformation', 'w_720,h_1280,c_limit,q_auto:good,vc_h264');
-        }
+        // NOTE: Do NOT add eager, eager_async, or transformation params here.
+        // Unsigned presets only allow: upload_preset, callback, public_id,
+        // folder, asset_folder, tags. HLS is handled via getHlsUrl() URL
+        // transformation at play time — no server-side processing needed.
 
-        // Add timestamp to filename to make it unique and sanitize
         const timestamp = Date.now();
         const sanitizedName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
         const fileName = `${timestamp}_${sanitizedName}`;
         formData.append('public_id', fileName);
 
-        // Upload to Cloudinary
         const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${actualType}/upload`;
 
         const response = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
 
-            // Track upload progress
             if (onProgress) {
                 xhr.upload.addEventListener('progress', (event) => {
                     if (event.lengthComputable) {
@@ -122,12 +89,9 @@ export async function uploadToCloudinary(
                 });
             }
 
-            // Handle response
             xhr.addEventListener('load', () => {
                 if (xhr.status === 200) {
                     const result = JSON.parse(xhr.responseText);
-                    console.log('[Cloudinary Debug] Raw Response:', result);
-
                     resolve({
                         url: result.url || result.secure_url,
                         secureUrl: result.secure_url || result.url,
@@ -142,7 +106,6 @@ export async function uploadToCloudinary(
                     });
                 } else {
                     const errorResponse = xhr.responseText ? JSON.parse(xhr.responseText) : {};
-                    console.error('[Cloudinary Debug] Error Response:', errorResponse);
                     reject(new Error(errorResponse.error?.message || `Upload failed with status ${xhr.status}`));
                 }
             });
@@ -159,31 +122,22 @@ export async function uploadToCloudinary(
             xhr.send(formData);
         });
 
-        console.log('✅ Image uploaded to Cloudinary:', response.secureUrl);
         return response;
 
     } catch (error: any) {
-        console.error('❌ Cloudinary upload error:', error);
-        throw new Error(error.message || 'Failed to upload image. Please try again.');
+        throw new Error(error.message || 'Failed to upload. Please try again.');
     }
 }
 
-/**
- * Upload payment screenshot specifically
- */
 export async function uploadPaymentScreenshot(
     file: File,
     userId: string,
     onProgress?: (progress: UploadProgress) => void
 ): Promise<CloudinaryUploadResult> {
-    // Use dedicated payments folder
     const folder = `khanhub/payments/${userId}`;
     return uploadToCloudinary(file, folder, onProgress);
 }
 
-/**
- * Upload CV
- */
 export async function uploadCV(
     file: File,
     userId: string,
@@ -196,16 +150,13 @@ export async function uploadCV(
         throw new Error('Cloudinary not configured');
     }
 
-    // Validate file type
     const validTypes = [
         'application/pdf',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
     if (!validTypes.includes(file.type)) {
         throw new Error('Invalid file type. Please upload PDF or DOCX');
     }
-
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
         throw new Error('File size must be less than 5MB');
     }
@@ -214,20 +165,13 @@ export async function uploadCV(
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
     formData.append('folder', `khanhub/cvs/${userId}`);
-    formData.append('resource_type', 'auto'); // Let Cloudinary decide (image for PDF, raw for DOCX)
 
-    // Using 'auto' allows PDFs to be treated as images (better for viewing)
-    // while DOCX files remain as raw assets.
     const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
 
-    const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
-    });
+    const response = await fetch(uploadUrl, { method: 'POST', body: formData });
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Cloudinary CV Upload Error:', errorData);
         throw new Error(errorData?.error?.message || 'Failed to upload CV');
     }
 
@@ -235,76 +179,43 @@ export async function uploadCV(
     return result.secure_url;
 }
 
-/**
- * Upload profile photo
- */
 export async function uploadProfilePhoto(
     file: File,
     userId: string,
     onProgress?: (progress: UploadProgress) => void
 ): Promise<CloudinaryUploadResult> {
-    const folder = `khanhub/profiles/${userId}`;
-    return uploadToCloudinary(file, folder, onProgress);
+    return uploadToCloudinary(file, `khanhub/profiles/${userId}`, onProgress);
 }
 
-/**
- * Upload company logo
- */
 export async function uploadCompanyLogo(
     file: File,
     employerId: string,
     onProgress?: (progress: UploadProgress) => void
 ): Promise<CloudinaryUploadResult> {
-    const folder = `khanhub/logos/${employerId}`;
-    return uploadToCloudinary(file, folder, onProgress);
+    return uploadToCloudinary(file, `khanhub/logos/${employerId}`, onProgress);
 }
 
-/**
- * Get optimized image URL from Cloudinary
- * Useful for thumbnails and responsive images
- */
 export function getOptimizedImageUrl(
     publicId: string,
-    options: {
-        width?: number;
-        height?: number;
-        quality?: number;
-        format?: 'auto' | 'jpg' | 'png' | 'webp';
-    } = {}
+    options: { width?: number; height?: number; quality?: number; format?: 'auto' | 'jpg' | 'png' | 'webp' } = {}
 ): string {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-
-    if (!cloudName) {
-        throw new Error('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME not configured');
-    }
+    if (!cloudName) throw new Error('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME not configured');
 
     const transformations: string[] = [];
-
     if (options.width) transformations.push(`w_${options.width}`);
     if (options.height) transformations.push(`h_${options.height}`);
     if (options.quality) transformations.push(`q_${options.quality}`);
     if (options.format) transformations.push(`f_${options.format}`);
 
-    const transformation = transformations.length > 0
-        ? transformations.join(',') + '/'
-        : '';
-
+    const transformation = transformations.length > 0 ? transformations.join(',') + '/' : '';
     return `https://res.cloudinary.com/${cloudName}/image/upload/${transformation}${publicId}`;
 }
 
-/**
- * Delete image from Cloudinary
- * Note: This requires server-side API with authentication
- * For now, we'll just let Cloudinary's auto-cleanup handle old images
- */
 export async function deleteFromCloudinary(publicId: string): Promise<void> {
-    // This needs to be done server-side with Cloudinary SDK
-    // For security, you cannot delete from client-side
     console.warn('Delete operation should be done server-side');
     throw new Error('Delete operation not supported from client-side');
 }
-
-// ==================== CONSTANTS ====================
 
 export const CLOUDINARY_FOLDERS = {
     PAYMENTS: 'khanhub/payments',
@@ -314,17 +225,10 @@ export const CLOUDINARY_FOLDERS = {
     VIDEOS: 'khanhub/videos',
 } as const;
 
-export const MAX_FILE_SIZES = {
-    IMAGE: 10,  // MB
-    CV: 5,      // MB
-    VIDEO: 30, // MB
-} as const;
+export const MAX_FILE_SIZES = { IMAGE: 10, CV: 5, VIDEO: 30 } as const;
 
 export const ALLOWED_IMAGE_TYPES = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
+    'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
 ] as const;
 
 export const ALLOWED_DOCUMENT_TYPES = [
