@@ -197,6 +197,218 @@ function FormField({ label, children, required, isSaved, hint }: { label: string
 
 const INPUT_CLASSES = "w-full px-4 py-3.5 bg-gray-50/50 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:ring-4 focus:ring-teal-50 outline-none transition-all font-medium text-gray-900 placeholder:text-gray-300";
 
+const METADATA_CONFIGS: Record<string, {
+    titleLabel: string;
+    titlePlaceholder: string;
+    titleHint: string;
+    companyLabel: string;
+    companyPlaceholder: string;
+    salaryLabel: string;
+    salaryPlaceholder: string;
+    salaryHint: string;
+    skillsLabel: string;
+    skillsPlaceholder: string;
+    skillsHint: string;
+    experienceLabel: string;
+    experienceOptions: string[];
+}> = {
+    jobs: {
+        titleLabel: "Job / Profile Title",
+        titlePlaceholder: 'e.g. "Civil Engineer" or "Expert Painter"',
+        titleHint: "Appears on overlay",
+        companyLabel: "Company / Business Name",
+        companyPlaceholder: 'e.g. "ABC Corp" or "Self-Employed"',
+        salaryLabel: "Salary / Fee",
+        salaryPlaceholder: 'e.g. "50,000" or "Negotiable"',
+        salaryHint: "PKR",
+        skillsLabel: "Skills / Expertise",
+        skillsPlaceholder: "Add professional skills...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Experience Level",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    healthcare: {
+        titleLabel: "Medical Specialization / Specialty",
+        titlePlaceholder: 'e.g. "Cardiologist", "Dentist", "Physiotherapist"',
+        titleHint: "Your clinical role or specialty",
+        companyLabel: "Clinic / Hospital Name",
+        companyPlaceholder: 'e.g. "Shifa Clinic" or "Independent Practise"',
+        salaryLabel: "Consultation Fee",
+        salaryPlaceholder: 'e.g. "1,500" or "Free / Philanthropy"',
+        salaryHint: "PKR",
+        skillsLabel: "Medical Skills & Specialties",
+        skillsPlaceholder: "Add medical skills...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Clinical Experience",
+        experienceOptions: ['Intern/Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    education: {
+        titleLabel: "Subject / Teaching Role",
+        titlePlaceholder: 'e.g. "Maths Tutor" or "Physics Teacher" or "Quran Teacher"',
+        titleHint: "What subject or skill you teach",
+        companyLabel: "Institution / Academy Name",
+        companyPlaceholder: 'e.g. "Home Tuition" or "Beaconhouse School"',
+        salaryLabel: "Monthly Tuition Fee / Pricing",
+        salaryPlaceholder: 'e.g. "5,000 / month" or "1,000 / hour"',
+        salaryHint: "PKR",
+        skillsLabel: "Subjects & Skills Taught",
+        skillsPlaceholder: "Add subjects or skills...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Teaching Experience",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    marriage: {
+        titleLabel: "Proposal Profile Title",
+        titlePlaceholder: 'e.g. "Software Engineer proposal" or "Doctor proposal"',
+        titleHint: "Brief title of the proposal",
+        companyLabel: "Sect / Caste / Clan Background",
+        companyPlaceholder: 'e.g. "Sunni Rajput" or "Arain Family"',
+        salaryLabel: "Expected Income / Status Range",
+        salaryPlaceholder: 'e.g. "Middle Class" or "100k+ / month"',
+        salaryHint: "Status info",
+        skillsLabel: "Interests & Family Preferences",
+        skillsPlaceholder: "Add preferences...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Caste / Sect Preference",
+        experienceOptions: ['No Preference', 'Same Caste Only', 'Sect-specific', 'Flexible']
+    },
+    domestic: {
+        titleLabel: "Service Type Offered",
+        titlePlaceholder: 'e.g. "Cook / Chef" or "Professional Maid" or "Driver"',
+        titleHint: "Type of domestic service",
+        companyLabel: "Service Scope / Agency",
+        companyPlaceholder: 'e.g. "Home Service" or "Self-Employed"',
+        salaryLabel: "Monthly Salary / Charges",
+        salaryPlaceholder: 'e.g. "25,000" or "Negotiable"',
+        salaryHint: "PKR",
+        skillsLabel: "Domestic Services & Skills",
+        skillsPlaceholder: "Add services...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Work Experience",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    legal: {
+        titleLabel: "Legal Specialty / Practice Title",
+        titlePlaceholder: 'e.g. "Family Lawyer" or "Corporate Advocate" or "Tax Advisor"',
+        titleHint: "Area of legal practice",
+        companyLabel: "Law Firm / Chambers Name",
+        companyPlaceholder: 'e.g. "Khan & Co Chambers" or "Independent Practise"',
+        salaryLabel: "Consultation Fee / Charges",
+        salaryPlaceholder: 'e.g. "5,000" or "Case-to-case basis"',
+        salaryHint: "PKR",
+        skillsLabel: "Legal Practice Areas",
+        skillsPlaceholder: "Add practice areas...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Practice Experience",
+        experienceOptions: ['Junior Advocate', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    realestate: {
+        titleLabel: "Real Estate Service / Specialty",
+        titlePlaceholder: 'e.g. "Residential Specialist" or "DHA Plot Seller" or "Agent"',
+        titleHint: "Focus area",
+        companyLabel: "Real Estate Agency / Developer",
+        companyPlaceholder: 'e.g. "Ahmad Real Estate" or "Independent Dealer"',
+        salaryLabel: "Property Price / Commission Range",
+        salaryPlaceholder: 'e.g. "1 Crore+" or "1% Commission"',
+        salaryHint: "PKR / Percentage",
+        skillsLabel: "Locations & Sectors Covered",
+        skillsPlaceholder: "Add location keywords...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Deals Completed / Exp",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    it: {
+        titleLabel: "IT Specialization / Tech Stack",
+        titlePlaceholder: 'e.g. "Full Stack React Developer" or "Shopify Expert"',
+        titleHint: "IT service or tech stack",
+        companyLabel: "Agency / Freelance Group",
+        companyPlaceholder: 'e.g. "Self-Employed" or "Dev Studio Agency"',
+        salaryLabel: "Hourly Rate / Project Pricing",
+        salaryPlaceholder: 'e.g. "2,500/hr" or "Case-to-case"',
+        salaryHint: "PKR",
+        skillsLabel: "Technologies & Frameworks",
+        skillsPlaceholder: "Add tech keywords...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Development Experience",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    transport: {
+        titleLabel: "Transport Service / Vehicle Type",
+        titlePlaceholder: 'e.g. "Mini Truck Driver" or "Rider" or "Cargo Mover"',
+        titleHint: "Type of logistics or transport",
+        companyLabel: "Transport Agency / Company Name",
+        companyPlaceholder: 'e.g. "Careem Cargo" or "Independent Carrier"',
+        salaryLabel: "Monthly Salary / Trip Charges",
+        salaryPlaceholder: 'e.g. "30,000" or "Trip-to-trip basis"',
+        salaryHint: "PKR",
+        skillsLabel: "Routes / Vehicles Handled",
+        skillsPlaceholder: "Add routes or vehicle models...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Driving/Service Experience",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    travel: {
+        titleLabel: "Travel Service / Tour Role",
+        titlePlaceholder: 'e.g. "Tour Guide" or "Visa Consultant" or "Agency Owner"',
+        titleHint: "Travel business role",
+        companyLabel: "Travel Agency / Group Name",
+        companyPlaceholder: 'e.g. "Ahmad Travels" or "Self-Employed"',
+        salaryLabel: "Tour Budget / Service Charges",
+        salaryPlaceholder: 'e.g. "50,000" or "Package-specific"',
+        salaryHint: "PKR",
+        skillsLabel: "Destinations & Services Covered",
+        skillsPlaceholder: "Add locations/destinations...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Travel Industry Experience",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    agriculture: {
+        titleLabel: "Agricultural Specialty / Crop",
+        titlePlaceholder: 'e.g. "Wheat Supplier" or "Agri Consultant" or "Seed Dealer"',
+        titleHint: "Agricultural role",
+        companyLabel: "Farm / Agri-Business Name",
+        companyPlaceholder: 'e.g. "Mubeen Farms" or "Independent Supplier"',
+        salaryLabel: "Pricing / Estimated Budget",
+        salaryPlaceholder: 'e.g. "Negotiable" or "Per Maund Pricing"',
+        salaryHint: "PKR",
+        skillsLabel: "Crops / Machinery Handled",
+        skillsPlaceholder: "Add crop/machinery names...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Farming/Business Exp",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    sellbuy: {
+        titleLabel: "Product Type / Shop Role",
+        titlePlaceholder: 'e.g. "Mobile Retailer" or "Cloth Merchant" or "Online Seller"',
+        titleHint: "Retail focus",
+        companyLabel: "Shop / Brand / Business Name",
+        companyPlaceholder: 'e.g. "Mirza Electronics" or "Self-Employed"',
+        salaryLabel: "Average Price Range",
+        salaryPlaceholder: 'e.g. "1,000 - 5,000" or "Item-to-item basis"',
+        salaryHint: "PKR",
+        skillsLabel: "Brands & Products Handled",
+        skillsPlaceholder: "Add brand or product tags...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Business/Sales Experience",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    },
+    custom: {
+        titleLabel: "Specialization / Service Offered",
+        titlePlaceholder: 'e.g. "Expert Service Provider" or "Consultant"',
+        titleHint: "Your professional role or service focus",
+        companyLabel: "Business / Brand / Institution",
+        companyPlaceholder: 'e.g. "Self-Employed" or "Private Agency"',
+        salaryLabel: "Salary / Consultation Fee",
+        salaryPlaceholder: 'e.g. "5,000" or "Negotiable"',
+        salaryHint: "PKR",
+        skillsLabel: "Skills & Services offered",
+        skillsPlaceholder: "Add professional keywords...",
+        skillsHint: "Press Enter to add",
+        experienceLabel: "Experience Level",
+        experienceOptions: ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs']
+    }
+};
+
 function ConditionalFields({
     category, firestoreProfile, formData, onChange,
 }: {
@@ -204,8 +416,11 @@ function ConditionalFields({
 }) {
     const set = (key: string) => (val: any) => onChange(key, val);
 
+    const activeCategory = formData.category || category || 'jobs';
+    const config = METADATA_CONFIGS[activeCategory] || METADATA_CONFIGS.jobs;
+
     // Get subcategories for the current sector
-    const sector = INDUSTRY_CATEGORIES.find(c => c.id === category);
+    const sector = INDUSTRY_CATEGORIES.find(c => c.id === activeCategory);
     const subcats = sector ? sector.subcategories : [];
 
     return (
@@ -290,12 +505,12 @@ function ConditionalFields({
                     </div>
                 </FormField>
 
-                <FormField label="Job / Profile Title" required hint="Appears on overlay">
+                <FormField label={config.titleLabel} required hint={config.titleHint}>
                     <input
                         type="text"
                         value={formData.title || ''}
                         onChange={(e) => set('title')(e.target.value)}
-                        placeholder='e.g. "Civil Engineer" or "Expert Painter"'
+                        placeholder={config.titlePlaceholder}
                         className={INPUT_CLASSES}
                     />
                 </FormField>
@@ -338,41 +553,41 @@ function ConditionalFields({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FormField label="Company / Business Name" required>
+                    <FormField label={config.companyLabel} required>
                         <div className="relative">
                             <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <input
                                 type="text"
                                 value={formData.companyTitle || ''}
                                 onChange={(e) => set('companyTitle')(e.target.value)}
-                                placeholder='e.g. "ABC Corp" or "Self-Employed"'
+                                placeholder={config.companyPlaceholder}
                                 className={`${INPUT_CLASSES} pl-11`}
                             />
                         </div>
                     </FormField>
 
-                    <FormField label="Salary / Fee" required hint="PKR">
+                    <FormField label={config.salaryLabel} required hint={config.salaryHint}>
                         <input
                             type="text"
                             value={formData.salary || ''}
                             onChange={(e) => set('salary')(e.target.value)}
-                            placeholder='e.g. "50,000" or "Negotiable"'
+                            placeholder={config.salaryPlaceholder}
                             className={INPUT_CLASSES}
                         />
                     </FormField>
                 </div>
 
-                <FormField label="Skills / Expertise" required hint="Press Enter to add">
+                <FormField label={config.skillsLabel} required hint={config.skillsHint}>
                      <TagInput
                         tags={formData.skills || []}
                         onChange={set('skills')}
-                        placeholder="Add professional skills..."
+                        placeholder={config.skillsPlaceholder}
                     />
                 </FormField>
 
-                <FormField label="Experience Level" required>
+                <FormField label={config.experienceLabel} required>
                     <div className="flex flex-wrap gap-2">
-                        {['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs'].map(level => (
+                        {config.experienceOptions.map(level => (
                             <button
                                 key={level}
                                 type="button"
