@@ -781,7 +781,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     }}
                     style={{
                         position: 'absolute',
-                        bottom: '140px',
+                        bottom: '260px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         zIndex: 25,
