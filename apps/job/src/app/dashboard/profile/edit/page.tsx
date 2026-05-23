@@ -64,7 +64,10 @@ export default function EditProfilePage() {
         } else if (user) {
             setFormData((prev: any) => ({
                 ...prev,
-                fullName: user.displayName || '',
+                fullName: user.displayName || user.name || '',
+                phone: user.phone || '',
+                whatsapp: user.whatsapp || '',
+                location: user.city || (user as any).location || '',
             }));
         }
     }, [authLoading, user, router]);

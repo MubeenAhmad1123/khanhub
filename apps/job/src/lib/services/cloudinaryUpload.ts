@@ -111,7 +111,8 @@ export async function uploadToCloudinary(
             });
 
             xhr.addEventListener('error', () => {
-                reject(new Error('Upload failed. Please check your internet connection.'));
+                console.error('[Cloudinary] Upload failed. If you have active internet, this is usually caused by an invalid or missing upload preset in your .env.local file.', { cloudName, uploadPreset });
+                reject(new Error('Upload failed. Please check your internet connection or verify that NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET is configured correctly in your .env.local file (and not set to "auto-filled").'));
             });
 
             xhr.addEventListener('abort', () => {

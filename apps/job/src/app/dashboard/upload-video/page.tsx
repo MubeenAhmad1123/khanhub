@@ -820,11 +820,11 @@ export default function UploadVideoPage() {
         if (!firestoreProfile) return;
         setFormData(prev => ({
             ...prev,
-            userName: firestoreProfile.name || firestoreProfile.displayName || prev.userName,
+            userName: firestoreProfile.name || firestoreProfile.displayName || firestoreProfile.profile?.fullName || prev.userName,
             fatherName: firestoreProfile.fatherName || prev.fatherName,
-            phone: firestoreProfile.phone || firestoreProfile.phoneNumber || prev.phone,
-            city: firestoreProfile.city || prev.city,
-            bio: firestoreProfile.bio || prev.bio,
+            phone: firestoreProfile.phone || firestoreProfile.profile?.phone || firestoreProfile.phoneNumber || prev.phone,
+            city: firestoreProfile.city || firestoreProfile.profile?.location || prev.city,
+            bio: firestoreProfile.bio || firestoreProfile.profile?.bio || prev.bio,
         }));
     }, [firestoreProfile]);
 

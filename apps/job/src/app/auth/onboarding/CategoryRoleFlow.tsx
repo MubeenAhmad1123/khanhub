@@ -184,6 +184,13 @@ export default function CategoryRoleFlow() {
                 role: roleKey, // compat
                 onboardingCompleted: true,
                 updatedAt: serverTimestamp(),
+                profile: {
+                    ...((user as any).profile || {}),
+                    fullName: fullName.trim(),
+                    phone: phone.trim(),
+                    whatsapp: sameWhatsApp ? phone.trim() : whatsapp.trim(),
+                    location: city.trim(),
+                }
             };
 
             await updateDoc(doc(db, 'users', user.uid), updates);
