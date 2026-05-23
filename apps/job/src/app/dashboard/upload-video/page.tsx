@@ -615,12 +615,31 @@ export default function UploadVideoPage() {
     // --- Referral Gate Logic ---
     const uploadCount = firestoreProfile.videoUploadCount || 0;
     const referralCount = firestoreProfile.referralCount || 0;
-    // 1 free upload, then 3 referrals per additional upload
-    const canUpload = uploadCount === 0 || referralCount >= (uploadCount * 3);
+    // 2 free uploads, then 3 referrals per additional upload
+    const FREE_UPLOADS = 2;
+    const referralsRequired = uploadCount < FREE_UPLOADS
+        ? 0
+        : (uploadCount - FREE_UPLOADS + 1) * 3;
+    const canUpload = referralsRequired === 0 || referralCount >= referralsRequired;
 
     if (!canUpload) {
-        const referralsNeeded = (uploadCount * 3) - referralCount;
-        const referralLink = `${window.location.origin}/auth/register?ref=${firestoreProfile.referralCode}`;
+        const referralsNeeded = referralsRequired - referralCount;
+        // Generate a referral code from userId if not already saved
+        const existingCode = firestoreProfile.referralCode;
+        let resolvedReferralCode = existingCode;
+        if (!existingCode && user?.uid) {
+            // Create a stable code from uid — first 8 chars uppercased
+            resolvedReferralCode = user.uid.slice(0, 8).toUpperCase();
+            // Save it to Firestore so it persists (fire and forget)
+            import('firebase/firestore').then(({ doc, updateDoc }) => {
+                import('@/lib/firebase/firebase-config').then(({ db }) => {
+                    updateDoc(doc(db, 'users', user.uid), {
+                        referralCode: resolvedReferralCode,
+                    }).catch(() => {});
+                });
+            });
+        }
+        const referralLink = `${window.location.origin}/auth/register?ref=${resolvedReferralCode || user?.uid?.slice(0, 8).toUpperCase()}`;
 
         return (
             <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
@@ -665,13 +684,13 @@ export default function UploadVideoPage() {
                     <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-8 relative overflow-hidden group">
                         <div className="flex items-center justify-between mb-4">
                             <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Referral Progress</span>
-                            <span className="text-sm font-black text-white">{referralCount} / {uploadCount * 3}</span>
+                            <span className="text-sm font-black text-white">{referralCount} / {referralsRequired}</span>
                         </div>
                         
                         <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden mb-4">
                             <motion.div 
                                 initial={{ width: 0 }}
-                                animate={{ width: `${Math.min(100, (referralCount / (uploadCount * 3)) * 100)}%` }}
+                                animate={{ width: `${referralsRequired > 0 ? Math.min(100, (referralCount / referralsRequired) * 100) : 100}%` }}
                                 transition={{ duration: 1.5, ease: "easeOut" }}
                                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)]"
                             />
@@ -707,8 +726,8 @@ export default function UploadVideoPage() {
 
                     <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-6">
                         <div className="flex flex-col items-center">
-                            <span className="text-white font-black text-lg">1</span>
-                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">Free Token</span>
+                            <span className="text-white font-black text-lg">2</span>
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">Free Uploads</span>
                         </div>
                         <div className="w-px h-8 bg-white/10" />
                         <div className="flex flex-col items-center">
@@ -859,8 +878,8 @@ export default function UploadVideoPage() {
                 overlayData,
 
                 // Access Control
-                admin_status: 'approved',
-                is_live: true,
+                admin_status: 'pending',
+                is_live: false,
                 transcriptionStatus: 'pending',
 
                 // Engagement Stats

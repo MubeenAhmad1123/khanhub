@@ -32,15 +32,12 @@ export async function POST(req: NextRequest) {
     // 2. Perform atomic updates
     const batch = adminDb.batch();
 
-    // Increment referrer's referralCount
-    batch.update(usersRef.doc(referrerId), {
-      referralCount: FieldValue.increment(1),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    // Set referredBy on new user
+    // DO NOT increment referralCount here.
+    // Count only increments when referred user's first video is approved.
+    // Just record the referral relationship on the new user.
     batch.update(usersRef.doc(newUserId), {
       referredBy: refCode,
+      referredByUserId: referrerId,
       updatedAt: FieldValue.serverTimestamp(),
     });
 

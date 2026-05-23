@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDoc, increment } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/toast';
 import { writeActivityLog } from '@/hooks/useActivityLog';
@@ -78,8 +78,39 @@ export default function AdminVideosPage() {
             // 2. Update user doc
             await updateDoc(doc(db, 'users', video.userId), {
                 profile_status: 'active',
-                video_upload_enabled: true
+                video_upload_enabled: true,
             });
+
+            // 2b. If this is the user's first approved video AND they were referred,
+            //     increment the referrer's referralCount now.
+            try {
+                const userSnap = await getDoc(doc(db, 'users', video.userId));
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const referredByUserId = userData.referredByUserId;
+                    const videoUploadCount = userData.videoUploadCount || 0;
+
+                    // Only count if this is their FIRST video being approved
+                    if (referredByUserId && videoUploadCount <= 1) {
+                        await updateDoc(doc(db, 'users', referredByUserId), {
+                            referralCount: increment(1),
+                            updatedAt: serverTimestamp(),
+                        });
+
+                        // Notify the referrer
+                        await createNotification(
+                            referredByUserId,
+                            'referral_completed',
+                            'Referral Completed! 🎉',
+                            'Someone you referred just got their first video approved. Your referral count has been updated!',
+                            video.userId
+                        );
+                    }
+                }
+            } catch (refErr) {
+                // Non-fatal — log and continue
+                console.warn('[Admin] Could not update referrer count:', refErr);
+            }
 
             // 3. Write notification
             await createNotification(
