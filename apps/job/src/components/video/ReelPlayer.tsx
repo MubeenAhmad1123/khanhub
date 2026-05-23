@@ -426,7 +426,7 @@ const ReelPlayer = memo(function ReelPlayer({
             clearTimeout(timer);
             clearTimeout(loadingReasonTimeout);
         };
-    }, [isActive, isAdjacent, userHasInteracted, activeVideoIdRef, globalMuted, videoId]);
+    }, [isActive, isAdjacent, userHasInteracted, activeVideoIdRef, globalMuted, videoId, isSlowConnection]);
 
     // ── Auto-unmute when userHasInteracted first fires ────────────
     useEffect(() => {
@@ -462,11 +462,12 @@ const ReelPlayer = memo(function ReelPlayer({
 
             if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
                 const hls = new Hls({
-                    autoStartLoad: false,
+                    autoStartLoad: true,
                     startLevel: 0,
-                    abrEwmaDefaultEstimate: 300000,
-                    maxBufferLength: 10,
-                    maxMaxBufferLength: 20,
+                    abrEwmaDefaultEstimate: 500000,
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60,
+                    maxBufferSize: 100 * 1024 * 1024, // 100MB aggressive preload buffer size
                     manifestLoadingTimeOut: 10000,
                     manifestLoadingMaxRetry: 5,
                     levelLoadingTimeOut: 10000,
@@ -479,6 +480,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 hls.loadSource(hlsUrl);
                 hls.attachMedia(video);
                 hlsRef.current = hls;
+                hls.startLoad();
 
                 hls.on(Hls.Events.ERROR, (_, data) => {
                     if (data.fatal) {
@@ -646,7 +648,7 @@ const ReelPlayer = memo(function ReelPlayer({
                             boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                         }}>
                             <img
-                                src="/logo.webp"
+                                src="/logo-circle.webp"
                                 alt="KhanHub"
                                 style={{
                                     width: '100%',
@@ -930,7 +932,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 playsInline
                 muted
                 loop
-                preload={isAdjacent ? "metadata" : "none"}
+                preload={(isActive || isAdjacent) ? "auto" : "none"}
                 onCanPlay={() => {
                     if (isActive) {
                         setIsBuffering(false);
