@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDoc, increment } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDoc, increment, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/toast';
 import { writeActivityLog } from '@/hooks/useActivityLog';
@@ -77,39 +77,48 @@ export default function AdminVideosPage() {
 
             // 2. Update user doc
             await updateDoc(doc(db, 'users', video.userId), {
-                profile_status: 'active',
-                video_upload_enabled: true,
+              videoUploadCount: increment(1),   // track approved video count properly
+              profile_status: 'active',
+              video_upload_enabled: true,
             });
 
-            // 2b. If this is the user's first approved video AND they were referred,
-            //     increment the referrer's referralCount now.
+            // 2b. Check if this is the user's FIRST APPROVED video and they were referred
             try {
-                const userSnap = await getDoc(doc(db, 'users', video.userId));
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    const referredByUserId = userData.referredByUserId;
-                    const videoUploadCount = userData.videoUploadCount || 0;
+              const userSnap = await getDoc(doc(db, 'users', video.userId));
+              if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const referredByUserId: string | undefined = userData.referredByUserId;
 
-                    // Only count if this is their FIRST video being approved
-                    if (referredByUserId && videoUploadCount <= 1) {
-                        await updateDoc(doc(db, 'users', referredByUserId), {
-                            referralCount: increment(1),
-                            updatedAt: serverTimestamp(),
-                        });
+                if (referredByUserId) {
+                  // Count how many OTHER approved videos this user has (excluding current)
+                  const approvedQuery = query(
+                    collection(db, 'videos'),
+                    where('userId', '==', video.userId),
+                    where('admin_status', '==', 'approved')
+                  );
+                  const approvedSnap = await getDocs(approvedQuery);
+                  // approvedSnap includes the video we just approved, so count === 1 means first
+                  const approvedCount = approvedSnap.size;
 
-                        // Notify the referrer
-                        await createNotification(
-                            referredByUserId,
-                            'referral_completed',
-                            'Referral Completed! 🎉',
-                            'Someone you referred just got their first video approved. Your referral count has been updated!',
-                            video.userId
-                        );
-                    }
+                  if (approvedCount === 1) {
+                    // This IS their first approved video — complete the referral
+                    await updateDoc(doc(db, 'users', referredByUserId), {
+                      referralCount: increment(1),
+                      updatedAt: serverTimestamp(),
+                    });
+
+                    await createNotification(
+                      referredByUserId,
+                      'referral_completed',
+                      'Referral Completed! 🎉',
+                      'Someone you referred just had their first video approved. Your referral count went up!',
+                      video.userId
+                    );
+                  }
                 }
+              }
             } catch (refErr) {
-                // Non-fatal — log and continue
-                console.warn('[Admin] Could not update referrer count:', refErr);
+              console.warn('[Admin] Referral count update failed (non-fatal):', refErr);
             }
 
             // 3. Write notification

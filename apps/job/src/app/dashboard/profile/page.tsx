@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, query, where, collection, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { useCategory } from '@/context/CategoryContext';
 
@@ -41,6 +41,7 @@ export default function ProfilePage() {
     const { categoryConfig, accentColor } = useCategory();
     const [profile, setProfile] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<ProfileTab>('videos');
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -54,7 +55,14 @@ export default function ProfilePage() {
         if (user) {
             // Use onSnapshot for live updates
             const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-                if (snap.exists()) setProfile(snap.data());
+                if (snap.exists()) {
+                    const data = snap.data();
+                    setProfile(data);
+                    if (!data.referralCode) {
+                        const code = user.uid.slice(0, 8).toUpperCase();
+                        updateDoc(doc(db, 'users', user.uid), { referralCode: code });
+                    }
+                }
             }, (error) => {
                 console.warn('[Dashboard Profile] Snapshot error:', error.message);
             });
@@ -164,6 +172,32 @@ export default function ProfilePage() {
                 >
                     Edit Profile
                 </button>
+
+                {/* Referral section */}
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '0 16px' }}>
+                    <div style={{ fontSize: 12, color: '#888888', fontFamily: 'DM Sans', fontWeight: 600, wordBreak: 'break-all' }}>
+                        Your Referral Code: <span style={{ color: '#0A0A0A', fontWeight: 800 }}>{profile.referralCode || '...'}</span>
+                    </div>
+                    <button
+                        onClick={() => {
+                            const referralUrl = `${window.location.origin}/auth/register?ref=${profile.referralCode || ''}`;
+                            navigator.clipboard.writeText(referralUrl);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                        }}
+                        style={{
+                            width: '100%', maxWidth: 280,
+                            padding: '10px', borderRadius: 10,
+                            background: copied ? '#00C864' : '#FF0069', color: '#fff',
+                            border: 'none', fontFamily: 'DM Sans',
+                            fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                        }}
+                    >
+                        {copied ? 'Copied! ✓' : 'Copy Invite Link 🔗'}
+                    </button>
+                </div>
 
             </div>
 

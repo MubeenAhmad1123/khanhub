@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import ReferralWallCard from './ReferralWallCard';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, increment } from 'firebase/firestore';
@@ -472,17 +473,15 @@ export default function UploadVideoPage() {
 
     const startCamera = async (mode: 'user' | 'environment' = 'user') => {
         try {
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            const constraints = {
+            const s = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: { ideal: mode },
-                    width: { min: 640, ideal: isMobile ? 720 : 1280, max: 1920 },
-                    height: { min: 480, ideal: isMobile ? 1280 : 720, max: 1920 },
-                    zoom: 1,
+                    facingMode: { ideal: 'user' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    aspectRatio: { ideal: 16 / 9 },
                 },
-                audio: true
-            };
-            const s = await navigator.mediaDevices.getUserMedia(constraints);
+                audio: true,
+            });
             setStream(s);
             if (videoPreviewRef.current) {
                 videoPreviewRef.current.srcObject = s;
@@ -571,20 +570,25 @@ export default function UploadVideoPage() {
         if (!user) return;
         const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
             if (snap.exists()) {
-                const data = snap.data();
-                setFirestoreProfile(data);
-                // Pre-fill formData if not set
-                setFormData(prev => ({
-                    ...prev,
-                    city: prev.city || data.city || '',
-                    phone: prev.phone || data.phone || data.phoneNumber || '',
-                }));
+                setFirestoreProfile(snap.data());
             }
         }, (error) => {
             console.warn('[UploadVideo Profile] Snapshot error:', error.message);
         });
         return () => unsub();
     }, [user]);
+
+    useEffect(() => {
+        if (!firestoreProfile) return;
+        setFormData(prev => ({
+            ...prev,
+            userName: firestoreProfile.name || firestoreProfile.displayName || prev.userName,
+            fatherName: firestoreProfile.fatherName || prev.fatherName,
+            phone: firestoreProfile.phone || firestoreProfile.phoneNumber || prev.phone,
+            city: firestoreProfile.city || prev.city,
+            bio: firestoreProfile.bio || prev.bio,
+        }));
+    }, [firestoreProfile]);
 
     if (authLoading) {
         return (
@@ -612,131 +616,20 @@ export default function UploadVideoPage() {
         return null;
     }
 
-    // --- Referral Gate Logic ---
-    const uploadCount = firestoreProfile.videoUploadCount || 0;
-    const referralCount = firestoreProfile.referralCount || 0;
-    // 2 free uploads, then 3 referrals per additional upload
-    const FREE_UPLOADS = 2;
-    const referralsRequired = uploadCount < FREE_UPLOADS
-        ? 0
-        : (uploadCount - FREE_UPLOADS + 1) * 3;
-    const canUpload = referralsRequired === 0 || referralCount >= referralsRequired;
+    const uploadedCount = firestoreProfile?.videoUploadCount ?? 0;
+    const completedReferrals = firestoreProfile?.referralCount ?? 0;
+    const referralCode = firestoreProfile?.referralCode ?? '';
 
-    if (!canUpload) {
-        const referralsNeeded = referralsRequired - referralCount;
-        // Generate a referral code from userId if not already saved
-        const existingCode = firestoreProfile.referralCode;
-        let resolvedReferralCode = existingCode;
-        if (!existingCode && user?.uid) {
-            // Create a stable code from uid — first 8 chars uppercased
-            resolvedReferralCode = user.uid.slice(0, 8).toUpperCase();
-            // Save it to Firestore so it persists (fire and forget)
-            import('firebase/firestore').then(({ doc, updateDoc }) => {
-                import('@/lib/firebase/firebase-config').then(({ db }) => {
-                    updateDoc(doc(db, 'users', user.uid), {
-                        referralCode: resolvedReferralCode,
-                    }).catch(() => {});
-                });
-            });
-        }
-        const referralLink = `${window.location.origin}/auth/register?ref=${resolvedReferralCode || user?.uid?.slice(0, 8).toUpperCase()}`;
+    const FREE_LIMIT = 2;
+    const REFERRALS_REQUIRED = 3;
 
+    if (uploadedCount >= FREE_LIMIT && completedReferrals < REFERRALS_REQUIRED) {
         return (
-            <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
-                {/* Background Decorative Elements */}
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse delay-700" />
-                
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative z-10 w-full max-w-md bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-hidden"
-                >
-                    {/* Header Icon */}
-                    <div className="flex justify-center mb-8">
-                        <div className="relative">
-                            <motion.div 
-                                animate={{ scale: [1, 1.1, 1] }}
-                                transition={{ repeat: Infinity, duration: 3 }}
-                                className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/20 rotate-12"
-                            >
-                                <Shield className="w-10 h-10 text-white -rotate-12" />
-                            </motion.div>
-                            <motion.div 
-                                initial={{ rotate: 0 }}
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                className="absolute -inset-2 border-2 border-dashed border-white/20 rounded-full"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="text-center mb-10">
-                        <h2 className="text-3xl font-black text-white mb-4 tracking-tight">
-                            Access Locked
-                        </h2>
-                        <p className="text-blue-100/60 text-sm font-medium leading-relaxed">
-                            You've exhausted your free upload. Help the community grow to unlock unlimited access!
-                        </p>
-                    </div>
-
-                    {/* Progress Card */}
-                    <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-8 relative overflow-hidden group">
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Referral Progress</span>
-                            <span className="text-sm font-black text-white">{referralCount} / {referralsRequired}</span>
-                        </div>
-                        
-                        <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden mb-4">
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${referralsRequired > 0 ? Math.min(100, (referralCount / referralsRequired) * 100) : 100}%` }}
-                                transition={{ duration: 1.5, ease: "easeOut" }}
-                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)]"
-                            />
-                        </div>
-
-                        <p className="text-center text-xs font-bold text-blue-100/40">
-                            {referralsNeeded > 0 
-                                ? `Invite ${referralsNeeded} more ${referralsNeeded === 1 ? 'friend' : 'friends'} to unlock`
-                                : "Success! You've unlocked your next upload."
-                            }
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <button
-                            onClick={() => {
-                                navigator.clipboard.writeText(referralLink);
-                                alert('Referral link copied to clipboard!');
-                            }}
-                            className="w-full py-4 bg-white text-[#0F172A] rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl"
-                        >
-                            <Share2 className="w-4 h-4" />
-                            Copy Invite Link
-                        </button>
-
-                        <button
-                            onClick={() => router.push('/dashboard')}
-                            className="w-full py-4 bg-white/5 text-white/60 rounded-2xl font-bold text-sm hover:bg-white/10 transition-all border border-white/5"
-                        >
-                            Return to Dashboard
-                        </button>
-                    </div>
-
-                    <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-6">
-                        <div className="flex flex-col items-center">
-                            <span className="text-white font-black text-lg">2</span>
-                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">Free Uploads</span>
-                        </div>
-                        <div className="w-px h-8 bg-white/10" />
-                        <div className="flex flex-col items-center">
-                            <span className="text-white font-black text-lg">3</span>
-                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">Refs / Life</span>
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
+            <ReferralWallCard
+                referralCode={referralCode}
+                completedReferrals={completedReferrals}
+                required={REFERRALS_REQUIRED}
+            />
         );
     }
 
@@ -1076,7 +969,8 @@ export default function UploadVideoPage() {
                                     width: '100%',
                                     height: '100%',
                                     objectFit: 'cover',
-                                    transform: cameraMode === 'user' ? 'scaleX(-1)' : 'none',
+                                    transform: 'none',
+                                    zoom: 1,
                                 }}
                                 onLoadedMetadata={(e) => { e.currentTarget.play().catch(() => {}); }}
                             />
