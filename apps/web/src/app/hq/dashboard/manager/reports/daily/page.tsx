@@ -50,7 +50,8 @@ interface DailyReportRow {
 
 export default function DailyReportPage() {
   const router = useRouter();
-  const { session, loading: sessionLoading } = useHqSession();
+  const { session: hqSession, loading: sessionLoading } = useHqSession();
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportData, setReportData] = useState<DailyReportRow[]>([]);
@@ -60,11 +61,32 @@ export default function DailyReportPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || (session.role !== 'manager' && session.role !== 'superadmin')) {
-      router.push('/hq/login');
+    
+    // Check HQ session first
+    if (hqSession && (hqSession.role === 'manager' || hqSession.role === 'superadmin')) {
+      setSession(hqSession);
       return;
     }
-  }, [session, sessionLoading, router]);
+
+    // Fallback: Check hospital session
+    const hospitalSessionRaw = localStorage.getItem('hospital_session');
+    if (hospitalSessionRaw) {
+      try {
+        const parsed = JSON.parse(hospitalSessionRaw);
+        if (parsed.uid === '5mHY2l3o6NhGDji4CysY' || parsed.role === 'admin' || parsed.role === 'superadmin') {
+          setSession({
+            uid: parsed.uid,
+            role: parsed.role,
+            displayName: parsed.displayName || 'Hospital Staff Audit',
+            isEditOnly: parsed.uid === '5mHY2l3o6NhGDji4CysY'
+          });
+          return;
+        }
+      } catch (e) {}
+    }
+
+    router.push('/hq/login');
+  }, [hqSession, sessionLoading, router]);
 
   const fetchReport = async () => {
     try {
@@ -792,7 +814,7 @@ export default function DailyReportPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
             <Link
-              href="/hq/dashboard/manager"
+              href={session?.isEditOnly ? "/departments/hospital/dashboard/staff" : "/hq/dashboard/manager"}
               className="p-3.5 bg-white border border-gray-100 rounded-2xl hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
             >
               <ArrowLeft size={20} className="text-gray-600" />
@@ -957,16 +979,22 @@ export default function DailyReportPage() {
                           {row.employeeId}
                         </div>
                         <div>
-                          <a
-                            href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
-                            }}
-                            className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
-                          >
-                            {row.name}
-                          </a>
+                          {session?.isEditOnly ? (
+                            <span className="font-bold text-sm text-gray-900 select-none">
+                              {row.name}
+                            </span>
+                          ) : (
+                            <a
+                              href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                              }}
+                              className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
+                            >
+                              {row.name}
+                            </a>
+                          )}
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
                         </div>
                       </div>
@@ -1190,7 +1218,6 @@ export default function DailyReportPage() {
                         )}
                       </div>
                     </td>
-
 
                   </tr>
                 ))}

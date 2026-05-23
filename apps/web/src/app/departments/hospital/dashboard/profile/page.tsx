@@ -111,7 +111,8 @@ export default function ProfilePage() {
   const fetchMetrics = useCallback(async (sId: string) => {
     try {
       const prefix = 'hospital';
-      const prefixedId = `${prefix}_${sId}`;
+      const rawId = sId.startsWith('hospital_') ? sId.replace('hospital_', '') : sId;
+      const prefixedId = sId.startsWith('hospital_') ? sId : `hospital_${sId}`;
 
       // Parallel resolution covering both traditional staff ID and prefixed staff ID formats from HQ
       const [
@@ -121,21 +122,22 @@ export default function ProfilePage() {
         taskSnap1, taskSnap2,
         fineSnap1, fineSnap2,
         growthSnap1, growthSnap2,
-        salarySnap
+        salarySnap1, salarySnap2
       ] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
         getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
         getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
         getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
         getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
         getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', sId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
       ]);
 
       // Helper to properly merge, deduplicate, and sort data from both lookup streams
@@ -155,7 +157,11 @@ export default function ProfilePage() {
       setSpecialTasks(mergeAndSort(taskSnap1, taskSnap2, 'createdAt') as any);
       setFines(mergeAndSort(fineSnap1, fineSnap2, 'date') as any);
       setGrowthHistory(mergeAndSort(growthSnap1, growthSnap2, 'date') as any);
-      setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)).sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month)));
+
+      const salaryCombined = [...salarySnap1.docs, ...salarySnap2.docs].map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
+      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
+        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
+      setSalaryRecords(uniqueSalaries);
 
     } catch (error) {
       console.error("Critical sync failure in fetchMetrics:", error);
@@ -173,18 +179,36 @@ export default function ProfilePage() {
       try {
         setLoading(true);
         const userRef = doc(db, 'hospital_users', parsed.uid);
-        const userSnap = await getDoc(userRef);
+        let userSnap = await getDoc(userRef);
+        let uData = null;
+        let finalId = parsed.uid;
         
-        if (!userSnap.exists()) { 
+        if (userSnap.exists()) {
+          uData = userSnap.data();
+        } else {
+          // Fallback to hospital_staff collection
+          const fallbackSnap = await getDocs(query(collection(db, 'hospital_staff'), where('loginUserId', '==', parsed.uid)));
+          if (!fallbackSnap.empty) {
+            userSnap = fallbackSnap.docs[0] as any;
+            uData = userSnap.data();
+            finalId = userSnap.id;
+          }
+        }
+        
+        if (!uData) { 
           toast.error("User profile not found in active ledger.");
           router.push('/departments/hospital/login'); 
           return; 
         }
-        const uData = userSnap.data();
-        setProfile({ id: userSnap.id, ...uData });
+
+        setProfile({ 
+          id: finalId, 
+          ...uData,
+          phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
+        });
 
         // Execute comprehensive data synchronization
-        await fetchMetrics(userSnap.id);
+        await fetchMetrics(finalId);
       } catch (err) {
         console.error(err);
         toast.error("Secure synchronization failed.");
@@ -555,7 +579,7 @@ export default function ProfilePage() {
                                 : sub.status === 'na'
                                   ? 'bg-gray-100 border-gray-200 text-gray-500 opacity-60'
                                   : 'bg-red-50 border-red-100 text-red-600'
-                              }`}
+                                }`}
                           >
                             {sub.status === 'done' ? <CheckCircle size={12} /> : sub.status === 'na' ? <MinusCircle size={12} /> : <XCircle size={12} />}
                             {sub.label}
@@ -614,7 +638,7 @@ export default function ProfilePage() {
                                 : item.status === 'na'
                                   ? 'bg-gray-100 border-gray-200 text-gray-500'
                                   : 'bg-orange-50 border-orange-100 text-orange-700'
-                              }`}
+                                }`}
                           >
                             {item.status === 'yes' ? <CheckCircle2 size={12} /> : item.status === 'na' ? <MinusCircle size={12} /> : <AlertTriangle size={12} />}
                             {item.label}
@@ -860,6 +884,7 @@ function InfoRow({ label, value, icon: Icon, multiline = false }: { label: strin
     </div>
   );
 }
+
 // Helper icons from lucide
 function MinusCircle(props: any) {
   return (
@@ -880,6 +905,7 @@ function MinusCircle(props: any) {
     </svg>
   );
 }
+
 function AlertTriangle(props: any) {
   return (
     <svg

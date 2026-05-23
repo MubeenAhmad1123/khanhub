@@ -13,7 +13,7 @@ import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2, AlertCircle,
   Trophy, TrendingUp, User as UserIcon, Sparkles, Activity,
-  CheckCircle2, Circle
+  CheckCircle2, Circle, Shirt
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -23,6 +23,7 @@ export default function StaffSelfPage() {
 
   const [staffProfile, setStaffProfile] = useState<any>(null);
   const [todayRecord, setTodayRecord] = useState<any>(null);
+  const [todayDressRecord, setTodayDressRecord] = useState<any>(null);
   const [contributions, setContributions] = useState<any[]>([]);
   const [contributionText, setContributionText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -57,27 +58,21 @@ export default function StaffSelfPage() {
 
       const staffData = staffSnap.data() as any;
       const staffId = staffSnap.id;
+
+      const rawId = staffId.startsWith('hospital_') ? staffId.replace('hospital_', '') : staffId;
+      const prefixedId = staffId.startsWith('hospital_') ? staffId : `hospital_${staffId}`;
       
-      setStaffProfile({ 
-        id: staffId, 
-        ...staffData, 
-        joiningDate: toDate(staffData.joiningDate) || new Date(), 
-        duties: staffData.duties || [] 
-      });
+      // 2. Today's attendance (Dual fetch raw & prefixed IDs)
+      const [attSnap1, attSnap2] = await Promise.all([
+        getDocs(query(collection(db, 'hospital_attendance'), where('staffId', '==', rawId), where('date', '==', today))),
+        getDocs(query(collection(db, 'hospital_attendance'), where('staffId', '==', prefixedId), where('date', '==', today)))
+      ]);
+      const attDocs = [...attSnap1.docs, ...attSnap2.docs];
 
-      // 2. Today's attendance
-      const attSnap = await getDocs(
-        query(
-          collection(db, 'hospital_attendance'), 
-          where('staffId', '==', staffId), 
-          where('date', '==', today)
-        )
-      );
-
-      if (!attSnap.empty) {
-        const d = attSnap.docs[0].data();
+      if (attDocs.length > 0) {
+        const d = attDocs[0].data();
         setTodayRecord({ 
-          id: attSnap.docs[0].id, 
+          id: attDocs[0].id, 
           ...d, 
           checkInTime: toDate(d.checkInTime), 
           checkOutTime: toDate(d.checkOutTime) 
@@ -86,42 +81,39 @@ export default function StaffSelfPage() {
         setTodayRecord(null);
       }
 
-      // 3. Contributions (Recent)
-      const contribSnap = await getDocs(
-        query(
-          collection(db, 'hospital_contributions'), 
-          where('staffId', '==', staffId),
-          orderBy('createdAt', 'desc'),
-          limit(5)
-        )
-      );
-      
-      const contribDocs = contribSnap.docs.map(d => ({ 
+      // 3. Contributions (Recent) (Dual fetch raw & prefixed IDs)
+      const [contribSnap1, contribSnap2] = await Promise.all([
+        getDocs(query(collection(db, 'hospital_contributions'), where('staffId', '==', rawId), orderBy('createdAt', 'desc'), limit(5))).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, 'hospital_contributions'), where('staffId', '==', prefixedId), orderBy('createdAt', 'desc'), limit(5))).catch(() => ({ docs: [] } as any))
+      ]);
+      const contribCombinedDocs = [...contribSnap1.docs, ...contribSnap2.docs].map(d => ({ 
         id: d.id, 
         ...d.data(), 
         createdAt: toDate(d.data().createdAt) || new Date() 
       } as any));
 
-      setHasContributedToday(contribDocs.some(d => d.date === today));
-      setContributions(contribDocs);
+      const uniqueContribs = Array.from(new Map(contribCombinedDocs.map(c => [c.id, c])).values())
+        .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 5);
 
-      // 4. Monthly attendance summary
+      setHasContributedToday(uniqueContribs.some((d: any) => d.date === today));
+      setContributions(uniqueContribs);
+
+      // 4. Monthly attendance summary (Dual fetch raw & prefixed IDs)
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const firstDayStr = firstDay.toISOString().split('T')[0];
 
-      const monthlySnap = await getDocs(
-        query(
-          collection(db, 'hospital_attendance'),
-          where('staffId', '==', staffId),
-          where('date', '>=', firstDayStr),
-          where('date', '<=', today)
-        )
-      );
+      const [monthlySnap1, monthlySnap2] = await Promise.all([
+        getDocs(query(collection(db, 'hospital_attendance'), where('staffId', '==', rawId), where('date', '>=', firstDayStr), where('date', '<=', today))),
+        getDocs(query(collection(db, 'hospital_attendance'), where('staffId', '==', prefixedId), where('date', '>=', firstDayStr), where('date', '<=', today)))
+      ]);
+      const monthlyDocs = [...monthlySnap1.docs, ...monthlySnap2.docs];
+      const uniqueMonthly = Array.from(new Map(monthlyDocs.map(d => [d.id, d.data()])).values());
       
       const summary = { present: 0, absent: 0, leave: 0 };
-      monthlySnap.docs.forEach(d => {
-        const status = d.data().status;
+      uniqueMonthly.forEach((d: any) => {
+        const status = d.status;
         if (status === 'present') summary.present++;
         else if (status === 'absent') summary.absent++;
         else if (['leave', 'paid_leave', 'unpaid_leave'].includes(status)) summary.leave++;
@@ -129,34 +121,59 @@ export default function StaffSelfPage() {
 
       setMonthlySummary(summary);
 
-      // 5. Special Tasks
-      const tasksSnap = await getDocs(
-        query(
-          collection(db, 'hospital_special_tasks'), 
-          where('staffId', '==', staffId),
-          where('status', '!=', 'completed')
-        )
-      );
-      setSpecialTasks(tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      // 5. Special Tasks (Dual fetch raw & prefixed IDs)
+      const [tasksSnap1, tasksSnap2] = await Promise.all([
+        getDocs(query(collection(db, 'hospital_special_tasks'), where('staffId', '==', rawId), where('status', '!=', 'completed'))),
+        getDocs(query(collection(db, 'hospital_special_tasks'), where('staffId', '==', prefixedId), where('status', '!=', 'completed')))
+      ]);
+      const specialTasksCombined = [...tasksSnap1.docs, ...tasksSnap2.docs].map(d => ({ id: d.id, ...d.data() }));
+      const uniqueSpecialTasks = Array.from(new Map(specialTasksCombined.map(t => [t.id, t])).values());
+      setSpecialTasks(uniqueSpecialTasks);
 
-      // 6. Fetch Today's Duty Log for real-time status
-      const dutyLogSnap = await getDocs(
-        query(
-          collection(db, 'hospital_duty_logs'),
-          where('staffId', '==', staffId),
-          where('date', '==', today)
-        )
-      );
-      
-      if (!dutyLogSnap.empty) {
-        const logData = dutyLogSnap.docs[0].data();
-        if (logData.duties) {
-          setStaffProfile((prev: any) => ({
-            ...(prev || {}),
-            duties: logData.duties
-          }));
-        }
+      // 6. Fetch Today's Duty Log for real-time status (Dual fetch raw & prefixed IDs)
+      const [dutyLogSnap1, dutyLogSnap2] = await Promise.all([
+        getDocs(query(collection(db, 'hospital_duty_logs'), where('staffId', '==', rawId), where('date', '==', today))),
+        getDocs(query(collection(db, 'hospital_duty_logs'), where('staffId', '==', prefixedId), where('date', '==', today)))
+      ]);
+      const dutyDocs = [...dutyLogSnap1.docs, ...dutyLogSnap2.docs];
+
+      // 7. Fetch Today's Apparel Log (Dual fetch raw & prefixed IDs)
+      const [dressLogSnap1, dressLogSnap2] = await Promise.all([
+        getDocs(query(collection(db, 'hospital_dress_logs'), where('staffId', '==', rawId), where('date', '==', today))),
+        getDocs(query(collection(db, 'hospital_dress_logs'), where('staffId', '==', prefixedId), where('date', '==', today)))
+      ]);
+      const dressDocs = [...dressLogSnap1.docs, ...dressLogSnap2.docs];
+      if (dressDocs.length > 0) {
+        setTodayDressRecord(dressDocs[0].data());
+      } else {
+        setTodayDressRecord(null);
       }
+      
+      let todayDuties = [];
+      if (dutyDocs.length > 0 && dutyDocs[0].data().duties) {
+        todayDuties = dutyDocs[0].data().duties;
+      } else if (staffData.dutyConfig && staffData.dutyConfig.length > 0) {
+        todayDuties = staffData.dutyConfig.map((d: any) => ({
+          key: d.key,
+          label: d.label,
+          status: 'pending'
+        }));
+      } else {
+        todayDuties = [
+          { key: 'morning', label: 'Morning Duty', status: 'pending' },
+          { key: 'afternoon', label: 'Afternoon Duty', status: 'pending' },
+          { key: 'evening', label: 'Evening Duty', status: 'pending' }
+        ];
+      }
+
+      setStaffProfile({ 
+        id: staffId, 
+        ...staffData, 
+        phone: staffData.phone || staffData.phoneNumber || staffData.mobile || (user as any)?.phone || (user as any)?.phoneNumber || '',
+        joiningDate: toDate(staffData.joiningDate) || new Date(), 
+        duties: todayDuties 
+      });
+
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -362,7 +379,6 @@ export default function StaffSelfPage() {
           </div>
         )}
 
-
         {/* Contribution Section */}
         <div className={`p-8 border-4 border-black ${glassStyle}`}>
           <div className="flex items-center gap-3 mb-2">
@@ -422,6 +438,58 @@ export default function StaffSelfPage() {
             </div>
           </div>
         )}
+
+        {/* Uniform & Apparel Compliance Section */}
+        <div className={`p-8 border-4 border-black ${glassStyle}`}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-lg">
+              <Shirt size={20} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900">Today's Uniform Status</h2>
+          </div>
+          {todayDressRecord ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-2xl border bg-white">
+                <span className="text-sm font-bold">Overall Evaluation</span>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  todayDressRecord.status === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                  todayDressRecord.status === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                  'bg-amber-50 text-amber-700 border-amber-100'
+                }`}>
+                  {todayDressRecord.status}
+                </span>
+              </div>
+              {todayDressRecord.items && todayDressRecord.items.length > 0 && (
+                <div className="space-y-2">
+                  {todayDressRecord.items.map((item: any, idx: number) => {
+                    const isChecked = item.status === 'yes';
+                    return (
+                      <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border text-xs font-bold ${isChecked ? 'bg-blue-50/30 border-blue-100' : 'bg-orange-50/30 border-orange-100'}`}>
+                        <span>{item.label}</span>
+                        <span className={isChecked ? 'text-blue-600 font-black' : 'text-orange-600 font-black'}>
+                          {isChecked ? '✓ Compliant' : '✗ Missing'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Uniform audit pending for today</p>
+              {staffProfile?.dressCodeConfig && staffProfile.dressCodeConfig.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                  {staffProfile.dressCodeConfig.map((item: any, idx: number) => (
+                    <span key={idx} className="px-2.5 py-1 bg-white border rounded-lg text-[10px] font-bold text-slate-500 uppercase">
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Duties Section */}
         {staffProfile?.duties?.length > 0 && (

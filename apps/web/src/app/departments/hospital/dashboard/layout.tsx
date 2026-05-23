@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['admin', 'superadmin'] },
   { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin', 'superadmin'] },
   { title: 'Reports & Logs', href: '/departments/hospital/dashboard/admin/reports', icon: ClipboardList, roles: ['admin', 'superadmin'] },
+  { title: 'Daily Audit', href: '/hq/dashboard/manager/reports/daily', icon: ShieldCheck, roles: ['admin', 'superadmin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
   { title: 'My Profile', href: '/departments/hospital/dashboard/profile', icon: UserCircle, roles: ['admin', 'staff', 'superadmin'] },
@@ -173,6 +174,11 @@ export default function HospitalDashboardLayout({
     if (!user) return false;
     const itemRoles = item.roles.map(r => r.toLowerCase());
     
+    // Explicitly allow Daily Audit for user '5mHY2l3o6NhGDji4CysY'
+    if (item.title === 'Daily Audit' && user.uid === '5mHY2l3o6NhGDji4CysY') {
+      return true;
+    }
+
     // Exact match:
     if (itemRoles.includes(userRole)) return true;
 
