@@ -13,11 +13,66 @@ import {
   CheckCircle, Phone, Calendar, 
   Shirt, Award, Clock, Target, DollarSign,
   TrendingUp, Activity, MapPin, Mail,
-  AlertCircle, Sparkles, Trophy
+  AlertCircle, Sparkles, Trophy, FileText, CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+
+interface AttendanceRecord {
+  id: string;
+  date: string;
+  status: 'present' | 'absent' | 'leave' | 'late' | 'paid_leave' | 'unpaid_leave' | 'unmarked';
+  arrivalTime?: string;
+  departureTime?: string;
+  arrivedOnTime?: boolean;
+}
+
+interface DutyRecord {
+  id: string;
+  date: string;
+  dutyType?: string;
+  status?: string;
+  duties?: Array<{ key: string; label: string; status: 'done' | 'not_done' | 'na' }>;
+  points?: number;
+}
+
+interface DressRecord {
+  id: string;
+  date: string;
+  status?: 'yes' | 'no';
+  items?: Array<{ key: string; label: string; status: 'yes' | 'no' | 'na' }>;
+  points?: number;
+}
+
+interface SpecialTask {
+  id: string;
+  task?: string;
+  description?: string;
+  status: 'pending' | 'completed' | 'assigned' | 'acknowledged';
+  date?: string;
+  createdAt?: string;
+  points?: number;
+}
+
+interface FineRecord {
+  id: string;
+  amount: number;
+  reason: string;
+  date: string;
+}
+
+interface SalarySlip {
+  id: string;
+  month: string;
+  netSalary: number;
+  status: 'draft' | 'approved' | 'paid';
+  basicSalary: number;
+  absentDeduction: number;
+  bonus: number;
+  otherDeductions: number;
+  presentDays: number;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -28,12 +83,13 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'special_tasks' | 'attendance' | 'finance' | 'dress' | 'duty' | 'score' | 'profile'>('special_tasks');
   
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [duties, setDuties] = useState<any[]>([]);
-  const [dressLogs, setDressLogs] = useState<any[]>([]);
-  const [specialTasks, setSpecialTasks] = useState<any[]>([]);
-  const [fines, setFines] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [duties, setDuties] = useState<DutyRecord[]>([]);
+  const [dressLogs, setDressLogs] = useState<DressRecord[]>([]);
+  const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
+  const [fines, setFines] = useState<FineRecord[]>([]);
   const [growthPointsHistory, setGrowthPointsHistory] = useState<any[]>([]);
+  const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
 
   // Clean Minimalist Styles
   const cardStyle = "bg-white border border-slate-100 shadow-sm rounded-[1.5rem]";
@@ -59,10 +115,10 @@ export default function ProfilePage() {
         uniqueList.sort((a, b) => {
           const valA = a[dateField] || '';
           const valB = b[dateField] || '';
-          return valB.localeCompare(valA);
+          return valB.toString().localeCompare(valA.toString());
         });
 
-        return uniqueList.slice(0, 30); // keep latest 30 records
+        return uniqueList;
       } catch (err) {
         console.error(`Error in fetchParallel for ${collectionName}:`, err);
         return [];
@@ -70,19 +126,21 @@ export default function ProfilePage() {
     };
 
     try {
-      const [att, dts, drs, tks, fns] = await Promise.all([
+      const [att, dts, drs, tks, fns, salaries] = await Promise.all([
         fetchParallel('welfare_attendance', 'date'),
         fetchParallel('welfare_duty_logs', 'date'),
         fetchParallel('welfare_dress_logs', 'date'),
         fetchParallel('welfare_special_tasks', 'createdAt'),
-        fetchParallel('welfare_fines', 'date')
+        fetchParallel('welfare_fines', 'date'),
+        fetchParallel('welfare_salary_records', 'month')
       ]);
 
-      setAttendance(att);
-      setDuties(dts);
-      setDressLogs(drs);
-      setSpecialTasks(tks);
-      setFines(fns);
+      setAttendance(att as AttendanceRecord[]);
+      setDuties(dts as DutyRecord[]);
+      setDressLogs(drs as DressRecord[]);
+      setSpecialTasks(tks as SpecialTask[]);
+      setFines(fns as FineRecord[]);
+      setSalaryRecords(salaries as SalarySlip[]);
 
       // Fetch Growth Points History (both variations of IDs)
       const [gp1, gp2] = await Promise.all([
@@ -145,9 +203,14 @@ export default function ProfilePage() {
         }
         
         const uData = userSnap.data();
-        setProfile({ id: userSnap.id, _collection: collectionName, ...uData });
+        setProfile({ 
+          id: userSnap.id, 
+          _collection: collectionName, 
+          ...uData,
+          phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
+        });
 
-        fetchMetrics(userSnap.id);
+        await fetchMetrics(userSnap.id);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load profile");
@@ -178,7 +241,7 @@ export default function ProfilePage() {
   const totalEarnings = useMemo(() => {
     if (!profile?.monthlySalary) return 0;
     const fineTotal = fines.reduce((acc, f) => acc + (f.amount || 0), 0);
-    return profile.monthlySalary - fineTotal;
+    return Math.max(0, profile.monthlySalary - fineTotal);
   }, [profile, fines]);
 
   if (loading) return (
@@ -214,7 +277,7 @@ export default function ProfilePage() {
                   <img src={profile.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-slate-100 flex items-center justify-center text-3xl font-bold text-slate-400 uppercase">
-                    {profile?.displayName?.[0]}
+                    {profile?.displayName?.[0] || profile?.name?.[0]}
                   </div>
                 )}
                 {uploadingPhoto && (
@@ -246,7 +309,7 @@ export default function ProfilePage() {
               />
             </div>
 
-            <h2 className="mt-4 text-lg font-bold text-center text-slate-900">{profile?.displayName}</h2>
+            <h2 className="mt-4 text-lg font-bold text-center text-slate-900">{profile?.displayName || profile?.name}</h2>
             <p className="text-slate-500 font-semibold text-[11px] uppercase tracking-wider mt-1 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
               {profile?.designation || 'Welfare Staff'}
             </p>
@@ -258,7 +321,7 @@ export default function ProfilePage() {
               </div>
               <div className={`flex items-center gap-3 p-3.5 ${inputCardStyle}`}>
                 <Phone className="text-slate-400" size={14} />
-                <span className="text-xs font-medium text-slate-700">{profile?.phone || 'No Phone'}</span>
+                <span className="text-xs font-medium text-slate-700">{profile?.phone || 'No Phone Linked'}</span>
               </div>
             </div>
           </div>
@@ -271,10 +334,10 @@ export default function ProfilePage() {
             {[
               { id: 'special_tasks', label: 'Tasks', icon: <Target size={14} /> },
               { id: 'attendance', label: 'Attendance', icon: <Calendar size={14} /> },
-              { id: 'finance', label: 'Finance', icon: <DollarSign size={14} /> },
               { id: 'duty', label: 'Work Logs', icon: <Activity size={14} /> },
               { id: 'dress', label: 'Dress', icon: <Shirt size={14} /> },
               { id: 'score', label: 'Performance', icon: <TrendingUp size={14} /> },
+              { id: 'finance', label: 'Finance', icon: <DollarSign size={14} /> },
               { id: 'profile', label: 'Personal', icon: <User size={14} /> },
             ].map(tab => (
               <button
@@ -308,8 +371,8 @@ export default function ProfilePage() {
                           {task.status === 'completed' ? <CheckCircle size={16} /> : <Clock size={16} />}
                         </div>
                         <div>
-                          <p className={`text-sm font-medium ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task.task}</p>
-                          <p className="text-[9px] font-bold uppercase text-slate-400 mt-0.5">{formatDateDMY(task.date)}</p>
+                          <p className={`text-sm font-medium ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task.task || task.description}</p>
+                          <p className="text-[9px] font-bold uppercase text-slate-400 mt-0.5">{formatDateDMY(task.date || task.createdAt)}</p>
                         </div>
                       </div>
                       <div className="px-2 py-1 rounded-md bg-white border border-slate-100 text-[10px] font-bold text-slate-600">+{task.points || 0} PTS</div>
@@ -362,7 +425,36 @@ export default function ProfilePage() {
                      <h4 className="text-2xl font-bold mt-1 text-rose-600">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4>
                   </div>
                 </div>
+
+                {/* Salary slips */}
+                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <FileText size={14} className="text-slate-800" />
+                  Official Payroll Ledger
+                </h4>
                 
+                <div className="space-y-3 mb-8">
+                   {salaryRecords.length > 0 ? salaryRecords.map(rec => (
+                     <div key={rec.id} className="p-4 border border-gray-100 bg-white rounded-xl flex items-center justify-between shadow-sm transition-all hover:shadow-md">
+                       <div>
+                         <p className="font-bold text-gray-900">{new Date(rec.month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+                         <p className="text-xs text-gray-400 font-medium">Net Disbursed: Rs. {rec.netSalary.toLocaleString()}</p>
+                       </div>
+                       <div className={`px-3 py-1 text-[11px] font-black uppercase tracking-wide rounded-md ${rec.status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                         {rec.status}
+                       </div>
+                     </div>
+                   )) : (
+                      <div className="text-center py-6 border border-dashed border-gray-100 rounded-xl bg-gray-50/50 text-xs font-medium text-gray-400">
+                        No finalized payroll documents exist in system.
+                      </div>
+                   )}
+                </div>
+                
+                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <AlertCircle size={14} className="text-rose-600" />
+                  Logged Fine History
+                </h4>
+
                 <div className="space-y-2">
                   {fines.map(fine => (
                     <div key={fine.id} className="p-4 rounded-xl border border-slate-100 flex items-center justify-between bg-white">
@@ -373,7 +465,7 @@ export default function ProfilePage() {
                             <p className="text-[9px] font-bold text-slate-400 uppercase">{formatDateDMY(fine.date)}</p>
                           </div>
                        </div>
-                       <p className="font-bold text-rose-600 text-sm">- Rs. {fine.amount}</p>
+                       <p className="font-bold text-rose-500 text-sm">- Rs. {fine.amount}</p>
                     </div>
                   ))}
                 </div>
@@ -388,9 +480,9 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-4">
                   {duties.map(duty => {
-                    const hasBreakdown = duty.duties && Array.isArray(duty.duties);
-                    const totalChecked = hasBreakdown ? duty.duties.length : 0;
-                    const doneCount = hasBreakdown ? duty.duties.filter((d: any) => d.status === 'done').length : 0;
+                    const hasBreakdown = !!(duty.duties && Array.isArray(duty.duties));
+                    const totalChecked = hasBreakdown && duty.duties ? duty.duties.length : 0;
+                    const doneCount = hasBreakdown && duty.duties ? duty.duties.filter((d: any) => d.status === 'done').length : 0;
                     
                     return (
                       <div key={duty.id} className="p-5 rounded-xl border border-slate-100 bg-white shadow-sm">
@@ -402,7 +494,7 @@ export default function ProfilePage() {
                             <div>
                               <p className="text-sm font-bold text-slate-800">{formatDateDMY(duty.date)}</p>
                               <p className="text-[10px] font-medium text-slate-400 mt-0.5">
-                                {hasBreakdown ? `${doneCount} of ${totalChecked} tasks completed` : 'General Duties'}
+                                {hasBreakdown && duty.duties ? `${doneCount} of ${totalChecked} tasks completed` : 'General Duties'}
                               </p>
                             </div>
                           </div>
@@ -411,7 +503,7 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        {hasBreakdown ? (
+                        {hasBreakdown && duty.duties ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 border-t border-slate-100/50">
                             {duty.duties.map((item: any) => (
                               <div key={item.key} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100/40">
