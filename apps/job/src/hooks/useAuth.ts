@@ -334,46 +334,22 @@ export function useAuth() {
       console.log('[useAuth] 🟢 Popup success, uid:', userCredential.user.uid);
 
       const fbUser = userCredential.user;
-      const tempProfile: any = {
-        uid: fbUser.uid,
-        email: fbUser.email,
-        displayName: fbUser.displayName || 'User',
-        photoURL: fbUser.photoURL,
-        role,
-        emailVerified: fbUser.emailVerified,
-        onboardingCompleted: true,
-        paymentStatus: 'approved',
-        isPremium: false,
-        isActive: true,
-        isBanned: false,
-        isFeatured: false,
-        applicationsUsed: 0,
-        premiumJobsViewed: 0,
-        points: 0,
-        followerCount: 0,
-        followingCount: 0,
-        totalLikes: 0,
-        referralCode: fbUser.uid.slice(-6).toUpperCase(),
-        referralCount: 0,
-        videoUploadCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+
+      // Fallback for referredBy from sessionStorage in case it was lost
+      const finalReferredBy = referredBy || (typeof window !== 'undefined' ? sessionStorage.getItem('pendingRefCode') : null) || undefined;
+      if (finalReferredBy && typeof window !== 'undefined') {
+        sessionStorage.removeItem('pendingRefCode'); // Clear after use
+      }
+
+      console.log('[useAuth] 🔵 Loading/Creating Firestore user profile...', { uid: fbUser.uid, referredBy: finalReferredBy });
+
+      // Synchronously wait for profile load/creation so we don't broadcast dummy tempProfile
+      const profile = await _safeGetOrCreateProfile(fbUser, role, finalReferredBy);
 
       _hasAuthenticatedBefore = true;
       localStorage.setItem('jobreel_authenticated', 'true');
-      _broadcast({ user: tempProfile, firebaseUser: fbUser, loading: false, error: null });
+      _broadcast({ user: profile, firebaseUser: fbUser, loading: false, error: null });
       console.log('[useAuth] ✅ loginWithGoogle complete');
-
-      // Background Firestore sync — non-blocking
-      _safeGetOrCreateProfile(fbUser, role, referredBy).then((profile) => {
-        if (profile) {
-          console.log('[useAuth] ✅ Firestore profile loaded in background');
-          _broadcast({ user: profile, firebaseUser: fbUser, loading: false, error: null });
-        }
-      }).catch((err) => {
-        console.warn('[useAuth] ⚠️ Firestore profile fetch failed:', err);
-      });
 
     } catch (error: any) {
       console.error('[useAuth] ❌ Login failed:', error);

@@ -16,7 +16,14 @@ function RegisterContent() {
     const searchParams = useSearchParams();
     const { loginWithGoogle } = useAuth();
 
-    const referralCode = searchParams.get('ref') || undefined;
+    // 1. Read the ref code from the URL and save to sessionStorage
+    const urlParamsCode = searchParams.get('ref');
+    if (urlParamsCode && typeof window !== 'undefined') {
+        sessionStorage.setItem('pendingRefCode', urlParamsCode);
+        console.log('🔗 [Register] Stored referral code in sessionStorage:', urlParamsCode);
+    }
+
+    const referralCode = urlParamsCode || (typeof window !== 'undefined' ? sessionStorage.getItem('pendingRefCode') : null) || undefined;
     if (referralCode) {
         console.log('🔗 [Register] Referral code detected:', referralCode);
     }
@@ -26,8 +33,13 @@ function RegisterContent() {
             setLoading(true);
             console.log('🔵 [Register] Step 1: Starting Google registration via useAuth...');
 
+            const finalRefCode = referralCode || (typeof window !== 'undefined' ? sessionStorage.getItem('pendingRefCode') : null) || undefined;
+            if (finalRefCode && typeof window !== 'undefined') {
+                sessionStorage.setItem('pendingRefCode', finalRefCode);
+            }
+
             // loginWithGoogle handles the popup, Firestore creation, and select_account
-            await loginWithGoogle('job_seeker', referralCode);
+            await loginWithGoogle('job_seeker', finalRefCode);
             
             console.log('✅ [Register] Step 2: loginWithGoogle successful!');
 
@@ -36,14 +48,25 @@ function RegisterContent() {
             localStorage.setItem('jobreel_registered', 'true');
             sessionStorage.setItem('authRedirect', 'true');
 
-            // Note: Since useAuth updates state, we'd need to check the newly updated state
-            // but for simplicity we can check the result of the Firestore creation logic
-            // that is now internal to useAuth.
-            // A common pattern is to check if onboardingCompleted is false in the profile.
-            
-            console.log('🔵 [Register] Step 3: Navigating to feed or onboarding...');
-            // Redirect based on current knowledge or let it happen in a useEffect
-            router.push('/feed'); 
+            if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('pendingRefCode');
+            }
+
+            // Check onboardingCompleted status to redirect accordingly
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
+                const userData = userSnap.data();
+                if (!userData?.onboardingCompleted) {
+                    console.log('🔵 [Register] Redirecting new user to onboarding...');
+                    router.push('/auth/onboarding');
+                } else {
+                    console.log('🔵 [Register] Redirecting onboarded user to feed...');
+                    router.push('/feed');
+                }
+            } else {
+                router.push('/feed');
+            }
             console.log('✅ [Register] Step 4: router.push called!');
 
         } catch (error: any) {

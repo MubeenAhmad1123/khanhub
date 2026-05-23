@@ -87,7 +87,13 @@ export default function AdminVideosPage() {
               const userSnap = await getDoc(doc(db, 'users', video.userId));
               if (userSnap.exists()) {
                 const userData = userSnap.data();
+                console.log('[Referral Debug] referredByUserId:', userData.referredByUserId);
+                console.log('[Referral Debug] referredBy:', userData.referredBy);
+
                 const referredByUserId: string | undefined = userData.referredByUserId;
+                if (!referredByUserId) {
+                  console.warn('[Referral Debug] No referredByUserId found — referral tracking was never saved for this user');
+                }
 
                 if (referredByUserId) {
                   // Count how many OTHER approved videos this user has (excluding current)

@@ -1,460 +1,834 @@
 'use client';
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
-import { ArrowLeft, ArrowRight, Check, MapPin, Phone, Building2, User } from 'lucide-react';
-import { CATEGORY_CONFIG, CategoryKey } from '@/lib/categories';
+import { uploadProfilePhoto } from '@/lib/services/cloudinaryUpload';
+import CitySearch from '@/components/forms/CitySearch';
+import { Check } from 'lucide-react';
+import { CategoryKey } from '@/lib/categories';
 
-const CATEGORIES = [
-    { key: 'jobs', label: 'Jobs', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'healthcare', label: 'Healthcare', image: '/healthcare.webp', accent: '#00C896' },
-    { key: 'education', label: 'Education', image: '/education (2).webp', accent: '#FFD600' },
-    { key: 'marriage', label: 'Marriage Bureau', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'legal', label: 'Legal', image: '/translation.webp', accent: '#4A90D9' },
-    { key: 'realestate', label: 'Real Estate', image: '/real-estate.webp', accent: '#7638FA' },
-    { key: 'transport', label: 'Transport', image: '/jobs.webp', accent: '#FF8C00' },
-    { key: 'travel', label: 'Travel & Tour', image: '/jobs.webp', accent: '#00BFFF' },
-    { key: 'agriculture', label: 'Agriculture', image: '/jobs.webp', accent: '#4CAF50' },
-    { key: 'sellbuy', label: 'Sell & Buy', image: '/healthcare.webp', accent: '#FF5722' },
+const ONBOARDING_CATEGORIES = [
+    { key: 'jobs', label: 'Jobs', emoji: '💼', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', accent: '#FF0069' },
+    { key: 'education', label: 'Education', emoji: '📚', accent: '#FF0069' },
+    { key: 'marriage', label: 'Marriage', emoji: '💍', accent: '#FF0069' },
+    { key: 'domestic', label: 'Domestic Help', emoji: '🏠', accent: '#FF0069' },
+    { key: 'legal', label: 'Legal', emoji: '⚖️', accent: '#FF0069' },
+    { key: 'realestate', label: 'Real Estate', emoji: '🏢', accent: '#FF0069' },
+    { key: 'it', label: 'IT & Tech', emoji: '💻', accent: '#FF0069' },
 ];
 
 const CATEGORY_ROLES: Record<string, {
     providerLabel: string; seekerLabel: string;
     providerKey: string; seekerKey: string;
-    providerDesc: string; seekerDesc: string;
-    providerIcon: string; seekerIcon: string;
 }> = {
     jobs: {
-        providerKey: 'worker', providerLabel: 'Job Seeker', providerDesc: 'I am looking for a job', providerIcon: '👨‍💼',
-        seekerKey: 'hiring', seekerLabel: 'Company', seekerDesc: 'I want to hire people', seekerIcon: '🏢'
+        providerKey: 'worker', providerLabel: "I'm looking for work",
+        seekerKey: 'hiring', seekerLabel: "I'm hiring"
     },
     healthcare: {
-        providerKey: 'doctor', providerLabel: 'Healthcare Provider', providerDesc: 'I am a doctor or clinic', providerIcon: '🏥',
-        seekerKey: 'patient', seekerLabel: 'Patient / Seeker', seekerDesc: 'I am looking for medical help', seekerIcon: '🤒'
+        providerKey: 'doctor', providerLabel: "I provide healthcare",
+        seekerKey: 'patient', seekerLabel: "I need healthcare"
     },
     education: {
-        providerKey: 'teacher', providerLabel: 'Teacher / Tutor', providerDesc: 'I want to teach students', providerIcon: '👨‍🏫',
-        seekerKey: 'student', seekerLabel: 'Student / Parent', seekerDesc: 'I am looking for a tutor', seekerIcon: '📚'
+        providerKey: 'teacher', providerLabel: "I'm a teacher / tutor",
+        seekerKey: 'student', seekerLabel: "I'm a student / learner"
     },
     marriage: {
-        providerKey: 'groom', providerLabel: 'Groom/Male Side', providerDesc: 'I am looking for a partner', providerIcon: '🤵',
-        seekerKey: 'bride', seekerLabel: 'Bride/Female Side', seekerDesc: 'I am looking for a proposal', seekerIcon: '👰'
+        providerKey: 'groom', providerLabel: "I'm presenting a proposal",
+        seekerKey: 'bride', seekerLabel: "I'm looking for a match"
+    },
+    domestic: {
+        providerKey: 'provider', providerLabel: "I provide domestic services",
+        seekerKey: 'seeker', seekerLabel: "I need domestic help"
     },
     legal: {
-        providerKey: 'lawyer', providerLabel: 'Legal Professional', providerDesc: 'I am a lawyer or firm', providerIcon: '⚖️',
-        seekerKey: 'client', seekerLabel: 'Client', seekerDesc: 'I need legal advice', seekerIcon: '🤝'
+        providerKey: 'lawyer', providerLabel: "I'm a lawyer / legal advisor",
+        seekerKey: 'client', seekerLabel: "I need legal help"
     },
     realestate: {
-        providerKey: 'agent', providerLabel: 'Agent / Seller', providerDesc: 'I am selling or renting property', providerIcon: '🏠',
-        seekerKey: 'buyer', seekerLabel: 'Buyer / Renter', seekerDesc: 'I am looking to buy or rent', seekerIcon: '🔑'
+        providerKey: 'agent', providerLabel: "I'm an agent / seller",
+        seekerKey: 'buyer', seekerLabel: "I'm looking to buy/rent"
     },
-    transport: {
-        providerKey: 'seller', providerLabel: 'Driver / Seller', providerDesc: 'I provide transport services', providerIcon: '🚛',
-        seekerKey: 'buyer', seekerLabel: 'Passenger / Buyer', seekerDesc: 'I need transport', seekerIcon: '💰'
-    },
-    travel: {
-        providerKey: 'agency', providerLabel: 'Travel agency', providerDesc: 'I provide travel services', providerIcon: '✈️',
-        seekerKey: 'traveler', seekerLabel: 'Traveler', seekerDesc: 'I am looking for a tour', seekerIcon: '🎒'
-    },
-    agriculture: {
-        providerKey: 'farmer', providerLabel: 'Farmer / Supplier', providerDesc: 'I provide agri products', providerIcon: '🌾',
-        seekerKey: 'buyer', seekerLabel: 'Buyer', seekerDesc: 'I want to buy agri goods', seekerIcon: '🛒'
-    },
-    sellbuy: {
-        providerKey: 'seller', providerLabel: 'Seller', providerDesc: 'I am selling an item', providerIcon: '🛍️',
-        seekerKey: 'buyer', seekerLabel: 'Buyer', seekerDesc: 'I am looking for an item', seekerIcon: '💵'
-    },
-};
-
-const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: string; key: string; type?: string; icon: any }[]>> = {
-    jobs: {
-        hiring: [
-            { key: 'companyName', label: 'Company / Name', placeholder: 'e.g. Khan Construction', icon: Building2 },
-            { key: 'city', label: 'Work Location', placeholder: 'e.g. Lahore', icon: MapPin },
-            { key: 'phone', label: 'Contact Phone', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-        worker: [
-            { key: 'specialization', label: 'Your Work / Skill', placeholder: 'e.g. Electrician, Plumber', icon: User },
-            { key: 'city', label: 'Your City', placeholder: 'e.g. Karachi', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-    },
-    healthcare: {
-        doctor: [
-            { key: 'specialization', label: 'Specialization', placeholder: 'e.g. Cardiologist', icon: User },
-            { key: 'city', label: 'City', placeholder: 'e.g. Lahore', icon: MapPin },
-        ],
-        patient: [
-            { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
-        ],
-    },
-    marriage: {
-        groom: [
-            { key: 'age', label: 'Age', placeholder: 'e.g. 28', type: 'number', icon: User },
-            { key: 'city', label: 'City', placeholder: 'e.g. Lahore', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-        bride: [
-            { key: 'age', label: 'Age', placeholder: 'e.g. 24', type: 'number', icon: User },
-            { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-    },
-    realestate: {
-        agent: [
-            { key: 'companyName', label: 'Agency Name', placeholder: 'e.g. Zameen Experts', icon: Building2 },
-            { key: 'city', label: 'Operating City', placeholder: 'e.g. Islamabad', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-        buyer: [
-            { key: 'city', label: 'Looking in City', placeholder: 'e.g. Lahore', icon: MapPin },
-        ],
-    },
-    transport: {
-        seller: [
-            { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-        buyer: [
-            { key: 'city', label: 'Your City', placeholder: 'e.g. Lahore', icon: MapPin },
-        ],
-    },
-    sellbuy: {
-        seller: [
-            { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-        buyer: [
-            { key: 'city', label: 'Your City', placeholder: 'e.g. Lahore', icon: MapPin },
-        ],
-    },
-    education: {
-        teacher: [
-            { key: 'specialization', label: 'Subject / Expertise', placeholder: 'e.g. Mathematics', icon: User },
-            { key: 'city', label: 'Teaching City', placeholder: 'e.g. Faisalabad', icon: MapPin },
-            { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
-        ],
-        student: [
-            { key: 'city', label: 'Your City', placeholder: 'e.g. Multan', icon: MapPin },
-        ],
+    it: {
+        providerKey: 'provider', providerLabel: "I'm a developer / IT provider",
+        seekerKey: 'seeker', seekerLabel: "I need IT services"
     },
 };
 
 export default function CategoryRoleFlow() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const { user } = useAuth();
+    const { user, refreshProfile } = useAuth();
     const { setCategory, setRole: setContextRole } = useCategory();
 
-    const initialCat = searchParams.get('cat') as CategoryKey | null;
+    const [step, setStep] = useState(1);
+    
+    // Step 1 states
+    const [fullName, setFullName] = useState('');
+    const [profilePic, setProfilePic] = useState('');
+    const [city, setCity] = useState('');
+    const [phone, setPhone] = useState('');
+    const [sameWhatsApp, setSameWhatsApp] = useState(true);
+    const [whatsapp, setWhatsapp] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const [step, setStep] = useState(initialCat ? 2 : 1);
-    const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(initialCat);
+    // Step 2 states
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [customIndustry, setCustomIndustry] = useState('');
+    const [customChecked, setCustomChecked] = useState(false);
     const [selectedRole, setSelectedRole] = useState<'provider' | 'seeker' | null>(null);
-    const [formFields, setFormFields] = useState<Record<string, string>>({});
+
     const [saving, setSaving] = useState(false);
 
-    const accent = selectedCategory ? (CATEGORY_CONFIG[selectedCategory]?.accent || '#FF0069') : '#FF0069';
+    // Pre-fill display name from authenticated user details
+    useEffect(() => {
+        if (user) {
+            setFullName(user.displayName || '');
+            setProfilePic(user.photoURL || '');
+        }
+    }, [user]);
 
-    const handleCategorySelect = (cat: CategoryKey) => {
-        setSelectedCategory(cat);
-        setSelectedRole(null); // ← reset role when category changes
-        setFormFields({});
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.type !== 'image/webp') {
+            setErrorMessage('Only .webp format is supported for profile pictures.');
+            return;
+        }
+
+        setErrorMessage(null);
+        setUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const result = await uploadProfilePhoto(file, user?.uid || 'temp', (progress) => {
+                setUploadProgress(progress.percentage);
+            });
+            setProfilePic(result.secureUrl);
+            setErrorMessage(null);
+        } catch (err: any) {
+            console.error('Upload error:', err);
+            setErrorMessage(err.message || 'Failed to upload profile photo.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleStep1Submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!fullName.trim()) {
+            setErrorMessage('Full name is required.');
+            return;
+        }
+        if (!city.trim()) {
+            setErrorMessage('City is required.');
+            return;
+        }
+        if (!phone.trim()) {
+            setErrorMessage('Phone number is required.');
+            return;
+        }
+        if (!sameWhatsApp && !whatsapp.trim()) {
+            setErrorMessage('WhatsApp number is required.');
+            return;
+        }
+        setErrorMessage(null);
         setStep(2);
     };
 
-    // ── FIXED: No role locking. User can always freely select any role. ──
-    const handleRoleSelect = (role: 'provider' | 'seeker') => {
-        setSelectedRole(role);
-        const roles = CATEGORY_ROLES[selectedCategory!];
-        const roleKey = role === 'provider' ? roles.providerKey : roles.seekerKey;
-        const fields = ROLE_FIELDS[selectedCategory!]?.[roleKey] || [];
-        const initialFields: Record<string, string> = {};
-        fields.forEach(f => { initialFields[f.key] = ''; });
-        setFormFields(initialFields);
-    };
-
-    const handleFieldChange = (key: string, value: string) => {
-        setFormFields(prev => ({ ...prev, [key]: value }));
-    };
-
-    const handleSave = async () => {
-        if (selectedCategory) {
-            localStorage.setItem('jobreel_active_category', selectedCategory);
-            setCategory(selectedCategory);
+    const handleStep2Submit = () => {
+        if (!selectedCategory && !customChecked) {
+            setErrorMessage('Please select a category or enter custom industry.');
+            return;
         }
-        if (selectedRole) {
-            localStorage.setItem('jobreel_active_role', selectedRole);
+        if (customChecked && !customIndustry.trim()) {
+            setErrorMessage('Custom industry name is required.');
+            return;
+        }
+        if (!selectedRole) {
+            setErrorMessage('Please select a sub-role.');
+            return;
+        }
+        setErrorMessage(null);
+        setStep(3);
+    };
+
+    const handleFinalSave = async (targetRoute: '/feed' | '/dashboard/upload-video') => {
+        if (!user) return;
+        setSaving(true);
+
+        try {
+            const finalCategoryKey = (customChecked ? 'jobs' : selectedCategory!) as CategoryKey;
+            const roles = CATEGORY_ROLES[selectedCategory || 'jobs'];
+            const roleKey = selectedRole === 'provider' ? roles.providerKey : roles.seekerKey;
+            const finalRoleLabel = selectedRole === 'provider' ? roles.providerLabel : roles.seekerLabel;
+
+            const updates: any = {
+                name: fullName.trim(),
+                displayName: fullName.trim(),
+                photoURL: profilePic || user.photoURL || '',
+                city: city.trim(),
+                phone: phone.trim(),
+                whatsapp: sameWhatsApp ? phone.trim() : whatsapp.trim(),
+                category: finalCategoryKey,
+                customIndustry: customChecked ? customIndustry.trim() : null,
+                uiRole: selectedRole,
+                roleLabel: finalRoleLabel,
+                role: roleKey, // compat
+                onboardingCompleted: true,
+                updatedAt: serverTimestamp(),
+            };
+
+            await updateDoc(doc(db, 'users', user.uid), updates);
+
+            // Sync Context
+            setCategory(finalCategoryKey);
             setContextRole(selectedRole);
-        }
 
-        if (user) {
-            setSaving(true);
-            try {
-                const roles = CATEGORY_ROLES[selectedCategory!];
-                const roleKey = selectedRole === 'provider' ? roles.providerKey : roles.seekerKey;
+            // guest preferences local storage
+            localStorage.setItem('jobreel_active_category', finalCategoryKey);
+            localStorage.setItem('jobreel_active_role', selectedRole || '');
+            localStorage.setItem('jobreel_guest_prefs', JSON.stringify({
+                category: finalCategoryKey,
+                role: roleKey,
+                uiRole: selectedRole,
+                selectedAt: Date.now(),
+            }));
 
-                const updates: any = {
-                    category: selectedCategory,
-                    role: roleKey,
-                    uiRole: selectedRole,
-                    roleKey: roleKey,
-                    onboardingCompleted: true,
-                    updatedAt: new Date(),
-                };
-
-                Object.entries(formFields).forEach(([key, value]) => {
-                    if (value) updates[key] = value;
-                });
-
-                await updateDoc(doc(db, 'users', user.uid), updates);
-
-                // Update localStorage for feed filtering
-                localStorage.setItem('jobreel_guest_prefs', JSON.stringify({
-                    category: selectedCategory,
-                    role: roleKey,
-                    uiRole: selectedRole,
-                    selectedAt: Date.now(),
-                }));
-
-                sessionStorage.removeItem('feed_last_index');
-                sessionStorage.setItem('authRedirect', 'true');
-            } catch (err) {
-                console.error('Error updating profile:', err);
-                setSaving(false);
-                return;
-            } finally {
-                setSaving(false);
-            }
-        } else {
-            // Guest mode - also reset feed if they just converted or changed prefs
+            sessionStorage.removeItem('feed_last_index');
             sessionStorage.setItem('authRedirect', 'true');
-        }
 
-        router.push('/feed');
+            await refreshProfile();
+            router.push(targetRoute);
+        } catch (err: any) {
+            console.error('Final onboarding save failed:', err);
+            setErrorMessage(err.message || 'Failed to complete profile onboarding.');
+            setSaving(false);
+        }
     };
 
-    // ── STEP 1: Category Grid ──────────────────────────────────────────
+    // ── STEP 1: Basic Info Form ─────────────────────────────────────────
     const renderStep1 = () => (
-        <div>
-            <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 24 }}>
-                Choose Your Category
+        <form onSubmit={handleStep1Submit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <h2 style={{
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: 800,
+                fontSize: '22px',
+                color: '#0A0A0A',
+                textAlign: 'center',
+                margin: '0 0 4px 0'
+            }}>
+                Basic Information
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                {CATEGORIES.map((cat) => (
-                    <button
-                        key={cat.key}
-                        onClick={() => handleCategorySelect(cat.key as CategoryKey)}
-                        style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center',
-                            gap: 10, padding: 16,
-                            background: '#fff',
-                            border: `1.5px solid #E5E5E5`,
-                            borderRadius: 20, cursor: 'pointer',
-                            transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = cat.accent)}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
-                    >
+            <p style={{
+                fontFamily: 'DM Sans, sans-serif',
+                fontSize: '13px',
+                color: '#666666',
+                textAlign: 'center',
+                margin: '0 0 8px 0'
+            }}>
+                Complete your details to personalize your profile
+            </p>
+
+            {/* Profile Pic Upload */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    background: '#F8F8F8',
+                    border: '2px solid #E5E5E5',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    {profilePic ? (
+                        <img
+                            src={profilePic}
+                            alt="Profile Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    ) : (
+                        <span style={{ fontSize: '28px', color: '#888888' }}>👤</span>
+                    )}
+                    {uploading && (
                         <div style={{
-                            width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
-                            border: `2.5px solid ${cat.accent}`,
-                            boxShadow: `0 0 0 3px ${cat.accent}22`,
-                            flexShrink: 0,
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            fontWeight: 'bold'
                         }}>
-                            <Image
-                                src={cat.image}
-                                alt={cat.label}
-                                width={72}
-                                height={72}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+                            {uploadProgress}%
                         </div>
-                        <span style={{
-                            fontFamily: 'DM Sans', fontWeight: 700,
-                            fontSize: 13, color: '#0A0A0A', textAlign: 'center',
-                        }}>
-                            {cat.label}
-                        </span>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-
-    // ── STEP 2: Role Selection ─────────────────────────────────────────
-    const renderStep2Content = () => {
-        const roles = CATEGORY_ROLES[selectedCategory!];
-        if (!roles) return null;
-
-        return (
-            <div>
-                <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 6 }}>
-                    Who are you?
-                </h2>
-                <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#888', textAlign: 'center', marginBottom: 24 }}>
-                    Select your role in {CATEGORIES.find(c => c.key === selectedCategory)?.label}
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {/* Provider role */}
-                    <button
-                        onClick={() => handleRoleSelect('provider')}
-                        style={{
-                            padding: '20px 20px',
-                            borderRadius: 16,
-                            textAlign: 'left',
-                            border: selectedRole === 'provider'
-                                ? `2px solid ${accent}`
-                                : '2px solid #E5E5E5',
-                            background: selectedRole === 'provider' ? `${accent}08` : '#fff',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            display: 'flex', alignItems: 'center', gap: 14,
-                        }}
-                    >
-                        <span style={{ fontSize: 32, lineHeight: 1 }}>{roles.providerIcon}</span>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
-                                {roles.providerLabel}
-                            </div>
-                            <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#666' }}>
-                                {roles.providerDesc}
-                            </div>
-                        </div>
-                        {selectedRole === 'provider' && (
-                            <div style={{
-                                width: 24, height: 24, borderRadius: '50%',
-                                background: accent, display: 'flex',
-                                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                            }}>
-                                <Check size={14} color="#fff" />
-                            </div>
-                        )}
-                    </button>
-
-                    {/* Seeker role */}
-                    <button
-                        onClick={() => handleRoleSelect('seeker')}
-                        style={{
-                            padding: '20px 20px',
-                            borderRadius: 16,
-                            textAlign: 'left',
-                            border: selectedRole === 'seeker'
-                                ? `2px solid ${accent}`
-                                : '2px solid #E5E5E5',
-                            background: selectedRole === 'seeker' ? `${accent}08` : '#fff',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            display: 'flex', alignItems: 'center', gap: 14,
-                        }}
-                    >
-                        <span style={{ fontSize: 32, lineHeight: 1 }}>{roles.seekerIcon}</span>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
-                                {roles.seekerLabel}
-                            </div>
-                            <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#666' }}>
-                                {roles.seekerDesc}
-                            </div>
-                        </div>
-                        {selectedRole === 'seeker' && (
-                            <div style={{
-                                width: 24, height: 24, borderRadius: '50%',
-                                background: accent, display: 'flex',
-                                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                            }}>
-                                <Check size={14} color="#fff" />
-                            </div>
-                        )}
-                    </button>
+                    )}
                 </div>
 
-                <button
-                    onClick={handleSave}
-                    disabled={!selectedRole || saving}
+                <label style={{
+                    cursor: 'pointer',
+                    background: '#F8F8F8',
+                    border: '1px solid #E5E5E5',
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#0A0A0A',
+                    transition: 'all 0.15s'
+                }}>
+                    Change photo
+                    <input
+                        type="file"
+                        accept="image/webp"
+                        onChange={handleFileChange}
+                        disabled={uploading}
+                        style={{ display: 'none' }}
+                    />
+                </label>
+                <div style={{ fontSize: '11px', color: '#666666', fontWeight: 500, textAlign: 'center' }}>
+                    Only <span style={{ color: '#FF0069', fontWeight: 700 }}>.webp</span> format supported
+                </div>
+            </div>
+
+            {/* Full Name */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>Full Name</label>
+                <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
                     style={{
-                        width: '100%', marginTop: 24, padding: '15px',
-                        background: selectedRole ? accent : '#E5E5E5',
-                        color: selectedRole ? '#fff' : '#aaa',
-                        border: 'none', borderRadius: 14,
-                        fontFamily: 'Poppins', fontWeight: 800,
-                        fontSize: 15, cursor: selectedRole ? 'pointer' : 'not-allowed',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        transition: 'all 0.2s',
-                        boxShadow: selectedRole ? `0 6px 20px ${accent}44` : 'none',
-                        opacity: saving ? 0.7 : 1,
+                        padding: '12px 16px',
+                        border: '2px solid #E5E5E5',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        fontFamily: 'DM Sans, sans-serif',
+                        outline: 'none'
                     }}
-                >
-                    {saving ? (
-                        <>
-                            <div style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                            Saving...
-                        </>
-                    ) : (
-                        <>Save & Go to Feed <Check size={18} /></>
+                />
+            </div>
+
+            {/* City Lookup via CitySearch */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>City</label>
+                <CitySearch
+                    value={city}
+                    onChange={(value) => setCity(value)}
+                    placeholder="Search or select your city"
+                />
+            </div>
+
+            {/* Phone Number */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>Phone Number</label>
+                <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="03XX-XXXXXXX"
+                    style={{
+                        padding: '12px 16px',
+                        border: '2px solid #E5E5E5',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        fontFamily: 'DM Sans, sans-serif',
+                        outline: 'none'
+                    }}
+                />
+            </div>
+
+            {/* WhatsApp Sync Toggle */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: '#F8F8F8',
+                borderRadius: '12px',
+                border: '1px solid #E5E5E5'
+            }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>WhatsApp Sync</span>
+                    <span style={{ fontSize: '11px', color: '#666666' }}>This is also my WhatsApp number</span>
+                </div>
+                <input
+                    type="checkbox"
+                    checked={sameWhatsApp}
+                    onChange={(e) => setSameWhatsApp(e.target.checked)}
+                    style={{
+                        width: '20px',
+                        height: '20px',
+                        accentColor: '#FF0069',
+                        cursor: 'pointer'
+                    }}
+                />
+            </div>
+
+            {/* Separate WhatsApp Input */}
+            {!sameWhatsApp && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>WhatsApp Number</label>
+                    <input
+                        type="tel"
+                        required
+                        value={whatsapp}
+                        onChange={(e) => setWhatsapp(e.target.value)}
+                        placeholder="03XX-XXXXXXX"
+                        style={{
+                            padding: '12px 16px',
+                            border: '2px solid #E5E5E5',
+                            borderRadius: '12px',
+                            fontSize: '14px',
+                            fontFamily: 'DM Sans, sans-serif',
+                            outline: 'none'
+                        }}
+                    />
+                </div>
+            )}
+
+            {errorMessage && (
+                <div style={{ color: '#FF0069', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>
+                    ⚠️ {errorMessage}
+                </div>
+            )}
+
+            <button
+                type="submit"
+                disabled={uploading}
+                style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: '#FF0069',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '15px',
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(255, 0, 105, 0.3)',
+                    marginTop: '8px'
+                }}
+            >
+                Next Step
+            </button>
+        </form>
+    );
+
+    // ── STEP 2: Category & Role Selection ───────────────────────────────
+    const renderStep2 = () => {
+        const roles = CATEGORY_ROLES[selectedCategory || 'jobs'];
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h2 style={{
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 800,
+                    fontSize: '22px',
+                    color: '#0A0A0A',
+                    textAlign: 'center',
+                    margin: '0 0 4px 0'
+                }}>
+                    Category & Role
+                </h2>
+                <p style={{
+                    fontFamily: 'DM Sans, sans-serif',
+                    fontSize: '13px',
+                    color: '#666666',
+                    textAlign: 'center',
+                    margin: '0 0 8px 0'
+                }}>
+                    Select your main industry and matching profile role
+                </p>
+
+                {/* 8 Categories Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                    {ONBOARDING_CATEGORIES.map((cat) => {
+                        const isSelected = selectedCategory === cat.key && !customChecked;
+                        return (
+                            <button
+                                key={cat.key}
+                                onClick={() => {
+                                    setSelectedCategory(cat.key);
+                                    setCustomChecked(false);
+                                    setSelectedRole(null);
+                                    setErrorMessage(null);
+                                }}
+                                type="button"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '14px 12px',
+                                    background: '#FFFFFF',
+                                    border: isSelected ? '2px solid #FF0069' : '2px solid #E5E5E5',
+                                    borderRadius: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <span style={{ fontSize: '20px', lineHeight: 1 }}>{cat.emoji}</span>
+                                <span style={{
+                                    fontFamily: 'DM Sans, sans-serif',
+                                    fontWeight: 700,
+                                    fontSize: '13px',
+                                    color: '#0A0A0A',
+                                    flex: 1
+                                }}>
+                                    {cat.label}
+                                </span>
+                                {isSelected && (
+                                    <div style={{
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '50%',
+                                        background: '#FF0069',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Check size={10} color="#fff" />
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Custom Industry Section */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    padding: '14px 16px',
+                    background: '#F8F8F8',
+                    borderRadius: '14px',
+                    border: '1px solid #E5E5E5',
+                    marginTop: '4px'
+                }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={customChecked}
+                            onChange={(e) => {
+                                setCustomChecked(e.target.checked);
+                                if (e.target.checked) {
+                                    setSelectedCategory(null);
+                                    setSelectedRole(null);
+                                }
+                            }}
+                            style={{
+                                width: '18px',
+                                height: '18px',
+                                accentColor: '#FF0069',
+                                cursor: 'pointer'
+                            }}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>
+                            My industry is not listed above
+                        </span>
+                    </label>
+
+                    {customChecked && (
+                        <input
+                            type="text"
+                            required
+                            value={customIndustry}
+                            onChange={(e) => {
+                                setCustomIndustry(e.target.value);
+                                // For sub-role logic, use 'jobs' as dynamic fallback config
+                                setSelectedCategory('jobs');
+                            }}
+                            placeholder="Enter industry name"
+                            style={{
+                                padding: '10px 14px',
+                                border: '2px solid #E5E5E5',
+                                borderRadius: '10px',
+                                fontSize: '13px',
+                                fontFamily: 'DM Sans, sans-serif',
+                                outline: 'none',
+                                background: '#FFFFFF'
+                            }}
+                        />
                     )}
-                </button>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+
+                {/* Role Picker (Shown after category selection is complete) */}
+                {selectedCategory && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>
+                            Select your profile role
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {/* Provider Role */}
+                            <button
+                                onClick={() => setSelectedRole('provider')}
+                                type="button"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    border: selectedRole === 'provider' ? '2px solid #FF0069' : '2px solid #E5E5E5',
+                                    background: selectedRole === 'provider' ? 'rgba(255, 0, 105, 0.04)' : '#FFFFFF',
+                                    cursor: 'pointer',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>
+                                    {roles.providerLabel}
+                                </span>
+                                {selectedRole === 'provider' && (
+                                    <div style={{
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '50%',
+                                        background: '#FF0069',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Check size={10} color="#fff" />
+                                    </div>
+                                )}
+                            </button>
+
+                            {/* Seeker Role */}
+                            <button
+                                onClick={() => setSelectedRole('seeker')}
+                                type="button"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    border: selectedRole === 'seeker' ? '2px solid #FF0069' : '2px solid #E5E5E5',
+                                    background: selectedRole === 'seeker' ? 'rgba(255, 0, 105, 0.04)' : '#FFFFFF',
+                                    cursor: 'pointer',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A0A0A' }}>
+                                    {roles.seekerLabel}
+                                </span>
+                                {selectedRole === 'seeker' && (
+                                    <div style={{
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '50%',
+                                        background: '#FF0069',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Check size={10} color="#fff" />
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {errorMessage && (
+                    <div style={{ color: '#FF0069', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>
+                        ⚠️ {errorMessage}
+                    </div>
+                )}
+
+                {/* Back / Next buttons */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                    <button
+                        onClick={() => {
+                            setStep(1);
+                            setErrorMessage(null);
+                        }}
+                        type="button"
+                        style={{
+                            flex: 1,
+                            padding: '16px',
+                            border: '1px solid #E5E5E5',
+                            color: '#888888',
+                            background: 'transparent',
+                            borderRadius: '12px',
+                            fontFamily: 'Poppins, sans-serif',
+                            fontWeight: 700,
+                            fontSize: '15px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Back
+                    </button>
+                    <button
+                        onClick={handleStep2Submit}
+                        type="button"
+                        style={{
+                            flex: 2,
+                            padding: '16px',
+                            background: '#FF0069',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontFamily: 'Poppins, sans-serif',
+                            fontWeight: 700,
+                            fontSize: '15px',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 14px rgba(255, 0, 105, 0.3)'
+                        }}
+                    >
+                        Continue
+                    </button>
+                </div>
             </div>
         );
     };
 
-    return (
-        <div style={{ width: '100%', maxWidth: 440, margin: '0 auto' }}>
-            {/* Progress dots */}
+    // ── STEP 3: Done Screen ──────────────────────────────────────────────
+    const renderStep3 = () => (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px',
+            textAlign: 'center',
+            padding: '20px 0'
+        }}>
             <div style={{
-                display: 'flex', justifyContent: 'center', gap: '8px',
-                padding: '12px 0', marginBottom: 16
+                width: '72px',
+                height: '72px',
+                borderRadius: '50%',
+                background: 'rgba(0, 200, 150, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '36px'
             }}>
-                {[1, 2].map((s) => (
-                    <div key={s} style={{
-                        width: step === s ? '20px' : '8px',
-                        height: '8px', borderRadius: '4px',
-                        background: step === s ? (accent || '#FF0069') : '#E5E5E5',
-                        transition: 'all 0.3s ease',
-                    }} />
-                ))}
+                ✅
+            </div>
+            <div>
+                <h2 style={{
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 800,
+                    fontSize: '22px',
+                    color: '#0A0A0A',
+                    margin: '0 0 6px 0'
+                }}>
+                    You&apos;re all set!
+                </h2>
+                <p style={{
+                    fontFamily: 'DM Sans, sans-serif',
+                    fontSize: '14px',
+                    color: '#666666',
+                    margin: 0,
+                    lineHeight: '1.5'
+                }}>
+                    Your profile details have been saved successfully. Start exploring matching jobs or upload an introduction video to stand out.
+                </p>
             </div>
 
-            {step === 1 && (
-                <div>
-                    <button
-                        onClick={() => router.back()}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#666', fontSize: '14px', padding: '16px 20px',
-                            WebkitTapHighlightColor: 'transparent',
-                        }}
-                    >
-                        ← Back
-                    </button>
-                    {renderStep1()}
+            {errorMessage && (
+                <div style={{ color: '#FF0069', fontSize: '13px', fontWeight: 600 }}>
+                    ⚠️ {errorMessage}
                 </div>
             )}
-            
-            {step === 2 && (
-                <div>
-                    <button
-                        onClick={() => { setStep(1); setSelectedRole(null); }}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#666', fontSize: '14px', padding: '16px 20px',
-                            WebkitTapHighlightColor: 'transparent',
-                        }}
-                    >
-                        ← Back
-                    </button>
-                    {renderStep2Content()}
-                </div>
-            )}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button
+                    onClick={() => handleFinalSave('/feed')}
+                    disabled={saving}
+                    style={{
+                        width: '100%',
+                        padding: '16px',
+                        background: '#FF0069',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '12px',
+                        fontFamily: 'Poppins, sans-serif',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 4px 14px rgba(255, 0, 105, 0.3)'
+                    }}
+                >
+                    {saving ? 'Completing setup...' : 'Explore Feed'}
+                </button>
+                <button
+                    onClick={() => handleFinalSave('/dashboard/upload-video')}
+                    disabled={saving}
+                    style={{
+                        width: '100%',
+                        padding: '15px',
+                        background: 'transparent',
+                        color: '#FF0069',
+                        border: '2px solid #FF0069',
+                        borderRadius: '12px',
+                        fontFamily: 'Poppins, sans-serif',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                        cursor: saving ? 'not-allowed' : 'pointer'
+                    }}
+                >
+                    Upload Video
+                </button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+            {/* Step Indicators */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '28px'
+            }}>
+                {[1, 2, 3].map((s) => {
+                    const isActive = step === s;
+                    const isDone = step > s;
+                    return (
+                        <div
+                            key={s}
+                            style={{
+                                width: isActive ? '24px' : '8px',
+                                height: '8px',
+                                borderRadius: '4px',
+                                background: isActive || isDone ? '#FF0069' : '#E5E5E5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.25s ease'
+                            }}
+                        >
+                            {isDone && <Check size={5} color="#fff" style={{ fontWeight: 'bold' }} />}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Step Content */}
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
         </div>
     );
 }
