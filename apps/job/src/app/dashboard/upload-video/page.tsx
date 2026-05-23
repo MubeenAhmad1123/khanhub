@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import ReferralWallCard from './ReferralWallCard';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, increment } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, increment, query, where } from 'firebase/firestore';
 import { 
     ArrowLeft, Video, CheckCircle, AlertCircle, X, Camera, Circle, RefreshCw, Loader2,
     Shield, Share2, User, Phone, Briefcase, MapPin, Tag, Info, UserCheck
@@ -400,6 +400,7 @@ export default function UploadVideoPage() {
 
     const [step, setStep] = useState<1 | 2 | 'success'>(1);
     const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
+    const [approvedVideoCount, setApprovedVideoCount] = useState<number | null>(null);
 
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -570,10 +571,32 @@ export default function UploadVideoPage() {
         if (!user) return;
         const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
             if (snap.exists()) {
-                setFirestoreProfile(snap.data());
+                const data = snap.data();
+                setFirestoreProfile(data);
+                // Auto-generate referralCode if missing
+                if (!data.referralCode && user) {
+                    const code = user.uid.slice(0, 8).toUpperCase();
+                    updateDoc(doc(db, 'users', user.uid), { referralCode: code });
+                }
             }
         }, (error) => {
             console.warn('[UploadVideo Profile] Snapshot error:', error.message);
+        });
+        return () => unsub();
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+        const q = query(
+            collection(db, 'videos'),
+            where('userId', '==', user.uid),
+            where('admin_status', '==', 'approved')
+        );
+        const unsub = onSnapshot(q, (snap) => {
+            setApprovedVideoCount(snap.size);
+        }, (err) => {
+            console.warn('[UploadVideo] Video count error:', err.message);
+            setApprovedVideoCount(0);
         });
         return () => unsub();
     }, [user]);
@@ -612,18 +635,17 @@ export default function UploadVideoPage() {
         );
     }
 
-    if (!user || !firestoreProfile) {
+    if (!user || !firestoreProfile || approvedVideoCount === null) {
         return null;
     }
 
-    const uploadedCount = firestoreProfile?.videoUploadCount ?? 0;
+    const FREE_LIMIT = 2;
+    const REFERRALS_REQUIRED = 3;
     const completedReferrals = firestoreProfile?.referralCount ?? 0;
     const referralCode = firestoreProfile?.referralCode ?? '';
 
-    const FREE_LIMIT = 2;
-    const REFERRALS_REQUIRED = 3;
-
-    if (uploadedCount >= FREE_LIMIT && completedReferrals < REFERRALS_REQUIRED) {
+    // Use live query count — NOT the stale videoUploadCount field
+    if (approvedVideoCount >= FREE_LIMIT && completedReferrals < REFERRALS_REQUIRED) {
         return (
             <ReferralWallCard
                 referralCode={referralCode}
