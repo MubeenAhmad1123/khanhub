@@ -123,13 +123,13 @@ export const isValidScreenshot = (file: File): boolean => {
 
 export const JAZZCASH_ACCOUNT_INFO = {
     accountTitle: 'Khanhub Job Portal',
-    accountNumber: '03-0063-9522-0',
+    accountNumber: '0300-6395220',
     accountType: 'Mobile Account',
 };
 
 export const EASYPAISA_ACCOUNT_INFO = {
     accountTitle: 'Khanhub Job Portal',
-    accountNumber: '03-0063-9522-0',
+    accountNumber: '0300-6395220',
     accountType: 'Mobile Account',
 };
 
