@@ -73,12 +73,19 @@ export default function DailyReportPage() {
     if (hospitalSessionRaw) {
       try {
         const parsed = JSON.parse(hospitalSessionRaw);
-        if (parsed.uid === '5mHY2l3o6NhGDji4CysY' || parsed.role === 'admin' || parsed.role === 'superadmin') {
+        const isSpecialUser = parsed.uid === '5mHY2l3o6NhGDji4CysY' || 
+                              parsed.uid === 'hospital_5mHY2l3o6NhGDji4CysY' ||
+                              parsed.customId === '5mHY2l3o6NhGDji4CysY' ||
+                              parsed.customId === 'hospital_5mHY2l3o6NhGDji4CysY' ||
+                              parsed.email?.includes('5mHY2l3o6NhGDji4CysY') ||
+                              parsed.isEditOnly === true;
+
+        if (isSpecialUser || parsed.role === 'admin' || parsed.role === 'superadmin') {
           setSession({
             uid: parsed.uid,
             role: parsed.role,
             displayName: parsed.displayName || 'Hospital Staff Audit',
-            isEditOnly: parsed.uid === '5mHY2l3o6NhGDji4CysY'
+            isEditOnly: isSpecialUser
           });
           return;
         }

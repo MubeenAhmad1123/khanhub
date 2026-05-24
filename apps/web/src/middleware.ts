@@ -7,7 +7,7 @@ export function middleware(req: NextRequest) {
   // Protect all HQ dashboard routes.
   if (pathname.startsWith('/hq/dashboard')) {
     // Exempt the daily report page from middleware redirect so client-side localStorage can authorize it.
-    if (pathname === '/hq/dashboard/manager/reports/daily') {
+    if (pathname === '/hq/dashboard/manager/reports/daily' || pathname.startsWith('/hq/dashboard/manager/reports/daily/')) {
       return NextResponse.next();
     }
 
