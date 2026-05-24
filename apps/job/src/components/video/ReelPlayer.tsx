@@ -265,18 +265,33 @@ const ReelPlayer = memo(function ReelPlayer({
 
         // --- isActive === true && !forceStop ---
         userPausedRef.current = false;
-        const alreadyBuffered = !!video && video.readyState >= 3; // HAVE_FUTURE_DATA or better
+        const alreadyBuffered = !!video && video.readyState >= 3;
         if (!alreadyBuffered) {
-            setShowInitialLoading(true);
-            setIsBuffering(true);
+            // If we have readyState >= 1 (metadata loaded from preload),
+            // show thumbnail instead of black screen — skip the black spinner
+            if (video.readyState >= 1 && video.readyState < 3) {
+                setShowInitialLoading(false); // thumbnail already visible
+                setIsBuffering(true);
+            } else {
+                setShowInitialLoading(true);
+                setIsBuffering(true);
+            }
             setShowCenterPlayOverlay(false);
             setShowLoaderReason(false);
         }
         const loadingStart = performance.now();
 
-        // Point 2: Call hls.startLoad() if needed
         if (hlsRef.current) {
-            hlsRef.current.startLoad();
+            // Clear the adjacent stop timer and resume full aggressive load
+            clearTimeout((hlsRef.current as any)._stopTimer);
+            (hlsRef.current as any)._stopTimer = null;
+            // Reconfigure for active video bandwidth
+            try {
+                (hlsRef.current as any).config.maxBufferLength = 20;
+                (hlsRef.current as any).config.maxMaxBufferLength = 40;
+                (hlsRef.current as any).config.maxBufferSize = 30 * 1024 * 1024;
+            } catch {}
+            hlsRef.current.startLoad(-1);
         }
 
         // Timer to detect slow connections or long load times
@@ -461,13 +476,16 @@ const ReelPlayer = memo(function ReelPlayer({
             const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
 
             if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
+                const isActiveVideo = isActive;
                 const hls = new Hls({
-                    autoStartLoad: true,
+                    autoStartLoad: false, // We control startLoad manually below
                     startLevel: 0,
-                    abrEwmaDefaultEstimate: 500000,
-                    maxBufferLength: 30,
-                    maxMaxBufferLength: 60,
-                    maxBufferSize: 100 * 1024 * 1024, // 100MB aggressive preload buffer size
+                    // Active video: buffer aggressively
+                    // Adjacent video: buffer conservatively (just enough to start fast)
+                    abrEwmaDefaultEstimate: isActiveVideo ? 500000 : 200000,
+                    maxBufferLength: isActiveVideo ? 20 : 4,
+                    maxMaxBufferLength: isActiveVideo ? 40 : 8,
+                    maxBufferSize: isActiveVideo ? 30 * 1024 * 1024 : 3 * 1024 * 1024,
                     manifestLoadingTimeOut: 10000,
                     manifestLoadingMaxRetry: 5,
                     levelLoadingTimeOut: 10000,
@@ -480,10 +498,31 @@ const ReelPlayer = memo(function ReelPlayer({
                 hls.loadSource(hlsUrl);
                 hls.attachMedia(video);
                 hlsRef.current = hls;
-                hls.startLoad();
+
+                if (isActive) {
+                    // Active video: start loading immediately, full buffer
+                    hls.startLoad(-1);
+                } else {
+                    // Adjacent video: load manifest + first fragment only
+                    // This gives us the thumbnail frame and enough data for instant start
+                    hls.startLoad(-1);
+
+                    // After 3 seconds of buffering the start, STOP to free bandwidth
+                    // for the active video. Will resume when this video becomes active.
+                    const stopTimer = setTimeout(() => {
+                        if (hlsRef.current === hls && !isActive) {
+                            hls.stopLoad();
+                        }
+                    }, 3000);
+
+                    // Clean up timer if component unmounts
+                    // (store on hls instance so cleanup works)
+                    (hls as any)._stopTimer = stopTimer;
+                }
 
                 hls.on(Hls.Events.ERROR, (_, data) => {
                     if (data.fatal) {
+                        clearTimeout((hls as any)._stopTimer);
                         hls.destroy();
                         hlsRef.current = null;
                         video.src = optimizedMp4;
@@ -502,7 +541,10 @@ const ReelPlayer = memo(function ReelPlayer({
         const video = videoRef.current;
         return () => {
             if (hlsRef.current) {
-                try { hlsRef.current.destroy(); } catch { }
+                try {
+                    clearTimeout((hlsRef.current as any)._stopTimer);
+                    hlsRef.current.destroy();
+                } catch { }
                 hlsRef.current = null;
             }
             if (video) {

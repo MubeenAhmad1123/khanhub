@@ -49,7 +49,7 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-const PRELOAD_AHEAD = 2;
+const PRELOAD_AHEAD = 3;
 const PRELOAD_BEHIND = 1;
 
 // ─── component ──────────────────────────────────────────────────────────────
@@ -717,7 +717,7 @@ export function VideoFeed() {
   // ── video slides ──────────────────────────────────────────────
   const renderedVideos = useMemo(() => {
     const RENDER_AHEAD = 3;
-    const RENDER_BEHIND = 1;
+    const RENDER_BEHIND = 2;
 
     return displayVideos.map((video, index) => {
       const { isActive, isAdjacent } = getVideoState(index);
@@ -738,8 +738,28 @@ export function VideoFeed() {
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
               flexShrink: 0,
+              position: 'relative',
+              overflow: 'hidden',
             }}
-          />
+          >
+            {/* Thumbnail glimpse — user sees content not black */}
+            {video.thumbnailUrl && (
+              <img
+                src={video.thumbnailUrl}
+                alt=""
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  filter: 'blur(8px) brightness(0.5)',
+                  transform: 'scale(1.05)',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+          </div>
         );
       }
 
