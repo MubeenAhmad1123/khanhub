@@ -165,6 +165,39 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   };
 
   useEffect(() => {
+    // Whitelist bypass for hospital supervisor on the daily report page:
+    const isDailyAuditRoute = pathname === '/hq/dashboard/manager/reports/daily' || 
+                              pathname.startsWith('/hq/dashboard/manager/reports/daily/');
+                              
+    if (isDailyAuditRoute && !localStorage.getItem(SESSION_KEY)) {
+      const hospitalSession = localStorage.getItem('hospital_session');
+      if (hospitalSession) {
+        try {
+          const parsed = JSON.parse(hospitalSession);
+          const isSpecialUser = parsed.uid === '5mHY2l3o6NhGDji4CysY' || 
+                                parsed.uid === 'hospital_5mHY2l3o6NhGDji4CysY' ||
+                                parsed.customId === '5mHY2l3o6NhGDji4CysY' ||
+                                parsed.customId === 'hospital_5mHY2l3o6NhGDji4CysY' ||
+                                parsed.email?.includes('5mHY2l3o6NhGDji4CysY') ||
+                                parsed.isEditOnly === true;
+
+          if (isSpecialUser || parsed.role === 'admin' || parsed.role === 'superadmin') {
+            const synthSession = {
+              uid: parsed.uid,
+              customId: parsed.customId || '5mHY2l3o6NhGDji4CysY',
+              name: parsed.name || parsed.displayName || 'Hospital Staff Audit',
+              role: 'manager',
+              loginTime: Date.now(),
+              isEditOnly: true
+            };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(synthSession));
+            localStorage.setItem('hq_login_time', Date.now().toString());
+            console.log('[HQ Layout] Synthesized temporary HQ session for supervisor.');
+          }
+        } catch (e) {}
+      }
+    }
+
     // 1. Session check
     const session = localStorage.getItem(SESSION_KEY);
     if (!session) { router.push('/hq/login'); return; }
