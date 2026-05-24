@@ -937,17 +937,19 @@ export default function UploadVideoPage() {
     }
 
     const FREE_LIMIT = 2;
-    const REFERRALS_REQUIRED = 3;
     const completedReferrals = firestoreProfile?.referralCount ?? 0;
     const referralCode = firestoreProfile?.referralCode ?? '';
 
-    // Use live query count — NOT the stale videoUploadCount field
-    if (approvedVideoCount >= FREE_LIMIT && completedReferrals < REFERRALS_REQUIRED) {
+    // Dynamic scale: to upload the Nth video (where N > 2), they need (N - 2) * 3 referrals in total.
+    const requiredTotal = (approvedVideoCount - 1) * 3;
+    if (approvedVideoCount >= FREE_LIMIT && completedReferrals < requiredTotal) {
+        const tierStart = (approvedVideoCount - 2) * 3;
+        const currentMilestoneProgress = Math.max(0, completedReferrals - tierStart);
         return (
             <ReferralWallCard
                 referralCode={referralCode}
-                completedReferrals={completedReferrals}
-                required={REFERRALS_REQUIRED}
+                completedReferrals={currentMilestoneProgress}
+                required={3}
             />
         );
     }

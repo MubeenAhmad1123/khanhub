@@ -42,6 +42,7 @@ export default function JobSeekerDashboard() {
     const [hasSubmittedPayment, setHasSubmittedPayment] = useState(false);
     const [checkingPayment, setCheckingPayment] = useState(true);
     const [mounted, setMounted] = useState(false);
+    const [approvedVideoCount, setApprovedVideoCount] = useState<number>(0);
 
     useEffect(() => {
         setMounted(true);
@@ -100,10 +101,23 @@ export default function JobSeekerDashboard() {
             console.warn('[Dashboard VideoStatus] Snapshot error:', error.message);
         });
 
+        // 5. Approved Videos Count
+        const approvedVideoQ = query(
+            collection(db, 'videos'),
+            where('userId', '==', user.uid),
+            where('admin_status', '==', 'approved')
+        );
+        const unsubscribeApprovedVideo = onSnapshot(approvedVideoQ, (snap) => {
+            setApprovedVideoCount(snap.size);
+        }, (error) => {
+            console.warn('[Dashboard ApprovedVideoQ] Snapshot error:', error.message);
+        });
+
         return () => {
             unsubscribeUser();
             unsubscribeConn();
             unsubscribeVideo();
+            unsubscribeApprovedVideo();
         };
     }, [user?.uid]);
 
@@ -445,25 +459,33 @@ export default function JobSeekerDashboard() {
                                     <p className="text-blue-400 text-[10px] font-bold uppercase tracking-widest mb-1">Next Upload Goal</p>
                                     <div className="flex items-end justify-between">
                                         <p className="text-2xl font-black text-white">
-                                            {userData?.videoUploadCount === 0 
-                                                ? 'First Upload Free' 
-                                                : `${Math.max(0, ((userData?.videoUploadCount || 0)) * 3 - (userData?.referralCount || 0))}`}
+                                            {approvedVideoCount < 2 
+                                                ? 'Next Upload Free' 
+                                                : `${Math.max(0, (approvedVideoCount - 1) * 3 - (userData?.referralCount || 0))} Ref.`}
                                         </p>
-                                        <span className="text-[10px] font-bold text-blue-300 pb-1">Ref. Needed</span>
+                                        <span className="text-[10px] font-bold text-blue-300 pb-1">Required</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Progress Bar (Example: 3 referrals per upload) */}
+                            {/* Progress Bar (Example: 3 referrals per upload after 2 free videos) */}
                             <div className="mt-8">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-xs font-bold text-blue-200/60 uppercase tracking-widest">Milestone Progress</span>
-                                    <span className="text-xs font-bold text-white">{((userData?.referralCount || 0) % 3)} / 3</span>
+                                    <span className="text-xs font-bold text-white">
+                                        {approvedVideoCount < 2 
+                                            ? '2 / 2 Free Videos Live' 
+                                            : `${Math.max(0, (userData?.referralCount || 0) - (approvedVideoCount - 2) * 3) % 3} / 3`}
+                                    </span>
                                 </div>
                                 <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
                                     <motion.div 
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${((userData?.referralCount || 0) % 3) / 3 * 100}%` }}
+                                        animate={{ 
+                                            width: approvedVideoCount < 2 
+                                                ? '100%' 
+                                                : `${(Math.max(0, (userData?.referralCount || 0) - (approvedVideoCount - 2) * 3) % 3) / 3 * 100}%` 
+                                        }}
                                         className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]"
                                     />
                                 </div>

@@ -199,7 +199,7 @@ export function RevealContactSheet({
                             </p>
                             {[
                                 { label: 'Bank', value: 'JazzCash / EasyPaisa' },
-                                { label: 'Account #', value: '0300-0000000' },
+                                { label: 'Account #', value: '03-0063-9522-0' },
                                 { label: 'Account Name', value: 'KhanHub Pvt Ltd' },
                                 { label: 'Amount', value: 'Rs. 1,000' },
                             ].map(row => (
