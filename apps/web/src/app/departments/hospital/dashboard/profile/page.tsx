@@ -85,6 +85,79 @@ interface SalarySlip {
   presentDays: number;
 }
 
+// Helper to translate raw duty item keys to beautiful labels
+function getDutyLabel(item: any, profile: any) {
+  if (item.label) return item.label;
+  
+  // Look up in profile's dutyConfig
+  const configItem = profile?.dutyConfig?.find((c: any) => c.key === item.key);
+  if (configItem?.label) return configItem.label;
+  
+  // Custom manual mappings matching HQ configurations and user requests
+  const keyMap: Record<string, string> = {
+    'morning': 'Morning Duty',
+    'afternoon': 'Afternoon Duty',
+    'evening': 'Evening Duty',
+    'attendance': 'Attendance Entry',
+    'vitals': 'Patient Vitals',
+    'ward_round': 'Ward Round',
+    'cleanliness': 'Area Cleanliness',
+    'prayer': 'Morning Prayer Supervision',
+    'fajar': 'Fajar Wake-up Round',
+    'meds_morning': 'Medication Distribution (Morning)',
+    'meds_night': 'Medication Distribution (Night)',
+    'meal_breakfast': 'Meal Supervision (Breakfast)',
+    'meal_lunch': 'Meal Supervision (Lunch)',
+    'meal_dinner': 'Meal Supervision (Dinner)',
+    'monitoring': 'Patient Activity Monitoring',
+    'counselling': 'Counselling Session Support',
+    'vital_signs': 'Vital Signs Check',
+    'security_round': 'Night Security Round',
+    'gate': 'Gate/Entry Management',
+    'cleaning_supervision': 'Cleaning Supervision',
+    'visitor_management': 'Visitor Management'
+  };
+
+  if (keyMap[item.key]) return keyMap[item.key];
+  
+  // Fallback to capitalizing the key
+  return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Helper to translate raw dress item keys to beautiful labels
+function getDressLabel(item: any, profile: any) {
+  if (item.label) return item.label;
+  
+  // Look up in profile's dressCodeConfig
+  const configItem = profile?.dressCodeConfig?.find((c: any) => c.key === item.key);
+  if (configItem?.label) return configItem.label;
+
+  // Custom manual mappings matching HQ configurations, UNIFORM_RULES, and user requests
+  const keyMap: Record<string, string> = {
+    'uniform': 'Uniform Shirt',
+    'black_suit': 'Black OT Kit / Black Suit',
+    'black_ot_kit': 'Black OT Kit / Black Suit',
+    'white_overall': 'White Overall',
+    'shoes': 'Polished Shoes',
+    'id_card': 'Employee Card',
+    'card': 'Employee Card',
+    'hijab': 'Hijab',
+    'pant': 'Dress Pant',
+    'shirt': 'Dress Shirt',
+    'tie': 'Tie',
+    'lab_coat': 'Lab Coat',
+    'security_uniform': 'Security Uniform',
+    'security_cap': 'Security Cap',
+    'torch': 'Torch',
+    'whistle': 'Whistle'
+  };
+
+  if (keyMap[item.key]) return keyMap[item.key];
+
+  // Fallback to capitalizing the key
+  return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -582,7 +655,7 @@ export default function ProfilePage() {
                                 }`}
                           >
                             {sub.status === 'done' ? <CheckCircle size={12} /> : sub.status === 'na' ? <MinusCircle size={12} /> : <XCircle size={12} />}
-                            {sub.label}
+                            {getDutyLabel(sub, profile)}
                           </div>
                         )) : (
                           /* Legacy support fallback */
@@ -641,7 +714,7 @@ export default function ProfilePage() {
                                 }`}
                           >
                             {item.status === 'yes' ? <CheckCircle2 size={12} /> : item.status === 'na' ? <MinusCircle size={12} /> : <AlertTriangle size={12} />}
-                            {item.label}
+                            {getDressLabel(item, profile)}
                           </div>
                         )) : (
                           /* Legacy support fallback */

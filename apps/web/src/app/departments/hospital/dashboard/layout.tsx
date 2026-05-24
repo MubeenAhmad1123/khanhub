@@ -174,6 +174,11 @@ export default function HospitalDashboardLayout({
     if (!user) return false;
     const itemRoles = item.roles.map(r => r.toLowerCase());
     
+    // For this specific lady staff, hide redundant 'Daily Report' sidebar link to only show 'Daily Audit'
+    if (item.title === 'Daily Report' && user.uid === '5mHY2l3o6NhGDji4CysY') {
+      return false;
+    }
+
     // Explicitly allow Daily Audit for user '5mHY2l3o6NhGDji4CysY'
     if (item.title === 'Daily Audit' && user.uid === '5mHY2l3o6NhGDji4CysY') {
       return true;
