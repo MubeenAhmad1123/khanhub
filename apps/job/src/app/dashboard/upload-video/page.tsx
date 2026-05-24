@@ -817,10 +817,13 @@ export default function UploadVideoPage() {
     }, [user]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !firestoreProfile?.referralCode) return;
 
         // Dynamic Self-Healing for referralCount on the lock/upload screen
-        const refUsersQuery = query(collection(db, 'users'), where('referredByUserId', '==', user.uid));
+        const refUsersQuery = query(
+            collection(db, 'users'), 
+            where('referredBy', '==', firestoreProfile.referralCode)
+        );
         let unsubscribeVideos: (() => void) | null = null;
 
         const unsubscribeRef = onSnapshot(refUsersQuery, (refUsersSnap) => {
@@ -830,13 +833,28 @@ export default function UploadVideoPage() {
             }
 
             const referredUserIds = refUsersSnap.docs.map(doc => doc.id);
+
+            // Repair missing referredByUserId links in referred users' documents
+            refUsersSnap.docs.forEach(async (uDoc) => {
+                const uData = uDoc.data();
+                if (!uData.referredByUserId) {
+                    try {
+                        console.log(`[Self-Healing] Repairing referredByUserId link (lockscreen): ${uDoc.id} -> ${user.uid}`);
+                        await updateDoc(doc(db, 'users', uDoc.id), {
+                            referredByUserId: user.uid
+                        });
+                    } catch (e) {
+                        console.warn('[Self-Healing] Failed to repair link:', e);
+                    }
+                }
+            });
+
             if (referredUserIds.length === 0) {
                 const userDocRef = doc(db, 'users', user.uid);
-                getDoc(userDocRef).then((freshSnap) => {
-                    if (freshSnap.exists() && freshSnap.data().referralCount !== 0) {
-                        updateDoc(userDocRef, { referralCount: 0 });
-                    }
-                }).catch((err) => console.warn('[Self-Healing] Sync 0 failed:', err));
+                if (firestoreProfile.referralCount !== 0) {
+                    updateDoc(userDocRef, { referralCount: 0 })
+                        .catch((err) => console.warn('[Self-Healing] Sync 0 failed:', err));
+                }
                 return;
             }
 
@@ -878,7 +896,7 @@ export default function UploadVideoPage() {
                 unsubscribeVideos();
             }
         };
-    }, [user]);
+    }, [user, firestoreProfile?.referralCode]);
 
     useEffect(() => {
         if (!firestoreProfile) return;

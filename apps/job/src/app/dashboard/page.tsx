@@ -100,8 +100,21 @@ export default function JobSeekerDashboard() {
             console.warn('[Dashboard VideoStatus] Snapshot error:', error.message);
         });
 
-        // 4. Dynamic Self-Healing for referralCount
-        const refUsersQuery = query(collection(db, 'users'), where('referredByUserId', '==', user.uid));
+        return () => {
+            unsubscribeUser();
+            unsubscribeConn();
+            unsubscribeVideo();
+        };
+    }, [user?.uid]);
+
+    useEffect(() => {
+        if (!user?.uid || !userData?.referralCode) return;
+
+        // 4. Dynamic Self-Healing for referralCount using referralCode
+        const refUsersQuery = query(
+            collection(db, 'users'), 
+            where('referredBy', '==', userData.referralCode)
+        );
         let unsubscribeVideos: (() => void) | null = null;
 
         const unsubscribeRef = onSnapshot(refUsersQuery, (refUsersSnap) => {
@@ -111,15 +124,31 @@ export default function JobSeekerDashboard() {
             }
 
             const referredUserIds = refUsersSnap.docs.map(doc => doc.id);
+            
+            // Repair missing referredByUserId links in referred users' documents
+            refUsersSnap.docs.forEach(async (uDoc) => {
+                const uData = uDoc.data();
+                if (!uData.referredByUserId) {
+                    try {
+                        const userDocRef = doc(db, 'users', uDoc.id);
+                        console.log(`[Self-Healing] Repairing referredByUserId link: ${uDoc.id} -> ${user.uid}`);
+                        await updateDoc(userDocRef, {
+                            referredByUserId: user.uid
+                        });
+                    } catch (e) {
+                        console.warn('[Self-Healing] Failed to repair link:', e);
+                    }
+                }
+            });
+
             if (referredUserIds.length === 0) {
                 // If they have no referrals, check if we need to heal it back to 0
                 const userDocRef = doc(db, 'users', user.uid);
-                getDoc(userDocRef).then((freshSnap) => {
-                    if (freshSnap.exists() && freshSnap.data().referralCount !== 0) {
-                        console.log('[Self-Healing] Syncing referralCount to 0');
-                        updateDoc(userDocRef, { referralCount: 0 });
-                    }
-                }).catch((err) => console.warn('[Self-Healing] Sync 0 failed:', err));
+                if (userData.referralCount !== 0) {
+                    console.log('[Self-Healing] Syncing referralCount to 0');
+                    updateDoc(userDocRef, { referralCount: 0 })
+                        .catch((err) => console.warn('[Self-Healing] Sync 0 failed:', err));
+                }
                 return;
             }
 
@@ -157,15 +186,12 @@ export default function JobSeekerDashboard() {
         });
 
         return () => {
-            unsubscribeUser();
-            unsubscribeConn();
-            unsubscribeVideo();
             unsubscribeRef();
             if (unsubscribeVideos) {
                 unsubscribeVideos();
             }
         };
-    }, [user?.uid]);
+    }, [user?.uid, userData?.referralCode]);
 
 
     if (!mounted || loading) {
