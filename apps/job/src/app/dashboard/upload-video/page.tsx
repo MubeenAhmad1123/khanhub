@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import ReferralWallCard from './ReferralWallCard';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, increment, query, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, increment, query, where, getDoc } from 'firebase/firestore';
 import { 
     ArrowLeft, Video, CheckCircle, AlertCircle, X, Camera, Circle, RefreshCw, Loader2,
     Shield, Share2, User, Phone, Briefcase, MapPin, Tag, Info, UserCheck
@@ -814,6 +814,70 @@ export default function UploadVideoPage() {
             setApprovedVideoCount(0);
         });
         return () => unsub();
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        // Dynamic Self-Healing for referralCount on the lock/upload screen
+        const refUsersQuery = query(collection(db, 'users'), where('referredByUserId', '==', user.uid));
+        let unsubscribeVideos: (() => void) | null = null;
+
+        const unsubscribeRef = onSnapshot(refUsersQuery, (refUsersSnap) => {
+            if (unsubscribeVideos) {
+                unsubscribeVideos();
+                unsubscribeVideos = null;
+            }
+
+            const referredUserIds = refUsersSnap.docs.map(doc => doc.id);
+            if (referredUserIds.length === 0) {
+                const userDocRef = doc(db, 'users', user.uid);
+                getDoc(userDocRef).then((freshSnap) => {
+                    if (freshSnap.exists() && freshSnap.data().referralCount !== 0) {
+                        updateDoc(userDocRef, { referralCount: 0 });
+                    }
+                }).catch((err) => console.warn('[Self-Healing] Sync 0 failed:', err));
+                return;
+            }
+
+            const approvedVideosQuery = query(
+                collection(db, 'videos'),
+                where('admin_status', '==', 'approved'),
+                where('userId', 'in', referredUserIds.slice(0, 10))
+            );
+
+            unsubscribeVideos = onSnapshot(approvedVideosQuery, async (videoSnap) => {
+                const uniqueApprovedUserIds = new Set(videoSnap.docs.map(vDoc => vDoc.data().userId));
+                const actualCount = uniqueApprovedUserIds.size;
+
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const freshSnap = await getDoc(userDocRef);
+                    if (freshSnap.exists()) {
+                        const freshData = freshSnap.data();
+                        if (freshData.referralCount !== actualCount) {
+                            console.log(`[Self-Healing] Syncing referralCount on lockscreen: ${freshData.referralCount} -> ${actualCount}`);
+                            await updateDoc(userDocRef, {
+                                referralCount: actualCount
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[Self-Healing] Lockscreen sync failed:', err);
+                }
+            }, (error) => {
+                console.warn('[Self-Healing Videos] Snapshot error:', error.message);
+            });
+        }, (error) => {
+            console.warn('[Self-Healing Users] Snapshot error:', error.message);
+        });
+
+        return () => {
+            unsubscribeRef();
+            if (unsubscribeVideos) {
+                unsubscribeVideos();
+            }
+        };
     }, [user]);
 
     useEffect(() => {

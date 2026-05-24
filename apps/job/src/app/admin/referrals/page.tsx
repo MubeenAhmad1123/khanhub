@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Search, Link as LinkIcon, CheckCircle, Clock, Users, ArrowUpRight } from 'lucide-react';
-import Image from 'next/image';
+import { Loader2, Search, Link as LinkIcon, CheckCircle, Clock, Users } from 'lucide-react';
 
 interface ReferredRelation {
   id: string;
@@ -17,7 +16,8 @@ interface ReferredRelation {
 
 export default function AdminReferralsPage() {
   const { user } = useAuth();
-  const [referrals, setReferrals] = useState<ReferredRelation[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -27,50 +27,76 @@ export default function AdminReferralsPage() {
       return;
     }
 
-    // Subscribe to all users in real-time
-    const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+    // Subscribe to users collection
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.error('[AdminReferrals] Users snapshot error:', err);
+    });
 
-      // Create quick lookup maps
-      const userMap = new Map<string, any>();
-      const codeMap = new Map<string, any>();
-      allUsers.forEach(u => {
-        userMap.set(u.id, u);
-        if (u.referralCode) {
-          codeMap.set(u.referralCode, u);
-        }
-      });
-
-      // Filter and map out referred relations
-      const list = allUsers
-        .filter(u => u.referredBy)
-        .map(u => {
-          const referrer = userMap.get(u.referredByUserId || '') || codeMap.get(u.referredBy || '');
-          return {
-            id: u.id,
-            referredUser: u,
-            referrer: referrer || null,
-            referredBy: u.referredBy || '',
-            createdAt: u.createdAt,
-          } as ReferredRelation;
-        });
-
-      // Sort by creation date descending
-      list.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-
-      setReferrals(list);
+    // Subscribe to videos collection
+    const unsubVideos = onSnapshot(collection(db, 'videos'), (snap) => {
+      setVideos(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
-    }, (error) => {
-      console.error('[AdminReferrals] Subscription error:', error);
+    }, (err) => {
+      console.error('[AdminReferrals] Videos snapshot error:', err);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubUsers();
+      unsubVideos();
+    };
   }, [user?.role]);
+
+  // Compute live referral relationships in real-time
+  const referrals = useMemo(() => {
+    // Create quick lookup maps
+    const userMap = new Map<string, any>();
+    const codeMap = new Map<string, any>();
+    users.forEach(u => {
+      userMap.set(u.id, u);
+      if (u.referralCode) {
+        codeMap.set(u.referralCode, u);
+      }
+    });
+
+    // Create approved videos lookup map (userId -> count of approved videos)
+    const approvedVideosMap = new Map<string, number>();
+    videos.forEach(v => {
+      if (v.admin_status === 'approved') {
+        const currentCount = approvedVideosMap.get(v.userId) || 0;
+        approvedVideosMap.set(v.userId, currentCount + 1);
+      }
+    });
+
+    // Filter and map out referred relations
+    const list = users
+      .filter(u => u.referredBy)
+      .map(u => {
+        const referrer = userMap.get(u.referredByUserId || '') || codeMap.get(u.referredBy || '');
+        const approvedCount = approvedVideosMap.get(u.id) || 0;
+        return {
+          id: u.id,
+          referredUser: {
+            ...u,
+            approvedVideoCount: approvedCount
+          },
+          referrer: referrer || null,
+          referredBy: u.referredBy || '',
+          createdAt: u.createdAt,
+        } as ReferredRelation;
+      });
+
+    // Sort by creation date descending
+    list.sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+
+    return list;
+  }, [users, videos]);
 
   // Search filter matching name, email, or referral code
   const filtered = referrals.filter(r => {
@@ -86,7 +112,7 @@ export default function AdminReferralsPage() {
   });
 
   const totalReferrals = referrals.length;
-  const completedReferrals = referrals.filter(r => (r.referredUser?.videoUploadCount || 0) >= 1).length;
+  const completedReferrals = referrals.filter(r => (r.referredUser?.approvedVideoCount || 0) >= 1).length;
   const pendingReferrals = totalReferrals - completedReferrals;
 
   if (loading) {
@@ -166,7 +192,7 @@ export default function AdminReferralsPage() {
               </thead>
               <tbody>
                 {filtered.map((item) => {
-                  const isCompleted = (item.referredUser?.videoUploadCount || 0) >= 1;
+                  const isCompleted = (item.referredUser?.approvedVideoCount || 0) >= 1;
                   const dateStr = item.createdAt?.toDate?.()
                     ? item.createdAt.toDate().toLocaleDateString(undefined, { dateStyle: 'medium' })
                     : 'N/A';
@@ -229,7 +255,7 @@ export default function AdminReferralsPage() {
                             ? 'bg-green-50 text-green-700 border-green-200'
                             : 'bg-slate-100 text-slate-600 border-slate-200'
                             }`}>
-                            {item.referredUser.videoUploadCount || 0} Video(s)
+                            {item.referredUser.approvedVideoCount || 0} Video(s)
                           </span>
                         </div>
                       </td>
