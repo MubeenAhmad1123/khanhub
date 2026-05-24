@@ -758,7 +758,7 @@ export function VideoFeed() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            paddingTop: '112px',
+            paddingTop: '56px',
             paddingBottom: '60px',
           }}
         >
@@ -989,7 +989,7 @@ export function VideoFeed() {
               position: 'fixed',
               left: 0,
               right: 0,
-              bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+              bottom: 'calc(75px + env(safe-area-inset-bottom, 0px))',
               zIndex: 9400,
               maxWidth: '480px',
               margin: '0 auto',
@@ -1014,12 +1014,12 @@ export function VideoFeed() {
             style={{
               position: 'fixed',
               right: 10,
-              bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
+              bottom: 'calc(45px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
               zIndex: 9400,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 20,
+              gap: 16,
             }}
           >
             {/* Mute button — top of action column */}
@@ -1101,12 +1101,12 @@ export function VideoFeed() {
             style={{
               position: 'fixed',
               right: 10,
-              bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 20px)',
+              bottom: 'calc(75px + env(safe-area-inset-bottom, 0px) + 20px)',
               zIndex: 9400,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 20,
+              gap: 16,
             }}
           >
             <ActionButtons

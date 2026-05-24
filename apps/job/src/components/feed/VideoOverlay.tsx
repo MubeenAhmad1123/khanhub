@@ -55,39 +55,39 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
         <div
             className="w-full px-4"
             style={{
-                paddingBottom: '20px',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)',
+                paddingBottom: '12px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)',
             }}
         >
             {/* ── Row 1: Name + Connect Button ── */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                marginBottom: 10,
+                gap: 8,
+                marginBottom: 4,
             }}>
                 {/* Name + Connect button directly beside it */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
+                    gap: 6,
                     flex: 1,
                     minWidth: 0,
                 }}>
                     <span style={{
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: 700,
                         color: '#fff',
                         fontFamily: 'Poppins',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        maxWidth: '140px',
+                        maxWidth: '120px',
                     }}>
                         {userName}
                     </span>
                     {isVerified && (
-                        <span style={{ color: '#00C853', fontSize: 13, flexShrink: 0, marginLeft: -4 }}>✓</span>
+                        <span style={{ color: '#00C853', fontSize: 11, flexShrink: 0, marginLeft: -4 }}>✓</span>
                     )}
 
                     {userId && (
@@ -97,10 +97,10 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                             style={{
                                 background: '#FF0069',
                                 border: 'none',
-                                borderRadius: '20px',
-                                padding: '4px 12px',
+                                borderRadius: '16px',
+                                padding: '3px 10px',
                                 color: '#fff',
-                                fontSize: 10,
+                                fontSize: 9,
                                 fontWeight: 800,
                                 fontFamily: 'Poppins',
                                 cursor: 'pointer',
@@ -120,13 +120,13 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                fontSize: 12,
+                gap: 5,
+                fontSize: 10,
                 fontWeight: 700,
                 color: '#fff',
                 fontFamily: 'Poppins',
                 textTransform: 'uppercase',
-                marginBottom: 6,
+                marginBottom: 3,
             }}>
                 <span>💼</span>
                 <span>{intent || 'Job Seeker / Company'}</span>
@@ -136,13 +136,13 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
+                gap: 5,
+                fontSize: 11,
                 fontWeight: 700,
                 color: '#fff',
                 fontFamily: 'Poppins',
-                marginBottom: 8,
-                lineHeight: 1.25,
+                marginBottom: 4,
+                lineHeight: 1.2,
             }}>
                 <span>🧠</span>
                 <span>{title}</span>
@@ -152,21 +152,21 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 4,
-                marginBottom: 10,
-                fontSize: 11,
+                gap: 2,
+                marginBottom: 5,
+                fontSize: 9.5,
                 fontFamily: 'DM Sans',
                 color: 'rgba(255,255,255,0.9)',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ opacity: 0.8 }}>💰 Salary:</span>
                     <span style={{ fontWeight: 700, color: '#fff' }}>{salary || 'Unavailable'}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ opacity: 0.8 }}>📍 Location:</span>
                     <span style={{ fontWeight: 700, color: '#fff' }}>{city || 'Unavailable'}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ opacity: 0.8 }}>⏳ Experience:</span>
                     <span style={{ fontWeight: 700, color: '#fff' }}>{experience || 'Unavailable'}</span>
                 </div>
@@ -174,13 +174,13 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
 
             {/* ── Row 5: Skills pills (for professional identification) ── */}
             {skills.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                     {skills.slice(0, 4).map((skill: string, idx: number) => (
                         <span key={idx} style={{
                             background: 'rgba(255,255,255,0.1)',
-                            padding: '2px 8px',
+                            padding: '1.5px 6px',
                             borderRadius: '4px',
-                            fontSize: 10,
+                            fontSize: 9,
                             color: 'rgba(255,255,255,0.85)',
                             fontFamily: 'DM Sans',
                             border: '1px solid rgba(255,255,255,0.08)',
