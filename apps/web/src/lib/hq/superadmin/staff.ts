@@ -49,6 +49,10 @@ export type StaffCardRow = {
   todayDutyStatus?: 'yes' | 'no' | 'incomplete' | 'na';
   todayDailyScore?: number;
   isPresentToday?: boolean;
+  dutyConfig?: { key: string; label: string }[];
+  dressCodeConfig?: { key: string; label: string }[];
+  dutyStartTime?: string;
+  dutyEndTime?: string;
 };
 
 function normalizeRole(raw: any): StaffRole {
@@ -309,6 +313,10 @@ export async function listStaffCards({
         todayDutyStatus: today.duty,
         todayDailyScore: today.score,
         isPresentToday: today.score > 0,
+        dutyConfig: s.dutyConfig || [],
+        dressCodeConfig: s.dressCodeConfig || [],
+        dutyStartTime: s.dutyStartTime || '09:00',
+        dutyEndTime: s.dutyEndTime || '17:00',
       } as StaffCardRow;
     })
   );

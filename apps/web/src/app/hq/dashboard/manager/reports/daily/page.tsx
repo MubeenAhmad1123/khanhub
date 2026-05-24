@@ -2,20 +2,17 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
-  FileText, ArrowLeft, Loader2, Search, Filter,
-  Calendar, CheckCircle, XCircle, Info, Download,
-  Printer, TrendingUp, Shield, AlertTriangle, Clock,
-  Sparkles
+  ArrowLeft, Loader2, Search,
+  Calendar, CheckCircle, XCircle, Download,
+  TrendingUp, Shield, AlertTriangle
 } from 'lucide-react';
-import { Spinner } from '@/components/ui';
 import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
-import { HqDailyAttendanceRecord, HqDailyDressCodeRecord, HqDailyDutyRecord } from '@/types/hq';
 import { toPng } from 'html-to-image';
 
 interface DailyReportRow {
@@ -415,7 +412,6 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    // Target the table directly to avoid scrollbars and get full content width
     const container = document.getElementById('daily-report-table-capture');
     const table = container?.querySelector('table');
     const element = (table || container) as HTMLElement;
@@ -426,7 +422,6 @@ export default function DailyReportPage() {
       setDownloading(true);
       toast.loading("Preparing high-quality image...", { id: 'download-image' });
 
-      // Use scroll dimensions to ensure the entire table is rendered
       const width = element.scrollWidth;
       const height = element.scrollHeight;
 
@@ -434,7 +429,7 @@ export default function DailyReportPage() {
         quality: 1.0,
         pixelRatio: 3, 
         backgroundColor: '#FFFFFF',
-        width: width + 48, // Add space for padding
+        width: width + 48, 
         height: height + 48,
         style: {
           padding: '24px',
@@ -461,6 +456,7 @@ export default function DailyReportPage() {
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [saving, setSaving] = useState(false);
+  const [newCustomItemText, setNewCustomItemText] = useState('');
 
   const [activeChecklist, setActiveChecklist] = useState<{
     id: string;
@@ -503,27 +499,6 @@ export default function DailyReportPage() {
       default:
         return null;
     }
-  };
-
-  const handleUpdateStatus = (id: string, status: DailyReportRow['attendance']) => {
-    const auto = getAutoValues(status);
-    if (!auto) return;
-
-    setReportData(prev => prev.map(row => {
-      if (row.id === id) {
-        return {
-          ...row,
-          attendance: status,
-          uniformStatus: auto.uniform as any,
-          dutyStatus: auto.duties as any,
-          gpStatus: auto.gp as any,
-          dailyScore: auto.score,
-          fines: auto.fine,
-          isDirty: true
-        };
-      }
-      return row;
-    }));
   };
 
   const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus' | 'fines' | 'fineReason' | 'gpLink', value: any) => {
@@ -644,11 +619,10 @@ export default function DailyReportPage() {
     }));
   };
 
-  const handleSaveChecklist = (id: string, type: 'uniform' | 'duty', checkedKeys: string[]) => {
+  const handleSaveChecklist = (id: string, type: 'uniform' | 'duty', checkedKeys: string[], updatedItems: { key: string; label: string }[]) => {
     setReportData(prev => prev.map(row => {
       if (row.id === id) {
-        const config = type === 'uniform' ? (row.uniformConfig || []) : (row.dutyConfig || []);
-        const total = config.length;
+        const total = updatedItems.length;
         const checkedCount = checkedKeys.length;
 
         let status: 'yes' | 'no' | 'incomplete' = 'no';
@@ -665,23 +639,25 @@ export default function DailyReportPage() {
 
         if (type === 'uniform') {
           updatedRow.uniformStatus = status;
-          updatedRow.uniformItems = config.map((c: any) => ({
+          updatedRow.uniformConfig = updatedItems;
+          updatedRow.uniformItems = updatedItems.map((c: any) => ({
             key: c.key,
             status: checkedKeys.includes(c.key) ? 'yes' : 'no'
           }));
           updatedRow.details = {
             ...updatedRow.details,
-            uniformMissing: config.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
+            uniformMissing: updatedItems.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
           };
         } else {
           updatedRow.dutyStatus = status;
-          updatedRow.dutyItems = config.map((c: any) => ({
+          updatedRow.dutyConfig = updatedItems;
+          updatedRow.dutyItems = updatedItems.map((c: any) => ({
             key: c.key,
             status: checkedKeys.includes(c.key) ? 'done' : 'pending'
           }));
           updatedRow.details = {
             ...updatedRow.details,
-            dutiesPending: config.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
+            dutiesPending: updatedItems.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
           };
         }
 
@@ -773,13 +749,13 @@ export default function DailyReportPage() {
           try {
             await deleteDoc(doc(db, `${prefix}_fines`, attId));
           } catch (err) {
-            // Document might not exist, safe to ignore
+            // Safe to ignore
           }
         }
 
         // Sync to primary staff document for immediate visibility across pages
         const staffDocRef = doc(db, `${prefix}_users`, row.id);
-        await updateDoc(staffDocRef, {
+        const updateData: any = {
           todayAttendance: row.attendance,
           todayUniformStatus: row.uniformStatus,
           todayDutyStatus: row.dutyStatus,
@@ -788,7 +764,16 @@ export default function DailyReportPage() {
           todayFineReason: row.fineReason || '',
           lastDailyAssessmentDate: reportDate,
           updatedAt: Timestamp.now()
-        }).catch((err) => {
+        };
+
+        if (row.dutyConfig) {
+          updateData.dutyConfig = row.dutyConfig;
+        }
+        if (row.uniformConfig) {
+          updateData.dressCodeConfig = row.uniformConfig;
+        }
+
+        await updateDoc(staffDocRef, updateData).catch((err) => {
           console.warn(`Could not sync to ${prefix}_users/${row.id}:`, err);
         });
       }
@@ -815,7 +800,7 @@ export default function DailyReportPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans p-4 md:p-8 pb-32">
-      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-8 p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
+      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-8 p-4 sm:p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
@@ -834,20 +819,20 @@ export default function DailyReportPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:border-gray-200">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:border-gray-200 w-full sm:w-auto">
               <Calendar size={18} className="text-indigo-500" />
               <input
                 type="date"
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
-                className="bg-transparent border-none outline-none font-bold text-xs text-gray-800"
+                className="bg-transparent border-none outline-none font-bold text-xs text-gray-800 w-full"
               />
             </div>
             <button
               onClick={saveAssessment}
               disabled={saving || !reportData.some(r => r.isDirty)}
-              className="flex items-center gap-2 px-5 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:-translate-y-0.5 active:translate-y-0 duration-200"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:-translate-y-0.5 active:translate-y-0 duration-200"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
               Save Assessment
@@ -855,7 +840,7 @@ export default function DailyReportPage() {
             <button
               onClick={handleDownloadImage}
               disabled={downloading}
-              className="flex items-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {downloading ? (
                 <Loader2 size={16} className="animate-spin text-indigo-600" />
@@ -883,7 +868,7 @@ export default function DailyReportPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
             <div className="flex items-center gap-3">
@@ -908,7 +893,7 @@ export default function DailyReportPage() {
             </div>
           </div>
 
-          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-1">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold text-gray-900">
@@ -962,9 +947,11 @@ export default function DailyReportPage() {
           </div>
         </div>
 
-        {/* Report Table */}
+        {/* Master Container wrapping desktop & mobile layouts */}
         <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
-          <div className="overflow-x-auto">
+          
+          {/* Desktop Table View - Hidden on smaller viewports */}
+          <div className="hidden lg:block overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
@@ -1225,11 +1212,289 @@ export default function DailyReportPage() {
                         )}
                       </div>
                     </td>
-
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards View - Displays under lg (992px) breakpoint */}
+          <div className="block lg:hidden divide-y divide-gray-100">
+            {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
+              <div 
+                key={row.id} 
+                className={`p-5 flex flex-col gap-4 transition-all ${
+                  row.isDirty ? 'bg-indigo-50/25 border-l-4 border-indigo-500' : 'hover:bg-gray-50/20'
+                }`}
+              >
+                
+                {/* Mobile Header: Staff details & score */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50/70 text-indigo-600 border border-indigo-100 shrink-0 uppercase tracking-wider">
+                      {row.employeeId}
+                    </div>
+                    <div>
+                      {session?.isEditOnly ? (
+                        <span className="font-bold text-sm text-gray-900 select-none">
+                          {row.name}
+                        </span>
+                      ) : (
+                        <a
+                          href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                          }}
+                          className="font-bold text-sm text-gray-900 hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
+                        >
+                          {row.name}
+                        </a>
+                      )}
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
+                    </div>
+                  </div>
+
+                  <span className={`inline-block px-2.5 py-1 rounded-xl text-xs font-black select-none ${
+                    row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700' : 
+                    row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700' : 
+                    'bg-rose-50 text-rose-700'
+                  }`}>
+                    {row.dailyScore} / 4 pts
+                  </span>
+                </div>
+
+                {/* Form Elements for Easy Tapping */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  
+                  {/* Mobile Attendance */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Attendance</label>
+                    <select
+                      value={row.attendance}
+                      onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
+                      className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
+                        row.attendance === 'present' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
+                        row.attendance === 'absent' ? 'bg-rose-50/50 text-rose-700 border-rose-100' :
+                        row.attendance === 'late' ? 'bg-amber-50/50 text-amber-700 border-amber-100' :
+                        row.attendance === 'leave' ? 'bg-cyan-50/50 text-cyan-700 border-cyan-100' :
+                        'border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      <option value="unmarked">Unmarked</option>
+                      <option value="present">Present</option>
+                      <option value="absent">Absent</option>
+                      <option value="late">Late</option>
+                      <option value="leave">Leave</option>
+                    </select>
+
+                    {row.attendance === 'late' && (
+                      <div className="mt-0.5">
+                        <span
+                          onClick={() => {
+                            const start = row.dutyStartTime || '09:00';
+                            setLatePicker({
+                              id: row.id,
+                              dutyStartTime: start,
+                              arrivalTime: (row as any).arrivalTime || start,
+                              lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
+                            });
+                          }}
+                          className="inline-block font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 hover:bg-indigo-100 cursor-pointer select-none"
+                        >
+                          Arrived @ {(row as any).arrivalTime || 'Set Time'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Uniform */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Uniform Code</label>
+                    <select
+                      value={row.uniformStatus}
+                      disabled={row.attendance === 'leave'}
+                      onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
+                      className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
+                        row.uniformStatus === 'yes' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
+                        row.uniformStatus === 'no' ? 'bg-rose-50/50 text-rose-700 border-rose-100' :
+                        row.uniformStatus === 'incomplete' ? 'bg-amber-50/50 text-amber-700 border-amber-100' :
+                        'border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      <option value="na">N/A</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                      <option value="incomplete">Incomplete</option>
+                    </select>
+
+                    {row.uniformStatus === 'incomplete' && (
+                      <div className="mt-0.5">
+                        <button
+                          onClick={() => {
+                            const config = (row as any).uniformConfig || [];
+                            const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+                            setActiveChecklist({
+                              id: row.id,
+                              type: 'uniform',
+                              items: config.length > 0 ? config : [
+                                { key: 'uniform', label: 'Uniform' },
+                                { key: 'shoes', label: 'Polished Shoes' },
+                                { key: 'card', label: 'Identity Card' }
+                              ],
+                              checkedKeys: checked
+                            });
+                          }}
+                          className="text-[10px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
+                        >
+                          Missing: {(() => {
+                            const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                              { key: 'uniform', label: 'Uniform' },
+                              { key: 'shoes', label: 'Polished Shoes' },
+                              { key: 'card', label: 'Identity Card' }
+                            ];
+                            const missing = row.details?.uniformMissing?.length > 0
+                              ? row.details.uniformMissing
+                              : config.filter((c: any) => {
+                                  const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                  return !item || item.status === 'no';
+                                }).map((c: any) => c.label);
+                            return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                          })()}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Duties */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Duties Performed</label>
+                    <select
+                      value={row.dutyStatus}
+                      disabled={row.attendance === 'leave'}
+                      onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
+                      className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
+                        row.dutyStatus === 'yes' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
+                        row.dutyStatus === 'no' ? 'bg-rose-50/50 text-rose-700 border-rose-100' :
+                        row.dutyStatus === 'incomplete' ? 'bg-amber-50/50 text-amber-700 border-amber-100' :
+                        'border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      <option value="na">N/A</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                      <option value="incomplete">Incomplete</option>
+                    </select>
+
+                    {row.dutyStatus === 'incomplete' && (
+                      <div className="mt-0.5">
+                        <button
+                          onClick={() => {
+                            const config = (row as any).dutyConfig || [];
+                            const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+                            setActiveChecklist({
+                              id: row.id,
+                              type: 'duty',
+                              items: config.length > 0 ? config : [
+                                { key: 'morning', label: 'Morning Duty' },
+                                { key: 'afternoon', label: 'Afternoon Duty' },
+                                { key: 'evening', label: 'Evening Duty' }
+                              ],
+                              checkedKeys: checked
+                            });
+                          }}
+                          className="text-[10px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
+                        >
+                          Pending: {(() => {
+                            const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                              { key: 'morning', label: 'Morning Duty' },
+                              { key: 'afternoon', label: 'Afternoon Duty' },
+                              { key: 'evening', label: 'Evening Duty' }
+                            ];
+                            const pending = row.details?.dutiesPending?.length > 0
+                              ? row.details.dutiesPending
+                              : config.filter((c: any) => {
+                                  const item = row.dutyItems?.find((i: any) => i.key === c.key);
+                                  return !item || item.status !== 'done';
+                                }).map((c: any) => c.label);
+                            return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                          })()}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile GP Link */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Growth Points (GP)</label>
+                    <div className="flex flex-col gap-2">
+                      <select
+                        value={row.gpStatus}
+                        disabled={row.attendance === 'leave'}
+                        onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
+                        className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
+                          row.gpStatus === 'yes' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
+                          'bg-rose-50/50 text-rose-700 border-rose-100'
+                        }`}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                      {row.gpStatus === 'yes' && (
+                        <input
+                          type="text"
+                          value={row.gpLink || ''}
+                          onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
+                          placeholder="GP Line / Post URL"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mobile Fines & Penalty */}
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fines & Reason</label>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={row.fines || ''}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value);
+                            handleInlineUpdate(row.id, 'fines', val);
+                          }}
+                          placeholder="No fine penalty"
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
+                        />
+                        {row.fines > 0 && (
+                          <button
+                            onClick={() => {
+                              handleInlineUpdate(row.id, 'fines', 0);
+                              handleInlineUpdate(row.id, 'fineReason', '');
+                            }}
+                            className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+                          >
+                            <XCircle size={14} /> Clear
+                          </button>
+                        )}
+                      </div>
+                      {row.fines > 0 && (
+                        <input
+                          type="text"
+                          value={row.fineReason || ''}
+                          onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
+                          placeholder="Deduction reason..."
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            ))}
           </div>
 
           {filteredData.length === 0 && (
@@ -1258,7 +1523,7 @@ export default function DailyReportPage() {
           </div>
         </div>
 
-        {/* ACTIVE CHECKLIST MODAL */}
+        {/* ACTIVE CHECKLIST MODAL with Add Custom Item Input */}
         {activeChecklist && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white border border-gray-100 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
@@ -1269,14 +1534,15 @@ export default function DailyReportPage() {
                 Mark completed items for {activeChecklist.type === 'uniform' ? 'dress code' : 'daily tasks'}
               </p>
 
-              <div className="space-y-2 mb-6 max-h-52 overflow-y-auto pr-1">
+              {/* Checklist checklist */}
+              <div className="space-y-2 mb-4 max-h-52 overflow-y-auto pr-1">
                 {activeChecklist.items.map((item) => {
                   const isChecked = activeChecklist.checkedKeys.includes(item.key);
                   return (
                     <label
                       key={item.key}
                       className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
-                        isChecked ? 'bg-indigo-50/40 border-indigo-100 text-indigo-900' : 'bg-gray-50/30 border-gray-100 text-gray-600 hover:bg-gray-50'
+                        isChecked ? 'bg-indigo-50/40 border-indigo-100 text-indigo-900 font-bold' : 'bg-gray-50/30 border-gray-100 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       <span className="text-xs font-bold uppercase tracking-wider select-none">{item.label}</span>
@@ -1300,15 +1566,80 @@ export default function DailyReportPage() {
                 })}
               </div>
 
+              {/* Add Custom Duty / Uniform Item Form */}
+              <div className="mt-4 pt-4 border-t border-gray-100 mb-6">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Add Custom Requirement</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    list={activeChecklist.type === 'uniform' ? 'common-uniform-items' : 'common-duty-items'}
+                    value={newCustomItemText}
+                    onChange={(e) => setNewCustomItemText(e.target.value)}
+                    placeholder={activeChecklist.type === 'uniform' ? 'e.g. Socks, Apron, Lab Coat...' : 'e.g. Reception, Gate Duty, Data Entry...'}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
+                  />
+                  <datalist id="common-uniform-items">
+                    <option value="Uniform" />
+                    <option value="Polished Shoes" />
+                    <option value="Identity Card" />
+                    <option value="Lab Coat" />
+                    <option value="Apron" />
+                    <option value="Name Badge" />
+                    <option value="Socks" />
+                    <option value="Belt" />
+                  </datalist>
+                  <datalist id="common-duty-items">
+                    <option value="Data Entry Management" />
+                    <option value="Gate Duty" />
+                    <option value="Reception Duty" />
+                    <option value="Video Editing" />
+                    <option value="Social Media Posting" />
+                    <option value="File Management" />
+                    <option value="Patient Care" />
+                    <option value="Inventory Audit" />
+                    <option value="Canteen Duty" />
+                  </datalist>
+                  <button
+                    onClick={() => {
+                      if (!newCustomItemText.trim()) return;
+                      const label = newCustomItemText.trim();
+                      const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now();
+                      
+                      setActiveChecklist(prev => {
+                        if (!prev) return null;
+                        if (prev.items.some(i => i.label.toLowerCase() === label.toLowerCase())) {
+                          toast.error("Item already exists in checklist");
+                          return prev;
+                        }
+                        return {
+                          ...prev,
+                          items: [...prev.items, { key, label }],
+                          checkedKeys: [...prev.checkedKeys, key]
+                        };
+                      });
+                      setNewCustomItemText('');
+                      toast.success(`Added "${label}" to checklist`);
+                    }}
+                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs uppercase tracking-wider rounded-xl transition-all select-none"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setActiveChecklist(null)}
+                  onClick={() => {
+                    setActiveChecklist(null);
+                    setNewCustomItemText('');
+                  }}
                   className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-600 font-bold text-xs uppercase tracking-wider rounded-xl border border-gray-100 hover:bg-gray-100 transition-all select-none"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleSaveChecklist(activeChecklist.id, activeChecklist.type, activeChecklist.checkedKeys)}
+                  onClick={() => handleSaveChecklist(activeChecklist.id, activeChecklist.type, activeChecklist.checkedKeys, activeChecklist.items)}
                   className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-indigo-700 transition-all select-none shadow-sm"
                 >
                   Save Changes
