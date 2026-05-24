@@ -34,6 +34,7 @@ export default function UserProfilePage() {
     const [showRevealSheet, setShowRevealSheet] = useState(false);
     const [showContactModal, setShowContactModal] = useState(false);
     const [isPlaceholderUser, setIsPlaceholderUser] = useState(false);
+    const [paymentStatus, setPaymentStatus] = useState<'none' | 'pending' | 'rejected'>('none');
 
     // Followers state
     const [isFollowing, setIsFollowing] = useState(false);
@@ -144,6 +145,7 @@ export default function UserProfilePage() {
         const auth = getAuth();
         let unsubscribeSnapshot: (() => void) | null = null;
         let unsubFollow: (() => void) | null = null;
+        let unsubPayment: (() => void) | null = null;
 
         const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             setAuthUser(firebaseUser);
@@ -153,6 +155,10 @@ export default function UserProfilePage() {
             if (unsubscribeSnapshot) {
                 unsubscribeSnapshot();
                 unsubscribeSnapshot = null;
+            }
+            if (unsubPayment) {
+                unsubPayment();
+                unsubPayment = null;
             }
 
             if (!firebaseUser) {
@@ -196,12 +202,37 @@ export default function UserProfilePage() {
                     setCheckingUnlock(false);
                 }
             );
+
+            // 3. Payment Status Listener
+            const payQ = query(
+                collection(db, 'paymentRequests'),
+                where('requestedBy', '==', firebaseUser.uid),
+                where('targetUserId', '==', id),
+                where('status', 'in', ['pending', 'rejected'])
+            );
+            unsubPayment = onSnapshot(payQ, (snap) => {
+                if (snap.empty) {
+                    setPaymentStatus('none');
+                    return;
+                }
+                const docs = snap.docs.sort((a, b) => {
+                    const aTime = a.data().createdAt?.seconds || 0;
+                    const bTime = b.data().createdAt?.seconds || 0;
+                    return bTime - aTime;
+                });
+                const latest = docs[0].data();
+                setPaymentStatus(latest.status as 'none' | 'pending' | 'rejected');
+            }, (error) => {
+                console.warn('[Profile PaymentCheck] Snapshot error:', error.message);
+                setPaymentStatus('none');
+            });
         });
 
         return () => {
             unsubscribeAuth();
             if (unsubscribeSnapshot) unsubscribeSnapshot();
             if (unsubFollow) unsubFollow();
+            if (unsubPayment) unsubPayment();
         };
     }, [id]);
 
@@ -552,7 +583,19 @@ export default function UserProfilePage() {
                         whileHover="hover"
                         animate="rest"
                         whileTap={{ scale: 0.96 }}
-                        onClick={() => contactRevealed ? setShowContactModal(true) : setShowRevealSheet(true)}
+                        onClick={() => {
+                            if (!authUser) {
+                                router.push('/auth/login');
+                                return;
+                            }
+                            if (contactRevealed) {
+                                setShowContactModal(true);
+                            } else if (paymentStatus === 'pending') {
+                                showToast('⏳ Your payment proof is under review!');
+                            } else {
+                                setShowRevealSheet(true);
+                            }
+                        }}
                         style={{
                             flex: 1, 
                             padding: '12px', 
@@ -585,7 +628,7 @@ export default function UserProfilePage() {
                                     <path fill="none" d="M0 0h24v24H0z" />
                                     <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
                                 </svg>
-                            ) : '🔓'}
+                            ) : paymentStatus === 'pending' ? '⏳' : paymentStatus === 'rejected' ? '❌' : '🔓'}
                         </motion.div>
                         <motion.span
                             variants={{
@@ -593,7 +636,7 @@ export default function UserProfilePage() {
                                 hover: { x: 80, opacity: 0 }
                             }}
                         >
-                             {checkingUnlock ? '' : contactRevealed ? 'Contact' : 'Connect'}
+                             {checkingUnlock ? '' : contactRevealed ? 'Contact' : paymentStatus === 'pending' ? 'Reviewing' : paymentStatus === 'rejected' ? 'Resubmit' : 'Connect'}
                         </motion.span>
                     </motion.button>
                 </div>
@@ -965,12 +1008,57 @@ export default function UserProfilePage() {
                                 )}
                             </div>
 
+                        ) : paymentStatus === 'pending' ? (
+                            /* ⏳ PENDING */
+                            <div style={{
+                                background: '#FFF3E0', borderRadius: 12,
+                                padding: '16px', border: '1px solid #FFB74D',
+                                textAlign: 'center',
+                            }}>
+                                <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+                                <p style={{
+                                    color: '#E65100', fontFamily: 'DM Sans',
+                                    fontWeight: 700, fontSize: 14, margin: '0 0 4px',
+                                }}>
+                                    Payment Under Review
+                                </p>
+                                <p style={{ color: '#BF360C', fontFamily: 'DM Sans', fontSize: 12, margin: 0 }}>
+                                    Admin will approve within 24 hours.
+                                    Contact info will appear here automatically.
+                                </p>
+                            </div>
+                        ) : paymentStatus === 'rejected' ? (
+                            /* ❌ REJECTED */
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    background: '#FFEBEE', borderRadius: 12,
+                                    padding: '12px', border: '1px solid #FFCDD2',
+                                    marginBottom: 12,
+                                }}>
+                                    <p style={{ color: '#C62828', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
+                                        ❌ Your previous payment was rejected.
+                                        Please resubmit with correct proof.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowRevealSheet(true)}
+                                    style={{
+                                        width: '100%', padding: '12px',
+                                        background: catConfig.accent, color: '#fff',
+                                        border: 'none', borderRadius: 10,
+                                        fontFamily: 'Poppins', fontWeight: 700,
+                                        fontSize: 14, cursor: 'pointer',
+                                    }}
+                                >
+                                    🔓 Resubmit Payment — Rs. 1,000
+                                </button>
+                            </div>
                         ) : (
                             /* 🔒 LOCKED */
                             <div style={{ textAlign: 'center', padding: '12px 0' }}>
                                 <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
                                 <p style={{ color: '#666', fontFamily: 'DM Sans', fontSize: 13, margin: '0 0 14px' }}>
-                                    Pay Rs. 1,000 to unlock phone, email & location
+                                    Pay Rs. 1,000 to unlock phone, email, WhatsApp & location
                                 </p>
                                 <button
                                     onClick={() => setShowRevealSheet(true)}

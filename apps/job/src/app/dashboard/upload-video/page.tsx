@@ -804,11 +804,11 @@ export default function UploadVideoPage() {
         if (!user) return;
         const q = query(
             collection(db, 'videos'),
-            where('userId', '==', user.uid),
-            where('admin_status', '==', 'approved')
+            where('userId', '==', user.uid)
         );
         const unsub = onSnapshot(q, (snap) => {
-            setApprovedVideoCount(snap.size);
+            const validVids = snap.docs.filter(d => d.data().admin_status !== 'rejected');
+            setApprovedVideoCount(validVids.length);
         }, (err) => {
             console.warn('[UploadVideo] Video count error:', err.message);
             setApprovedVideoCount(0);

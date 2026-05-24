@@ -104,11 +104,11 @@ export default function JobSeekerDashboard() {
         // 5. Approved Videos Count
         const approvedVideoQ = query(
             collection(db, 'videos'),
-            where('userId', '==', user.uid),
-            where('admin_status', '==', 'approved')
+            where('userId', '==', user.uid)
         );
         const unsubscribeApprovedVideo = onSnapshot(approvedVideoQ, (snap) => {
-            setApprovedVideoCount(snap.size);
+            const validVids = snap.docs.filter(d => d.data().admin_status !== 'rejected');
+            setApprovedVideoCount(validVids.length);
         }, (error) => {
             console.warn('[Dashboard ApprovedVideoQ] Snapshot error:', error.message);
         });
