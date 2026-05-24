@@ -90,24 +90,40 @@ export default function AdminVideosPage() {
                 console.log('[Referral Debug] referredByUserId:', userData.referredByUserId);
                 console.log('[Referral Debug] referredBy:', userData.referredBy);
 
-                const referredByUserId: string | undefined = userData.referredByUserId;
-                if (!referredByUserId) {
-                  console.warn('[Referral Debug] No referredByUserId found — referral tracking was never saved for this user');
+                let referredByUserId: string | undefined = userData.referredByUserId;
+
+                // Robust client-side fallback: Resolve referredByUserId using the referredBy code if it is missing
+                if (!referredByUserId && userData.referredBy) {
+                  console.log('[Referral Fallback] No referredByUserId found. Resolving via referredBy code:', userData.referredBy);
+                  const refQuery = query(collection(db, 'users'), where('referralCode', '==', userData.referredBy));
+                  const refSnap = await getDocs(refQuery);
+                  
+                  if (!refSnap.empty) {
+                    referredByUserId = refSnap.docs[0].id;
+                    console.log('[Referral Fallback] Resolved referredByUserId:', referredByUserId);
+                    // Save it to the referred user's doc to prevent future resolutions
+                    await updateDoc(doc(db, 'users', video.userId), {
+                      referredByUserId: referredByUserId
+                    });
+                  } else {
+                    console.warn('[Referral Fallback] No user found with referralCode:', userData.referredBy);
+                  }
                 }
 
                 if (referredByUserId) {
-                  // Count how many OTHER approved videos this user has (excluding current)
+                  // Count how many OTHER approved videos this user has (excluding the current one)
                   const approvedQuery = query(
                     collection(db, 'videos'),
                     where('userId', '==', video.userId),
                     where('admin_status', '==', 'approved')
                   );
                   const approvedSnap = await getDocs(approvedQuery);
-                  // approvedSnap includes the video we just approved, so count === 1 means first
-                  const approvedCount = approvedSnap.size;
+                  
+                  // Strict check: Filter out current video to find if they have any prior approved videos
+                  const priorApproved = approvedSnap.docs.filter(doc => doc.id !== videoId);
 
-                  if (approvedCount === 1) {
-                    // This IS their first approved video — complete the referral
+                  if (priorApproved.length === 0) {
+                    // This IS their first approved video — complete the referral!
                     await updateDoc(doc(db, 'users', referredByUserId), {
                       referralCount: increment(1),
                       updatedAt: serverTimestamp(),
@@ -120,6 +136,9 @@ export default function AdminVideosPage() {
                       'Someone you referred just had their first video approved. Your referral count went up!',
                       video.userId
                     );
+                    console.log(`[Referral] Referral completed successfully. Referrer: ${referredByUserId}, Seeker: ${video.userId}`);
+                  } else {
+                    console.log('[Referral] Not first approved video (prior approved count:', priorApproved.length, ') — skipping credit.');
                   }
                 }
               }

@@ -42,6 +42,7 @@ const navSections = [
         items: [
             { href: '/admin/users', icon: '👥', label: 'All Users' },
             { href: '/admin/users/add', icon: '👤+', label: 'Add New User' },
+            { href: '/admin/referrals', icon: '🔗', label: 'Referrals' },
         ],
     },
     {
