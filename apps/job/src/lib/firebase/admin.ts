@@ -15,15 +15,19 @@ if (serviceAccountKey) {
     console.error('[Firebase Admin] Failed to parse serviceAccountKey:', err);
   }
 } else if (projectId && clientEmail && rawPrivateKey) {
-  const cleanKey = rawPrivateKey
-    .replace(/^["']|["']$/g, '') // Remove wrapping quotes
-    .replace(/\\n/g, '\n')       // Replace literal \n with real newlines
-    .trim();                     // Remove any accidental whitespace
-  credential = cert({
-    projectId,
-    clientEmail,
-    privateKey: cleanKey,
-  });
+  try {
+    const cleanKey = rawPrivateKey
+      .replace(/^["']|["']$/g, '') // Remove wrapping quotes
+      .replace(/\\n/g, '\n')       // Replace literal \n with real newlines
+      .trim();                     // Remove any accidental whitespace
+    credential = cert({
+      projectId,
+      clientEmail,
+      privateKey: cleanKey,
+    });
+  } catch (err: any) {
+    console.error('[Firebase Admin] Failed to initialize credentials:', err.message);
+  }
 }
 
 if (!credential) {
