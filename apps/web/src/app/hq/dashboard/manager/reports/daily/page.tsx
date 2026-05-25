@@ -424,14 +424,15 @@ export default function DailyReportPage() {
       const captureContainer = document.createElement('div');
       captureContainer.id = 'report-capture-container';
       
-      // Style it to be off-screen, with fixed 1200px desktop width and standard card styling
+      // Style it as a beautiful, fully visible card in the DOM, but positioned at a safe positive offset far below the normal content
       captureContainer.className = "bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-8";
       captureContainer.style.position = 'absolute';
-      captureContainer.style.left = '-9999px';
-      captureContainer.style.top = '-9999px';
+      captureContainer.style.left = '0px';
+      captureContainer.style.top = '99999px'; // Positive coordinates far below content prevents viewport clipping
       captureContainer.style.width = '1200px';
       captureContainer.style.display = 'block';
       captureContainer.style.backgroundColor = '#FFFFFF';
+      captureContainer.style.zIndex = '-9999';
 
       // 2. Clone the table wrapper and the signature footer
       const clonedTableWrapper = originalTableWrapper.cloneNode(true) as HTMLElement;
@@ -492,24 +493,12 @@ export default function DailyReportPage() {
       document.body.appendChild(captureContainer);
 
       // Short delay to ensure browser engine completes layout calculation
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      const width = captureContainer.scrollWidth;
-      const height = captureContainer.scrollHeight;
+      await new Promise(resolve => setTimeout(resolve, 250));
 
       const dataUrl = await toPng(captureContainer, {
         quality: 1.0,
         pixelRatio: 3, 
-        backgroundColor: '#FFFFFF',
-        width: width + 48, 
-        height: height + 48,
-        style: {
-          padding: '24px',
-          margin: '0',
-          width: width + 'px',
-          height: height + 'px',
-          overflow: 'visible'
-        }
+        backgroundColor: '#FFFFFF'
       });
 
       // 9. Remove capture container from DOM
