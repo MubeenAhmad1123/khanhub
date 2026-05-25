@@ -412,15 +412,24 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    const container = document.getElementById('daily-report-table-capture');
-    const table = container?.querySelector('table');
-    const element = (table || container) as HTMLElement;
-    
+    const element = document.getElementById('desktop-report-table-wrapper');
     if (!element) return;
+
+    const originalStyle = element.getAttribute('style') || '';
+    const originalClassName = element.className;
 
     try {
       setDownloading(true);
       toast.loading("Preparing high-quality image...", { id: 'download-image' });
+
+      element.className = "overflow-x-auto w-full bg-white";
+      element.style.position = 'absolute';
+      element.style.left = '-9999px';
+      element.style.top = '-9999px';
+      element.style.width = '1200px';
+      element.style.display = 'block';
+
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const width = element.scrollWidth;
       const height = element.scrollHeight;
@@ -440,6 +449,13 @@ export default function DailyReportPage() {
         }
       });
 
+      element.className = originalClassName;
+      if (originalStyle) {
+        element.setAttribute('style', originalStyle);
+      } else {
+        element.removeAttribute('style');
+      }
+
       const link = document.createElement('a');
       link.download = `HQ_Daily_Report_${reportDate}.png`;
       link.href = dataUrl;
@@ -448,6 +464,12 @@ export default function DailyReportPage() {
       toast.success("Report downloaded successfully!", { id: 'download-image' });
     } catch (err) {
       console.error('Download error:', err);
+      element.className = originalClassName;
+      if (originalStyle) {
+        element.setAttribute('style', originalStyle);
+      } else {
+        element.removeAttribute('style');
+      }
       toast.error("Failed to generate image", { id: 'download-image' });
     } finally {
       setDownloading(false);
@@ -847,7 +869,7 @@ export default function DailyReportPage() {
               ) : (
                 <Download size={16} />
               )}
-              {downloading ? 'Processing...' : 'Export Image'}
+              {downloading ? 'Processing...' : 'Download Report'}
             </button>
           </div>
         </div>
@@ -951,7 +973,7 @@ export default function DailyReportPage() {
         <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
           
           {/* Desktop Table View - Hidden on smaller viewports */}
-          <div className="hidden lg:block overflow-x-auto w-full">
+          <div id="desktop-report-table-wrapper" className="hidden lg:block overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
