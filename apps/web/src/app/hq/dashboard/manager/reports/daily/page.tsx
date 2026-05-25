@@ -412,97 +412,24 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    const originalTableWrapper = document.getElementById('desktop-report-table-wrapper');
-    const originalFooter = document.getElementById('report-signature-footer');
-    if (!originalTableWrapper || !originalFooter) return;
+    const captureContainer = document.getElementById('daily-report-table-capture-export');
+    if (!captureContainer) {
+      toast.error("Export template not found");
+      return;
+    }
 
     try {
       setDownloading(true);
       toast.loading("Preparing high-quality report...", { id: 'download-image' });
 
-      // 1. Create the main capture container
-      const captureContainer = document.createElement('div');
-      captureContainer.id = 'report-capture-container';
-      
-      // Style it as a beautiful, fully visible card in the DOM, but positioned at a safe positive offset far below the normal content
-      captureContainer.className = "bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-8";
-      captureContainer.style.position = 'absolute';
-      captureContainer.style.left = '0px';
-      captureContainer.style.top = '99999px'; // Positive coordinates far below content prevents viewport clipping
-      captureContainer.style.width = '1200px';
-      captureContainer.style.display = 'block';
-      captureContainer.style.backgroundColor = '#FFFFFF';
-      captureContainer.style.zIndex = '-9999';
-
-      // 2. Clone the table wrapper and the signature footer
-      const clonedTableWrapper = originalTableWrapper.cloneNode(true) as HTMLElement;
-      const clonedFooter = originalFooter.cloneNode(true) as HTMLElement;
-
-      // 3. Remove responsive hidden classes from cloned table wrapper
-      clonedTableWrapper.className = "overflow-x-auto w-full bg-white";
-
-      // 4. Ensure cloned footer matches standard visual separation styles
-      clonedFooter.className = "flex items-center justify-between pt-8 mt-8 border-t border-gray-100 bg-white";
-
-      // 5. Copy select values and set 'selected' attributes explicitly in cloned table wrapper
-      const originalSelects = originalTableWrapper.querySelectorAll('select');
-      const clonedSelects = clonedTableWrapper.querySelectorAll('select');
-      originalSelects.forEach((select, index) => {
-        if (clonedSelects[index]) {
-          const val = select.value;
-          clonedSelects[index].value = val;
-          
-          const options = clonedSelects[index].querySelectorAll('option');
-          options.forEach(opt => {
-            if (opt.value === val) {
-              opt.setAttribute('selected', 'selected');
-            } else {
-              opt.removeAttribute('selected');
-            }
-          });
-        }
-      });
-
-      // 6. Copy input values and set 'value' / 'checked' attributes explicitly in cloned table wrapper
-      const originalInputs = originalTableWrapper.querySelectorAll('input');
-      const clonedInputs = clonedTableWrapper.querySelectorAll('input');
-      originalInputs.forEach((input, index) => {
-        if (clonedInputs[index]) {
-          const originalInput = input as HTMLInputElement;
-          const clonedInput = clonedInputs[index] as HTMLInputElement;
-          
-          if (originalInput.type === 'checkbox' || originalInput.type === 'radio') {
-            clonedInput.checked = originalInput.checked;
-            if (originalInput.checked) {
-              clonedInput.setAttribute('checked', 'checked');
-            } else {
-              clonedInput.removeAttribute('checked');
-            }
-          } else {
-            clonedInput.value = originalInput.value;
-            clonedInput.setAttribute('value', originalInput.value);
-          }
-        }
-      });
-
-      // 7. Assemble the capture container
-      captureContainer.appendChild(clonedTableWrapper);
-      captureContainer.appendChild(clonedFooter);
-
-      // 8. Append capture container to document body
-      document.body.appendChild(captureContainer);
-
-      // Short delay to ensure browser engine completes layout calculation
-      await new Promise(resolve => setTimeout(resolve, 250));
+      // Small delay to ensure any fresh DOM updates are fully rendered/painted
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       const dataUrl = await toPng(captureContainer, {
         quality: 1.0,
         pixelRatio: 3, 
-        backgroundColor: '#FFFFFF'
+        backgroundColor: '#FFFFFF',
       });
-
-      // 9. Remove capture container from DOM
-      document.body.removeChild(captureContainer);
 
       const link = document.createElement('a');
       link.download = `HQ_Daily_Report_${reportDate}.png`;
@@ -512,15 +439,12 @@ export default function DailyReportPage() {
       toast.success("Report downloaded successfully!", { id: 'download-image' });
     } catch (err) {
       console.error('Download error:', err);
-      const containerEl = document.getElementById('report-capture-container');
-      if (containerEl && containerEl.parentNode) {
-        containerEl.parentNode.removeChild(containerEl);
-      }
       toast.error("Failed to generate image", { id: 'download-image' });
     } finally {
       setDownloading(false);
     }
   };
+
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [saving, setSaving] = useState(false);
@@ -1287,7 +1211,7 @@ export default function DailyReportPage() {
           </div>
 
           {/* Mobile Cards View - Displays under lg (992px) breakpoint */}
-          <div className="block lg:hidden divide-y divide-gray-100">
+          <div id="mobile-report-cards-wrapper" className="block lg:hidden divide-y divide-gray-100">
             {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
               <div 
                 key={row.id} 
@@ -1574,19 +1498,19 @@ export default function DailyReportPage() {
               <p className="text-gray-400 text-xs font-medium mt-1">Adjust filters or search criteria</p>
             </div>
           )}
-        </div>
 
-        {/* Signature & Legal Disclaimer */}
-        <div id="report-signature-footer" className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100 print:pt-6 print:mt-6">
-          <div className="flex flex-col gap-1">
-            <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
-            <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
-            <div className="flex items-center justify-end gap-2 mt-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Verified Audit</p>
+          {/* Signature & Legal Disclaimer */}
+          <div id="report-signature-footer" className="flex items-center justify-between p-8 border-t border-gray-100 bg-white">
+            <div className="flex flex-col gap-1 text-left">
+              <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
+              <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
+              <div className="flex items-center justify-end gap-2 mt-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Verified Audit</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1789,7 +1713,224 @@ export default function DailyReportPage() {
             </div>
           </div>
         )}
+
+        {/* OFFSCREEN TEMPLATE FOR IMAGE EXPORT */}
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '1200px', overflow: 'hidden', pointerEvents: 'none' }}>
+          <div id="daily-report-table-capture-export" className="p-8 rounded-3xl bg-white border border-gray-100 shadow-sm font-sans text-gray-900" style={{ width: '1200px' }}>
+            
+            {/* Branding Header */}
+            <div className="flex justify-between items-end mb-8 pb-6 border-b border-gray-100">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 leading-none">Khan Hub HQ</h1>
+                <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mt-2">Performance Intelligence Ledger</p>
+                <p className="text-sm text-gray-600 mt-2 font-medium">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              </div>
+              <div className="text-right">
+                <div className="inline-block px-3 py-1.5 bg-gray-50 border border-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl">Verified Audit</div>
+                <p className="text-xs text-gray-400 mt-2 font-mono">Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
+              </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
+                  </span>
+                  <div className="p-2 bg-emerald-50 rounded-xl">
+                    <TrendingUp size={20} className="text-emerald-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-gray-900">
+                    ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
+                  </span>
+                  <div className="p-2 bg-rose-50 rounded-xl">
+                    <AlertTriangle size={20} className="text-rose-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
+                  </span>
+                  <div className="p-2 bg-indigo-50 rounded-xl">
+                    <CheckCircle size={20} className="text-indigo-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop-styled Table */}
+            <div className="overflow-x-auto w-full bg-white rounded-3xl border border-gray-100">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100">
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Staff Identity</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">GP</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (4)</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
+                    <tr key={row.id} className="transition-all">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-wider">
+                            {row.employeeId}
+                          </div>
+                          <div>
+                            <span className="font-bold text-sm text-gray-900 select-none">
+                              {row.name}
+                            </span>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border select-none ${
+                          row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                          row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                          row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
+                          'bg-gray-50 text-gray-700 border border-gray-200'
+                        }`}>
+                          {row.attendance}
+                        </span>
+                        {row.attendance === 'late' && (
+                          <div className="mt-1 text-[9px] font-mono font-bold text-gray-500">
+                            Arrived @ {(row as any).arrivalTime || 'Set Time'}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border select-none ${
+                          row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                          row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                          'bg-gray-50 text-gray-700 border border-gray-200'
+                        }`}>
+                          {row.uniformStatus === 'na' ? 'N/A' : row.uniformStatus}
+                        </span>
+                        {row.uniformStatus === 'incomplete' && (
+                          <div className="text-[9px] text-amber-600 font-semibold mt-1 max-w-[120px] mx-auto leading-tight">
+                            Missing: {(() => {
+                              const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                                { key: 'uniform', label: 'Uniform' },
+                                { key: 'shoes', label: 'Polished Shoes' },
+                                { key: 'card', label: 'Identity Card' }
+                              ];
+                              const missing = row.details?.uniformMissing?.length > 0
+                                ? row.details.uniformMissing
+                                : config.filter((c: any) => {
+                                    const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                    return !item || item.status === 'no';
+                                  }).map((c: any) => c.label);
+                              return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                            })()}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border select-none ${
+                          row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                          row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                          'bg-gray-50 text-gray-700 border border-gray-200'
+                        }`}>
+                          {row.dutyStatus === 'na' ? 'N/A' : row.dutyStatus}
+                        </span>
+                        {row.dutyStatus === 'incomplete' && (
+                          <div className="text-[9px] text-amber-600 font-semibold mt-1 max-w-[120px] mx-auto leading-tight">
+                            Pending: {(() => {
+                              const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                                { key: 'morning', label: 'Morning Duty' },
+                                { key: 'afternoon', label: 'Afternoon Duty' },
+                                { key: 'evening', label: 'Evening Duty' }
+                              ];
+                              const pending = row.details?.dutiesPending?.length > 0
+                                ? row.details.dutiesPending
+                                : config.filter((c: any) => {
+                                    const item = row.dutyItems?.find((i: any) => i.key === c.key);
+                                    return !item || item.status !== 'done';
+                                  }).map((c: any) => c.label);
+                              return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                            })()}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border select-none ${
+                          row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          'bg-rose-50 text-rose-700 border-rose-100'
+                        }`}>
+                          {row.gpStatus === 'na' ? 'N/A' : row.gpStatus}
+                        </span>
+                        {row.gpStatus === 'yes' && row.gpLink && (
+                          <div className="text-[8px] text-gray-400 font-medium mt-1 truncate max-w-[100px] mx-auto leading-tight">
+                            {row.gpLink}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`text-sm font-bold ${row.dailyScore >= 3 ? 'text-emerald-600' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
+                          {row.dailyScore} / 4
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`text-xs font-bold ${row.fines > 0 ? 'text-rose-600' : 'text-gray-400'}`}>
+                          {row.fines > 0 ? `₨${row.fines.toLocaleString()}` : '—'}
+                        </span>
+                        {row.fines > 0 && row.fineReason && (
+                          <div className="text-[9px] text-gray-400 font-medium mt-0.5 max-w-[100px] mx-auto leading-tight">
+                            {row.fineReason}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Signature Footer inside capture wrapper */}
+            <div className="flex items-center justify-between mt-8 pt-8 border-t border-gray-100 bg-white">
+              <div className="flex flex-col gap-1 text-left">
+                <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
+                <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
+                <div className="flex items-center justify-end gap-2 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Verified Audit</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
