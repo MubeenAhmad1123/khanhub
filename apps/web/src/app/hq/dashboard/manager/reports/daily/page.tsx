@@ -412,20 +412,40 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    const originalWrapper = document.getElementById('desktop-report-table-wrapper');
-    if (!originalWrapper) return;
+    const originalTableWrapper = document.getElementById('desktop-report-table-wrapper');
+    const originalFooter = document.getElementById('report-signature-footer');
+    if (!originalTableWrapper || !originalFooter) return;
 
     try {
       setDownloading(true);
       toast.loading("Preparing high-quality report...", { id: 'download-image' });
 
-      // Create a deep clone of the desktop wrapper
-      const clone = originalWrapper.cloneNode(true) as HTMLElement;
-      clone.id = 'desktop-report-table-wrapper-clone';
+      // 1. Create the main capture container
+      const captureContainer = document.createElement('div');
+      captureContainer.id = 'report-capture-container';
+      
+      // Style it to be off-screen, with fixed 1200px desktop width and standard card styling
+      captureContainer.className = "bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-8";
+      captureContainer.style.position = 'absolute';
+      captureContainer.style.left = '-9999px';
+      captureContainer.style.top = '-9999px';
+      captureContainer.style.width = '1200px';
+      captureContainer.style.display = 'block';
+      captureContainer.style.backgroundColor = '#FFFFFF';
 
-      // 1. Copy select values and set 'selected' attributes explicitly
-      const originalSelects = originalWrapper.querySelectorAll('select');
-      const clonedSelects = clone.querySelectorAll('select');
+      // 2. Clone the table wrapper and the signature footer
+      const clonedTableWrapper = originalTableWrapper.cloneNode(true) as HTMLElement;
+      const clonedFooter = originalFooter.cloneNode(true) as HTMLElement;
+
+      // 3. Remove responsive hidden classes from cloned table wrapper
+      clonedTableWrapper.className = "overflow-x-auto w-full bg-white";
+
+      // 4. Ensure cloned footer matches standard visual separation styles
+      clonedFooter.className = "flex items-center justify-between pt-8 mt-8 border-t border-gray-100 bg-white";
+
+      // 5. Copy select values and set 'selected' attributes explicitly in cloned table wrapper
+      const originalSelects = originalTableWrapper.querySelectorAll('select');
+      const clonedSelects = clonedTableWrapper.querySelectorAll('select');
       originalSelects.forEach((select, index) => {
         if (clonedSelects[index]) {
           const val = select.value;
@@ -442,9 +462,9 @@ export default function DailyReportPage() {
         }
       });
 
-      // 2. Copy input values and set 'value' / 'checked' attributes explicitly
-      const originalInputs = originalWrapper.querySelectorAll('input');
-      const clonedInputs = clone.querySelectorAll('input');
+      // 6. Copy input values and set 'value' / 'checked' attributes explicitly in cloned table wrapper
+      const originalInputs = originalTableWrapper.querySelectorAll('input');
+      const clonedInputs = clonedTableWrapper.querySelectorAll('input');
       originalInputs.forEach((input, index) => {
         if (clonedInputs[index]) {
           const originalInput = input as HTMLInputElement;
@@ -464,24 +484,20 @@ export default function DailyReportPage() {
         }
       });
 
-      // Remove responsive hiding classes and format layout
-      clone.className = "overflow-x-auto w-full bg-white p-6 rounded-3xl border border-gray-100 shadow-sm";
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      clone.style.top = '-9999px';
-      clone.style.width = '1200px';
-      clone.style.display = 'block';
+      // 7. Assemble the capture container
+      captureContainer.appendChild(clonedTableWrapper);
+      captureContainer.appendChild(clonedFooter);
 
-      // Append clone to document body
-      document.body.appendChild(clone);
+      // 8. Append capture container to document body
+      document.body.appendChild(captureContainer);
 
       // Short delay to ensure browser engine completes layout calculation
       await new Promise(resolve => setTimeout(resolve, 150));
 
-      const width = clone.scrollWidth;
-      const height = clone.scrollHeight;
+      const width = captureContainer.scrollWidth;
+      const height = captureContainer.scrollHeight;
 
-      const dataUrl = await toPng(clone, {
+      const dataUrl = await toPng(captureContainer, {
         quality: 1.0,
         pixelRatio: 3, 
         backgroundColor: '#FFFFFF',
@@ -496,8 +512,8 @@ export default function DailyReportPage() {
         }
       });
 
-      // Remove clone from document
-      document.body.removeChild(clone);
+      // 9. Remove capture container from DOM
+      document.body.removeChild(captureContainer);
 
       const link = document.createElement('a');
       link.download = `HQ_Daily_Report_${reportDate}.png`;
@@ -507,9 +523,9 @@ export default function DailyReportPage() {
       toast.success("Report downloaded successfully!", { id: 'download-image' });
     } catch (err) {
       console.error('Download error:', err);
-      const cloneEl = document.getElementById('desktop-report-table-wrapper-clone');
-      if (cloneEl && cloneEl.parentNode) {
-        cloneEl.parentNode.removeChild(cloneEl);
+      const containerEl = document.getElementById('report-capture-container');
+      if (containerEl && containerEl.parentNode) {
+        containerEl.parentNode.removeChild(containerEl);
       }
       toast.error("Failed to generate image", { id: 'download-image' });
     } finally {
@@ -1062,10 +1078,10 @@ export default function DailyReportPage() {
                         value={row.attendance}
                         onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
                         className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                          row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                          row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                          row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                          row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border border-cyan-100' :
+                          row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                          row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                          row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
                           'bg-gray-50 text-gray-700 border border-gray-200'
                         }`}
                       >
@@ -1101,9 +1117,9 @@ export default function DailyReportPage() {
                           value={row.uniformStatus}
                           onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
                           className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                            row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                            row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                            row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                             'bg-gray-50 text-gray-700 border border-gray-200'
                           }`}
                         >
@@ -1157,9 +1173,9 @@ export default function DailyReportPage() {
                           value={row.dutyStatus}
                           onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
                           className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                            row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                            row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                            row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                             'bg-gray-50 text-gray-700 border border-gray-200'
                           }`}
                         >
@@ -1213,8 +1229,8 @@ export default function DailyReportPage() {
                           value={row.gpStatus}
                           onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
                           className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                            'bg-rose-50 text-rose-700 border border-rose-100'
+                            row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            'bg-rose-50 text-rose-700 border-rose-100'
                           }`}
                         >
                           <option value="no">No</option>
@@ -1572,7 +1588,7 @@ export default function DailyReportPage() {
         </div>
 
         {/* Signature & Legal Disclaimer */}
-        <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100 print:pt-6 print:mt-6">
+        <div id="report-signature-footer" className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100 print:pt-6 print:mt-6">
           <div className="flex flex-col gap-1">
             <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
             <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
