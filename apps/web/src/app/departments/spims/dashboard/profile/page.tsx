@@ -200,7 +200,8 @@ export default function ProfilePage() {
           });
         }
 
-        if (parsed.role === 'admin' || parsed.role === 'staff') {
+        const finalRole = uData?.role || parsed.role;
+        if (finalRole !== 'student' && finalRole !== 'family') {
           let sSnap = await getDocs(query(collection(db, 'spims_staff'), where('loginUserId', '==', parsed.uid))).catch(() => ({ docs: [] } as any));
           if (sSnap.empty) {
             sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid))).catch(() => ({ docs: [] } as any));
@@ -244,13 +245,41 @@ export default function ProfilePage() {
     router.push('/departments/spims/login');
   };
 
-  const totalEarnings = useMemo(() => {
-    if (!profile?.monthlySalary) return 0;
-    const fineTotal = fines.reduce((acc, f) => acc + (f.amount || 0), 0);
-    return Math.max(0, profile.monthlySalary - fineTotal);
-  }, [profile, fines]);
-
   const totalFines = useMemo(() => fines.reduce((a, c) => a + (c.amount || 0), 0), [fines]);
+
+  const salaryBreakdown = useMemo(() => {
+    const monthlySalary = Number(profile?.monthlySalary || profile?.salary || 0);
+    const dailyRate = Math.floor(monthlySalary / 30);
+    
+    const presentDays = attendance.filter(a => a.status === 'present' || a.status === 'late').length;
+    const leaveDays = attendance.filter(a => a.status === 'leave' || a.status === 'paid_leave').length;
+    const absentDays = attendance.filter(a => a.status === 'absent' || a.status === 'unpaid_leave').length;
+    
+    const earnings = (presentDays + leaveDays) * dailyRate;
+    const deductions = absentDays * dailyRate;
+    
+    return {
+      monthlySalary,
+      dailyRate,
+      presentDays,
+      leaveDays,
+      absentDays,
+      earnings,
+      deductions,
+    };
+  }, [profile, attendance]);
+
+  const totalEarnings = useMemo(() => {
+    return Math.max(0, Math.floor(salaryBreakdown.earnings - totalFines));
+  }, [salaryBreakdown, totalFines]);
+
+  const assignedDuties = useMemo(() => {
+    return profile?.dutyConfig || profile?.duties || [];
+  }, [profile]);
+
+  const assignedDress = useMemo(() => {
+    return profile?.dressCodeConfig || [];
+  }, [profile]);
 
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9FAFB]">
@@ -520,6 +549,28 @@ export default function ProfilePage() {
               <div className="animate-in fade-in duration-300">
                 <h3 className="text-lg font-black text-gray-900 mb-6">Duty Log Deployment History</h3>
 
+                {/* Designated Master Duties */}
+                <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-gray-100">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Briefcase size={14} className="text-teal-600" />
+                    Assigned Master Duties
+                  </h4>
+                  {assignedDuties.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {assignedDuties.map((duty: any, idx: number) => {
+                        const label = duty.label || duty.description || (typeof duty === 'string' ? duty : 'General Duty');
+                        return (
+                          <span key={idx} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold shadow-sm">
+                            {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs font-medium text-gray-400">No master duties assigned by administration.</p>
+                  )}
+                </div>
+
                 <div className="space-y-4">
                   {duties.length > 0 ? duties.map(rec => (
                     <div key={rec.id} className="border border-gray-100 bg-gray-50/30 rounded-xl p-4">
@@ -565,6 +616,28 @@ export default function ProfilePage() {
             {activeTab === 'dress' && (
               <div className="animate-in fade-in duration-300">
                 <h3 className="text-lg font-black text-gray-900 mb-6">Dress & Attire Compliance History</h3>
+
+                {/* Designated Dress Code */}
+                <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-gray-100">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Shirt size={14} className="text-teal-600" />
+                    Assigned Dress Code Requirements
+                  </h4>
+                  {assignedDress.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {assignedDress.map((item: any, idx: number) => {
+                        const label = item.label || (typeof item === 'string' ? item : 'Uniform Item');
+                        return (
+                          <span key={idx} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold shadow-sm">
+                            {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs font-medium text-gray-400">No specific dress code requirements assigned by administration.</p>
+                  )}
+                </div>
 
                 <div className="space-y-4">
                   {dressLogs.length > 0 ? dressLogs.map(rec => (
@@ -619,9 +692,9 @@ export default function ProfilePage() {
                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
                      </div>
                      <p className="text-xs font-medium text-gray-500">Total Gross Structure</p>
-                     <h4 className="text-2xl font-black text-gray-900">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
+                     <h4 className="text-2xl font-black text-gray-900">Rs. {salaryBreakdown.monthlySalary.toLocaleString()}</h4>
                      <div className="border-t border-gray-50 mt-4 pt-4 flex justify-between items-center text-sm font-medium">
-                        <span className="text-gray-400">Live Deductions</span>
+                        <span className="text-gray-400">Live Deductions (Fines)</span>
                         <span className="text-rose-600 font-bold">-Rs. {totalFines.toLocaleString()}</span>
                      </div>
                   </div>
@@ -632,7 +705,44 @@ export default function ProfilePage() {
                      </div>
                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Est. Retainable Net</p>
                      <h4 className="text-3xl font-black">Rs. {totalEarnings.toLocaleString()}</h4>
-                     <p className="text-xs mt-2 font-medium opacity-70">Adjusted for logged system fines.</p>
+                     <p className="text-xs mt-2 font-medium opacity-70">Adjusted for present/leave days & logged system fines.</p>
+                  </div>
+                </div>
+
+                {/* Salary Calculation Breakdown */}
+                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Clock size={14} className="text-teal-600" />
+                  Salary Calculation Summary
+                </h4>
+                <div className="bg-slate-50 border border-gray-100 rounded-2xl p-6 mb-8 space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Per Day Salary</p>
+                      <p className="text-sm font-black text-gray-800">Rs. {salaryBreakdown.dailyRate}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Present Days</p>
+                      <p className="text-sm font-black text-emerald-600">{salaryBreakdown.presentDays} Days</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Paid Leaves</p>
+                      <p className="text-sm font-black text-blue-600">{salaryBreakdown.leaveDays} Days</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Absent Days</p>
+                      <p className="text-sm font-black text-rose-600">{salaryBreakdown.absentDays} Days</p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200/60 pt-4 flex flex-col sm:flex-row justify-between text-xs font-bold text-gray-600 gap-2">
+                    <div>
+                      <span>Calculated Earnings ({salaryBreakdown.presentDays + salaryBreakdown.leaveDays} Paid Days × Rs. {salaryBreakdown.dailyRate}):</span>
+                      <span className="text-gray-900 font-black ml-1.5">Rs. {salaryBreakdown.earnings.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span>Absent Deductions ({salaryBreakdown.absentDays} Absent Days × Rs. {salaryBreakdown.dailyRate}):</span>
+                      <span className="text-rose-600 font-black ml-1.5">-Rs. {salaryBreakdown.deductions.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
 
