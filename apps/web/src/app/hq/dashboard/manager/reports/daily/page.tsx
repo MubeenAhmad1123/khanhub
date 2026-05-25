@@ -412,29 +412,76 @@ export default function DailyReportPage() {
   }, [reportData, search, deptFilter]);
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('desktop-report-table-wrapper');
-    if (!element) return;
-
-    const originalStyle = element.getAttribute('style') || '';
-    const originalClassName = element.className;
+    const originalWrapper = document.getElementById('desktop-report-table-wrapper');
+    if (!originalWrapper) return;
 
     try {
       setDownloading(true);
-      toast.loading("Preparing high-quality image...", { id: 'download-image' });
+      toast.loading("Preparing high-quality report...", { id: 'download-image' });
 
-      element.className = "overflow-x-auto w-full bg-white";
-      element.style.position = 'absolute';
-      element.style.left = '-9999px';
-      element.style.top = '-9999px';
-      element.style.width = '1200px';
-      element.style.display = 'block';
+      // Create a deep clone of the desktop wrapper
+      const clone = originalWrapper.cloneNode(true) as HTMLElement;
+      clone.id = 'desktop-report-table-wrapper-clone';
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // 1. Copy select values and set 'selected' attributes explicitly
+      const originalSelects = originalWrapper.querySelectorAll('select');
+      const clonedSelects = clone.querySelectorAll('select');
+      originalSelects.forEach((select, index) => {
+        if (clonedSelects[index]) {
+          const val = select.value;
+          clonedSelects[index].value = val;
+          
+          const options = clonedSelects[index].querySelectorAll('option');
+          options.forEach(opt => {
+            if (opt.value === val) {
+              opt.setAttribute('selected', 'selected');
+            } else {
+              opt.removeAttribute('selected');
+            }
+          });
+        }
+      });
 
-      const width = element.scrollWidth;
-      const height = element.scrollHeight;
+      // 2. Copy input values and set 'value' / 'checked' attributes explicitly
+      const originalInputs = originalWrapper.querySelectorAll('input');
+      const clonedInputs = clone.querySelectorAll('input');
+      originalInputs.forEach((input, index) => {
+        if (clonedInputs[index]) {
+          const originalInput = input as HTMLInputElement;
+          const clonedInput = clonedInputs[index] as HTMLInputElement;
+          
+          if (originalInput.type === 'checkbox' || originalInput.type === 'radio') {
+            clonedInput.checked = originalInput.checked;
+            if (originalInput.checked) {
+              clonedInput.setAttribute('checked', 'checked');
+            } else {
+              clonedInput.removeAttribute('checked');
+            }
+          } else {
+            clonedInput.value = originalInput.value;
+            clonedInput.setAttribute('value', originalInput.value);
+          }
+        }
+      });
 
-      const dataUrl = await toPng(element, {
+      // Remove responsive hiding classes and format layout
+      clone.className = "overflow-x-auto w-full bg-white p-6 rounded-3xl border border-gray-100 shadow-sm";
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '-9999px';
+      clone.style.width = '1200px';
+      clone.style.display = 'block';
+
+      // Append clone to document body
+      document.body.appendChild(clone);
+
+      // Short delay to ensure browser engine completes layout calculation
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const width = clone.scrollWidth;
+      const height = clone.scrollHeight;
+
+      const dataUrl = await toPng(clone, {
         quality: 1.0,
         pixelRatio: 3, 
         backgroundColor: '#FFFFFF',
@@ -449,12 +496,8 @@ export default function DailyReportPage() {
         }
       });
 
-      element.className = originalClassName;
-      if (originalStyle) {
-        element.setAttribute('style', originalStyle);
-      } else {
-        element.removeAttribute('style');
-      }
+      // Remove clone from document
+      document.body.removeChild(clone);
 
       const link = document.createElement('a');
       link.download = `HQ_Daily_Report_${reportDate}.png`;
@@ -464,11 +507,9 @@ export default function DailyReportPage() {
       toast.success("Report downloaded successfully!", { id: 'download-image' });
     } catch (err) {
       console.error('Download error:', err);
-      element.className = originalClassName;
-      if (originalStyle) {
-        element.setAttribute('style', originalStyle);
-      } else {
-        element.removeAttribute('style');
+      const cloneEl = document.getElementById('desktop-report-table-wrapper-clone');
+      if (cloneEl && cloneEl.parentNode) {
+        cloneEl.parentNode.removeChild(cloneEl);
       }
       toast.error("Failed to generate image", { id: 'download-image' });
     } finally {
