@@ -255,6 +255,15 @@ export default function ProfilePage() {
           finalId = docSnap.id;
         }
 
+        // Check secure sync fallback for HQ administration roles
+        if (!uData.name && !uData.displayName && (parsed.role === 'superadmin' || parsed.role === 'manager')) {
+          const hqSnap = await getDoc(doc(db, 'hq_users', parsed.uid)).catch(() => null);
+          if (hqSnap && hqSnap.exists()) {
+            uData = { ...hqSnap.data(), ...uData };
+            finalId = hqSnap.id;
+          }
+        }
+
         if (!uData.name && !uData.displayName) { 
           toast.error("User profile not found in active ledger.");
           router.push('/departments/it/login'); 
@@ -284,7 +293,8 @@ export default function ProfilePage() {
     try {
       setUploadingPhoto(true);
       const url = await uploadToCloudinary(file, 'Khan Hub/it/profile');
-      await updateDoc(doc(db, 'it_users', session.uid), { photoUrl: url }).catch(() => {});
+      const targetCol = (session.role === 'superadmin' || session.role === 'manager') ? 'hq_users' : 'it_users';
+      await updateDoc(doc(db, targetCol, session.uid), { photoUrl: url }).catch(() => {});
       setProfile((p: any) => ({ ...p, photoUrl: url }));
       toast.success('Photo updated successfully');
     } catch (e) {
@@ -318,7 +328,7 @@ export default function ProfilePage() {
   if (loading) return (
     <div className="min-h-screen bg-[#070913] flex flex-col items-center justify-center text-white">
       <Loader2 className="animate-spin text-indigo-500 w-12 h-12 mb-4" />
-      <p className="text-[10px] font-black tracking-[0.35em] text-indigo-400 uppercase">Configuring Environment...</p>
+      <p className="text-[10px] font-black tracking-[0.35em] text-indigo-400 uppercase">Secure Synchronization in Progress...</p>
     </div>
   );
 
@@ -560,7 +570,7 @@ export default function ProfilePage() {
                       <Calendar size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Punctualitytimeline</h3>
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Punctuality Timeline</h3>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Timeline logs of professional presence & clock-ins</p>
                     </div>
                   </div>
@@ -631,7 +641,7 @@ export default function ProfilePage() {
                       
                       <div className="flex flex-wrap gap-2">
                         {duty.duties && duty.duties.length > 0 ? (
-                          duty.duties.map((sub, idx) => (
+                          duty.duties.map((sub: any, idx: number) => (
                             <div 
                               key={idx}
                               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-colors
@@ -700,7 +710,7 @@ export default function ProfilePage() {
                       
                       <div className="flex flex-wrap gap-2">
                         {log.items && log.items.length > 0 ? (
-                          log.items.map((item, idx) => (
+                          log.items.map((item: any, idx: number) => (
                             <div 
                               key={idx}
                               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider
@@ -782,7 +792,7 @@ export default function ProfilePage() {
                       <DollarSign size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Salary & Compensation Ledger</h3>
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Secure Ledger System</h3>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Live financial audits adjusted for enforced system fines</p>
                     </div>
                   </div>
@@ -826,10 +836,10 @@ export default function ProfilePage() {
                        </div>
                      </div>
                    )) : (
-                       <div className="text-center py-8 bg-white/[0.01] border border-dashed border-white/[0.04] rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500">
-                         No finalized payroll documents logged in ledger.
-                       </div>
-                    )}
+                        <div className="text-center py-8 bg-white/[0.01] border border-dashed border-white/[0.04] rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          No finalized payroll documents logged in ledger.
+                        </div>
+                     )}
                 </div>
 
                 <h4 className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-4 flex items-center gap-2">

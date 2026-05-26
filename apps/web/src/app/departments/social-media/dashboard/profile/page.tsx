@@ -69,7 +69,7 @@ interface SalarySlip {
   status: 'draft' | 'approved' | 'paid';
   basicSalary: number;
   absentDeduction: number;
-  bonus: number;
+  boldBonus?: number;
   otherDeductions: number;
   presentDays: number;
 }
@@ -89,7 +89,7 @@ export default function ProfilePage() {
   const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
   const [fines, setFines] = useState<FineRecord[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
-  const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
+  const [salaryRecords, setSalaryRecords] = useState<any[]>([]);
 
   // Styles
   const glassStyle = "bg-white/70 backdrop-blur-xl border border-white shadow-[20px_20px_60px_#d1d9e6,-20px_-20px_60px_#ffffff]";
@@ -136,7 +136,7 @@ export default function ProfilePage() {
       setDressLogs(dress as DressRecord[]);
       setSpecialTasks(tasks as SpecialTask[]);
       setFines(fns as FineRecord[]);
-      setSalaryRecords(salaries as SalarySlip[]);
+      setSalaryRecords(salaries as any[]);
 
       if (pointsSnap && !pointsSnap.empty) {
         setGrowthPoints(pointsSnap.docs[0].data());
@@ -152,7 +152,7 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('media_session');
+    const sessionData = localStorage.getItem('media_session') || localStorage.getItem('hq_session');
     if (!sessionData) { router.push('/departments/social-media/login'); return; }
     const parsed = JSON.parse(sessionData);
     setSession(parsed);
@@ -174,6 +174,22 @@ export default function ProfilePage() {
             phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
           });
           finalId = userSnap.id;
+        } else if (parsed.role === 'superadmin' || parsed.role === 'manager') {
+          // Sync check with hq_users fallback
+          const hqRef = doc(db, 'hq_users', parsed.uid);
+          const hqSnap = await getDoc(hqRef);
+          if (hqSnap.exists()) {
+            uData = hqSnap.data();
+            setProfile({
+              id: hqSnap.id,
+              ...uData,
+              phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
+            });
+            finalId = hqSnap.id;
+          } else {
+            router.push('/departments/social-media/login'); 
+            return;
+          }
         } else {
           router.push('/departments/social-media/login'); 
           return;
@@ -195,7 +211,8 @@ export default function ProfilePage() {
     try {
       setUploadingPhoto(true);
       const url = await uploadToCloudinary(file, 'Khan Hub/media/profile');
-      await updateDoc(doc(db, 'media_users', session.uid), { photoUrl: url }).catch(() => {});
+      const targetCol = (session.role === 'superadmin' || session.role === 'manager') ? 'hq_users' : 'media_users';
+      await updateDoc(doc(db, targetCol, session.uid), { photoUrl: url }).catch(() => {});
       setProfile((p: any) => ({ ...p, photoUrl: url }));
       toast.success('Photo updated');
     } catch (e) {
@@ -367,7 +384,7 @@ export default function ProfilePage() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600"><Calendar size={20} /></div>
-                  <h3 className="text-xl font-black">Session History</h3>
+                  <h3 className="text-xl font-black">Attendance History</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {attendance.length > 0 ? attendance.map(log => (

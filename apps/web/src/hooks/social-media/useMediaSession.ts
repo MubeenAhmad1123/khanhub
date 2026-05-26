@@ -27,7 +27,8 @@ export function useMediaSession() {
     // Real-time remote logout listener
     let unsubDoc: (() => void) | undefined;
     if (parsed?.uid) {
-      unsubDoc = onSnapshot(doc(db, 'media_users', parsed.uid), (snap) => {
+      const colName = (parsed.role === 'superadmin' || parsed.role === 'manager') ? 'hq_users' : 'media_users';
+      unsubDoc = onSnapshot(doc(db, colName, parsed.uid), (snap) => {
         const data = snap.data();
         if (data?.forceLogoutAt) {
           const logoutTime = new Date(data.forceLogoutAt).getTime();

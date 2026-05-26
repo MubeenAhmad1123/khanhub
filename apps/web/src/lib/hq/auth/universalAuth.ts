@@ -456,6 +456,13 @@ export function getDashboardPath(deptId: string, role: string, patientId?: strin
 
   const base = `/departments/${deptId}/dashboard`;
   
+  // For social-media and IT departments, admin, manager, and superadmin all route to the /admin dashboard directory.
+  if (deptId === 'social-media' || deptId === 'it') {
+    if (normalizedRole === 'admin' || normalizedRole === 'superadmin' || normalizedRole === 'manager') {
+      return `${base}/admin`;
+    }
+  }
+  
   // Handle staff variations (including contractor, internee, etc.) first to route them to /staff
   const isAnyStaff = normalizedRole === 'staff' || normalizedRole.includes('staff') || normalizedRole.includes('contractor') || normalizedRole.includes('internee');
   if (isAnyStaff) return `${base}/staff`;
