@@ -42,6 +42,19 @@ const PORTAL_LABELS: Record<CredentialUser['portal'], string> = {
   welfare: 'Welfare',
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  all: 'All Access',
+  staff: 'Staff',
+  family: 'Family',
+  superadmin: 'Super Admin',
+  manager: 'Manager',
+};
+
+const isStaffRole = (role: string): boolean => {
+  const r = role.toLowerCase();
+  return r !== 'family' && r !== 'superadmin' && r !== 'manager';
+};
+
 interface CredentialsManagerProps {
   mode: 'superadmin' | 'manager';
   backPath: string;
@@ -117,16 +130,25 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
   }, [session]);
 
   const roleOptions = useMemo(() => {
-    const roles = Array.from(new Set(users.map((u) => u.role))).sort();
-    return ['all', ...roles];
+    const hasFamily = users.some(u => u.role === 'family');
+    const hasSuperAdmin = users.some(u => u.role === 'superadmin');
+    const hasManager = users.some(u => u.role === 'manager');
+    const hasStaff = users.some(u => isStaffRole(u.role));
+
+    const options = ['all'];
+    if (hasStaff) options.push('staff');
+    if (hasFamily) options.push('family');
+    if (hasSuperAdmin) options.push('superadmin');
+    if (hasManager) options.push('manager');
+    return options;
   }, [users]);
 
   // Automatically select 'staff' role for managers if it's available once data loads
   useEffect(() => {
     if (loading || initializedRole) return;
     if (mode === 'manager' && users.length > 0) {
-      const roles = Array.from(new Set(users.map((u) => u.role)));
-      if (roles.includes('staff')) {
+      const hasStaff = users.some(u => isStaffRole(u.role));
+      if (hasStaff) {
         setActiveRole('staff');
       }
       setInitializedRole(true);
@@ -205,7 +227,11 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
     
     // Apply filters
     let res = users.filter((u) => {
-      const matchesRole = activeRole === 'all' || u.role === activeRole;
+      const matchesRole =
+        activeRole === 'all' ||
+        (activeRole === 'staff'
+          ? isStaffRole(u.role)
+          : u.role === activeRole);
       const matchesPortal = activePortal === 'all' || u.portal === activePortal;
       const matchesSearch =
         !searchValue ||
@@ -216,8 +242,8 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
     // Extra tweak: if manager and activeRole is "all", we put "staff" roles first
     if (mode === 'manager' && activeRole === 'all') {
       res = [...res].sort((a, b) => {
-        const aIsStaff = a.role === 'staff';
-        const bIsStaff = b.role === 'staff';
+        const aIsStaff = isStaffRole(a.role);
+        const bIsStaff = isStaffRole(b.role);
         if (aIsStaff && !bIsStaff) return -1;
         if (!aIsStaff && bIsStaff) return 1;
         return a.name.localeCompare(b.name);
@@ -310,7 +336,7 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
                           : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                       )}
                     >
-                      {r === 'all' ? 'All Access' : r}
+                      {ROLE_LABELS[r] || r}
                     </button>
                   ))}
                 </div>
