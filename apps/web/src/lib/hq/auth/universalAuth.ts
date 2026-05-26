@@ -101,7 +101,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     domain: '@media.khanhub.com.pk',
     legacyDomains: ['@media.khanhub.com', '@media.KhanHub', '@media.Khan Hub', '@media.khanhub', '@social-media.khanhub', '@social-media.KhanHub', '@khanhub.com.pk', '@khanhub'],
     dashboardPath: '/departments/social-media/dashboard',
-    sessionKey: 'mediacenter_session',
+    sessionKey: 'media_session',
     prefixes: ['MED', 'SOC']
   },
   it: {
