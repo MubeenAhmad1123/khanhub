@@ -29,7 +29,7 @@ export type CredentialUser = {
   customId: string;
   password: string;
   role: string;
-  portal: 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'job-center' | 'welfare';
+  portal: 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'job-center' | 'welfare' | 'social-media' | 'it';
 };
 
 const PORTAL_LABELS: Record<CredentialUser['portal'], string> = {
@@ -40,6 +40,8 @@ const PORTAL_LABELS: Record<CredentialUser['portal'], string> = {
   sukoon: 'Sukoon',
   'job-center': 'Job Center',
   welfare: 'Welfare',
+  'social-media': 'Social Media',
+  it: 'IT',
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -89,8 +91,21 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
     const fetchUsers = async () => {
       try {
         const hqSnap = await getDocs(collection(db, 'hq_users'));
-        const depts = ['rehab', 'spims', 'hospital', 'sukoon', 'job-center', 'welfare'] as const;
-        const deptSnaps = await Promise.all(depts.map((d) => getDocs(collection(db, `${d}_users`))));
+        
+        const deptConfigs = [
+          { key: 'rehab', collectionName: 'rehab_users' },
+          { key: 'spims', collectionName: 'spims_users' },
+          { key: 'hospital', collectionName: 'hospital_users' },
+          { key: 'sukoon', collectionName: 'sukoon_users' },
+          { key: 'welfare', collectionName: 'welfare_users' },
+          { key: 'job-center', collectionName: 'jobcenter_users' },
+          { key: 'social-media', collectionName: 'media_users' },
+          { key: 'it', collectionName: 'it_users' }
+        ] as const;
+
+        const snaps = await Promise.all(
+          deptConfigs.map((cfg) => getDocs(collection(db, cfg.collectionName)))
+        );
 
         const hqUsers = hqSnap.docs.map((d) => {
           const data = d.data() as any;
@@ -104,16 +119,16 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
           };
         });
 
-        const deptUsers = depts.flatMap((dept, i) => {
-          return deptSnaps[i].docs.map((d) => {
+        const deptUsers = deptConfigs.flatMap((cfg, idx) => {
+          return snaps[idx].docs.map((d) => {
             const data = d.data() as any;
             return {
-              id: `${dept}_${d.id}`,
+              id: `${cfg.key}_${d.id}`,
               name: data.displayName || data.name || 'Unknown',
               customId: data.customId || '-',
               password: data.password || '',
               role: data.role?.toLowerCase() || 'unknown',
-              portal: dept,
+              portal: cfg.key,
             };
           });
         });
@@ -352,7 +367,7 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Department Node</label>
                 <div className="flex flex-wrap gap-2">
-                  {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'job-center', 'welfare'] as const).map((p) => (
+                  {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'job-center', 'welfare', 'social-media', 'it'] as const).map((p) => (
                     <button
                       key={p}
                       onClick={() => setActivePortal(p)}
