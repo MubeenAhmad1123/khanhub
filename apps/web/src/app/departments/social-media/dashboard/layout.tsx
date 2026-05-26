@@ -94,12 +94,12 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
     if (hqSessionStr) {
       try {
         const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
+        if (hqSession?.role === 'superadmin' || hqSession?.role === 'manager') {
           const syncSession = {
             uid: hqSession.uid,
             customId: hqSession.customId || hqSession.email || 'HQ-USER',
-            role: 'superadmin',
-            displayName: hqSession.displayName || 'Superadmin',
+            role: hqSession.role,
+            displayName: hqSession.displayName || (hqSession.role === 'superadmin' ? 'Superadmin' : 'Manager'),
           };
           localStorage.setItem('media_session', JSON.stringify(syncSession));
           session = JSON.stringify(syncSession);

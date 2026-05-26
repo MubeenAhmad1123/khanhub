@@ -95,7 +95,7 @@ export default function SocialMediaLoginPage() {
             <div className="relative">
               <EyePasswordInput
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 required
                 className="w-full bg-white/[0.02] border border-white/[0.06] rounded-2xl px-6 py-5 pl-14 pr-16 text-white font-bold focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 outline-none transition-all placeholder:text-slate-600 text-sm"
               />
