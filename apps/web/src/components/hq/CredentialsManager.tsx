@@ -45,6 +45,8 @@ const PORTAL_LABELS: Record<CredentialUser['portal'], string> = {
 const ROLE_LABELS: Record<string, string> = {
   all: 'All Access',
   staff: 'Staff',
+  student: 'Student',
+  client: 'Client',
   family: 'Family',
   superadmin: 'Super Admin',
   manager: 'Manager',
@@ -52,7 +54,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const isStaffRole = (role: string): boolean => {
   const r = role.toLowerCase();
-  return r !== 'family' && r !== 'superadmin' && r !== 'manager';
+  return r !== 'family' && r !== 'superadmin' && r !== 'manager' && r !== 'student' && r !== 'client' && r !== 'other';
 };
 
 interface CredentialsManagerProps {
@@ -134,9 +136,13 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
     const hasSuperAdmin = users.some(u => u.role === 'superadmin');
     const hasManager = users.some(u => u.role === 'manager');
     const hasStaff = users.some(u => isStaffRole(u.role));
+    const hasStudent = users.some(u => u.role === 'student');
+    const hasClient = users.some(u => u.role === 'client');
 
     const options = ['all'];
     if (hasStaff) options.push('staff');
+    if (hasStudent) options.push('student');
+    if (hasClient) options.push('client');
     if (hasFamily) options.push('family');
     if (hasSuperAdmin) options.push('superadmin');
     if (hasManager) options.push('manager');
@@ -588,7 +594,7 @@ export default function CredentialsManager({ mode, backPath }: CredentialsManage
                 </div>
               </div>
 
-              {/* Mobile Actions */}
+              {/* Mobile/Card Actions */}
               {isAdmin && (
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
                    <button
