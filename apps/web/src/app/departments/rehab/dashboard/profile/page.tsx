@@ -44,6 +44,7 @@ interface DressRecord {
   id: string;
   date: string;
   status?: 'yes' | 'no'; // Legacy backup
+  isCompliant?: boolean; // Regional manager logs boolean
   items?: Array<{ key: string; label: string; status: 'yes' | 'no' | 'na' }>;
 }
 
@@ -86,6 +87,80 @@ interface SalarySlip {
   presentDays: number;
 }
 
+// Helper to translate raw duty item keys to beautiful labels
+function getDutyLabel(item: any, profile: any) {
+  if (!item) return 'General Duty';
+  if (item.label) return item.label;
+  if (!item.key) return 'General Duty';
+  
+  // Look up in profile's dutyConfig
+  const configItem = profile?.dutyConfig?.find((c: any) => c.key === item.key);
+  if (configItem?.label) return configItem.label;
+  
+  // Custom manual mappings matching HQ configurations and user requests
+  const keyMap: Record<string, string> = {
+    'morning': 'Morning Duty',
+    'afternoon': 'Afternoon Duty',
+    'evening': 'Evening Duty',
+    'attendance': 'Attendance Entry',
+    'vitals': 'Patient Vitals',
+    'ward_round': 'Ward Round',
+    'cleanliness': 'Area Cleanliness',
+    'prayer': 'Morning Prayer Supervision',
+    'fajar': 'Fajar Wake-up Round',
+    'meds_morning': 'Medication Distribution (Morning)',
+    'meds_night': 'Medication Distribution (Night)',
+    'meal_breakfast': 'Meal Supervision (Breakfast)',
+    'meal_lunch': 'Meal Supervision (Lunch)',
+    'meal_dinner': 'Meal Supervision (Dinner)',
+    'monitoring': 'Patient Activity Monitoring',
+    'counselling': 'Counselling Session Support',
+    'vital_signs': 'Vital Signs Check',
+    'security_round': 'Night Security Round',
+    'gate': 'Gate/Entry Management',
+    'cleaning_supervision': 'Cleaning Supervision',
+    'visitor_management': 'Visitor Management'
+  };
+
+  if (keyMap[item.key]) return keyMap[item.key];
+  
+  return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Helper to translate raw dress item keys to beautiful labels
+function getDressLabel(item: any, profile: any) {
+  if (!item) return 'Uniform Item';
+  if (item.label) return item.label;
+  if (!item.key) return 'Uniform Item';
+  
+  // Look up in profile's dressCodeConfig
+  const configItem = profile?.dressCodeConfig?.find((c: any) => c.key === item.key);
+  if (configItem?.label) return configItem.label;
+
+  const keyMap: Record<string, string> = {
+    'uniform': 'Uniform Shirt',
+    'black_suit': 'Black OT Kit / Black Suit',
+    'black_ot_kit': 'Black OT Kit / Black Suit',
+    'white_overall': 'White Overall',
+    'shoes': 'Polished Shoes',
+    'id_card': 'Employee Card',
+    'card': 'Employee Card',
+    'hijab': 'Hijab',
+    'pant': 'Dress Pant',
+    'shirt': 'Dress Shirt',
+    'tie': 'Tie',
+    'lab_coat': 'Lab Coat',
+    'security_uniform': 'Security Uniform',
+    'security_cap': 'Security Cap',
+    'torch': 'Torch',
+    'whistle': 'Whistle'
+  };
+
+  if (keyMap[item.key]) return keyMap[item.key];
+
+  return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -106,45 +181,68 @@ export default function ProfilePage() {
 
   // Design Tokens for Clean Minimalism
   const cardStyle = "bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-2xl transition-all";
-  const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-rose-500/20 outline-none text-sm transition-all text-gray-800";
+  const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-[#1D9E75]/20 outline-none text-sm transition-all text-gray-800";
 
-  // Robust Dual Fetcher matching HQ dashboard patterns
-  const fetchMetrics = useCallback(async (sId: string) => {
+  // Robust Multi-ID Fetcher mapping all candidate identities in parallel to bypass silent Firestore failures
+  const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
     try {
       const prefix = 'rehab';
-      const rawId = sId.startsWith('rehab_') ? sId.replace('rehab_', '') : sId;
-      const prefixedId = sId.startsWith('rehab_') ? sId : `rehab_${sId}`;
+      
+      // Collect all potential variant IDs to retrieve all logged records
+      const candidateIds = new Set<string>();
+      if (sId) {
+        candidateIds.add(sId);
+        candidateIds.add(sId.startsWith('rehab_') ? sId.replace('rehab_', '') : sId);
+        candidateIds.add(sId.startsWith('rehab_') ? sId : `rehab_${sId}`);
+      }
+      if (authUid) {
+        candidateIds.add(authUid);
+        candidateIds.add(authUid.startsWith('rehab_') ? authUid.replace('rehab_', '') : authUid);
+        candidateIds.add(authUid.startsWith('rehab_') ? authUid : `rehab_${authUid}`);
+      }
+      if (customId) {
+        candidateIds.add(customId);
+      }
+      if (employeeId) {
+        candidateIds.add(employeeId);
+      }
 
-      // Parallel resolution covering both traditional staff ID and prefixed staff ID formats from HQ
+      const uniqueIds = Array.from(candidateIds).filter(Boolean);
+
+      // Perform parallel, index-free single field queries
+      const fetchForCandidates = async (colName: string) => {
+        const snaps = await Promise.all(
+          uniqueIds.map(id => 
+            getDocs(query(collection(db, colName), where('staffId', '==', id)))
+              .catch(() => ({ docs: [] } as any))
+          )
+        );
+        const allDocs = snaps.flatMap(snap => snap.docs);
+        return { docs: allDocs };
+      };
+
       const [
-        attSnap1, attSnap2,
-        dutySnap1, dutySnap2,
-        dressSnap1, dressSnap2,
-        taskSnap1, taskSnap2,
-        fineSnap1, fineSnap2,
-        growthSnap1, growthSnap2,
-        salarySnap1, salarySnap2
+        attSnap,
+        dutySnap,
+        dressSnap,
+        taskSnap,
+        fineSnap,
+        growthSnap,
+        salarySnap
       ] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        fetchForCandidates(`${prefix}_attendance`),
+        fetchForCandidates(`${prefix}_duty_logs`),
+        fetchForCandidates(`${prefix}_dress_logs`),
+        fetchForCandidates(`${prefix}_special_tasks`),
+        fetchForCandidates(`${prefix}_fines`),
+        fetchForCandidates(`${prefix}_growth_points`),
+        fetchForCandidates(`${prefix}_salary_records`)
       ]);
 
-      // Helper to properly merge, deduplicate, and sort data from both lookup streams
-      const mergeAndSort = (snap1: any, snap2: any, dateField: string = 'date') => {
-        const combined = [...snap1.docs, ...snap2.docs].map((d: any) => ({ id: d.id, ...d.data() }));
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      // Helper to properly merge, deduplicate, and sort data from all lookup streams client-side
+      const mergeAndSort = (snap: any, dateField: string = 'date') => {
+        const combined = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        const unique = Array.from(new Map(combined.map((item: any) => [item.id, item])).values());
         return unique.sort((a: any, b: any) => {
           const da = a[dateField] || '';
           const db = b[dateField] || '';
@@ -152,14 +250,14 @@ export default function ProfilePage() {
         });
       };
 
-      setAttendance(mergeAndSort(attSnap1, attSnap2, 'date') as any);
-      setDuties(mergeAndSort(dutySnap1, dutySnap2, 'date') as any);
-      setDressLogs(mergeAndSort(dressSnap1, dressSnap2, 'date') as any);
-      setSpecialTasks(mergeAndSort(taskSnap1, taskSnap2, 'createdAt') as any);
-      setFines(mergeAndSort(fineSnap1, fineSnap2, 'date') as any);
-      setGrowthHistory(mergeAndSort(growthSnap1, growthSnap2, 'date') as any);
+      setAttendance(mergeAndSort(attSnap, 'date') as any);
+      setDuties(mergeAndSort(dutySnap, 'date') as any);
+      setDressLogs(mergeAndSort(dressSnap, 'date') as any);
+      setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
+      setFines(mergeAndSort(fineSnap, 'date') as any);
+      setGrowthHistory(mergeAndSort(growthSnap, 'date') as any);
 
-      const salaryCombined = [...salarySnap1.docs, ...salarySnap2.docs].map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
+      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
       const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
         .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
       setSalaryRecords(uniqueSalaries);
@@ -179,24 +277,25 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const userRef = doc(db, 'rehab_users', parsed.uid);
-        let userSnap = await getDoc(userRef);
-        let uData = null;
+
+        const [userSnap, staffSnap] = await Promise.all([
+          getDoc(doc(db, 'rehab_users', parsed.uid)).catch(() => null),
+          getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid))).catch(() => null)
+        ]);
+
+        let uData: any = {};
         let finalId = parsed.uid;
-        
-        if (userSnap.exists()) {
-          uData = userSnap.data();
-        } else {
-          // Fallback to rehab_staff collection
-          const fallbackSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
-          if (!fallbackSnap.empty) {
-            userSnap = fallbackSnap.docs[0] as any;
-            uData = userSnap.data();
-            finalId = userSnap.id;
-          }
+
+        if (userSnap && userSnap.exists()) {
+          uData = { ...userSnap.data() };
         }
-        
-        if (!uData) { 
+        if (staffSnap && !staffSnap.empty) {
+          const docSnap = staffSnap.docs[0];
+          uData = { ...docSnap.data(), ...uData };
+          finalId = docSnap.id;
+        }
+
+        if (!uData.name && !uData.displayName) { 
           toast.error("User profile not found in active ledger.");
           router.push('/departments/rehab/login'); 
           return; 
@@ -208,8 +307,8 @@ export default function ProfilePage() {
           phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
         });
 
-        // Execute comprehensive data synchronization
-        await fetchMetrics(finalId);
+        // Execute comprehensive data synchronization across all potential employee credentials
+        await fetchMetrics(finalId, parsed.uid, uData.customId, uData.employeeId);
       } catch (err) {
         console.error(err);
         toast.error("Secure synchronization failed.");
@@ -374,7 +473,7 @@ export default function ProfilePage() {
                   <span className="text-gray-500 font-medium">Attendance Rate (Past 30d)</span>
                   <span className="font-bold text-gray-900">{attendancePerformance}%</span>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                   <div className="h-full bg-teal-500 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
                 </div>
               </div>
@@ -582,12 +681,16 @@ export default function ProfilePage() {
                                 }`}
                           >
                             {sub.status === 'done' ? <CheckCircle size={12} /> : sub.status === 'na' ? <MinusCircle size={12} /> : <XCircle size={12} />}
-                            {sub.label}
+                            {getDutyLabel(sub, profile)}
                           </div>
                         )) : (
-                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${rec.status === 'completed' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
+                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${
+                            rec.status === 'completed' 
+                              ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                              : 'bg-red-50 border-red-100 text-red-600'
+                          }`}>
                             {rec.status === 'completed' ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                            {rec.status === 'completed' ? 'Completed' : 'Pending'}
+                            {getDutyLabel({ key: rec.dutyType }, profile)}: {rec.status === 'completed' ? 'Completed' : 'Not Completed'}
                           </div>
                         )}
                       </div>
@@ -627,24 +730,30 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {rec.items && rec.items.length > 0 ? rec.items.map((item, idx) => (
-                          <div 
-                            key={idx}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold
-                              ${item.status === 'yes' 
-                                ? 'bg-blue-50 border-blue-100 text-blue-700' 
-                                : item.status === 'na'
-                                  ? 'bg-gray-100 border-gray-200 text-gray-500'
-                                  : 'bg-orange-50 border-orange-100 text-orange-700'
-                                }`}
-                          >
-                            {item.status === 'yes' ? <CheckCircle2 size={12} /> : item.status === 'na' ? <MinusCircle size={12} /> : <AlertTriangle size={12} />}
-                            {item.label}
-                          </div>
-                        )) : (
-                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${rec.status === 'yes' ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
-                            {rec.status === 'yes' ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                            {rec.status === 'yes' ? 'Compliant' : 'Non-Compliant'}
+                        {rec.items && rec.items.length > 0 ? (
+                          rec.items.map((item, idx) => (
+                            <div 
+                              key={idx}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold
+                                ${item.status === 'yes' 
+                                  ? 'bg-blue-50 border-blue-100 text-blue-700' 
+                                  : item.status === 'na'
+                                    ? 'bg-gray-100 border-gray-200 text-gray-500'
+                                    : 'bg-orange-50 border-orange-100 text-orange-700'
+                                  }`}
+                            >
+                              {item.status === 'yes' ? <CheckCircle2 size={12} /> : item.status === 'na' ? <MinusCircle size={12} /> : <AlertTriangle size={12} />}
+                              {getDressLabel(item, profile)}
+                            </div>
+                          ))
+                        ) : (
+                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${
+                            (rec.isCompliant !== undefined ? rec.isCompliant : rec.status === 'yes') 
+                              ? 'bg-blue-50 border-blue-100 text-blue-700' 
+                              : 'bg-red-50 border-red-100 text-red-600'
+                          }`}>
+                            {(rec.isCompliant !== undefined ? rec.isCompliant : rec.status === 'yes') ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                            {(rec.isCompliant !== undefined ? rec.isCompliant : rec.status === 'yes') ? 'Compliant' : 'Non-Compliant'}
                           </div>
                         )}
                       </div>
@@ -727,7 +836,7 @@ export default function ProfilePage() {
                   <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
                      <div className="flex justify-between items-start mb-4">
                        <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
-                         <CreditCard size={18} />
+                          <CreditCard size={18} />
                        </div>
                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
                      </div>
@@ -766,10 +875,10 @@ export default function ProfilePage() {
                        </div>
                      </div>
                    )) : (
-                      <div className="text-center py-6 border border-dashed border-gray-100 rounded-xl bg-gray-50/50 text-xs font-medium text-gray-400">
-                        No finalized payroll documents exist in system.
-                      </div>
-                   )}
+                       <div className="text-center py-6 border border-dashed border-gray-100 rounded-xl bg-gray-50/50 text-xs font-medium text-gray-400">
+                         No finalized payroll documents exist in system.
+                       </div>
+                    )}
                 </div>
 
                 <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -823,7 +932,7 @@ export default function ProfilePage() {
                 
                 <div className="mt-8 bg-gray-50 border border-gray-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-rose-600">
+                      <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-[#1D9E75]">
                         <Award size={24} />
                       </div>
                       <div>
@@ -889,6 +998,7 @@ function MinusCircle(props: any) {
   );
 }
 
+// Helper icons from lucide
 function AlertTriangle(props: any) {
   return (
     <svg
