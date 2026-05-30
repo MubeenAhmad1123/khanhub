@@ -460,7 +460,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
   const idx = compositeId.indexOf('_');
   if (idx <= 0) return null;
   const dept = compositeId.slice(0, idx) as StaffDept;
-  const uid = compositeId.slice(idx + 1);
+  const uid = getSimpleId(compositeId.slice(idx + 1));
 
   if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) return null;
 
@@ -563,7 +563,7 @@ export async function updateStaffProfile(
   const idx = compositeId.indexOf('_');
   if (idx <= 0) return { success: false, error: 'Invalid ID' };
   const currentDept = compositeId.slice(0, idx) as StaffDept;
-  const uid = compositeId.slice(idx + 1);
+  const uid = getSimpleId(compositeId.slice(idx + 1));
 
   if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(currentDept)) {
     return { success: false, error: 'Invalid department' };
@@ -625,7 +625,7 @@ export async function deleteStaffProfile(
   const idx = compositeId.indexOf('_');
   if (idx <= 0) return { success: false, error: 'Invalid ID' };
   const dept = compositeId.slice(0, idx) as StaffDept;
-  const uid = compositeId.slice(idx + 1);
+  const uid = getSimpleId(compositeId.slice(idx + 1));
 
   if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) {
     return { success: false, error: 'Invalid department' };

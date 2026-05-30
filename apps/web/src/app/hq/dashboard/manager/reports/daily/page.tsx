@@ -9,7 +9,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Loader2, Search,
   Calendar, CheckCircle, XCircle, Download,
-  TrendingUp, Shield, AlertTriangle
+  TrendingUp, Shield, AlertTriangle, Award
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
@@ -66,6 +66,11 @@ export default function DailyReportPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [downloading, setDownloading] = useState(false);
+
+  // Step-by-step navigation flow states
+  const [activeStep, setActiveStep] = useState<'overview' | 'departments' | 'designations' | 'roster'>('overview');
+  const [selectedDesignation, setSelectedDesignation] = useState<string>('all');
+  const [sortBySeniority, setSortBySeniority] = useState<boolean>(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -427,13 +432,39 @@ export default function DailyReportPage() {
   }, [session, reportDate]);
 
   const filteredData = useMemo(() => {
-    return reportData.filter(r => {
+    let result = reportData.filter(r => {
       const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
         r.designation.toLowerCase().includes(search.toLowerCase());
       const matchesDept = deptFilter === 'all' || r.department === deptFilter;
-      return matchesSearch && matchesDept;
+      const matchesDesignation = selectedDesignation === 'all' || r.designation.toLowerCase() === selectedDesignation.toLowerCase();
+      return matchesSearch && matchesDept && matchesDesignation;
     });
-  }, [reportData, search, deptFilter]);
+
+    if (sortBySeniority) {
+      const getSeniorityRank = (desig: string) => {
+        const d = String(desig || '').toLowerCase();
+        if (d.includes('executive') || d.includes('director')) return 10;
+        if (d.includes('manager')) return 9;
+        if (d.includes('supervisor')) return 8;
+        if (d.includes('doctor') || d.includes('clinical') || d.includes('physiotherapist')) return 7;
+        if (d.includes('nurse') || d.includes('teacher') || d.includes('lecturer') || d.includes('counselor') || d.includes('personnel')) return 6;
+        if (d.includes('worker') || d.includes('junior')) return 5;
+        if (d.includes('contract')) return 4;
+        if (d.includes('trial')) return 3;
+        if (d.includes('internee') || d.includes('intern')) return 2;
+        if (d.includes('volunteer')) return 1;
+        return 0;
+      };
+      result = [...result].sort((a, b) => {
+        const rankA = getSeniorityRank(a.designation);
+        const rankB = getSeniorityRank(b.designation);
+        if (rankA !== rankB) return rankB - rankA;
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    return result;
+  }, [reportData, search, deptFilter, selectedDesignation, sortBySeniority]);
 
   const handleDownloadImage = async () => {
     const captureContainer = document.getElementById('daily-report-table-capture-export');
@@ -689,10 +720,11 @@ export default function DailyReportPage() {
 
       for (const row of dirtyRows) {
         const prefix = getDeptPrefix(row.department as StaffDept);
-        const attId = `${row.id}_${reportDate}`;
+        const simpleId = getSimpleId(row.id);
+        const attId = `${simpleId}_${reportDate}`;
 
         await setDoc(doc(db, `${prefix}_attendance`, attId), {
-          staffId: row.id,
+          staffId: simpleId,
           date: reportDate,
           status: row.attendance === 'late' ? 'present' : row.attendance,
           isLate: row.attendance === 'late',
@@ -703,7 +735,7 @@ export default function DailyReportPage() {
 
         if (row.uniformStatus !== 'na') {
           await setDoc(doc(db, `${prefix}_dress_logs`, attId), {
-            staffId: row.id,
+            staffId: simpleId,
             date: reportDate,
             status: row.uniformStatus,
             items: (row as any).uniformItems || [],
@@ -714,7 +746,7 @@ export default function DailyReportPage() {
 
         if (row.dutyStatus !== 'na') {
           await setDoc(doc(db, `${prefix}_duty_logs`, attId), {
-            staffId: row.id,
+            staffId: simpleId,
             date: reportDate,
             status: row.dutyStatus,
             duties: (row as any).dutyItems || [],
@@ -725,7 +757,7 @@ export default function DailyReportPage() {
 
         if (row.gpStatus !== 'na') {
           await setDoc(doc(db, `${prefix}_contributions`, attId), {
-            staffId: row.id,
+            staffId: simpleId,
             date: reportDate,
             status: row.gpStatus,
             isApproved: row.gpStatus === 'yes',
@@ -737,7 +769,7 @@ export default function DailyReportPage() {
 
         if (row.fines > 0) {
           await setDoc(doc(db, `${prefix}_fines`, attId), {
-            staffId: row.id,
+            staffId: simpleId,
             amount: row.fines,
             reason: row.fineReason || (row.attendance === 'absent' ? 'Absent without leave' : 'Penalty'),
             status: 'unpaid',
@@ -754,7 +786,7 @@ export default function DailyReportPage() {
         }
 
         // Sync to primary staff document for immediate visibility across pages
-        const staffDocRef = doc(db, `${prefix}_users`, row.id);
+        const staffDocRef = doc(db, `${prefix}_users`, simpleId);
         const updateData: any = {
           todayAttendance: row.attendance,
           todayUniformStatus: row.uniformStatus,
@@ -774,16 +806,16 @@ export default function DailyReportPage() {
         }
 
         await updateDoc(staffDocRef, updateData).catch((err) => {
-          console.warn(`Could not sync to ${prefix}_users/${row.id}:`, err);
+          console.warn(`Could not sync to ${prefix}_users/${simpleId}:`, err);
         });
 
         // Trigger dynamic growth points recalculation for this month
         const monthKey = reportDate.substring(0, 7); // YYYY-MM
         try {
           const { recalculateGrowthPoints } = await import('@/lib/rehab/growthPoints');
-          await recalculateGrowthPoints(row.id, monthKey, row.department);
+          await recalculateGrowthPoints(simpleId, monthKey, row.department);
         } catch (err) {
-          console.warn(`Could not recalculate growth points for ${row.id}:`, err);
+          console.warn(`Could not recalculate growth points for ${simpleId}:`, err);
         }
       }
       setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
@@ -811,7 +843,6 @@ export default function DailyReportPage() {
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans p-2 sm:p-4 md:p-8 pb-32">
       <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-6 sm:space-y-8 p-3 sm:p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
-
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
@@ -839,7 +870,7 @@ export default function DailyReportPage() {
                 className="bg-transparent border-none outline-none font-bold text-xs text-gray-800 w-full"
               />
             </div>
-            {deptFilter !== 'all' && (
+            {activeStep === 'roster' && (
               <>
                 <button
                   onClick={saveAssessment}
@@ -881,180 +912,327 @@ export default function DailyReportPage() {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        {deptFilter !== 'all' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-            <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-gray-900">
-                  {filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
-                </span>
-                <div className="p-2 bg-emerald-50 rounded-xl">
-                  <TrendingUp size={20} className="text-emerald-500" />
-                </div>
+        {/* STEP 1: OVERVIEW CARD */}
+        {activeStep === 'overview' && (
+          <div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
+            <button
+              onClick={() => setActiveStep('departments')}
+              className="max-w-xl w-full p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 border-4 border-black text-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 active:translate-y-0 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-125 transition-transform duration-500" />
+              
+              <div className="w-16 h-16 bg-white/20 border border-white/30 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform">
+                <TrendingUp size={32} className="text-white" />
               </div>
-            </div>
+              
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-tight">
+                KhanHub Operations
+              </h2>
+              <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mt-2">
+                Daily Performance Intelligence Ledger
+              </p>
 
-            <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-gray-900">
-                  ₨{filteredData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
-                </span>
-                <div className="p-2 bg-rose-50 rounded-xl">
-                  <AlertTriangle size={20} className="text-rose-500" />
-                </div>
-              </div>
-            </div>
+              <div className="w-full h-[2px] bg-white/20 my-6" />
 
-            <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-gray-900">
-                  {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
-                </span>
-                <div className="p-2 bg-indigo-50 rounded-xl">
-                  <CheckCircle size={20} className="text-indigo-500" />
+              <div className="grid grid-cols-2 gap-4 w-full">
+                <div className="bg-white/10 border border-white/20 p-4 rounded-2xl flex flex-col items-center">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-100">Departments</span>
+                  <span className="text-3xl font-black mt-1">9</span>
+                </div>
+                <div className="bg-white/10 border border-white/20 p-4 rounded-2xl flex flex-col items-center">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-100">Active Staff</span>
+                  <span className="text-3xl font-black mt-1">{reportData.length}</span>
                 </div>
               </div>
-            </div>
+
+              <div className="mt-8 flex items-center gap-2 text-xs font-black uppercase tracking-wider bg-white text-indigo-600 px-6 py-3 rounded-xl border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-y-0.5 active:translate-y-0 duration-200">
+                Enter System Flow →
+              </div>
+            </button>
           </div>
         )}
 
-        {/* Controls & Filter Tabs */}
-        <div className="space-y-4 print:hidden">
-          {deptFilter !== 'all' && (
-            <div className="flex flex-col sm:flex-row gap-3 animate-fadeIn">
-              <div className="flex-1 relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-indigo-600" size={18} />
-                <input
-                  type="text"
-                  placeholder={`Search ${deptFilter.replace('-', ' ')} staff by name or role...`}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-100 bg-white font-semibold text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none placeholder:text-gray-300"
-                />
+        {/* STEP 2: DEPARTMENT SELECTOR */}
+        {activeStep === 'departments' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Select Department</h2>
+                <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Choose a segment to analyze or view global matrix</p>
               </div>
+              <button
+                onClick={() => setActiveStep('overview')}
+                className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 hover:text-gray-900 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+              >
+                <ArrowLeft size={14} /> Go Back
+              </button>
             </div>
-          )}
 
-          {/* Department Interactive Cards Grid or Transition Header */}
-          {deptFilter === 'all' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 select-none animate-fadeIn">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 select-none">
               {[
-                { id: 'all', label: 'Global Matrix', activeClass: 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/25 ring-2 ring-indigo-500/30' },
-                { id: 'hq', label: 'HQ', activeClass: 'bg-slate-700 text-white border-slate-700 shadow-md shadow-slate-700/25 ring-2 ring-slate-500/30' },
-                { id: 'rehab', label: 'Rehab', activeClass: 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/25 ring-2 ring-rose-500/30' },
-                { id: 'spims', label: 'SPIMS', activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/30' },
-                { id: 'hospital', label: 'Hospital', activeClass: 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/25 ring-2 ring-blue-500/30' },
-                { id: 'sukoon', label: 'Sukoon', activeClass: 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/25 ring-2 ring-purple-500/30' },
-                { id: 'welfare', label: 'Welfare', activeClass: 'bg-green-600 text-white border-green-600 shadow-md shadow-green-600/25 ring-2 ring-green-500/30' },
-                { id: 'job-center', label: 'Job Center', activeClass: 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/30' },
-                { id: 'social-media', label: 'Social Media', activeClass: 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-600/25 ring-2 ring-pink-500/30' },
-                { id: 'it', label: 'IT', activeClass: 'bg-cyan-600 text-white border-cyan-600 shadow-md shadow-cyan-600/25 ring-2 ring-cyan-500/30' }
+                { id: 'hq', label: 'HQ', color: 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-700 hover:text-white hover:border-slate-700 hover:shadow-slate-500/20' },
+                { id: 'rehab', label: 'Rehab', color: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow-rose-500/20' },
+                { id: 'spims', label: 'SPIMS / College', color: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-emerald-500/20' },
+                { id: 'hospital', label: 'Hospital', color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-500/20' },
+                { id: 'sukoon', label: 'Sukoon', color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-600 hover:text-white hover:border-purple-600 hover:shadow-purple-500/20' },
+                { id: 'welfare', label: 'Welfare', color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-green-500/20' },
+                { id: 'job-center', label: 'Job Center', color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white hover:border-amber-600 hover:shadow-amber-500/20' },
+                { id: 'social-media', label: 'Social Media', color: 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-600 hover:text-white hover:border-pink-600 hover:shadow-pink-500/20' },
+                { id: 'it', label: 'IT Department', color: 'bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-600 hover:text-white hover:border-cyan-600 hover:shadow-cyan-500/20' },
               ].map(d => {
-                if (d.id === 'all') return null; // In standard menu, only departments are shown as options
                 const count = reportData.filter(r => r.department === d.id).length;
                 return (
                   <button
                     key={d.id}
                     type="button"
-                    onClick={() => setDeptFilter(d.id)}
-                    className="px-4 py-3 rounded-2xl border text-left flex flex-col justify-between h-20 bg-white hover:bg-gray-50 border-gray-100 hover:border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-gray-800"
+                    onClick={() => {
+                      setDeptFilter(d.id);
+                      setSelectedDesignation('all');
+                      setActiveStep('designations');
+                    }}
+                    className={`p-6 rounded-2xl border text-left flex flex-col justify-between h-32 hover:-translate-y-1 hover:shadow-md transition-all duration-300 ${d.color}`}
                   >
-                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider opacity-60">
                       {d.id.replace('-', ' ')}
                     </span>
-                    <div className="flex items-baseline justify-between w-full mt-2 gap-1.5">
-                      <span className="text-sm font-black tracking-tight leading-none">{d.label}</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold shrink-0 bg-gray-100 text-gray-500">
-                        {count}
+                    <div className="flex flex-col mt-4">
+                      <span className="text-base font-black tracking-tight leading-snug">{d.label}</span>
+                      <span className="text-[10px] font-bold mt-1 opacity-80">
+                        {count} Personnel Active
                       </span>
                     </div>
                   </button>
                 );
               })}
+
+              {/* 10th Card: All Departments */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDeptFilter('all');
+                  setSelectedDesignation('all');
+                  setActiveStep('roster');
+                }}
+                className="p-6 rounded-2xl border-2 border-dashed border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 text-indigo-700 hover:bg-gradient-to-br hover:from-indigo-600 hover:to-purple-600 hover:text-white hover:border-indigo-600 hover:-translate-y-1 hover:shadow-md text-left flex flex-col justify-between h-32 transition-all duration-300"
+              >
+                <span className="text-[10px] font-black uppercase tracking-wider">
+                  Global
+                </span>
+                <div className="flex flex-col mt-4">
+                  <span className="text-base font-black tracking-tight leading-snug">All Departments</span>
+                  <span className="text-[10px] font-bold mt-1">
+                    {reportData.length} Personnel Total
+                  </span>
+                </div>
+              </button>
             </div>
-          ) : (
-            /* Sub-Page Navigation Header (Feels like a next page transition!) */
-            <div className="p-6 rounded-[2rem] border border-gray-100 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn select-none">
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setDeptFilter('all')}
-                  className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900 border border-gray-100 hover:border-gray-200 transition-all flex items-center justify-center shrink-0 shadow-sm hover:scale-105 active:scale-95"
-                  title="Return to Global Matrix"
-                >
-                  <ArrowLeft size={18} />
-                </button>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${
-                      deptFilter === 'rehab' ? 'bg-rose-500' :
-                      deptFilter === 'hospital' ? 'bg-blue-500' :
-                      deptFilter === 'it' ? 'bg-cyan-500' :
-                      deptFilter === 'spims' ? 'bg-emerald-500' :
-                      deptFilter === 'sukoon' ? 'bg-purple-500' :
-                      deptFilter === 'welfare' ? 'bg-green-500' :
-                      deptFilter === 'job-center' ? 'bg-amber-500' :
-                      deptFilter === 'social-media' ? 'bg-pink-500' :
-                      'bg-slate-500'
-                    }`} />
-                    <h3 className="text-base font-black uppercase tracking-wider text-gray-900 leading-none">
-                      {deptFilter.replace('-', ' ')} Matrix
-                    </h3>
+          </div>
+        )}
+
+        {/* STEP 3: DESIGNATION SELECTOR */}
+        {activeStep === 'designations' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">
+                  Select Designation
+                </h2>
+                <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                  {deptFilter.toUpperCase()} Matrix • Choose a specific role to audit
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveStep('departments')}
+                className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 hover:text-gray-900 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+              >
+                <ArrowLeft size={14} /> Go Back
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 select-none">
+              {/* Box 1: All Designations */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDesignation('all');
+                  setActiveStep('roster');
+                }}
+                className="p-6 rounded-2xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 hover:-translate-y-1 hover:shadow-md text-left flex flex-col justify-between h-28 transition-all duration-300 text-indigo-900"
+              >
+                <span className="text-[10px] font-black uppercase tracking-wider">
+                  HQ Audit
+                </span>
+                <div className="flex flex-col mt-2">
+                  <span className="text-base font-black tracking-tight leading-snug">All Designations</span>
+                  <span className="text-[10px] font-bold mt-1">
+                    {reportData.filter(r => r.department === deptFilter).length} Personnel Total
+                  </span>
+                </div>
+              </button>
+
+              {/* Dynamic unique designation boxes */}
+              {(() => {
+                const deptRows = reportData.filter(r => r.department === deptFilter);
+                const uniqueDesigs = Array.from(new Set(deptRows.map(r => r.designation || 'Staff Member')));
+                
+                return uniqueDesigs.map(desig => {
+                  const count = deptRows.filter(r => r.designation === desig).length;
+                  return (
+                    <button
+                      key={desig}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDesignation(desig);
+                        setActiveStep('roster');
+                      }}
+                      className="p-6 rounded-2xl border border-gray-100 bg-white hover:bg-gray-50 hover:border-gray-300 hover:-translate-y-1 hover:shadow-md text-left flex flex-col justify-between h-28 transition-all duration-300 text-gray-800"
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                        Departmental Role
+                      </span>
+                      <div className="flex flex-col mt-2">
+                        <span className="text-base font-black tracking-tight leading-snug truncate max-w-full">
+                          {desig}
+                        </span>
+                        <span className="text-[10px] font-bold mt-1 text-gray-500">
+                          {count} Personnel
+                        </span>
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: STAGING ROSTER */}
+        {activeStep === 'roster' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Breadcrumbs Navigation */}
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-gray-400 select-none pb-4 border-b border-gray-100 flex-wrap">
+              <button 
+                onClick={() => { setActiveStep('overview'); setDeptFilter('all'); setSelectedDesignation('all'); }}
+                className="hover:text-indigo-600 transition-colors cursor-pointer"
+              >
+                Overview
+              </button>
+              <span>/</span>
+              <button 
+                onClick={() => { setActiveStep('departments'); setSelectedDesignation('all'); }}
+                className="hover:text-indigo-600 transition-colors cursor-pointer"
+              >
+                Departments
+              </button>
+              {deptFilter !== 'all' && (
+                <>
+                  <span>/</span>
+                  <button 
+                    onClick={() => { setActiveStep('designations'); }}
+                    className="hover:text-indigo-600 transition-colors cursor-pointer"
+                  >
+                    {deptFilter.toUpperCase()}
+                  </button>
+                </>
+              )}
+              {selectedDesignation !== 'all' && (
+                <>
+                  <span>/</span>
+                  <span className="text-gray-900 font-bold">{selectedDesignation}</span>
+                </>
+              )}
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+              <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
+                  </span>
+                  <div className="p-2 bg-emerald-50 rounded-xl">
+                    <TrendingUp size={20} className="text-emerald-500" />
                   </div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                    Departmental performance & duty stats audit
-                  </p>
                 </div>
               </div>
 
-              {/* Department Statistics Summary Panel */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Roster Strength</span>
-                  <span className="text-sm font-black text-gray-900 mt-0.5">
-                    {filteredData.length} Personnel
+              <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-gray-900">
+                    ₨{filteredData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
                   </span>
+                  <div className="p-2 bg-rose-50 rounded-xl">
+                    <AlertTriangle size={20} className="text-rose-500" />
+                  </div>
                 </div>
-                <div className="px-4 py-2.5 bg-emerald-50 border border-emerald-100 rounded-2xl flex flex-col">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">Active Present</span>
-                  <span className="text-sm font-black text-emerald-700 mt-0.5">
-                    {filteredData.filter(r => r.attendance === 'present' || r.attendance === 'late').length}
-                  </span>
-                </div>
-                <div className="px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-indigo-600">GP Index</span>
-                  <span className="text-sm font-black text-indigo-700 mt-0.5">
+              </div>
+
+              <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-gray-900">
                     {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
                   </span>
+                  <div className="p-2 bg-indigo-50 rounded-xl">
+                    <CheckCircle size={20} className="text-indigo-500" />
+                  </div>
                 </div>
               </div>
             </div>
-          )}
 
-          {deptFilter !== 'all' && (
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none animate-fadeIn">
-              {['all', 'present', 'absent', 'late', 'leave'].map(f => (
+            {/* Controls & Filter Tabs */}
+            <div className="space-y-4 print:hidden">
+              <div className="flex flex-col sm:flex-row gap-3 animate-fadeIn">
+                <div className="flex-1 relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-indigo-600" size={18} />
+                  <input
+                    type="text"
+                    placeholder={`Search ${deptFilter === 'all' ? 'global' : deptFilter.replace('-', ' ')} staff by name or role...`}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-100 bg-white font-semibold text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none placeholder:text-gray-300"
+                  />
+                </div>
+                
+                {/* Dynamic Sort by Seniority Filter Button */}
                 <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${activeFilter === f
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
-                    }`}
+                  type="button"
+                  onClick={() => setSortBySeniority(!sortBySeniority)}
+                  className={`flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider border transition-all duration-200 select-none ${
+                    sortBySeniority
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/25 ring-2 ring-indigo-500/30 hover:bg-indigo-700'
+                      : 'bg-white text-gray-700 border-gray-100 hover:bg-gray-50'
+                  }`}
                 >
-                  {f}
+                  <Award size={16} />
+                  Sort Seniority: {sortBySeniority ? 'ON' : 'OFF'}
                 </button>
-              ))}
+              </div>
+
+              {/* Status Filters */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none animate-fadeIn">
+                {['all', 'present', 'absent', 'late', 'leave'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFilter(f)}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${
+                      activeFilter === f
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Master Container wrapping desktop & mobile layouts */}
-        {deptFilter !== 'all' && (
+        {activeStep === 'roster' && (
           <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
             
             {/* Desktop Table View - Hidden on smaller viewports */}
