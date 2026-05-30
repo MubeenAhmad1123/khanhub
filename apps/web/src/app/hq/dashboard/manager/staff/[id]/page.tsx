@@ -301,6 +301,7 @@ export default function StaffProfilePage() {
 
   const [showVacateConfirm, setShowVacateConfirm] = useState(false);
   const [isVacating, setIsVacating] = useState(false);
+  const [vacateReason, setVacateReason] = useState<'resigned' | 'terminated'>('resigned');
 
   const daysInMonth = useCallback(() => {
     if (!selectedMonth || !selectedMonth.includes('-')) return [];
@@ -401,6 +402,9 @@ export default function StaffProfilePage() {
       }
 
       setStaff(profile);
+      if (profile.name === 'Vacant') {
+        setActiveTab('edit');
+      }
       setEditForm({
         name: profile.name || '',
         designation: profile.designation || '',
@@ -1402,7 +1406,19 @@ export default function StaffProfilePage() {
       setIsVacating(true);
       if (!staff) return;
 
+      // 1. Update the departing staff member's record in Firestore
+      // Keep their name and other details exactly as-is but change status to resigned/terminated and isActive = false
       const res = await updateStaffProfile(staff.id, {
+        isActive: false,
+        status: vacateReason, // 'resigned' or 'terminated'
+        updatedAt: serverTimestamp()
+      });
+
+      if (!res.success) throw new Error(res.error);
+
+      // 2. Create the NEW replacement vacant profile document
+      // Clone configuration fields: dept, designation, dutyConfig, dressCodeConfig, monthlySalary, shift times
+      const newStaffDocRef = await addDoc(collection(db, getDeptCollection(staff.dept)), {
         name: "Vacant",
         displayName: "Vacant",
         email: "",
@@ -1416,14 +1432,26 @@ export default function StaffProfilePage() {
         joiningDate: "",
         isActive: false,
         status: "inactive",
+        dept: staff.dept,
+        role: staff.role || "staff",
+        designation: staff.designation || "",
+        dutyConfig: staff.dutyConfig || [],
+        dressCodeConfig: staff.dressCodeConfig || [],
+        monthlySalary: staff.monthlySalary || 0,
+        dutyStartTime: staff.dutyStartTime || "09:00",
+        dutyEndTime: staff.dutyEndTime || "17:00",
+        visibleSections: staff.visibleSections || {},
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
 
-      if (!res.success) throw new Error(res.error);
+      const newCompositeId = `${staff.dept}_${newStaffDocRef.id}`;
 
-      toast.success("Profile slot vacated successfully!");
+      toast.success(`${staff.name} archived as ${vacateReason.toUpperCase()}. New vacant profile slot created!`);
       setShowVacateConfirm(false);
-      fetchData();
+
+      // 3. Redirect the manager to the new vacant profile
+      router.push(`/hq/dashboard/manager/staff/${newCompositeId}`);
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Failed to vacate profile slot");
@@ -3356,17 +3384,47 @@ export default function StaffProfilePage() {
                     <div className="w-20 h-20 rounded-[2rem] bg-amber-500/10 flex items-center justify-center text-amber-500 mb-6">
                       <UserMinus size={40} />
                     </div>
-                    <h3 className={`text-2xl font-black mb-2 text-gray-900 uppercase tracking-tight`}>Vacate Profile Slot</h3>
+                    <h3 className={`text-2xl font-black mb-2 text-gray-900 uppercase tracking-tight`}>Vacate Position</h3>
                     <p className="text-sm font-bold leading-relaxed mb-6 text-slate-700">
-                      Are you sure you want to vacate <span className="text-amber-600 font-black">{staff?.name}</span>'s profile?
+                      Are you sure you want to vacate <span className="text-amber-600 font-black">{staff?.name}</span>'s position slot?
                     </p>
-                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-left mb-8 w-full">
-                      <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">What this accomplishes:</p>
-                      <ul className="text-xs font-semibold text-amber-900 space-y-1.5 list-disc pl-4 leading-normal">
-                        <li>Resets Name and Display Name to "Vacant"</li>
-                        <li>Clears personal details (Phone, CNIC, Photo, Email, Address, Father's Name, Joining Date)</li>
-                        <li>Deactivates profile slot (`isActive = false`, `status = "inactive"`)</li>
-                        <li><span className="font-bold text-emerald-700">Preserves</span> all Professional Designation configurations, Salaries, Duty lists, and Uniform lists!</li>
+
+                    {/* Departure Reason Selector */}
+                    <div className="w-full mb-6 text-left">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Reason for Departure:</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setVacateReason('resigned')}
+                          className={`py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                            vacateReason === 'resigned'
+                              ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/25'
+                              : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-100 hover:scale-[1.01]'
+                          }`}
+                        >
+                          👋 Resigned
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVacateReason('terminated')}
+                          className={`py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                            vacateReason === 'terminated'
+                              ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-500/25'
+                              : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-100 hover:scale-[1.01]'
+                          }`}
+                        >
+                          🚫 Terminated
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left mb-8 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Workflow Action Details:</p>
+                      <ul className="text-xs font-semibold text-slate-700 space-y-1.5 list-disc pl-4 leading-normal">
+                        <li>Archives <span className="font-bold text-slate-900">{staff?.name}</span>'s profile status as <span className={`font-bold ${vacateReason === 'resigned' ? 'text-amber-600' : 'text-rose-600'}`}>{vacateReason.toUpperCase()}</span>.</li>
+                        <li>Historical attendance records, fines, and salary sheets remain <span className="font-bold text-emerald-600">safely archived</span> under their name.</li>
+                        <li>Auto-creates a <span className="font-bold text-indigo-600">new replacement vacant position slot</span>.</li>
+                        <li>Copies Designation, Department, Base Salary, Duty configs, and Uniform config to the replacement slot.</li>
                       </ul>
                     </div>
 
