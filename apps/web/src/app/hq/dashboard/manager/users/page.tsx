@@ -164,7 +164,7 @@ export default function ManagerUsersPage() {
     education: [] as { degree: string; institution: string; year: string }[],
     experience: [] as { title: string; company: string; duration: string }[],
     skills: [] as string[],
-    documents: [] as { type: string; url: string; name: string }[],
+    documents: [] as { title: string; url: string }[],
     createAccount: true,
     patientId: '',
     isOpenVacancy: false,
@@ -173,6 +173,7 @@ export default function ManagerUsersPage() {
   const [newEdu, setNewEdu] = useState({ degree: '', institution: '', year: '' });
   const [newExp, setNewExp] = useState({ title: '', company: '', duration: '' });
   const [newSkill, setNewSkill] = useState('');
+  const [newDocTitle, setNewDocTitle] = useState('');
 
   const [uploading, setUploading] = useState<string | null>(null);
   const [employeeCount, setEmployeeCount] = useState(0);
@@ -349,6 +350,10 @@ export default function ManagerUsersPage() {
       toast.error("Only .webp images are allowed.");
       return;
     }
+    if (type === 'document' && !newDocTitle.trim()) {
+      toast.error("Please enter a Document Title first.");
+      return;
+    }
     const fieldId = type === 'profile' ? 'photoUrl' : 'document';
     setUploading(fieldId);
     try {
@@ -358,10 +363,11 @@ export default function ManagerUsersPage() {
       } else {
         setFormData(prev => ({
           ...prev,
-          documents: [...prev.documents, { type, url, name: file.name }]
+          documents: [...prev.documents, { title: newDocTitle.trim(), url }]
         }));
+        setNewDocTitle('');
       }
-      toast.success(`${type} uploaded successfully`);
+      toast.success(`${type === 'profile' ? 'Profile picture' : 'Document'} uploaded successfully`);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -1607,8 +1613,8 @@ export default function ManagerUsersPage() {
                     )}
 
                     {/* SECTION 6: DOCUMENTS */}
-                    <div className="p-5 rounded-2xl border border-gray-100 bg-white hover:border-gray-200 transition-all duration-300 relative overflow-hidden group">
-                      <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-50">
+                    <div className="p-6 rounded-3xl border border-gray-100 bg-white hover:border-gray-200 transition-all duration-300 relative overflow-hidden group">
+                      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-50">
                         <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-pink-600">
                           <FileText size={20} />
                         </div>
@@ -1618,58 +1624,85 @@ export default function ManagerUsersPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="relative h-44 rounded-2xl border-2 border-dashed border-gray-200 hover:border-pink-400 bg-gray-50/50 hover:bg-pink-50/10 transition-all duration-300 flex flex-col items-center justify-center text-center p-6 group/upload cursor-pointer">
-                          <div className="w-11 h-11 rounded-full bg-pink-50 flex items-center justify-center mb-3 group-hover/upload:scale-110 transition-transform duration-200">
-                            <Plus className="text-pink-600" size={22} />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider ml-1">Document Title*</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. CV, Domicile, ID Card"
+                              value={newDocTitle}
+                              onChange={(e) => setNewDocTitle(e.target.value)}
+                              className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 hover:bg-white focus:bg-white text-sm font-semibold transition-all outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10"
+                            />
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Upload Archive</p>
-                            <p className="text-[10px] text-gray-400 mt-1 font-medium">MAX 10MB • WebP/PDF</p>
+
+                          <div className="relative h-32 rounded-2xl border-2 border-dashed border-gray-200 hover:border-pink-400 bg-gray-50/50 hover:bg-pink-50/10 transition-all duration-300 flex flex-col items-center justify-center text-center p-4 group/upload cursor-pointer">
+                            <div className="w-9 h-9 rounded-full bg-pink-50 flex items-center justify-center mb-2 group-hover/upload:scale-110 transition-transform duration-200">
+                              <Plus className="text-pink-600" size={18} />
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Upload webp file</p>
+                              <p className="text-[9px] text-gray-400 mt-0.5 font-medium">MAX 10MB • WEBP/PDF</p>
+                            </div>
+                            <input
+                              type="file"
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                              accept="image/webp,application/pdf"
+                              onChange={(e) => {
+                                const files = e.target.files;
+                                if (files && files[0]) {
+                                  handleFileUpload(files[0], 'document');
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
                           </div>
-                          <input
-                            type="file"
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            multiple
-                            accept="image/webp,application/pdf"
-                            onChange={(e) => {
-                              const files = e.target.files;
-                              if (files) {
-                                Array.from(files).forEach(file => {
-                                  handleFileUpload(file, 'document');
-                                });
-                              }
-                            }}
-                          />
                         </div>
 
-                        <div className="md:col-span-2 space-y-2.5 max-h-44 overflow-y-auto pr-1">
-                          {formData.documents.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200/80 rounded-2xl py-8">
-                              <UploadCloud size={28} strokeWidth={1.5} className="mb-1 text-gray-300" />
-                              <p className="text-[11px] font-bold uppercase tracking-wider opacity-60">No documents staged</p>
-                            </div>
-                          ) : (
-                            formData.documents.map((doc, idx) => (
-                              <div key={idx} className="p-3.5 bg-gray-50/60 border border-gray-100 rounded-xl flex items-center justify-between group/item hover:bg-white hover:border-gray-200 transition-all">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-lg bg-pink-50 flex items-center justify-center text-pink-500">
-                                    <FileCheck size={18} />
+                        <div className="md:col-span-2">
+                          <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2 block ml-1">Staged Documents Gallery</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[16rem] overflow-y-auto pr-1">
+                            {formData.documents.length === 0 ? (
+                              <div className="col-span-full h-36 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200/80 rounded-2xl bg-gray-50/30">
+                                <UploadCloud size={32} strokeWidth={1.5} className="mb-1 text-gray-300" />
+                                <p className="text-[10px] font-bold uppercase tracking-wider opacity-60">No documents uploaded yet</p>
+                              </div>
+                            ) : (
+                              formData.documents.map((doc: { title: string; url: string }, idx: number) => (
+                                <div key={idx} className="group relative rounded-xl overflow-hidden border border-gray-150 bg-white hover:border-pink-500 transition-all duration-300 shadow-sm flex flex-col">
+                                  <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                                    {doc.url.toLowerCase().endsWith('.pdf') ? (
+                                      <div className="flex flex-col items-center justify-center gap-1 p-2">
+                                        <FileText size={28} className="text-red-500" />
+                                        <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-1 py-0.5 rounded">PDF</span>
+                                      </div>
+                                    ) : (
+                                      <img 
+                                        src={doc.url} 
+                                        alt={doc.title} 
+                                        className="w-full h-full object-cover"
+                                      />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-1.5">
+                                      <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-[8px] uppercase tracking-wider px-2 py-1 rounded-lg hover:scale-105 transition-all shadow-md">
+                                        Open
+                                      </a>
+                                      <button
+                                        onClick={() => setFormData({ ...formData, documents: formData.documents.filter((_, i) => i !== idx) })}
+                                        className="bg-rose-600 text-white font-black text-[8px] uppercase tracking-wider px-2 py-1 rounded-lg hover:scale-105 transition-all shadow-md"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="text-xs font-bold text-gray-800 truncate max-w-[140px] sm:max-w-xs block">{doc.name}</span>
-                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-0.5">Asset ID: {doc.url.split('/').pop()?.slice(0, 8)}...</p>
+                                  <div className="p-2 text-center bg-white flex-1 flex items-center justify-center">
+                                    <span className="text-[9px] font-black text-black uppercase tracking-widest leading-snug line-clamp-1">{doc.title}</span>
                                   </div>
                                 </div>
-                                <button
-                                  onClick={() => setFormData({ ...formData, documents: formData.documents.filter((_, i) => i !== idx) })}
-                                  className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center opacity-0 group-hover/item:opacity-100 hover:bg-rose-500 hover:text-white transition-all duration-200"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            ))
-                          )}
+                              ))
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

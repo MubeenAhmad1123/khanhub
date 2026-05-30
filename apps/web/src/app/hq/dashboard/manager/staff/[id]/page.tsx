@@ -1785,20 +1785,41 @@ export default function StaffProfilePage() {
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
                     <FileText size={14} className="text-teal-500" /> Uploaded Documents
                   </h4>
-                  <div className="flex flex-col gap-3">
-                    {staff?.documents?.length ? staff.documents.map((doc, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600">
-                            <FileText size={14} />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {staff?.documents?.length ? staff.documents.map((doc: { title: string; url: string }, idx: number) => (
+                      <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 hover:shadow-md transition-all duration-300 flex flex-col">
+                        <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                          {doc.url.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex flex-col items-center justify-center gap-2 p-4">
+                              <FileText size={36} className="text-red-500 animate-pulse" />
+                              <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-2 py-1 rounded">PDF Document</span>
+                            </div>
+                          ) : (
+                            <img 
+                              src={doc.url} 
+                              alt={doc.title} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              onError={(e) => {
+                                // If it fails or fails to identify, hide and show placeholder
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-[9px] uppercase tracking-wider px-4 py-2 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md">
+                              View Fullscreen
+                            </a>
                           </div>
-                          <span className="text-[10px] font-extrabold text-black uppercase tracking-widest">{doc.title}</span>
                         </div>
-                        <a href={doc.url} target="_blank" rel="noreferrer" className="text-[9px] font-black text-teal-600 hover:text-teal-800 uppercase tracking-widest bg-teal-50 px-3 py-1.5 rounded-lg">
-                          View Original
-                        </a>
+                        <div className="p-3 text-center bg-white flex-1 flex items-center justify-center">
+                          <span className="text-[10px] font-black text-black uppercase tracking-widest leading-snug line-clamp-2">{doc.title}</span>
+                        </div>
                       </div>
-                    )) : <p className="text-xs text-black/50 italic">No documents available</p>}
+                    )) : (
+                      <div className="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                        No documents available
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2933,36 +2954,47 @@ export default function StaffProfilePage() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 mb-8">
-                      {(editForm.documents || []).map((doc, idx) => (
-                        <div key={idx} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                          <div className={`flex-1 p-4 rounded-2xl text-xs font-bold border transition-all flex items-center justify-between bg-gray-50 border-gray-100 text-black`}>
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600">
-                                <FileText size={14} />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-8">
+                      {(editForm.documents || []).map((doc: { title: string; url: string }, idx: number) => (
+                        <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 transition-all duration-300 shadow-sm flex flex-col">
+                          <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                            {doc.url.toLowerCase().endsWith('.pdf') ? (
+                              <div className="flex flex-col items-center justify-center gap-2 p-4">
+                                <FileText size={36} className="text-red-500" />
+                                <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-2 py-1 rounded">PDF Document</span>
                               </div>
-                              <span className="text-black font-extrabold uppercase">{doc.title}</span>
+                            ) : (
+                              <img 
+                                src={doc.url} 
+                                alt={doc.title} 
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                              <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-[8px] uppercase tracking-wider px-3 py-1.5 rounded-xl hover:scale-105 transition-all shadow-md">
+                                Open
+                              </a>
+                              <button
+                                onClick={() => {
+                                  const next = [...editForm.documents];
+                                  next.splice(idx, 1);
+                                  setEditForm({ ...editForm, documents: next });
+                                }}
+                                className="bg-rose-600 text-white font-black text-[8px] uppercase tracking-wider px-3 py-1.5 rounded-xl hover:scale-105 transition-all shadow-md"
+                              >
+                                Delete
+                              </button>
                             </div>
-                            <a href={doc.url} target="_blank" rel="noreferrer" className="text-teal-600 hover:text-teal-800 uppercase tracking-widest text-[10px]">
-                              View Original
-                            </a>
                           </div>
-                          <button
-                            onClick={() => {
-                              const next = [...editForm.documents];
-                              next.splice(idx, 1);
-                              setEditForm({ ...editForm, documents: next });
-                            }}
-                            className="p-4 rounded-2xl bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="p-3 text-center bg-white flex-1 flex items-center justify-center">
+                            <span className="text-[10px] font-black text-black uppercase tracking-widest leading-snug line-clamp-2">{doc.title}</span>
+                          </div>
                         </div>
                       ))}
                       {(!editForm.documents || editForm.documents.length === 0) && (
-                        <div className="flex flex-col items-center justify-center py-6 text-black border-2 border-dashed border-gray-200 rounded-2xl">
-                          <FileText size={32} className="opacity-20 mb-2" />
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">No documents uploaded</p>
+                        <div className="col-span-full flex flex-col items-center justify-center py-8 text-black border-2 border-dashed border-gray-200 rounded-[2.5rem] bg-gray-50/50">
+                          <FileText size={36} className="opacity-20 mb-2 text-teal-600" />
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">No documents uploaded</p>
                         </div>
                       )}
                     </div>
