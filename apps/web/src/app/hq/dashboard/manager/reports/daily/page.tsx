@@ -914,39 +914,37 @@ export default function DailyReportPage() {
 
         {/* STEP 1: OVERVIEW CARD */}
         {activeStep === 'overview' && (
-          <div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
+          <div className="flex flex-col items-center justify-center py-16 animate-fadeIn">
             <button
               onClick={() => setActiveStep('departments')}
-              className="max-w-xl w-full p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 border-4 border-black text-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 active:translate-y-0 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+              className="max-w-md w-full p-8 rounded-3xl bg-white border border-gray-100 text-gray-900 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center text-center group"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-125 transition-transform duration-500" />
-              
-              <div className="w-16 h-16 bg-white/20 border border-white/30 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform">
-                <TrendingUp size={32} className="text-white" />
+              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 text-indigo-600 group-hover:scale-105 transition-transform duration-300">
+                <TrendingUp size={24} />
               </div>
               
-              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-tight">
+              <h2 className="text-xl font-bold tracking-tight text-gray-800">
                 KhanHub Operations
               </h2>
-              <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mt-2">
-                Daily Performance Intelligence Ledger
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">
+                Daily Performance Ledger
               </p>
 
-              <div className="w-full h-[2px] bg-white/20 my-6" />
+              <div className="w-full h-px bg-gray-100 my-6" />
 
               <div className="grid grid-cols-2 gap-4 w-full">
-                <div className="bg-white/10 border border-white/20 p-4 rounded-2xl flex flex-col items-center">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-100">Departments</span>
-                  <span className="text-3xl font-black mt-1">9</span>
+                <div className="bg-gray-50/50 border border-gray-50/50 p-4 rounded-2xl flex flex-col items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Departments</span>
+                  <span className="text-2xl font-black mt-1 text-gray-850">9</span>
                 </div>
-                <div className="bg-white/10 border border-white/20 p-4 rounded-2xl flex flex-col items-center">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-100">Active Staff</span>
-                  <span className="text-3xl font-black mt-1">{reportData.length}</span>
+                <div className="bg-gray-50/50 border border-gray-50/50 p-4 rounded-2xl flex flex-col items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Staff</span>
+                  <span className="text-2xl font-black mt-1 text-gray-850">{reportData.length}</span>
                 </div>
               </div>
 
-              <div className="mt-8 flex items-center gap-2 text-xs font-black uppercase tracking-wider bg-white text-indigo-600 px-6 py-3 rounded-xl border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-y-0.5 active:translate-y-0 duration-200">
-                Enter System Flow →
+              <div className="mt-8 w-full flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider bg-indigo-600 text-white py-3.5 rounded-2xl hover:bg-indigo-700 transition-all select-none">
+                Enter System Flow
               </div>
             </button>
           </div>
@@ -957,8 +955,8 @@ export default function DailyReportPage() {
           <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
               <div>
-                <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Select Department</h2>
-                <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Choose a segment to analyze or view global matrix</p>
+                <h2 className="text-lg font-bold text-gray-900 tracking-tight">Select Department</h2>
+                <p className="text-gray-450 text-[10px] font-bold uppercase tracking-wider mt-0.5">Choose a segment to analyze or view global matrix</p>
               </div>
               <button
                 onClick={() => setActiveStep('overview')}
@@ -970,15 +968,15 @@ export default function DailyReportPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 select-none">
               {[
-                { id: 'hq', label: 'HQ', color: 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-700 hover:text-white hover:border-slate-700 hover:shadow-slate-500/20' },
-                { id: 'rehab', label: 'Rehab', color: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow-rose-500/20' },
-                { id: 'spims', label: 'SPIMS / College', color: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-emerald-500/20' },
-                { id: 'hospital', label: 'Hospital', color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-500/20' },
-                { id: 'sukoon', label: 'Sukoon', color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-600 hover:text-white hover:border-purple-600 hover:shadow-purple-500/20' },
-                { id: 'welfare', label: 'Welfare', color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-green-500/20' },
-                { id: 'job-center', label: 'Job Center', color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white hover:border-amber-600 hover:shadow-amber-500/20' },
-                { id: 'social-media', label: 'Social Media', color: 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-600 hover:text-white hover:border-pink-600 hover:shadow-pink-500/20' },
-                { id: 'it', label: 'IT Department', color: 'bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-600 hover:text-white hover:border-cyan-600 hover:shadow-cyan-500/20' },
+                { id: 'hq', label: 'HQ', color: 'hover:border-slate-300 hover:shadow-sm', badge: 'bg-slate-50 text-slate-650 border border-slate-100', dot: 'bg-slate-400' },
+                { id: 'rehab', label: 'Rehab', color: 'hover:border-rose-300 hover:shadow-sm', badge: 'bg-rose-50 text-rose-650 border border-rose-100', dot: 'bg-rose-400' },
+                { id: 'spims', label: 'SPIMS / College', color: 'hover:border-emerald-300 hover:shadow-sm', badge: 'bg-emerald-50 text-emerald-650 border border-emerald-100', dot: 'bg-emerald-400' },
+                { id: 'hospital', label: 'Hospital', color: 'hover:border-blue-300 hover:shadow-sm', badge: 'bg-blue-50 text-blue-650 border border-blue-100', dot: 'bg-blue-400' },
+                { id: 'sukoon', label: 'Sukoon', color: 'hover:border-purple-300 hover:shadow-sm', badge: 'bg-purple-50 text-purple-650 border border-purple-100', dot: 'bg-purple-400' },
+                { id: 'welfare', label: 'Welfare', color: 'hover:border-green-300 hover:shadow-sm', badge: 'bg-green-50 text-green-650 border border-green-100', dot: 'bg-green-400' },
+                { id: 'job-center', label: 'Job Center', color: 'hover:border-amber-300 hover:shadow-sm', badge: 'bg-amber-50 text-amber-650 border border-amber-100', dot: 'bg-amber-400' },
+                { id: 'social-media', label: 'Social Media', color: 'hover:border-pink-300 hover:shadow-sm', badge: 'bg-pink-50 text-pink-650 border border-pink-100', dot: 'bg-pink-400' },
+                { id: 'it', label: 'IT Department', color: 'hover:border-cyan-300 hover:shadow-sm', badge: 'bg-cyan-50 text-cyan-650 border border-cyan-100', dot: 'bg-cyan-400' },
               ].map(d => {
                 const count = reportData.filter(r => r.department === d.id).length;
                 return (
@@ -990,16 +988,19 @@ export default function DailyReportPage() {
                       setSelectedDesignation('all');
                       setActiveStep('designations');
                     }}
-                    className={`p-6 rounded-2xl border text-left flex flex-col justify-between h-32 hover:-translate-y-1 hover:shadow-md transition-all duration-300 ${d.color}`}
+                    className={`p-5 rounded-2xl border border-gray-150 bg-white text-left flex flex-col justify-between h-28 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 text-gray-800 ${d.color}`}
                   >
-                    <span className="text-[10px] font-black uppercase tracking-wider opacity-60">
-                      {d.id.replace('-', ' ')}
-                    </span>
-                    <div className="flex flex-col mt-4">
-                      <span className="text-base font-black tracking-tight leading-snug">{d.label}</span>
-                      <span className="text-[10px] font-bold mt-1 opacity-80">
-                        {count} Personnel Active
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${d.dot}`} />
+                        {d.id.replace('-', ' ')}
                       </span>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold ${d.badge}`}>
+                        {count} Staff
+                      </span>
+                    </div>
+                    <div className="flex flex-col mt-4">
+                      <span className="text-sm font-bold tracking-tight text-gray-850 leading-snug">{d.label}</span>
                     </div>
                   </button>
                 );
@@ -1013,16 +1014,19 @@ export default function DailyReportPage() {
                   setSelectedDesignation('all');
                   setActiveStep('roster');
                 }}
-                className="p-6 rounded-2xl border-2 border-dashed border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 text-indigo-700 hover:bg-gradient-to-br hover:from-indigo-600 hover:to-purple-600 hover:text-white hover:border-indigo-600 hover:-translate-y-1 hover:shadow-md text-left flex flex-col justify-between h-32 transition-all duration-300"
+                className="p-5 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/10 text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50/20 hover:-translate-y-0.5 hover:shadow-md text-left flex flex-col justify-between h-28 transition-all duration-300"
               >
-                <span className="text-[10px] font-black uppercase tracking-wider">
-                  Global
-                </span>
-                <div className="flex flex-col mt-4">
-                  <span className="text-base font-black tracking-tight leading-snug">All Departments</span>
-                  <span className="text-[10px] font-bold mt-1">
-                    {reportData.length} Personnel Total
+                <div className="flex justify-between items-center w-full">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    Global
                   </span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-indigo-50 text-indigo-650 border border-indigo-100">
+                    {reportData.length} Total
+                  </span>
+                </div>
+                <div className="flex flex-col mt-4">
+                  <span className="text-sm font-bold tracking-tight text-indigo-850 leading-snug">All Departments</span>
                 </div>
               </button>
             </div>
@@ -1034,10 +1038,8 @@ export default function DailyReportPage() {
           <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
               <div>
-                <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">
-                  Select Designation
-                </h2>
-                <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                <h2 className="text-lg font-bold text-gray-900 tracking-tight">Select Designation</h2>
+                <p className="text-gray-450 text-[10px] font-bold uppercase tracking-wider mt-0.5">
                   {deptFilter.toUpperCase()} Matrix • Choose a specific role to audit
                 </p>
               </div>
@@ -1057,15 +1059,16 @@ export default function DailyReportPage() {
                   setSelectedDesignation('all');
                   setActiveStep('roster');
                 }}
-                className="p-6 rounded-2xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 hover:-translate-y-1 hover:shadow-md text-left flex flex-col justify-between h-28 transition-all duration-300 text-indigo-900"
+                className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/20 hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-md text-left flex flex-col justify-between h-24 transition-all duration-300 text-indigo-900"
               >
-                <span className="text-[10px] font-black uppercase tracking-wider">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                   HQ Audit
                 </span>
-                <div className="flex flex-col mt-2">
-                  <span className="text-base font-black tracking-tight leading-snug">All Designations</span>
-                  <span className="text-[10px] font-bold mt-1">
-                    {reportData.filter(r => r.department === deptFilter).length} Personnel Total
+                <div className="flex items-baseline justify-between w-full mt-2">
+                  <span className="text-sm font-bold tracking-tight text-indigo-850 leading-snug">All Designations</span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+                    {reportData.filter(r => r.department === deptFilter).length} Staff
                   </span>
                 </div>
               </button>
@@ -1085,17 +1088,18 @@ export default function DailyReportPage() {
                         setSelectedDesignation(desig);
                         setActiveStep('roster');
                       }}
-                      className="p-6 rounded-2xl border border-gray-100 bg-white hover:bg-gray-50 hover:border-gray-300 hover:-translate-y-1 hover:shadow-md text-left flex flex-col justify-between h-28 transition-all duration-300 text-gray-800"
+                      className="p-5 rounded-2xl border border-gray-100 bg-white hover:border-gray-300 hover:-translate-y-0.5 hover:shadow-md text-left flex flex-col justify-between h-24 transition-all duration-300 text-gray-800"
                     >
-                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                        Departmental Role
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-450" />
+                        Role Roster
                       </span>
-                      <div className="flex flex-col mt-2">
-                        <span className="text-base font-black tracking-tight leading-snug truncate max-w-full">
+                      <div className="flex items-baseline justify-between w-full mt-2 gap-2">
+                        <span className="text-sm font-bold tracking-tight text-gray-850 leading-snug truncate max-w-full">
                           {desig}
                         </span>
-                        <span className="text-[10px] font-bold mt-1 text-gray-500">
-                          {count} Personnel
+                        <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-gray-50 text-gray-500 border border-gray-100 shrink-0">
+                          {count} Staff
                         </span>
                       </div>
                     </button>
