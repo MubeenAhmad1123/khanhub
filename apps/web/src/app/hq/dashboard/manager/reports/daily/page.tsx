@@ -156,6 +156,12 @@ export default function DailyReportPage() {
           return false;
         }
 
+        // Validate name exists and is not blank/placeholder
+        const nameVal = (s.name || s.displayName || '').trim();
+        if (!nameVal || nameVal === '—' || nameVal === '-') {
+          return false;
+        }
+
         // Exclude patients, students, families, clients, seekers, and superadmins
         const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin'];
         if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) {
@@ -163,7 +169,7 @@ export default function DailyReportPage() {
         }
 
         const statusStr = String(s.status || '').toLowerCase();
-        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
+        const isActive = statusStr === 'active' && s.isActive !== false;
 
         return isActive;
       };
