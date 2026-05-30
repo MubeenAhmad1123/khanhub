@@ -33,7 +33,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
-  const { sections, loading: visibilityLoading } = useVisibleSections('social-media', 'staff', staffProfile?.id || user?.uid || '');
+  const { sections, loading: visibilityLoading } = useVisibleSections('social-media', 'staff', user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -261,7 +261,6 @@ export default function StaffSelfPage() {
 
   // --- Styles (Cream/Black Brutalist) ---
   const glassStyle = "bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all";
-  const cardStyle = "bg-white border-2 border-black p-6 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
 
   return (
     <div className="min-h-screen bg-[#FCFBF8] text-black pb-24 overflow-x-hidden font-bold">
@@ -371,7 +370,7 @@ export default function StaffSelfPage() {
                   onChange={(e) => setContributionText(e.target.value)}
                   placeholder="What did you achieve or contribute today?"
                   rows={4}
-                className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
+                  className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
                 />
               </div>
               

@@ -37,7 +37,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
-  const { sections, loading: visibilityLoading } = useVisibleSections('welfare', 'staff', staffProfile?.id || user?.uid || '');
+  const { sections, loading: visibilityLoading } = useVisibleSections('welfare', 'staff', user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -557,7 +557,7 @@ export default function StaffSelfPage() {
           </div>
         )}
 
-        {/* Recent Contributions Log */}
+        {/* Recent Logs list */}
         {sections.reports !== false && contributions.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-1.5 px-1">
@@ -587,7 +587,7 @@ export default function StaffSelfPage() {
           </div>
         )}
 
-        {/* Daily Tasks Accordion Row */}
+        {/* Fixed Standard Responsibilities list */}
         {sections.duties !== false && staffProfile?.duties?.length > 0 && (
           <div className={cardStyle}>
             <div className="flex items-center gap-2 mb-4">

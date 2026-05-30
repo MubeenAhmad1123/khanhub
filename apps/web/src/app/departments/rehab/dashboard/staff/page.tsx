@@ -34,7 +34,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
-  const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'staff', staffProfile?.id || user?.uid || '');
+  const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'staff', user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -356,15 +356,15 @@ export default function StaffSelfPage() {
                   <div className="flex gap-2">
                     {task.status === 'assigned' ? (
                       <button 
-                        onClick={() => handleTaskUpdate(task.id, 'acknowledged')}
-                        className="flex-1 py-3 rounded-xl bg-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
+                         onClick={() => handleTaskUpdate(task.id, 'acknowledged')}
+                         className="flex-1 py-3 rounded-xl bg-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
                       >
                         Acknowledge
                       </button>
                     ) : (
                       <button 
-                        onClick={() => handleTaskUpdate(task.id, 'completed')}
-                        className="flex-1 py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
+                         onClick={() => handleTaskUpdate(task.id, 'completed')}
+                         className="flex-1 py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
                       >
                         <CheckCircle size={12} /> Complete
                       </button>

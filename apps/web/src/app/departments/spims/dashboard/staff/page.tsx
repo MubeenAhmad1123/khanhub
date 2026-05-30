@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import {
@@ -33,7 +33,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
-  const { sections, loading: visibilityLoading } = useVisibleSections('spims', 'staff', staffProfile?.id || user?.uid || '');
+  const { sections, loading: visibilityLoading } = useVisibleSections('spims', 'staff', user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;

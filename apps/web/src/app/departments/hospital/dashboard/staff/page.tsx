@@ -34,7 +34,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
-  const { sections, loading: visibilityLoading } = useVisibleSections('hospital', 'staff', staffProfile?.id || user?.uid || '');
+  const { sections, loading: visibilityLoading } = useVisibleSections('hospital', 'staff', user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
