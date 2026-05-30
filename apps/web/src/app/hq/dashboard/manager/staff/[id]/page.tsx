@@ -141,10 +141,13 @@ export default function StaffProfilePage() {
     joiningDate: '',
     seniority: '',
     fatherName: '',
-    defaultPassword: ''
+    defaultPassword: '',
+    documents: [] as { title: string; url: string }[]
   });
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const getDeptColor = (dept: string) => {
     switch (dept?.toLowerCase()) {
@@ -423,7 +426,8 @@ export default function StaffProfilePage() {
         joiningDate: profile.joiningDate ? toDate(profile.joiningDate).toISOString().slice(0, 10) : '',
         seniority: profile.seniority || '',
         fatherName: profile.fatherName || '',
-        defaultPassword: profile.defaultPassword || ''
+        defaultPassword: profile.defaultPassword || '',
+        documents: profile.documents || []
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -1306,6 +1310,37 @@ export default function StaffProfilePage() {
   };
 
 
+
+
+  const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !staff) return;
+    if (!newDocTitle.trim()) {
+      toast.error("Please enter a Document Title first.");
+      e.target.value = '';
+      return;
+    }
+
+    const file = e.target.files[0];
+    try {
+      setUploadingDoc(true);
+      toast.loading("Uploading document...", { id: 'upload-doc' });
+      const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
+      const url = await uploadToCloudinary(file, `khanhub/staff/${staff.dept}/documents`);
+
+      const nextDocs = [...(editForm.documents || []), { title: newDocTitle.trim(), url }];
+      setEditForm({ ...editForm, documents: nextDocs });
+      
+      setNewDocTitle('');
+      toast.success("Document uploaded to form (Don't forget to Save Changes)", { id: 'upload-doc' });
+    } catch (error) {
+      toast.error("Upload failed", { id: 'upload-doc' });
+    } finally {
+      setUploadingDoc(false);
+      e.target.value = '';
+    }
+  };
+
+
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
@@ -1724,6 +1759,27 @@ export default function StaffProfilePage() {
                         </div>
                       )) : <p className="text-xs text-black italic">No configuration found</p>}
                     </div>
+                  </div>
+                </div>
+
+                <div className={`mt-6 p-8 rounded-[2.5rem] border bg-white border-gray-100 shadow-sm`}>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
+                    <FileText size={14} className="text-teal-500" /> Uploaded Documents
+                  </h4>
+                  <div className="flex flex-col gap-3">
+                    {staff?.documents?.length ? staff.documents.map((doc, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600">
+                            <FileText size={14} />
+                          </div>
+                          <span className="text-[10px] font-extrabold text-black uppercase tracking-widest">{doc.title}</span>
+                        </div>
+                        <a href={doc.url} target="_blank" rel="noreferrer" className="text-[9px] font-black text-teal-600 hover:text-teal-800 uppercase tracking-widest bg-teal-50 px-3 py-1.5 rounded-lg">
+                          View Original
+                        </a>
+                      </div>
+                    )) : <p className="text-xs text-black/50 italic">No documents available</p>}
                   </div>
                 </div>
               </div>
@@ -2843,6 +2899,73 @@ export default function StaffProfilePage() {
                       >
                         <Plus size={20} />
                       </button>
+                    </div>
+                  </div>
+
+                  {/* Documents & Verification */}
+                  <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm`}>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-500">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black uppercase tracking-widest">Documents & Verification</h4>
+                        <p className="text-[10px] font-bold text-black uppercase tracking-widest">Upload CNIC, Certificates, etc.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mb-8">
+                      {(editForm.documents || []).map((doc, idx) => (
+                        <div key={idx} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
+                          <div className={`flex-1 p-4 rounded-2xl text-xs font-bold border transition-all flex items-center justify-between bg-gray-50 border-gray-100 text-black`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600">
+                                <FileText size={14} />
+                              </div>
+                              <span className="text-black font-extrabold uppercase">{doc.title}</span>
+                            </div>
+                            <a href={doc.url} target="_blank" rel="noreferrer" className="text-teal-600 hover:text-teal-800 uppercase tracking-widest text-[10px]">
+                              View Original
+                            </a>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const next = [...editForm.documents];
+                              next.splice(idx, 1);
+                              setEditForm({ ...editForm, documents: next });
+                            }}
+                            className="p-4 rounded-2xl bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      {(!editForm.documents || editForm.documents.length === 0) && (
+                        <div className="flex flex-col items-center justify-center py-6 text-black border-2 border-dashed border-gray-200 rounded-2xl">
+                          <FileText size={32} className="opacity-20 mb-2" />
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">No documents uploaded</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-dashed border-gray-200">
+                      <input
+                        placeholder="Document Title (e.g. CNIC Front)"
+                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500`}
+                        value={newDocTitle}
+                        onChange={e => setNewDocTitle(e.target.value)}
+                      />
+                      <label className="h-14 px-8 rounded-2xl bg-teal-500 text-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20 flex items-center justify-center cursor-pointer gap-2">
+                        {uploadingDoc ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} />}
+                        <span className="text-xs font-bold uppercase tracking-wider">{uploadingDoc ? 'Uploading...' : 'Upload File'}</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*,.pdf"
+                          onChange={handleUploadDocument}
+                          disabled={uploadingDoc}
+                        />
+                      </label>
                     </div>
                   </div>
 

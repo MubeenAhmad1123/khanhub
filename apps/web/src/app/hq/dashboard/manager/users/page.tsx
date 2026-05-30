@@ -167,6 +167,7 @@ export default function ManagerUsersPage() {
     documents: [] as { type: string; url: string; name: string }[],
     createAccount: true,
     patientId: '',
+    isOpenVacancy: false,
   });
 
   const [newEdu, setNewEdu] = useState({ degree: '', institution: '', year: '' });
@@ -475,24 +476,27 @@ export default function ManagerUsersPage() {
   };
 
   const handleStaffSubmit = async () => {
-    if (!formData.firstName || !formData.fatherName || !formData.phone || !formData.joiningDate || !formData.department) {
-      setMessage({ type: 'error', text: 'Please fill all required fields marked with *' });
-      toast.error('Missing required fields (Name, Father Name, Phone, etc.)');
-      return;
-    }
+    if (!formData.isOpenVacancy) {
+      if (!formData.firstName || !formData.fatherName || !formData.phone || !formData.joiningDate || !formData.department) {
+        setMessage({ type: 'error', text: 'Please fill all required fields marked with *' });
+        toast.error('Missing required fields (Name, Father Name, Phone, etc.)');
+        return;
+      }
 
-    const targetUserId = formData.userId || formData.customId;
-    if (!targetUserId || !formData.password) {
-      setMessage({ type: 'error', text: 'User ID and Password are strictly compulsory to create any profile.' });
-      toast.error('User ID and Password are compulsory.');
-      return;
+      const targetUserId = formData.userId || formData.customId;
+      if (!targetUserId || !formData.password) {
+        setMessage({ type: 'error', text: 'User ID and Password are strictly compulsory to create any profile.' });
+        toast.error('User ID and Password are compulsory.');
+        return;
+      }
     }
 
     setSubmitting(true);
     setMessage(null);
     setLastCreated(null);
 
-    if (targetUserId) {
+    const targetUserId = formData.userId || formData.customId;
+    if (!formData.isOpenVacancy && targetUserId) {
       const uniqueness = await checkIdUniqueness(targetUserId);
       if (!uniqueness.isUnique) {
         setMessage({ type: 'error', text: `ABORTED: The User ID "${targetUserId}" is already taken by a profile in the ${uniqueness.existingDept} department. Please choose a different ID.` });
@@ -507,72 +511,78 @@ export default function ManagerUsersPage() {
       const pass = formData.password;
 
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
-
-      const res = await createRehabUserServer(
-        targetUserId,
-        pass,
-        'staff',
-        `${formData.firstName} ${formData.lastName}`,
-        undefined,
-        deptDetails.emailDomain,
-        getDeptCollection(deptDetails.id)
-      );
-
-      if (!res.success || !res.uid) throw new Error(res.error || 'Failed to create login account');
-      loginUserId = res.uid;
-
       const collectionName = getDeptCollection(deptDetails.id);
-      
+
+      if (!formData.isOpenVacancy) {
+        const res = await createRehabUserServer(
+          targetUserId,
+          pass,
+          'staff',
+          `${formData.firstName} ${formData.lastName}`,
+          undefined,
+          deptDetails.emailDomain,
+          collectionName
+        );
+
+        if (!res.success || !res.uid) throw new Error(res.error || 'Failed to create login account');
+        loginUserId = res.uid;
+      } else {
+        loginUserId = `vacancy_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      }
+
       const { doc: firestoreDoc, setDoc } = await import('firebase/firestore');
       const staffRef = firestoreDoc(db, collectionName, loginUserId);
 
       await setDoc(staffRef, {
         employeeId: empId,
-        userId: targetUserId,
-        loginEmail: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        fatherName: formData.fatherName,
-        name: `${formData.firstName} ${formData.lastName}`,
-        gender: formData.gender,
-        dateOfBirth: formData.dateOfBirth,
-        cnic: formData.cnic,
-        phone: formData.phone,
-        emergencyContact: formData.emergencyContact,
-        photoUrl: formData.photoUrl || null,
+        userId: formData.isOpenVacancy ? loginUserId : targetUserId,
+        loginEmail: formData.isOpenVacancy ? '' : formData.email,
+        firstName: formData.isOpenVacancy ? 'Open' : formData.firstName,
+        lastName: formData.isOpenVacancy ? 'Vacancy' : formData.lastName,
+        fatherName: formData.isOpenVacancy ? '' : formData.fatherName,
+        name: formData.isOpenVacancy ? 'Open Vacancy' : `${formData.firstName} ${formData.lastName}`,
+        gender: formData.isOpenVacancy ? 'other' : formData.gender,
+        dateOfBirth: formData.isOpenVacancy ? '' : formData.dateOfBirth,
+        cnic: formData.isOpenVacancy ? '' : formData.cnic,
+        phone: formData.isOpenVacancy ? '' : formData.phone,
+        emergencyContact: formData.isOpenVacancy ? { name: '', phone: '' } : formData.emergencyContact,
+        photoUrl: formData.isOpenVacancy ? '' : (formData.photoUrl || null),
         department: formData.department,
         designation: formData.designation,
         role: formData.staffRole,
-        joiningDate: formData.joiningDate,
+        joiningDate: formData.isOpenVacancy ? new Date().toISOString().split('T')[0] : formData.joiningDate,
         salary: Number(formData.salary) || 0,
         dutyStartTime: formData.dutyStartTime,
         dutyEndTime: formData.dutyEndTime,
         dutyConfig: formData.dutyConfig,
         dressCodeConfig: formData.dressCodeConfig,
-        education: formData.education,
-        experience: formData.experience,
-        skills: formData.skills,
-        documents: formData.documents,
+        education: formData.isOpenVacancy ? [] : formData.education,
+        experience: formData.isOpenVacancy ? [] : formData.experience,
+        skills: formData.isOpenVacancy ? [] : formData.skills,
+        documents: formData.isOpenVacancy ? [] : formData.documents,
         loginUserId: loginUserId,
         isActive: true,
+        isVacancy: formData.isOpenVacancy || false,
         createdAt: new Date().toISOString(),
         createdBy: session?.customId || 'manager',
       });
 
-      setLastCreated({
-        customId: targetUserId,
-        password: pass,
-        name: `${formData.firstName} ${formData.lastName}`
-      });
+      if (!formData.isOpenVacancy) {
+        setLastCreated({
+          customId: targetUserId,
+          password: pass,
+          name: `${formData.firstName} ${formData.lastName}`
+        });
+      }
 
-      setMessage({ type: 'success', text: `Staff profile ${empId} created successfully.` });
-      toast.success(`Staff profile initialized: ${empId}`);
+      setMessage({ type: 'success', text: formData.isOpenVacancy ? `Open vacancy ${empId} created successfully.` : `Staff profile ${empId} created successfully.` });
+      toast.success(formData.isOpenVacancy ? `Vacancy initialized: ${empId}` : `Staff profile initialized: ${empId}`);
 
       setFormData(prev => ({
         ...prev,
         firstName: '', lastName: '', fatherName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
         designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], education: [], experience: [], skills: [], documents: [], patientId: '',
-        userId: '', employeeId: ''
+        userId: '', employeeId: '', isOpenVacancy: false
       }));
 
       fetchUsers();
@@ -925,17 +935,33 @@ export default function ManagerUsersPage() {
 
                     {/* SECTION 1: PROFILE & IDENTITY */}
                     <div className="p-5 rounded-2xl border border-gray-100 bg-white hover:border-gray-200 transition-all duration-300">
-                      <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-50">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                          <User size={20} />
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-3 border-b border-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <User size={20} />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">SECTION 1 — Profile & Identity</h3>
+                            <p className="text-[11px] font-medium text-gray-400">Personal information and identity verification</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">SECTION 1 — Profile & Identity</h3>
-                          <p className="text-[11px] font-medium text-gray-400">Personal information and identity verification</p>
-                        </div>
+
+                        <label className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-gray-50 transition-colors">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={formData.isOpenVacancy}
+                              onChange={(e) => setFormData({ ...formData, isOpenVacancy: e.target.checked })}
+                            />
+                            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-gray-700">Create as Open Vacancy</span>
+                        </label>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                      {!formData.isOpenVacancy ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         <div className="sm:col-span-2 lg:col-span-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200/80 rounded-2xl p-4 aspect-square relative hover:border-indigo-500 hover:bg-indigo-50/10 transition-colors cursor-pointer group bg-gray-50/40">
                           {formData.photoUrl ? (
                             <img src={formData.photoUrl} alt="Profile" className="w-full h-full object-cover rounded-xl" />
@@ -1067,6 +1093,14 @@ export default function ManagerUsersPage() {
                           />
                         </div>
                       </div>
+                      </div>
+                      ) : (
+                        <div className="py-8 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                          <User size={40} className="text-gray-300 mb-3" />
+                          <p className="text-sm font-bold text-gray-700">Open Vacancy Mode Active</p>
+                          <p className="text-[11px] text-gray-500 max-w-md text-center mt-1">Personal information is not required. You can fill these details later when you assign an employee to this slot.</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* SECTION 2: EMPLOYMENT DETAILS */}
@@ -1488,6 +1522,7 @@ export default function ManagerUsersPage() {
                     </div>
 
                     {/* SECTION 6: LOGIN ACCOUNT */}
+                    {!formData.isOpenVacancy && (
                     <div className={`p-6 rounded-2xl border transition-all duration-300 ${formData.createAccount ? 'border-indigo-100 bg-indigo-50/30' : 'border-gray-100 bg-white'}`}>
                       <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="flex items-center gap-4">
@@ -1568,6 +1603,7 @@ export default function ManagerUsersPage() {
                         </div>
                       )}
                     </div>
+                    )}
 
                     {/* SECTION 6: DOCUMENTS */}
                     <div className="p-5 rounded-2xl border border-gray-100 bg-white hover:border-gray-200 transition-all duration-300 relative overflow-hidden group">
