@@ -125,7 +125,6 @@ function getDressLabel(item: any, profile: any) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -389,34 +388,7 @@ export default function ProfilePage() {
                     {profile?.displayName?.[0] || profile?.name?.[0]}
                   </div>
                 )}
-                {uploadingPhoto && (
-                  <div className="absolute inset-0 bg-[#070913]/80 flex items-center justify-center backdrop-blur-sm">
-                    <Loader2 className="animate-spin text-indigo-400 w-8 h-8" />
-                  </div>
-                )}
               </div>
-              <button 
-                onClick={() => fileRef.current?.click()}
-                className="absolute -bottom-2 -right-2 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all border border-indigo-400/20"
-                title="Update Identity Photo"
-              >
-                <Camera size={16} />
-              </button>
-              <input 
-                ref={fileRef} 
-                type="file" 
-                className="hidden" 
-                accept="image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.type !== 'image/webp') {
-                    toast.error('Only WebP images are supported');
-                    return;
-                  }
-                  handleUploadPhoto(file);
-                }} 
-              />
             </div>
 
             <h2 className="mt-6 text-xl font-black text-white text-center leading-tight tracking-tight">{profile?.displayName || profile?.name}</h2>

@@ -387,24 +387,7 @@ export default function ProfilePage() {
                     {profile?.displayName?.[0] || profile?.name?.[0]}
                   </div>
                 )}
-                {uploadingPhoto && (
-                  <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-sm">
-                    <Loader2 className="animate-spin text-rose-600 w-6 h-6" />
-                  </div>
-                )}
               </div>
-              <label className="absolute -bottom-2 -right-2 bg-rose-600 text-white p-2 rounded-lg shadow-lg cursor-pointer hover:bg-rose-700 transition-transform hover:scale-105 active:scale-95 border-2 border-white">
-                <Camera size={16} />
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleUploadPhoto(file);
-                  }}
-                />
-              </label>
             </div>
 
             <h2 className="text-xl font-bold text-gray-900">{profile?.displayName || profile?.name}</h2>

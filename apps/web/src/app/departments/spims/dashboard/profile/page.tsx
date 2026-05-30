@@ -86,7 +86,6 @@ interface SalarySlip {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -339,27 +338,7 @@ export default function ProfilePage() {
                     {profile?.displayName?.[0] || profile?.name?.[0]}
                   </div>
                 )}
-                {uploadingPhoto && (
-                  <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-sm">
-                    <Loader2 className="animate-spin text-teal-600 w-6 h-6" />
-                  </div>
-                )}
               </div>
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2.5 rounded-full bg-teal-600 text-white shadow-md hover:bg-teal-700 transition-colors"
-              >
-                <Camera size={16} />
-              </button>
-              <input
-                ref={fileRef} type="file" className="hidden" accept="image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.type !== 'image/webp') { toast.error('Only WebP images are allowed'); return; }
-                  handleUploadPhoto(file);
-                }}
-              />
             </div>
 
             <h2 className="text-xl font-black text-gray-900">{profile?.displayName || profile?.name}</h2>
