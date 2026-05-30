@@ -446,7 +446,6 @@ export default function DailyReportPage() {
       setDownloading(true);
       toast.loading("Preparing high-quality report...", { id: 'download-image' });
 
-      // Small delay to ensure any fresh DOM updates are fully rendered/painted
       await new Promise(resolve => setTimeout(resolve, 150));
 
       const dataUrl = await toPng(captureContainer, {
@@ -500,21 +499,6 @@ export default function DailyReportPage() {
     let diff = arrivalMinutes - startMinutes;
     if (diff < 0) diff += 24 * 60;
     return diff > 0 ? diff : 0;
-  };
-
-  const getAutoValues = (status: DailyReportRow['attendance']) => {
-    switch (status) {
-      case 'present':
-        return { uniform: 'yes', duties: 'yes', gp: 'no', score: 3, fine: 0 };
-      case 'absent':
-        return { uniform: 'no', duties: 'no', gp: 'no', score: 0, fine: 500 };
-      case 'late':
-        return { uniform: 'incomplete', duties: 'incomplete', gp: 'invalid', score: 0, fine: 0 };
-      case 'leave':
-        return { uniform: 'na', duties: 'na', gp: 'na', score: 0, fine: 0 };
-      default:
-        return null;
-    }
   };
 
   const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus' | 'fines' | 'fineReason' | 'gpLink', value: any) => {
@@ -792,9 +776,19 @@ export default function DailyReportPage() {
         await updateDoc(staffDocRef, updateData).catch((err) => {
           console.warn(`Could not sync to ${prefix}_users/${row.id}:`, err);
         });
+
+        // Trigger dynamic growth points recalculation for this month
+        const monthKey = reportDate.substring(0, 7); // YYYY-MM
+        try {
+          const { recalculateGrowthPoints } = await import('@/lib/rehab/growthPoints');
+          await recalculateGrowthPoints(row.id, monthKey, row.department);
+        } catch (err) {
+          console.warn(`Could not recalculate growth points for ${row.id}:`, err);
+        }
       }
       setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
       toast.success("Assessment saved successfully!", { id: 'save-assessment' });
+      await fetchReport(); // Reload to sync monthly XP
     } catch (err) {
       console.error(err);
       toast.error("Failed to save changes", { id: 'save-assessment' });
@@ -815,8 +809,8 @@ export default function DailyReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans p-4 md:p-8 pb-32">
-      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-8 p-4 sm:p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
+    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans p-2 sm:p-4 md:p-8 pb-32">
+      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-6 sm:space-y-8 p-3 sm:p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
@@ -845,26 +839,30 @@ export default function DailyReportPage() {
                 className="bg-transparent border-none outline-none font-bold text-xs text-gray-800 w-full"
               />
             </div>
-            <button
-              onClick={saveAssessment}
-              disabled={saving || !reportData.some(r => r.isDirty)}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:-translate-y-0.5 active:translate-y-0 duration-200"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-              Save Assessment
-            </button>
-            <button
-              onClick={handleDownloadImage}
-              disabled={downloading}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {downloading ? (
-                <Loader2 size={16} className="animate-spin text-indigo-600" />
-              ) : (
-                <Download size={16} />
-              )}
-              {downloading ? 'Processing...' : 'Download Report'}
-            </button>
+            {deptFilter !== 'all' && (
+              <>
+                <button
+                  onClick={saveAssessment}
+                  disabled={saving || !reportData.some(r => r.isDirty)}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:-translate-y-0.5 active:translate-y-0 duration-200"
+                >
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                  Save Assessment
+                </button>
+                <button
+                  onClick={handleDownloadImage}
+                  disabled={downloading}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {downloading ? (
+                    <Loader2 size={16} className="animate-spin text-indigo-600" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  {downloading ? 'Processing...' : 'Download Report'}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -884,183 +882,533 @@ export default function DailyReportPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-gray-900">
-                {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
-              </span>
-              <div className="p-2 bg-emerald-50 rounded-xl">
-                <TrendingUp size={20} className="text-emerald-500" />
+        {deptFilter !== 'all' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+            <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold text-gray-900">
+                  {filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
+                </span>
+                <div className="p-2 bg-emerald-50 rounded-xl">
+                  <TrendingUp size={20} className="text-emerald-500" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-gray-900">
-                ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
-              </span>
-              <div className="p-2 bg-rose-50 rounded-xl">
-                <AlertTriangle size={20} className="text-rose-500" />
+            <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold text-gray-900">
+                  ₨{filteredData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
+                </span>
+                <div className="p-2 bg-rose-50 rounded-xl">
+                  <AlertTriangle size={20} className="text-rose-500" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-1">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-gray-900">
-                {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
-              </span>
-              <div className="p-2 bg-indigo-50 rounded-xl">
-                <CheckCircle size={20} className="text-indigo-500" />
+            <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-1">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold text-gray-900">
+                  {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
+                </span>
+                <div className="p-2 bg-indigo-50 rounded-xl">
+                  <CheckCircle size={20} className="text-indigo-500" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Controls & Filter Tabs */}
         <div className="space-y-4 print:hidden">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-indigo-600" size={18} />
-              <input
-                type="text"
-                placeholder="Search staff by name or role..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-100 bg-white font-semibold text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none placeholder:text-gray-300"
-              />
+          {deptFilter !== 'all' && (
+            <div className="flex flex-col sm:flex-row gap-3 animate-fadeIn">
+              <div className="flex-1 relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-indigo-600" size={18} />
+                <input
+                  type="text"
+                  placeholder={`Search ${deptFilter.replace('-', ' ')} staff by name or role...`}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-100 bg-white font-semibold text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none placeholder:text-gray-300"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Department Interactive Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 select-none">
-            {[
-              { id: 'all', label: 'Global Matrix', color: 'border-indigo-200 bg-indigo-50/30 text-indigo-700 active:bg-indigo-600 active:text-white', activeClass: 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/25 ring-2 ring-indigo-500/30' },
-              { id: 'hq', label: 'HQ', color: 'border-slate-200 bg-slate-50/40 text-slate-700 active:bg-slate-700 active:text-white', activeClass: 'bg-slate-700 text-white border-slate-700 shadow-md shadow-slate-700/25 ring-2 ring-slate-500/30' },
-              { id: 'rehab', label: 'Rehab', color: 'border-rose-200 bg-rose-50/40 text-rose-700 active:bg-rose-600 active:text-white', activeClass: 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/25 ring-2 ring-rose-500/30' },
-              { id: 'spims', label: 'SPIMS', color: 'border-emerald-200 bg-emerald-50/40 text-emerald-700 active:bg-emerald-600 active:text-white', activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/30' },
-              { id: 'hospital', label: 'Hospital', color: 'border-blue-200 bg-blue-50/40 text-blue-700 active:bg-blue-600 active:text-white', activeClass: 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/25 ring-2 ring-blue-500/30' },
-              { id: 'sukoon', label: 'Sukoon', color: 'border-purple-200 bg-purple-50/40 text-purple-700 active:bg-purple-600 active:text-white', activeClass: 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/25 ring-2 ring-purple-500/30' },
-              { id: 'welfare', label: 'Welfare', color: 'border-green-200 bg-green-50/40 text-green-700 active:bg-green-600 active:text-white', activeClass: 'bg-green-600 text-white border-green-600 shadow-md shadow-green-600/25 ring-2 ring-green-500/30' },
-              { id: 'job-center', label: 'Job Center', color: 'border-amber-200 bg-amber-50/40 text-amber-700 active:bg-amber-600 active:text-white', activeClass: 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/30' },
-              { id: 'social-media', label: 'Social Media', color: 'border-pink-200 bg-pink-50/40 text-pink-700 active:bg-pink-600 active:text-white', activeClass: 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-600/25 ring-2 ring-pink-500/30' },
-              { id: 'it', label: 'IT', color: 'border-cyan-200 bg-cyan-50/40 text-cyan-700 active:bg-cyan-600 active:text-white', activeClass: 'bg-cyan-600 text-white border-cyan-600 shadow-md shadow-cyan-600/25 ring-2 ring-cyan-500/30' }
-            ].map(d => {
-              const isActive = deptFilter === d.id;
-              const count = reportData.filter(r => d.id === 'all' || r.department === d.id).length;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setDeptFilter(d.id)}
-                  className={`px-4 py-3 rounded-2xl border text-left flex flex-col justify-between h-20 transition-all duration-300 ${
-                    isActive ? d.activeClass : `bg-white hover:bg-gray-50 border-gray-100 hover:border-gray-200 text-gray-800 shadow-sm`
-                  }`}
-                >
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-white/80' : 'text-gray-400'}`}>
-                    {d.id === 'all' ? 'All' : d.id.replace('-', ' ')}
-                  </span>
-                  <div className="flex items-baseline justify-between w-full mt-2 gap-1.5">
-                    <span className="text-sm font-black tracking-tight leading-none">{d.label}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold shrink-0 ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                      {count}
+          {/* Department Interactive Cards Grid or Transition Header */}
+          {deptFilter === 'all' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 select-none animate-fadeIn">
+              {[
+                { id: 'all', label: 'Global Matrix', activeClass: 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/25 ring-2 ring-indigo-500/30' },
+                { id: 'hq', label: 'HQ', activeClass: 'bg-slate-700 text-white border-slate-700 shadow-md shadow-slate-700/25 ring-2 ring-slate-500/30' },
+                { id: 'rehab', label: 'Rehab', activeClass: 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/25 ring-2 ring-rose-500/30' },
+                { id: 'spims', label: 'SPIMS', activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/30' },
+                { id: 'hospital', label: 'Hospital', activeClass: 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/25 ring-2 ring-blue-500/30' },
+                { id: 'sukoon', label: 'Sukoon', activeClass: 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/25 ring-2 ring-purple-500/30' },
+                { id: 'welfare', label: 'Welfare', activeClass: 'bg-green-600 text-white border-green-600 shadow-md shadow-green-600/25 ring-2 ring-green-500/30' },
+                { id: 'job-center', label: 'Job Center', activeClass: 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/30' },
+                { id: 'social-media', label: 'Social Media', activeClass: 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-600/25 ring-2 ring-pink-500/30' },
+                { id: 'it', label: 'IT', activeClass: 'bg-cyan-600 text-white border-cyan-600 shadow-md shadow-cyan-600/25 ring-2 ring-cyan-500/30' }
+              ].map(d => {
+                if (d.id === 'all') return null; // In standard menu, only departments are shown as options
+                const count = reportData.filter(r => r.department === d.id).length;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setDeptFilter(d.id)}
+                    className="px-4 py-3 rounded-2xl border text-left flex flex-col justify-between h-20 bg-white hover:bg-gray-50 border-gray-100 hover:border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-gray-800"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                      {d.id.replace('-', ' ')}
                     </span>
-                  </div>
+                    <div className="flex items-baseline justify-between w-full mt-2 gap-1.5">
+                      <span className="text-sm font-black tracking-tight leading-none">{d.label}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold shrink-0 bg-gray-100 text-gray-500">
+                        {count}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* Sub-Page Navigation Header (Feels like a next page transition!) */
+            <div className="p-6 rounded-[2rem] border border-gray-100 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn select-none">
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setDeptFilter('all')}
+                  className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900 border border-gray-100 hover:border-gray-200 transition-all flex items-center justify-center shrink-0 shadow-sm hover:scale-105 active:scale-95"
+                  title="Return to Global Matrix"
+                >
+                  <ArrowLeft size={18} />
                 </button>
-              );
-            })}
-          </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${
+                      deptFilter === 'rehab' ? 'bg-rose-500' :
+                      deptFilter === 'hospital' ? 'bg-blue-500' :
+                      deptFilter === 'it' ? 'bg-cyan-500' :
+                      deptFilter === 'spims' ? 'bg-emerald-500' :
+                      deptFilter === 'sukoon' ? 'bg-purple-500' :
+                      deptFilter === 'welfare' ? 'bg-green-500' :
+                      deptFilter === 'job-center' ? 'bg-amber-500' :
+                      deptFilter === 'social-media' ? 'bg-pink-500' :
+                      'bg-slate-500'
+                    }`} />
+                    <h3 className="text-base font-black uppercase tracking-wider text-gray-900 leading-none">
+                      {deptFilter.replace('-', ' ')} Matrix
+                    </h3>
+                  </div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    Departmental performance & duty stats audit
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {['all', 'present', 'absent', 'late', 'leave'].map(f => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${activeFilter === f
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
-                  }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+              {/* Department Statistics Summary Panel */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Roster Strength</span>
+                  <span className="text-sm font-black text-gray-900 mt-0.5">
+                    {filteredData.length} Personnel
+                  </span>
+                </div>
+                <div className="px-4 py-2.5 bg-emerald-50 border border-emerald-100 rounded-2xl flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">Active Present</span>
+                  <span className="text-sm font-black text-emerald-700 mt-0.5">
+                    {filteredData.filter(r => r.attendance === 'present' || r.attendance === 'late').length}
+                  </span>
+                </div>
+                <div className="px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-indigo-600">GP Index</span>
+                  <span className="text-sm font-black text-indigo-700 mt-0.5">
+                    {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {deptFilter !== 'all' && (
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none animate-fadeIn">
+              {['all', 'present', 'absent', 'late', 'leave'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${activeFilter === f
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
+                    }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Master Container wrapping desktop & mobile layouts */}
-        <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
-          
-          {/* Desktop Table View - Hidden on smaller viewports */}
-          <div id="desktop-report-table-wrapper" className="hidden lg:block overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Staff Identity</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">GP</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (4)</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
-                  <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-indigo-50/30' : 'hover:bg-gray-50/30 transition-colors duration-200'}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
-                          {row.employeeId}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black uppercase tracking-wider text-indigo-600 select-none leading-normal">
-                            {row.designation || 'Staff Member'}
-                          </span>
-                          {session?.isEditOnly ? (
-                            <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5">
-                              {row.name}
+        {deptFilter !== 'all' && (
+          <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
+            
+            {/* Desktop Table View - Hidden on smaller viewports */}
+            <div id="desktop-report-table-wrapper" className="hidden lg:block overflow-x-auto w-full">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100">
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Staff Identity</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">GP</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (4)</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
+                    <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-indigo-50/30' : 'hover:bg-gray-50/30 transition-colors duration-200'}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
+                            {row.employeeId}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider text-indigo-600 select-none leading-normal">
+                              {row.designation || 'Staff Member'}
                             </span>
-                          ) : (
-                            <a
-                              href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                            {session?.isEditOnly ? (
+                              <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5">
+                                {row.name}
+                              </span>
+                            ) : (
+                              <a
+                                href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                                }}
+                                className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
+                              >
+                                {row.name}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <select
+                          value={row.attendance}
+                          onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
+                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                            row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                            row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                            row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
+                            'bg-gray-50 text-gray-700 border border-gray-200'
+                          }`}
+                        >
+                          <option value="unmarked">Unmarked</option>
+                          <option value="present">Present</option>
+                          <option value="absent">Absent</option>
+                          <option value="late">Late</option>
+                          <option value="leave">Leave</option>
+                        </select>
+                        {row.attendance === 'late' && (
+                          <div className="mt-1 flex justify-center">
+                            <span
+                              onClick={() => {
+                                const start = row.dutyStartTime || '09:00';
+                                setLatePicker({
+                                  id: row.id,
+                                  dutyStartTime: start,
+                                  arrivalTime: (row as any).arrivalTime || start,
+                                  lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
+                                });
                               }}
-                              className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
+                              className="font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100 hover:bg-gray-100 cursor-pointer select-none"
                             >
-                              {row.name}
-                            </a>
+                              @{(row as any).arrivalTime || 'Set Time'}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <select
+                            value={row.uniformStatus}
+                            onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
+                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                              row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                              row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                              'bg-gray-50 text-gray-700 border border-gray-200'
+                            }`}
+                          >
+                            <option value="na">N/A</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                            <option value="incomplete">Incomplete</option>
+                          </select>
+                          {row.uniformStatus === 'incomplete' && (
+                            <div className="flex flex-col items-center">
+                              <button
+                                onClick={() => {
+                                  const config = (row as any).uniformConfig || [];
+                                  const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+                                  setActiveChecklist({
+                                    id: row.id,
+                                    type: 'uniform',
+                                    items: config.length > 0 ? config : [
+                                      { key: 'uniform', label: 'Uniform' },
+                                      { key: 'shoes', label: 'Polished Shoes' },
+                                      { key: 'card', label: 'Identity Card' }
+                                    ],
+                                    checkedKeys: checked
+                                  });
+                                }}
+                                className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
+                              >
+                                Missing: {(() => {
+                                  const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                                    { key: 'uniform', label: 'Uniform' },
+                                    { key: 'shoes', label: 'Polished Shoes' },
+                                    { key: 'card', label: 'Identity Card' }
+                                  ];
+                                  const missing = row.details?.uniformMissing?.length > 0
+                                    ? row.details.uniformMissing
+                                    : config.filter((c: any) => {
+                                        const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                        return !item || item.status === 'no';
+                                      }).map((c: any) => c.label);
+                                  return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                                })()}
+                              </button>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-6 py-4 text-center">
-                      <select
-                        value={row.attendance}
-                        onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
-                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                          row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                          row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                          row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                          row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
-                          'bg-gray-50 text-gray-700 border border-gray-200'
-                        }`}
-                      >
-                        <option value="unmarked">Unmarked</option>
-                        <option value="present">Present</option>
-                        <option value="absent">Absent</option>
-                        <option value="late">Late</option>
-                        <option value="leave">Leave</option>
-                      </select>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <select
+                            value={row.dutyStatus}
+                            onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
+                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                              row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                              row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                              'bg-gray-50 text-gray-700 border border-gray-200'
+                            }`}
+                          >
+                            <option value="na">N/A</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                            <option value="incomplete">Incomplete</option>
+                          </select>
+                          {row.dutyStatus === 'incomplete' && (
+                            <div className="flex flex-col items-center">
+                              <button
+                                onClick={() => {
+                                  const config = (row as any).dutyConfig || [];
+                                  const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+                                  setActiveChecklist({
+                                    id: row.id,
+                                    type: 'duty',
+                                    items: config.length > 0 ? config : [
+                                      { key: 'morning', label: 'Morning Duty' },
+                                      { key: 'afternoon', label: 'Afternoon Duty' },
+                                      { key: 'evening', label: 'Evening Duty' }
+                                    ],
+                                    checkedKeys: checked
+                                  });
+                                }}
+                                className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
+                              >
+                                Pending: {(() => {
+                                  const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                                    { key: 'morning', label: 'Morning Duty' },
+                                    { key: 'afternoon', label: 'Afternoon Duty' },
+                                    { key: 'evening', label: 'Evening Duty' }
+                                  ];
+                                  const pending = row.details?.dutiesPending?.length > 0
+                                    ? row.details.dutiesPending
+                                    : config.filter((c: any) => {
+                                        const item = row.dutyItems?.find((d: any) => d.key === c.key);
+                                        return !item || item.status !== 'done';
+                                      }).map((c: any) => c.label);
+                                  return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                                })()}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col gap-1 items-center">
+                          <select
+                            value={row.gpStatus}
+                            onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
+                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                              row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              'bg-rose-50 text-rose-700 border-rose-100'
+                            }`}
+                          >
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                          </select>
+                          {row.gpStatus === 'yes' && (
+                            <input
+                              type="text"
+                              value={row.gpLink || ''}
+                              onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
+                              placeholder="GP Line / Post"
+                              className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none mt-1"
+                            />
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`text-sm font-bold ${row.dailyScore >= 3 ? 'text-emerald-600' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
+                          {row.dailyScore} / 4
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col gap-1.5 items-center">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              value={row.fines || ''}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                handleInlineUpdate(row.id, 'fines', val);
+                              }}
+                              placeholder="0"
+                              className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                            />
+                            {row.fines > 0 && (
+                              <button
+                                onClick={() => {
+                                  handleInlineUpdate(row.id, 'fines', 0);
+                                  handleInlineUpdate(row.id, 'fineReason', '');
+                                }}
+                                className="text-rose-500 hover:text-rose-700 transition-colors"
+                                title="Remove fine"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            )}
+                          </div>
+                          {row.fines > 0 && (
+                            <input
+                              type="text"
+                              value={row.fineReason || ''}
+                              onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
+                              placeholder="Reason"
+                              className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View - Displays under lg (992px) breakpoint */}
+            <div id="mobile-report-cards-wrapper" className="block lg:hidden bg-gray-50/50 p-2 space-y-4">
+              {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
+                <div 
+                  key={row.id} 
+                  className={`p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col gap-3.5 transition-all ${
+                    row.isDirty ? 'ring-2 ring-indigo-500/20 border-indigo-200' : 'hover:shadow-md'
+                  }`}
+                >
+                  
+                  {/* Mobile Header: Staff details & score */}
+                  <div className="flex items-start justify-between gap-3 w-full">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 uppercase tracking-wider">
+                        {row.employeeId}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-black uppercase tracking-wider text-gray-900 select-none leading-normal truncate">
+                          {row.designation || 'Staff Member'}
+                        </span>
+                        {session?.isEditOnly ? (
+                          <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5 truncate">
+                            {row.name}
+                          </span>
+                        ) : (
+                          <a
+                            href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                            }}
+                            className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5 truncate"
+                          >
+                            {row.name}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider select-none ${
+                        row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/50' : 
+                        row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700 border border-amber-100/50' : 
+                        'bg-rose-50 text-rose-700 border border-rose-100/50'
+                      }`}>
+                        Today: {row.dailyScore} / 4
+                      </span>
+                      <span className="inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider select-none bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 border border-amber-500/20 font-extrabold shadow-sm">
+                        Month: {row.totalScore || 0} XP
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Form Elements for Easy Tapping */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                    
+                    {/* Mobile Attendance */}
+                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Attendance</label>
+                      <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                        {[
+                          { value: 'present', label: 'Pres', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                          { value: 'absent', label: 'Abs', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
+                          { value: 'late', label: 'Late', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
+                          { value: 'leave', label: 'Leave', activeBg: 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/20', inactiveBg: 'bg-cyan-50/40 hover:bg-cyan-100/40 text-cyan-700 border border-cyan-100/60' },
+                          { value: 'unmarked', label: 'Unmark', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => handleInlineUpdate(row.id, 'attendance', opt.value)}
+                            className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                              row.attendance === opt.value ? opt.activeBg : opt.inactiveBg
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
                       {row.attendance === 'late' && (
-                        <div className="mt-1 flex justify-center">
+                        <div className="mt-1">
                           <span
                             onClick={() => {
                               const start = row.dutyStartTime || '09:00';
@@ -1071,160 +1419,180 @@ export default function DailyReportPage() {
                                 lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
                               });
                             }}
-                            className="font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100 hover:bg-gray-100 cursor-pointer select-none"
+                            className="inline-block font-mono text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 cursor-pointer select-none"
                           >
-                            @{(row as any).arrivalTime || 'Set Time'}
+                            Arrived @ {(row as any).arrivalTime || 'Set Time'}
                           </span>
                         </div>
                       )}
-                    </td>
+                    </div>
 
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <select
-                          value={row.uniformStatus}
-                          onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                            row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                            'bg-gray-50 text-gray-700 border border-gray-200'
-                          }`}
-                        >
-                          <option value="na">N/A</option>
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                          <option value="incomplete">Incomplete</option>
-                        </select>
-                        {row.uniformStatus === 'incomplete' && (
-                          <div className="flex flex-col items-center">
-                            <button
-                              onClick={() => {
-                                const config = (row as any).uniformConfig || [];
-                                const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
-                                setActiveChecklist({
-                                  id: row.id,
-                                  type: 'uniform',
-                                  items: config.length > 0 ? config : [
-                                    { key: 'uniform', label: 'Uniform' },
-                                    { key: 'shoes', label: 'Polished Shoes' },
-                                    { key: 'card', label: 'Identity Card' }
-                                  ],
-                                  checkedKeys: checked
-                                });
-                              }}
-                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
-                            >
-                              Missing: {(() => {
-                                const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                    {/* Mobile Uniform */}
+                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Uniform Code</label>
+                      <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                        {[
+                          { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                          { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
+                          { value: 'incomplete', label: 'Incomp', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
+                          { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            disabled={row.attendance === 'leave'}
+                            onClick={() => handleInlineUpdate(row.id, 'uniformStatus', opt.value)}
+                            className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                              row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                              row.uniformStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {row.uniformStatus === 'incomplete' && (
+                        <div className="mt-1">
+                          <button
+                            onClick={() => {
+                              const config = (row as any).uniformConfig || [];
+                              const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+                              setActiveChecklist({
+                                id: row.id,
+                                type: 'uniform',
+                                items: config.length > 0 ? config : [
                                   { key: 'uniform', label: 'Uniform' },
                                   { key: 'shoes', label: 'Polished Shoes' },
                                   { key: 'card', label: 'Identity Card' }
-                                ];
-                                const missing = row.details?.uniformMissing?.length > 0
-                                  ? row.details.uniformMissing
-                                  : config.filter((c: any) => {
-                                      const item = row.uniformItems?.find((i: any) => i.key === c.key);
-                                      return !item || item.status === 'no';
-                                    }).map((c: any) => c.label);
-                                return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
-                              })()}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
+                                ],
+                                checkedKeys: checked
+                              });
+                            }}
+                            className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
+                          >
+                            Missing: {(() => {
+                              const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                                { key: 'uniform', label: 'Uniform' },
+                                { key: 'shoes', label: 'Polished Shoes' },
+                                { key: 'card', label: 'Identity Card' }
+                              ];
+                              const missing = row.details?.uniformMissing?.length > 0
+                                ? row.details.uniformMissing
+                                : config.filter((c: any) => {
+                                    const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                    return !item || item.status === 'no';
+                                  }).map((c: any) => c.label);
+                              return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                            })()}
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <select
-                          value={row.dutyStatus}
-                          onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                            row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                            'bg-gray-50 text-gray-700 border border-gray-200'
-                          }`}
-                        >
-                          <option value="na">N/A</option>
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                          <option value="incomplete">Incomplete</option>
-                        </select>
-                        {row.dutyStatus === 'incomplete' && (
-                          <div className="flex flex-col items-center">
-                            <button
-                              onClick={() => {
-                                const config = (row as any).dutyConfig || [];
-                                const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
-                                setActiveChecklist({
-                                  id: row.id,
-                                  type: 'duty',
-                                  items: config.length > 0 ? config : [
-                                    { key: 'morning', label: 'Morning Duty' },
-                                    { key: 'afternoon', label: 'Afternoon Duty' },
-                                    { key: 'evening', label: 'Evening Duty' }
-                                  ],
-                                  checkedKeys: checked
-                                });
-                              }}
-                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
-                            >
-                              Pending: {(() => {
-                                const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                    {/* Mobile Duties */}
+                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Duties Performed</label>
+                      <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                        {[
+                          { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                          { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
+                          { value: 'incomplete', label: 'Incomp', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
+                          { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            disabled={row.attendance === 'leave'}
+                            onClick={() => handleInlineUpdate(row.id, 'dutyStatus', opt.value)}
+                            className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                              row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                              row.dutyStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {row.dutyStatus === 'incomplete' && (
+                        <div className="mt-1">
+                          <button
+                            onClick={() => {
+                              const config = (row as any).dutyConfig || [];
+                              const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+                              setActiveChecklist({
+                                id: row.id,
+                                type: 'duty',
+                                items: config.length > 0 ? config : [
                                   { key: 'morning', label: 'Morning Duty' },
                                   { key: 'afternoon', label: 'Afternoon Duty' },
                                   { key: 'evening', label: 'Evening Duty' }
-                                ];
-                                const pending = row.details?.dutiesPending?.length > 0
-                                  ? row.details.dutiesPending
-                                  : config.filter((c: any) => {
-                                      const item = row.dutyItems?.find((i: any) => i.key === c.key);
-                                      return !item || item.status !== 'done';
-                                    }).map((c: any) => c.label);
-                                return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
-                              })()}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
+                                ],
+                                checkedKeys: checked
+                              });
+                            }}
+                            className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
+                          >
+                            Pending: {(() => {
+                              const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                                { key: 'morning', label: 'Morning Duty' },
+                                { key: 'afternoon', label: 'Afternoon Duty' },
+                                { key: 'evening', label: 'Evening Duty' }
+                              ];
+                              const pending = row.details?.dutiesPending?.length > 0
+                                ? row.details.dutiesPending
+                                : config.filter((c: any) => {
+                                    const item = row.dutyItems?.find((i: any) => i.key === c.key);
+                                    return !item || item.status !== 'done';
+                                  }).map((c: any) => c.label);
+                              return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                            })()}
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col gap-1 items-center">
-                        <select
-                          value={row.gpStatus}
-                          onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            'bg-rose-50 text-rose-700 border-rose-100'
-                          }`}
-                        >
-                          <option value="no">No</option>
-                          <option value="yes">Yes</option>
-                        </select>
+                    {/* Mobile GP Link */}
+                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Growth Points (GP)</label>
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                          {[
+                            { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                            { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' }
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              disabled={row.attendance === 'leave'}
+                              onClick={() => handleInlineUpdate(row.id, 'gpStatus', opt.value)}
+                              className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                                row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                                row.gpStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
                         {row.gpStatus === 'yes' && (
                           <input
                             type="text"
                             value={row.gpLink || ''}
                             onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
-                            placeholder="GP Line / Post"
-                            className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none mt-1"
+                            placeholder="GP Line / Post URL"
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
                           />
                         )}
                       </div>
-                    </td>
+                    </div>
 
-                    <td className="px-6 py-4 text-center">
-                      <span className={`text-sm font-bold ${row.dailyScore >= 3 ? 'text-emerald-600' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
-                        {row.dailyScore} / 4
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col gap-1.5 items-center">
-                        <div className="flex items-center gap-1.5">
+                    {/* Mobile Fines & Penalty */}
+                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 sm:col-span-2 w-full">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fines & Reason</label>
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center gap-2">
                           <input
                             type="number"
                             value={row.fines || ''}
@@ -1232,19 +1600,19 @@ export default function DailyReportPage() {
                               const val = e.target.value === '' ? 0 : Number(e.target.value);
                               handleInlineUpdate(row.id, 'fines', val);
                             }}
-                            placeholder="0"
-                            className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                            placeholder="No fine penalty"
+                            className="flex-1 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
                           />
                           {row.fines > 0 && (
                             <button
+                              type="button"
                               onClick={() => {
                                 handleInlineUpdate(row.id, 'fines', 0);
                                 handleInlineUpdate(row.id, 'fineReason', '');
                               }}
-                              className="text-rose-500 hover:text-rose-700 transition-colors"
-                              title="Remove fine"
+                              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
                             >
-                              <XCircle size={16} />
+                              <XCircle size={14} /> Clear
                             </button>
                           )}
                         </div>
@@ -1253,349 +1621,45 @@ export default function DailyReportPage() {
                             type="text"
                             value={row.fineReason || ''}
                             onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
-                            placeholder="Reason"
-                            className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                            placeholder="Deduction reason..."
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
                           />
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards View - Displays under lg (992px) breakpoint */}
-          <div id="mobile-report-cards-wrapper" className="block lg:hidden divide-y divide-gray-100">
-            {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
-              <div 
-                key={row.id} 
-                className={`p-5 flex flex-col gap-4 transition-all ${
-                  row.isDirty ? 'bg-indigo-50/25 border-l-4 border-indigo-500' : 'hover:bg-gray-50/20'
-                }`}
-              >
-                
-                {/* Mobile Header: Staff details & score */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50/70 text-indigo-600 border border-indigo-100 shrink-0 uppercase tracking-wider">
-                      {row.employeeId}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black uppercase tracking-wider text-gray-900 select-none leading-normal">
-                        {row.designation || 'Staff Member'}
-                      </span>
-                      {session?.isEditOnly ? (
-                        <span className="text-xs font-medium text-gray-500 select-none leading-tight mt-0.5">
-                          {row.name}
-                        </span>
-                      ) : (
-                        <a
-                          href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
-                          }}
-                          className="text-xs font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
-                        >
-                          {row.name}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className={`inline-block px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider select-none ${
-                      row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/50' : 
-                      row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700 border border-amber-100/50' : 
-                      'bg-rose-50 text-rose-700 border border-rose-100/50'
-                    }`}>
-                      Today: {row.dailyScore} / 4 pts
-                    </span>
-                    <span className="inline-block px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider select-none bg-indigo-50 text-indigo-700 border border-indigo-100/50">
-                      Month: {row.totalScore || 0} XP
-                    </span>
-                  </div>
-                </div>
-
-                {/* Form Elements for Easy Tapping */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  
-                  {/* Mobile Attendance */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Attendance</label>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {[
-                        { value: 'present', label: 'Present', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
-                        { value: 'absent', label: 'Absent', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' },
-                        { value: 'late', label: 'Late', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/50 hover:bg-amber-100/50 text-amber-700 border border-amber-100/80' },
-                        { value: 'leave', label: 'Leave', activeBg: 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/20', inactiveBg: 'bg-cyan-50/50 hover:bg-cyan-100/50 text-cyan-700 border border-cyan-100/80' },
-                        { value: 'unmarked', label: 'Unmarked', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => handleInlineUpdate(row.id, 'attendance', opt.value)}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
-                            row.attendance === opt.value ? opt.activeBg : opt.inactiveBg
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
                     </div>
 
-                    {row.attendance === 'late' && (
-                      <div className="mt-0.5">
-                        <span
-                          onClick={() => {
-                            const start = row.dutyStartTime || '09:00';
-                            setLatePicker({
-                              id: row.id,
-                              dutyStartTime: start,
-                              arrivalTime: (row as any).arrivalTime || start,
-                              lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
-                            });
-                          }}
-                          className="inline-block font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 hover:bg-indigo-100 cursor-pointer select-none"
-                        >
-                          Arrived @ {(row as any).arrivalTime || 'Set Time'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Mobile Uniform */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Uniform Code</label>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {[
-                        { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
-                        { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' },
-                        { value: 'incomplete', label: 'Incomplete', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/50 hover:bg-amber-100/50 text-amber-700 border border-amber-100/80' },
-                        { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          disabled={row.attendance === 'leave'}
-                          onClick={() => handleInlineUpdate(row.id, 'uniformStatus', opt.value)}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
-                            row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                            row.uniformStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {row.uniformStatus === 'incomplete' && (
-                      <div className="mt-0.5">
-                        <button
-                          onClick={() => {
-                            const config = (row as any).uniformConfig || [];
-                            const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
-                            setActiveChecklist({
-                              id: row.id,
-                              type: 'uniform',
-                              items: config.length > 0 ? config : [
-                                { key: 'uniform', label: 'Uniform' },
-                                { key: 'shoes', label: 'Polished Shoes' },
-                                { key: 'card', label: 'Identity Card' }
-                              ],
-                              checkedKeys: checked
-                            });
-                          }}
-                          className="text-[10px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
-                        >
-                          Missing: {(() => {
-                            const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
-                              { key: 'uniform', label: 'Uniform' },
-                              { key: 'shoes', label: 'Polished Shoes' },
-                              { key: 'card', label: 'Identity Card' }
-                            ];
-                            const missing = row.details?.uniformMissing?.length > 0
-                              ? row.details.uniformMissing
-                              : config.filter((c: any) => {
-                                  const item = row.uniformItems?.find((i: any) => i.key === c.key);
-                                  return !item || item.status === 'no';
-                                }).map((c: any) => c.label);
-                            return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
-                          })()}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Mobile Duties */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Duties Performed</label>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {[
-                        { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
-                        { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' },
-                        { value: 'incomplete', label: 'Incomplete', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/50 hover:bg-amber-100/50 text-amber-700 border border-amber-100/80' },
-                        { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          disabled={row.attendance === 'leave'}
-                          onClick={() => handleInlineUpdate(row.id, 'dutyStatus', opt.value)}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
-                            row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                            row.dutyStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {row.dutyStatus === 'incomplete' && (
-                      <div className="mt-0.5">
-                        <button
-                          onClick={() => {
-                            const config = (row as any).dutyConfig || [];
-                            const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
-                            setActiveChecklist({
-                              id: row.id,
-                              type: 'duty',
-                              items: config.length > 0 ? config : [
-                                { key: 'morning', label: 'Morning Duty' },
-                                { key: 'afternoon', label: 'Afternoon Duty' },
-                                { key: 'evening', label: 'Evening Duty' }
-                              ],
-                              checkedKeys: checked
-                            });
-                          }}
-                          className="text-[10px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
-                        >
-                          Pending: {(() => {
-                            const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
-                              { key: 'morning', label: 'Morning Duty' },
-                              { key: 'afternoon', label: 'Afternoon Duty' },
-                              { key: 'evening', label: 'Evening Duty' }
-                            ];
-                            const pending = row.details?.dutiesPending?.length > 0
-                              ? row.details.dutiesPending
-                              : config.filter((c: any) => {
-                                  const item = row.dutyItems?.find((i: any) => i.key === c.key);
-                                  return !item || item.status !== 'done';
-                                }).map((c: any) => c.label);
-                            return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
-                          })()}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Mobile GP Link */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Growth Points (GP)</label>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {[
-                          { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
-                          { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            disabled={row.attendance === 'leave'}
-                            onClick={() => handleInlineUpdate(row.id, 'gpStatus', opt.value)}
-                            className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
-                              row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                              row.gpStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                      {row.gpStatus === 'yes' && (
-                        <input
-                          type="text"
-                          value={row.gpLink || ''}
-                          onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
-                          placeholder="GP Line / Post URL"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Mobile Fines & Penalty */}
-                  <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fines & Reason</label>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={row.fines || ''}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? 0 : Number(e.target.value);
-                            handleInlineUpdate(row.id, 'fines', val);
-                          }}
-                          placeholder="No fine penalty"
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
-                        />
-                        {row.fines > 0 && (
-                          <button
-                            onClick={() => {
-                              handleInlineUpdate(row.id, 'fines', 0);
-                              handleInlineUpdate(row.id, 'fineReason', '');
-                            }}
-                            className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
-                          >
-                            <XCircle size={14} /> Clear
-                          </button>
-                        )}
-                      </div>
-                      {row.fines > 0 && (
-                        <input
-                          type="text"
-                          value={row.fineReason || ''}
-                          onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
-                          placeholder="Deduction reason..."
-                          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
-                        />
-                      )}
-                    </div>
                   </div>
 
                 </div>
+              ))}
+            </div>
 
+            {filteredData.length === 0 && (
+              <div className="py-16 text-center">
+                <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <Search size={22} className="text-gray-400" />
+                </div>
+                <h3 className="font-bold text-base text-gray-900 leading-snug">No Analytics Data</h3>
+                <p className="text-gray-400 text-xs font-medium mt-1">Adjust filters or search criteria</p>
               </div>
-            ))}
+            )}
+
+            {/* Signature & Legal Disclaimer */}
+            <div id="report-signature-footer" className="flex items-center justify-between p-8 border-t border-gray-100 bg-white">
+              <div className="flex flex-col gap-1 text-left">
+                <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
+                <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
+                <div className="flex items-center justify-end gap-2 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Verified Audit</p>
+                </div>
+              </div>
+            </div>
           </div>
-
-          {filteredData.length === 0 && (
-            <div className="py-16 text-center">
-              <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <Search size={22} className="text-gray-400" />
-              </div>
-              <h3 className="font-bold text-base text-gray-900 leading-snug">No Analytics Data</h3>
-              <p className="text-gray-400 text-xs font-medium mt-1">Adjust filters or search criteria</p>
-            </div>
-          )}
-
-          {/* Signature & Legal Disclaimer */}
-          <div id="report-signature-footer" className="flex items-center justify-between p-8 border-t border-gray-100 bg-white">
-            <div className="flex flex-col gap-1 text-left">
-              <p className="text-base font-black text-gray-900">Khan Hub Administration</p>
-              <p className="text-[10px] text-gray-400 font-mono">Log ID: {reportDate.replace(/-/g, '')}-HQ-{Math.random().toString(36).substring(7).toUpperCase()}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-bold text-gray-500">© {new Date().getFullYear()} Khan Hub HQ</p>
-              <div className="flex items-center justify-end gap-2 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Verified Audit</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* ACTIVE CHECKLIST MODAL with Add Custom Item Input */}
         {activeChecklist && (
@@ -1819,7 +1883,7 @@ export default function DailyReportPage() {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Points Earned</p>
                 <div className="flex items-center gap-3">
                   <span className="text-3xl font-bold text-gray-900">
-                    {reportData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
+                    {filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0).toLocaleString()}
                   </span>
                   <div className="p-2 bg-emerald-50 rounded-xl">
                     <TrendingUp size={20} className="text-emerald-500" />
@@ -1831,7 +1895,7 @@ export default function DailyReportPage() {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Deductions (Fine)</p>
                 <div className="flex items-center gap-3">
                   <span className="text-3xl font-bold text-gray-900">
-                    ₨{reportData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
+                    ₨{filteredData.reduce((acc, curr) => acc + curr.fines, 0).toLocaleString()}
                   </span>
                   <div className="p-2 bg-rose-50 rounded-xl">
                     <AlertTriangle size={20} className="text-rose-500" />
@@ -1843,7 +1907,7 @@ export default function DailyReportPage() {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
                 <div className="flex items-center gap-3">
                   <span className="text-3xl font-bold text-gray-900">
-                    {reportData.length > 0 ? (reportData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (reportData.length * 4) * 100).toFixed(0) : 0}%
+                    {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
                   </span>
                   <div className="p-2 bg-indigo-50 rounded-xl">
                     <CheckCircle size={20} className="text-indigo-500" />
@@ -2011,8 +2075,8 @@ export default function DailyReportPage() {
 
           </div>
         </div>
+
       </div>
     </div>
   );
 }
-

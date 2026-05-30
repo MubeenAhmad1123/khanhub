@@ -68,14 +68,45 @@ function normalizeRole(raw: any): StaffRole {
   return 'other';
 }
 
+function getSimpleId(id: string) {
+  if (!id) return '';
+  const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'];
+  for (const pref of prefixes) {
+    if (id.startsWith(pref)) {
+      return id.substring(pref.length);
+    }
+  }
+  return id;
+}
+
 async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: string) {
   if (dept === 'hq') return { present: 0, absent: 0, late: 0 };
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_attendance`;
-  const snap = await getDocs(
+  const simpleId = getSimpleId(staffId);
+
+  const q1 = getDocs(
     query(collection(db, col), where('staffId', '==', staffId), where('month', '==', monthKey))
   ).catch(() => ({ docs: [] } as any));
-  const rows = snap.docs.map((d: any) => d.data());
+  const promises = [q1];
+  if (simpleId && simpleId !== staffId) {
+    const q2 = getDocs(
+      query(collection(db, col), where('staffId', '==', simpleId), where('month', '==', monthKey))
+    ).catch(() => ({ docs: [] } as any));
+    promises.push(q2);
+  }
+  const snaps = await Promise.all(promises);
+  const seenDocIds = new Set<string>();
+  const rows: any[] = [];
+  snaps.forEach(snap => {
+    snap.docs.forEach((docSnap: any) => {
+      if (!seenDocIds.has(docSnap.id)) {
+        seenDocIds.add(docSnap.id);
+        rows.push(docSnap.data());
+      }
+    });
+  });
+
   let present = 0, absent = 0, late = 0;
   for (const r of rows) {
     const s = String(r.status || r.state || '').toLowerCase();
@@ -86,48 +117,125 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
   return { present, absent, late };
 }
 
-async function loadGrowthPoints(dept: StaffDept, staffId: string) {
+async function loadGrowthPoints(dept: StaffDept, staffId: string, monthKey?: string) {
   if (dept === 'hq') return 0;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_growth_points`;
-  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(200))).catch(
+  const simpleId = getSimpleId(staffId);
+
+  if (monthKey) {
+    const ids = [`${simpleId}_${monthKey}`];
+    if (staffId !== simpleId) {
+      ids.push(`${staffId}_${monthKey}`);
+    }
+    
+    let monthlyTotal = 0;
+    let found = false;
+    for (const docId of ids) {
+      const docRef = doc(db, col, docId);
+      const snap = await getDoc(docRef).catch(() => null);
+      if (snap && snap.exists()) {
+        const data = snap.data();
+        if (data && typeof data.total === 'number') {
+          monthlyTotal = Math.max(monthlyTotal, data.total);
+          found = true;
+        }
+      }
+    }
+    if (found) return monthlyTotal;
+  }
+
+  const q1 = getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(
     () => ({ docs: [] } as any)
   );
-  return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.points) || 0), 0);
+  const promises = [q1];
+  if (simpleId && simpleId !== staffId) {
+    const q2 = getDocs(query(collection(db, col), where('staffId', '==', simpleId))).catch(
+      () => ({ docs: [] } as any)
+    );
+    promises.push(q2);
+  }
+  const snaps = await Promise.all(promises);
+  const seenDocIds = new Set<string>();
+  let total = 0;
+  snaps.forEach(snap => {
+    snap.docs.forEach((docSnap: any) => {
+      if (!seenDocIds.has(docSnap.id)) {
+        seenDocIds.add(docSnap.id);
+        const data = docSnap.data();
+        if (monthKey) {
+          const itemMonth = data.month || (data.date ? data.date.substring(0, 7) : '');
+          if (itemMonth === monthKey) {
+            total += (Number(data.points) || 0);
+          }
+        } else {
+          total += (Number(data.points) || 0);
+        }
+      }
+    });
+  });
+  return total;
 }
 
 async function loadFinesTotal(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_fines`;
-  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), where('status', '==', 'unpaid'))).catch(() => ({ docs: [] } as any));
-  return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.amount) || 0), 0);
+  const simpleId = getSimpleId(staffId);
+
+  const q1 = getDocs(query(collection(db, col), where('staffId', '==', staffId), where('status', '==', 'unpaid'))).catch(() => ({ docs: [] } as any));
+  const promises = [q1];
+  if (simpleId && simpleId !== staffId) {
+    const q2 = getDocs(query(collection(db, col), where('staffId', '==', simpleId), where('status', '==', 'unpaid'))).catch(() => ({ docs: [] } as any));
+    promises.push(q2);
+  }
+  const snaps = await Promise.all(promises);
+  const seenDocIds = new Set<string>();
+  let total = 0;
+  snaps.forEach(snap => {
+    snap.docs.forEach((docSnap: any) => {
+      if (!seenDocIds.has(docSnap.id)) {
+        seenDocIds.add(docSnap.id);
+        total += (Number(docSnap.data()?.amount) || 0);
+      }
+    });
+  });
+  return total;
 }
 
 async function loadLastDuty(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return undefined;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_duty_logs`;
-  const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(1))).catch(
+  const simpleId = getSimpleId(staffId);
+
+  const q1 = getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(1))).catch(
     () => ({ docs: [] } as any)
   );
-  if (!snap.docs.length) return undefined;
-  const d = snap.docs[0].data();
+  const promises = [q1];
+  if (simpleId && simpleId !== staffId) {
+    const q2 = getDocs(query(collection(db, col), where('staffId', '==', simpleId), orderBy('createdAt', 'desc'), limit(1))).catch(
+      () => ({ docs: [] } as any)
+    );
+    promises.push(q2);
+  }
+  const snaps = await Promise.all(promises);
+  let latestDoc: any = null;
+  snaps.forEach(snap => {
+    if (snap.docs.length > 0) {
+      const d = snap.docs[0];
+      if (!latestDoc || toDate(d.data().createdAt || d.data().date) > toDate(latestDoc.data().createdAt || latestDoc.data().date)) {
+        latestDoc = d;
+      }
+    }
+  });
+
+  if (!latestDoc) return undefined;
+  const d = latestDoc.data();
   const when = toDate(d.createdAt || d.date);
   if (isNaN(when.getTime())) return 'No Date • Duty Log';
   return `${formatDateDMY(when)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
-
-const getSimpleId = (id: string) => {
-  if (!id) return '';
-  const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'];
-  for (const pref of prefixes) {
-    if (id.startsWith(pref)) {
-      return id.substring(pref.length);
-    }
-  }
-  return id;
-};
 
 async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: Record<string, any>) {
   if (dept === 'hq') return {};
@@ -309,7 +417,7 @@ export async function listStaffCards({
       // Only fetch expensive monthly/total data if fullEnrichment is enabled
       const [att, gp, fines, lastDuty] = fullEnrichment ? await Promise.all([
         loadAttendanceMonth(d, staffId, monthKey),
-        loadGrowthPoints(d, staffId),
+        loadGrowthPoints(d, staffId, monthKey),
         loadFinesTotal(d, staffId),
         loadLastDuty(d, staffId),
       ]) : [{ present: 0, absent: 0, late: 0 }, 0, 0, undefined];
@@ -348,33 +456,6 @@ export async function listStaffCards({
   return enriched;
 }
 
-export type StaffProfile = StaffCardRow & {
-  email?: string;
-  phone?: string;
-  customId?: string; // This is the Login ID
-  employeeId?: string; // This is the Visual ID
-  address?: string;
-  cnic?: string;
-  dob?: string;
-  gender?: string;
-  fatherName?: string;
-  bloodGroup?: string;
-  emergencyContact?: string;
-  emergencyContactName?: string;
-  emergencyPhone?: string;
-  joiningDate?: any;
-  lastLoginAt?: any;
-  photoUrl?: string;
-  defaultPassword?: string;
-  dutyConfig?: { key: string; label: string }[];
-  dressCodeConfig?: { key: string; label: string }[];
-  dutyStartTime?: string;
-  dutyEndTime?: string;
-  secondaryDepts?: StaffDept[];
-  basicInfoExtras?: Record<string, string>;
-  seniority?: string;
-};
-
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
   const idx = compositeId.indexOf('_');
   if (idx <= 0) return null;
@@ -396,7 +477,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
 
   const [att, gp, fines, lastDuty] = await Promise.all([
     loadAttendanceMonth(dept, uid, monthKey).catch(() => ({ present: 0, absent: 0, late: 0 })),
-    loadGrowthPoints(dept, uid).catch(() => 0),
+    loadGrowthPoints(dept, uid, monthKey).catch(() => 0),
     loadFinesTotal(dept, uid).catch(() => 0),
     loadLastDuty(dept, uid).catch(() => undefined),
   ]);
@@ -443,6 +524,33 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     seniority: data.seniority,
   };
 }
+
+export type StaffProfile = StaffCardRow & {
+  email?: string;
+  phone?: string;
+  customId?: string; // This is the Login ID
+  employeeId?: string; // This is the Visual ID
+  address?: string;
+  cnic?: string;
+  dob?: string;
+  gender?: string;
+  fatherName?: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
+  emergencyContactName?: string;
+  emergencyPhone?: string;
+  joiningDate?: any;
+  lastLoginAt?: any;
+  photoUrl?: string;
+  defaultPassword?: string;
+  dutyConfig?: { key: string; label: string }[];
+  dressCodeConfig?: { key: string; label: string }[];
+  dutyStartTime?: string;
+  dutyEndTime?: string;
+  secondaryDepts?: StaffDept[];
+  basicInfoExtras?: Record<string, string>;
+  seniority?: string;
+};
 
 export async function updateStaffProfile(
   compositeId: string,
@@ -528,9 +636,6 @@ export async function deleteStaffProfile(
     await deleteDoc(deptDocRef);
 
     // 2. Delete from global hq_staff collection (if it exists)
-    // The hq_staff record often has the same ID as the UID or composite ID.
-    // Based on listStaffCards, the hq_staff might be a separate collection or just a mirror.
-    // Let's also check hq_staff just in case.
     const hqStaffRef = firestoreDoc(db, 'hq_staff', uid);
     await deleteDoc(hqStaffRef).catch(() => null); // Silently fail if doesn't exist
 
@@ -540,5 +645,3 @@ export async function deleteStaffProfile(
     return { success: false, error: err.message };
   }
 }
-
-
