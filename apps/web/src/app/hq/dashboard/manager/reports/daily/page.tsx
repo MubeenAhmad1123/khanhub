@@ -148,6 +148,7 @@ export default function DailyReportPage() {
 
       const isEligibleStaff = (s: any) => {
         const r = String(s.role || '').toLowerCase();
+        const desig = String(s.designation || '').toLowerCase();
         const n = String(s.name || s.displayName || '').toLowerCase();
         const e = String(s.email || '').toLowerCase();
         
@@ -157,7 +158,7 @@ export default function DailyReportPage() {
 
         // Exclude patients, students, families, clients, seekers, and superadmins
         const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin'];
-        if (EXCLUDED_ROLES.some(ex => r.includes(ex))) {
+        if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) {
           return false;
         }
 
