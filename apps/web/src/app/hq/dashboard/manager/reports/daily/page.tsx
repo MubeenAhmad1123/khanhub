@@ -45,6 +45,17 @@ interface DailyReportRow {
   dutyItems?: any[];
 }
 
+const getSimpleId = (id: string) => {
+  if (!id) return '';
+  const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'];
+  for (const pref of prefixes) {
+    if (id.startsWith(pref)) {
+      return id.substring(pref.length);
+    }
+  }
+  return id;
+};
+
 export default function DailyReportPage() {
   const router = useRouter();
   const { session: hqSession, loading: sessionLoading } = useHqSession();
@@ -102,7 +113,7 @@ export default function DailyReportPage() {
         dept: 'all',
         status: 'all',
         role: 'personnel',
-        fullEnrichment: false
+        fullEnrichment: true
       });
 
       const staffSnaps = await Promise.all(depts.map(d => 
@@ -195,7 +206,9 @@ export default function DailyReportPage() {
         if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
           sid = sid.slice(0, -(reportDate.length + 1));
         }
+        const simpleSid = getSimpleId(sid);
         attMap.set(sid, data);
+        attMap.set(simpleSid, data);
       }));
 
       dressSnaps.forEach(snap => snap.docs.forEach((d: any) => {
@@ -204,7 +217,9 @@ export default function DailyReportPage() {
         if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
           sid = sid.slice(0, -(reportDate.length + 1));
         }
+        const simpleSid = getSimpleId(sid);
         dressMap.set(sid, data);
+        dressMap.set(simpleSid, data);
       }));
 
       dutySnaps.forEach(snap => snap.docs.forEach((d: any) => {
@@ -213,9 +228,11 @@ export default function DailyReportPage() {
         if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
           sid = sid.slice(0, -(reportDate.length + 1));
         }
-        const existing = dutyMap.get(sid);
+        const simpleSid = getSimpleId(sid);
+        const existing = dutyMap.get(sid) || dutyMap.get(simpleSid);
         if (!existing || (!existing.duties && data.duties)) {
           dutyMap.set(sid, data);
+          dutyMap.set(simpleSid, data);
         }
       }));
 
@@ -225,8 +242,11 @@ export default function DailyReportPage() {
         if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
           sid = sid.slice(0, -(reportDate.length + 1));
         }
-        const existing = fineMap.get(sid) || [];
-        fineMap.set(sid, [...existing, data]);
+        const simpleSid = getSimpleId(sid);
+        const existingSid = fineMap.get(sid) || [];
+        fineMap.set(sid, [...existingSid, data]);
+        const existingSimple = fineMap.get(simpleSid) || [];
+        fineMap.set(simpleSid, [...existingSimple, data]);
       }));
 
       contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
@@ -235,7 +255,9 @@ export default function DailyReportPage() {
         if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
           sid = sid.slice(0, -(reportDate.length + 1));
         }
+        const simpleSid = getSimpleId(sid);
         contribMap.set(sid, data);
+        contribMap.set(simpleSid, data);
       }));
 
       // 3. Process Report Rows
@@ -257,11 +279,12 @@ export default function DailyReportPage() {
         };
 
         const sid = s.id;
-        const att = attMap.get(sid);
-        const dress = dressMap.get(sid);
-        const duty = dutyMap.get(sid);
-        const finesList = fineMap.get(sid) || [];
-        const contribRecord = contribMap.get(sid);
+        const simpleSid = getSimpleId(sid);
+        const att = attMap.get(sid) || attMap.get(simpleSid);
+        const dress = dressMap.get(sid) || dressMap.get(simpleSid);
+        const duty = dutyMap.get(sid) || dutyMap.get(simpleSid);
+        const finesList = fineMap.get(sid) || fineMap.get(simpleSid) || [];
+        const contribRecord = contribMap.get(sid) || contribMap.get(simpleSid);
 
         const uniformConfig = s.dressCodeConfig && s.dressCodeConfig.length > 0 ? s.dressCodeConfig : [
           { key: 'uniform', label: 'Uniform' },
@@ -372,6 +395,7 @@ export default function DailyReportPage() {
           gpStatus: onLeave ? 'na' : (contribRecord?.status || (contribScore > 0 ? 'yes' : 'no')),
           gpLink: contribRecord?.link || '',
           dailyScore: totalDailyPoints,
+          totalScore: s.growthPointsTotal || 0,
           fines: fineTotal,
           fineReason: finesList.length > 0 ? finesList[0].reason : '',
           details: {
@@ -911,16 +935,45 @@ export default function DailyReportPage() {
                 className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-100 bg-white font-semibold text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none placeholder:text-gray-300"
               />
             </div>
-            <select
-              value={deptFilter}
-              onChange={(e) => setDeptFilter(e.target.value)}
-              className="px-4 py-3 rounded-2xl border border-gray-100 bg-white font-bold text-xs text-gray-700 cursor-pointer focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all duration-200"
-            >
-              <option value="all">Global Matrix</option>
-              {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
-                <option key={d} value={d}>{d.toUpperCase()}</option>
-              ))}
-            </select>
+          </div>
+
+          {/* Department Interactive Cards Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 select-none">
+            {[
+              { id: 'all', label: 'Global Matrix', color: 'border-indigo-200 bg-indigo-50/30 text-indigo-700 active:bg-indigo-600 active:text-white', activeClass: 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/25 ring-2 ring-indigo-500/30' },
+              { id: 'hq', label: 'HQ', color: 'border-slate-200 bg-slate-50/40 text-slate-700 active:bg-slate-700 active:text-white', activeClass: 'bg-slate-700 text-white border-slate-700 shadow-md shadow-slate-700/25 ring-2 ring-slate-500/30' },
+              { id: 'rehab', label: 'Rehab', color: 'border-rose-200 bg-rose-50/40 text-rose-700 active:bg-rose-600 active:text-white', activeClass: 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/25 ring-2 ring-rose-500/30' },
+              { id: 'spims', label: 'SPIMS', color: 'border-emerald-200 bg-emerald-50/40 text-emerald-700 active:bg-emerald-600 active:text-white', activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/30' },
+              { id: 'hospital', label: 'Hospital', color: 'border-blue-200 bg-blue-50/40 text-blue-700 active:bg-blue-600 active:text-white', activeClass: 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/25 ring-2 ring-blue-500/30' },
+              { id: 'sukoon', label: 'Sukoon', color: 'border-purple-200 bg-purple-50/40 text-purple-700 active:bg-purple-600 active:text-white', activeClass: 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/25 ring-2 ring-purple-500/30' },
+              { id: 'welfare', label: 'Welfare', color: 'border-green-200 bg-green-50/40 text-green-700 active:bg-green-600 active:text-white', activeClass: 'bg-green-600 text-white border-green-600 shadow-md shadow-green-600/25 ring-2 ring-green-500/30' },
+              { id: 'job-center', label: 'Job Center', color: 'border-amber-200 bg-amber-50/40 text-amber-700 active:bg-amber-600 active:text-white', activeClass: 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/30' },
+              { id: 'social-media', label: 'Social Media', color: 'border-pink-200 bg-pink-50/40 text-pink-700 active:bg-pink-600 active:text-white', activeClass: 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-600/25 ring-2 ring-pink-500/30' },
+              { id: 'it', label: 'IT', color: 'border-cyan-200 bg-cyan-50/40 text-cyan-700 active:bg-cyan-600 active:text-white', activeClass: 'bg-cyan-600 text-white border-cyan-600 shadow-md shadow-cyan-600/25 ring-2 ring-cyan-500/30' }
+            ].map(d => {
+              const isActive = deptFilter === d.id;
+              const count = reportData.filter(r => d.id === 'all' || r.department === d.id).length;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setDeptFilter(d.id)}
+                  className={`px-4 py-3 rounded-2xl border text-left flex flex-col justify-between h-20 transition-all duration-300 ${
+                    isActive ? d.activeClass : `bg-white hover:bg-gray-50 border-gray-100 hover:border-gray-200 text-gray-800 shadow-sm`
+                  }`}
+                >
+                  <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-white/80' : 'text-gray-400'}`}>
+                    {d.id === 'all' ? 'All' : d.id.replace('-', ' ')}
+                  </span>
+                  <div className="flex items-baseline justify-between w-full mt-2 gap-1.5">
+                    <span className="text-sm font-black tracking-tight leading-none">{d.label}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold shrink-0 ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      {count}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -964,9 +1017,12 @@ export default function DailyReportPage() {
                         <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
                           {row.employeeId}
                         </div>
-                        <div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase tracking-wider text-indigo-600 select-none leading-normal">
+                            {row.designation || 'Staff Member'}
+                          </span>
                           {session?.isEditOnly ? (
-                            <span className="font-bold text-sm text-gray-900 select-none">
+                            <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5">
                               {row.name}
                             </span>
                           ) : (
@@ -976,12 +1032,11 @@ export default function DailyReportPage() {
                                 e.preventDefault();
                                 router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
                               }}
-                              className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
+                              className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
                             >
                               {row.name}
                             </a>
                           )}
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
                         </div>
                       </div>
                     </td>
@@ -1226,9 +1281,12 @@ export default function DailyReportPage() {
                     <div className="w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50/70 text-indigo-600 border border-indigo-100 shrink-0 uppercase tracking-wider">
                       {row.employeeId}
                     </div>
-                    <div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black uppercase tracking-wider text-gray-900 select-none leading-normal">
+                        {row.designation || 'Staff Member'}
+                      </span>
                       {session?.isEditOnly ? (
-                        <span className="font-bold text-sm text-gray-900 select-none">
+                        <span className="text-xs font-medium text-gray-500 select-none leading-tight mt-0.5">
                           {row.name}
                         </span>
                       ) : (
@@ -1238,22 +1296,26 @@ export default function DailyReportPage() {
                             e.preventDefault();
                             router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
                           }}
-                          className="font-bold text-sm text-gray-900 hover:text-indigo-600 transition-colors leading-snug hover:underline cursor-pointer select-none"
+                          className="text-xs font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
                         >
                           {row.name}
                         </a>
                       )}
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{row.designation}</p>
                     </div>
                   </div>
 
-                  <span className={`inline-block px-2.5 py-1 rounded-xl text-xs font-black select-none ${
-                    row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700' : 
-                    row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700' : 
-                    'bg-rose-50 text-rose-700'
-                  }`}>
-                    {row.dailyScore} / 4 pts
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className={`inline-block px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider select-none ${
+                      row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/50' : 
+                      row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700 border border-amber-100/50' : 
+                      'bg-rose-50 text-rose-700 border border-rose-100/50'
+                    }`}>
+                      Today: {row.dailyScore} / 4 pts
+                    </span>
+                    <span className="inline-block px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider select-none bg-indigo-50 text-indigo-700 border border-indigo-100/50">
+                      Month: {row.totalScore || 0} XP
+                    </span>
+                  </div>
                 </div>
 
                 {/* Form Elements for Easy Tapping */}
@@ -1262,23 +1324,26 @@ export default function DailyReportPage() {
                   {/* Mobile Attendance */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Attendance</label>
-                    <select
-                      value={row.attendance}
-                      onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
-                      className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
-                        row.attendance === 'present' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
-                        row.attendance === 'absent' ? 'bg-rose-50/50 text-rose-700 border-rose-100' :
-                        row.attendance === 'late' ? 'bg-amber-50/50 text-amber-700 border-amber-100' :
-                        row.attendance === 'leave' ? 'bg-cyan-50/50 text-cyan-700 border-cyan-100' :
-                        'border-gray-200 text-gray-700'
-                      }`}
-                    >
-                      <option value="unmarked">Unmarked</option>
-                      <option value="present">Present</option>
-                      <option value="absent">Absent</option>
-                      <option value="late">Late</option>
-                      <option value="leave">Leave</option>
-                    </select>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {[
+                        { value: 'present', label: 'Present', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
+                        { value: 'absent', label: 'Absent', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' },
+                        { value: 'late', label: 'Late', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/50 hover:bg-amber-100/50 text-amber-700 border border-amber-100/80' },
+                        { value: 'leave', label: 'Leave', activeBg: 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/20', inactiveBg: 'bg-cyan-50/50 hover:bg-cyan-100/50 text-cyan-700 border border-cyan-100/80' },
+                        { value: 'unmarked', label: 'Unmarked', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleInlineUpdate(row.id, 'attendance', opt.value)}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
+                            row.attendance === opt.value ? opt.activeBg : opt.inactiveBg
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
 
                     {row.attendance === 'late' && (
                       <div className="mt-0.5">
@@ -1303,22 +1368,27 @@ export default function DailyReportPage() {
                   {/* Mobile Uniform */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Uniform Code</label>
-                    <select
-                      value={row.uniformStatus}
-                      disabled={row.attendance === 'leave'}
-                      onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
-                      className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
-                        row.uniformStatus === 'yes' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
-                        row.uniformStatus === 'no' ? 'bg-rose-50/50 text-rose-700 border-rose-100' :
-                        row.uniformStatus === 'incomplete' ? 'bg-amber-50/50 text-amber-700 border-amber-100' :
-                        'border-gray-200 text-gray-700'
-                      }`}
-                    >
-                      <option value="na">N/A</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                      <option value="incomplete">Incomplete</option>
-                    </select>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {[
+                        { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
+                        { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' },
+                        { value: 'incomplete', label: 'Incomplete', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/50 hover:bg-amber-100/50 text-amber-700 border border-amber-100/80' },
+                        { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={row.attendance === 'leave'}
+                          onClick={() => handleInlineUpdate(row.id, 'uniformStatus', opt.value)}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
+                            row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                            row.uniformStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
 
                     {row.uniformStatus === 'incomplete' && (
                       <div className="mt-0.5">
@@ -1361,22 +1431,27 @@ export default function DailyReportPage() {
                   {/* Mobile Duties */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Duties Performed</label>
-                    <select
-                      value={row.dutyStatus}
-                      disabled={row.attendance === 'leave'}
-                      onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
-                      className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
-                        row.dutyStatus === 'yes' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
-                        row.dutyStatus === 'no' ? 'bg-rose-50/50 text-rose-700 border-rose-100' :
-                        row.dutyStatus === 'incomplete' ? 'bg-amber-50/50 text-amber-700 border-amber-100' :
-                        'border-gray-200 text-gray-700'
-                      }`}
-                    >
-                      <option value="na">N/A</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                      <option value="incomplete">Incomplete</option>
-                    </select>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {[
+                        { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
+                        { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' },
+                        { value: 'incomplete', label: 'Incomplete', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/50 hover:bg-amber-100/50 text-amber-700 border border-amber-100/80' },
+                        { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={row.attendance === 'leave'}
+                          onClick={() => handleInlineUpdate(row.id, 'dutyStatus', opt.value)}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
+                            row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                            row.dutyStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
 
                     {row.dutyStatus === 'incomplete' && (
                       <div className="mt-0.5">
@@ -1420,18 +1495,25 @@ export default function DailyReportPage() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Growth Points (GP)</label>
                     <div className="flex flex-col gap-2">
-                      <select
-                        value={row.gpStatus}
-                        disabled={row.attendance === 'leave'}
-                        onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
-                        className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider border outline-none cursor-pointer transition-all duration-200 bg-white ${
-                          row.gpStatus === 'yes' ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' :
-                          'bg-rose-50/50 text-rose-700 border-rose-100'
-                        }`}
-                      >
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                      </select>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {[
+                          { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/50 hover:bg-emerald-100/50 text-emerald-700 border border-emerald-100/80' },
+                          { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/50 hover:bg-rose-100/50 text-rose-700 border border-rose-100/80' }
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            disabled={row.attendance === 'leave'}
+                            onClick={() => handleInlineUpdate(row.id, 'gpStatus', opt.value)}
+                            className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all select-none duration-150 ${
+                              row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                              row.gpStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                       {row.gpStatus === 'yes' && (
                         <input
                           type="text"

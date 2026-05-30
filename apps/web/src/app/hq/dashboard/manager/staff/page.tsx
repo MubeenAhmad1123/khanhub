@@ -294,11 +294,11 @@ export default function ManagerStaffPage() {
                     </div>
                   </div>
 
-                  <h3 className="text-xl font-black text-gray-900 transition-colors leading-tight group-hover:text-indigo-600">{s.name}</h3>
-                  <div className="mt-4 flex flex-col items-center gap-3">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] px-5 py-2 rounded-xl bg-gray-50 text-gray-400 border border-gray-100 transition-all group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100">
-                      {s.designation || 'Specialist'}
-                    </span>
+                  <span className="text-[13px] font-black uppercase tracking-[0.2em] px-4 py-1.5 bg-gray-50 text-gray-900 border border-gray-100 rounded-xl transition-all group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 select-none leading-none">
+                    {s.designation || 'Specialist'}
+                  </span>
+                  <h3 className="text-xs font-semibold text-gray-400 transition-colors leading-tight mt-2 group-hover:text-gray-600 select-none">{s.name}</h3>
+                  <div className="mt-3 flex flex-col items-center gap-3">
                     <div className="flex items-center gap-2">
                       <span className="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border border-gray-100 bg-white text-gray-400">
                         {s.employeeId || 'ID-OFFLINE'}

@@ -118,6 +118,17 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
   return `${formatDateDMY(when)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
 
+const getSimpleId = (id: string) => {
+  if (!id) return '';
+  const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'];
+  for (const pref of prefixes) {
+    if (id.startsWith(pref)) {
+      return id.substring(pref.length);
+    }
+  }
+  return id;
+};
+
 async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: Record<string, any>) {
   if (dept === 'hq') return {};
   const prefix = getDeptPrefix(dept);
@@ -136,7 +147,9 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
     if (!data.staffId && sid.endsWith(`_${date}`)) {
       sid = sid.slice(0, -(date.length + 1));
     }
+    const simpleSid = getSimpleId(sid);
     attMap[sid] = data;
+    attMap[simpleSid] = data;
   });
   
   const dressMap: Record<string, any> = {};
@@ -146,7 +159,9 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
     if (!data.staffId && sid.endsWith(`_${date}`)) {
       sid = sid.slice(0, -(date.length + 1));
     }
+    const simpleSid = getSimpleId(sid);
     dressMap[sid] = data;
+    dressMap[simpleSid] = data;
   });
   
   const dutyMap: Record<string, any> = {};
@@ -156,7 +171,12 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
     if (!data.staffId && sid.endsWith(`_${date}`)) {
       sid = sid.slice(0, -(date.length + 1));
     }
-    dutyMap[sid] = data;
+    const simpleSid = getSimpleId(sid);
+    const existing = dutyMap[sid] || dutyMap[simpleSid];
+    if (!existing || (!existing.duties && data.duties)) {
+      dutyMap[sid] = data;
+      dutyMap[simpleSid] = data;
+    }
   });
 
   const contribCounts: Record<string, number> = {};
@@ -166,18 +186,22 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
     if (!data.staffId && sid.endsWith(`_${date}`)) {
       sid = sid.slice(0, -(date.length + 1));
     }
+    const simpleSid = getSimpleId(sid);
     contribCounts[sid] = (contribCounts[sid] || 0) + 1;
+    contribCounts[simpleSid] = (contribCounts[simpleSid] || 0) + 1;
   });
 
   const results: Record<string, any> = {};
   Object.keys(staffConfigs).forEach(staffId => {
     const s = staffConfigs[staffId];
-    const att = attMap[staffId];
-    const dress = dressMap[staffId];
-    const duty = dutyMap[staffId];
-    const contribCount = contribCounts[staffId] || 0;
+    const simpleStaffId = getSimpleId(staffId);
+    
+    const att = attMap[staffId] || attMap[simpleStaffId];
+    const dress = dressMap[staffId] || dressMap[simpleStaffId];
+    const duty = dutyMap[staffId] || dutyMap[simpleStaffId];
+    const contribCount = contribCounts[staffId] || contribCounts[simpleStaffId] || 0;
 
-    const attPoint = (att?.status === 'present' || att?.isLate) ? 1 : 0;
+    const attPoint = (att?.status === 'present' || att?.isLate || att?.status === 'late') ? 1 : 0;
     
     const uniformConfig = s.dressCodeConfig || [];
     const uniformItems = dress?.items || [];

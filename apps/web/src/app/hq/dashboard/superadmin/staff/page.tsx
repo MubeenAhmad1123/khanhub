@@ -740,13 +740,13 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
               <Users2 size={20} className="text-gray-400" />
             )}
           </div>
-          <div className="min-w-0">
-            <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+          <div className="min-w-0 flex flex-col">
+            <span className="text-[11px] font-black uppercase tracking-wider text-gray-900 truncate select-none leading-normal">
+              {r.designation || r.role || 'Personnel'}
+            </span>
+            <h4 className="text-xs font-medium text-gray-500 truncate mt-0.5 group-hover:text-indigo-600 transition-colors select-none leading-tight">
               {r.name}
             </h4>
-            <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">
-              {r.designation || r.role}
-            </p>
           </div>
         </div>
 

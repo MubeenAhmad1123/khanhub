@@ -15,7 +15,7 @@ import {
   Target, Camera, Activity,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   TrendingUp, ChevronDown, ChevronUp, RefreshCw,
-  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X,
+  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X, UserMinus,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
   Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff
 } from 'lucide-react';
@@ -293,6 +293,9 @@ export default function StaffProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [showVacateConfirm, setShowVacateConfirm] = useState(false);
+  const [isVacating, setIsVacating] = useState(false);
 
   const daysInMonth = useCallback(() => {
     if (!selectedMonth || !selectedMonth.includes('-')) return [];
@@ -1357,6 +1360,41 @@ export default function StaffProfilePage() {
     }
   };
 
+  const handleVacateProfile = async () => {
+    try {
+      setIsVacating(true);
+      if (!staff) return;
+
+      const res = await updateStaffProfile(staff.id, {
+        name: "Vacant",
+        displayName: "Vacant",
+        email: "",
+        phone: "",
+        phoneNumber: "",
+        cnic: "",
+        address: "",
+        photoUrl: "",
+        photoURL: "",
+        fatherName: "",
+        joiningDate: "",
+        isActive: false,
+        status: "inactive",
+        updatedAt: serverTimestamp()
+      });
+
+      if (!res.success) throw new Error(res.error);
+
+      toast.success("Profile slot vacated successfully!");
+      setShowVacateConfirm(false);
+      fetchData();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Failed to vacate profile slot");
+    } finally {
+      setIsVacating(false);
+    }
+  };
+
   if (loading || sessionLoading) return (
     <div className={`min-h-screen flex items-center justify-center bg-[#F8FAFC]`}>
       <Spinner showText={true} />
@@ -1415,8 +1453,8 @@ export default function StaffProfilePage() {
                 </label>
               </div>
 
-              <h2 className={`text-2xl font-black text-gray-900`}>{staff?.name || 'Unknown Staff'}</h2>
-              <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1 mb-4">{staff?.designation || 'Position N/A'}</p>
+              <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-1.5 leading-none">{staff?.designation || 'Position N/A'}</p>
+              <h2 className={`text-2xl font-black text-gray-900 mt-1.5 mb-4`}>{staff?.name || 'Unknown Staff'}</h2>
 
               <div className="flex flex-wrap justify-center gap-2 mb-6">
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${'bg-gray-50 border-gray-100 text-black'
@@ -3030,27 +3068,53 @@ export default function StaffProfilePage() {
 
                 {/* Danger Zone */}
                 <div className="mt-16 pt-12 border-t-2 border-dashed border-rose-500/20">
-                  <div className={`p-8 rounded-[2.5rem] border transition-all bg-rose-50 border-rose-100`}>
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                      <div className="flex items-center gap-6">
-                        <div className={`w-16 h-16 rounded-3xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0`}>
-                          <AlertTriangle size={32} />
+                  <div className={`p-8 rounded-[2.5rem] border transition-all bg-rose-50/50 border-rose-100/80`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-rose-200/50">
+                      {/* Vacate Position Slot */}
+                      <div className="flex flex-col justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0 mt-1">
+                            <UserMinus size={24} />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-1">Vacate Position</h4>
+                            <p className="text-xs font-bold leading-relaxed text-slate-600">
+                              Clear all personal details (Name, CNIC, Phone, Photo, Address) but keep the professional designation, Employee ID, salary, uniform/duty configurations and active slots.
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Danger Zone</h4>
-                          <p className={`text-xs font-bold leading-relaxed text-black`}>
-                            Permanently delete this staff profile and all associated data records.<br />
-                            This action cannot be undone and will revoke all access immediately.
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowVacateConfirm(true)}
+                          className="px-6 py-4 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all hover:scale-105 shadow-xl shadow-amber-500/20 flex items-center justify-center gap-3 w-fit md:ml-16 mt-2"
+                        >
+                          <UserMinus size={16} />
+                          Vacate Profile Slot
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="px-8 py-4 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all hover:scale-105 shadow-xl shadow-rose-500/20 flex items-center gap-3"
-                      >
-                        <Trash2 size={16} />
-                        Delete Staff Profile
-                      </button>
+
+                      {/* Delete Profile */}
+                      <div className="flex flex-col justify-between gap-4 pt-6 md:pt-0 md:pl-8">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0 mt-1">
+                            <Trash2 size={24} />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Permanent Deletion</h4>
+                            <p className="text-xs font-bold leading-relaxed text-slate-600">
+                              Permanently delete this staff profile and all associated data records. This action cannot be undone and will revoke all access immediately.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="px-6 py-4 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all hover:scale-105 shadow-xl shadow-rose-500/20 flex items-center justify-center gap-3 w-fit md:ml-16 mt-2"
+                        >
+                          <Trash2 size={16} />
+                          Delete Staff Profile
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3102,6 +3166,52 @@ export default function StaffProfilePage() {
                         className="flex-1 h-14 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Vacate Confirmation Modal */}
+            {showVacateConfirm && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => !isVacating && setShowVacateConfirm(false)} />
+                <div className={`relative w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl border bg-white border-gray-100`}>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-20 h-20 rounded-[2rem] bg-amber-500/10 flex items-center justify-center text-amber-500 mb-6">
+                      <UserMinus size={40} />
+                    </div>
+                    <h3 className={`text-2xl font-black mb-2 text-gray-900 uppercase tracking-tight`}>Vacate Profile Slot</h3>
+                    <p className="text-sm font-bold leading-relaxed mb-6 text-slate-700">
+                      Are you sure you want to vacate <span className="text-amber-600 font-black">{staff?.name}</span>'s profile?
+                    </p>
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-left mb-8 w-full">
+                      <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">What this accomplishes:</p>
+                      <ul className="text-xs font-semibold text-amber-900 space-y-1.5 list-disc pl-4 leading-normal">
+                        <li>Resets Name and Display Name to "Vacant"</li>
+                        <li>Clears personal details (Phone, CNIC, Photo, Email, Address, Father's Name, Joining Date)</li>
+                        <li>Deactivates profile slot (`isActive = false`, `status = "inactive"`)</li>
+                        <li><span className="font-bold text-emerald-700">Preserves</span> all Professional Designation configurations, Salaries, Duty lists, and Uniform lists!</li>
+                      </ul>
+                    </div>
+
+                    <div className="flex gap-4 w-full">
+                      <button
+                        type="button"
+                        onClick={() => setShowVacateConfirm(false)}
+                        disabled={isVacating}
+                        className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-gray-200 text-black hover:bg-gray-50 transition-all disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleVacateProfile}
+                        disabled={isVacating}
+                        className="flex-1 h-14 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-xl shadow-amber-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isVacating ? 'Vacating...' : 'Confirm Vacate'}
                       </button>
                     </div>
                   </div>

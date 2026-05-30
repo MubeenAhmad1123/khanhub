@@ -1710,13 +1710,16 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tabs Navigation - Premium Sticky Glass Header */}
-        <div className="w-full px-2 sm:px-0 mt-6 mb-4 sticky top-0 z-40 bg-slate-50/80 dark:bg-gray-950/80 backdrop-blur-md py-2">
-          <div className="flex flex-wrap sm:flex-nowrap gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5">
+        <div 
+          className="w-full px-2 sm:px-0 mt-6 mb-4 sticky top-0 z-40 bg-slate-50/80 dark:bg-gray-950/80 backdrop-blur-md py-2 overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <div className="flex flex-nowrap gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5 min-w-max md:min-w-0 md:w-full">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 onClick={() => scrollToSection(t.id)}
-                className={`px-3 py-2.5 text-[10px] sm:px-5 sm:py-3 sm:text-[11px] whitespace-nowrap font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl min-w-[calc(50%-6px)] sm:min-w-fit flex-1 ${activeTab === t.id
+                className={`px-3.5 py-2.5 text-[10px] sm:px-5 sm:py-3 sm:text-[11px] whitespace-nowrap font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl shrink-0 ${activeTab === t.id
                   ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/30 active:scale-95'
                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
                   }`}
