@@ -117,8 +117,8 @@ export default function DailyReportPage() {
       const unifiedStaffCards = await listStaffCards({
         dept: 'all',
         status: 'all',
-        role: 'personnel',
-        fullEnrichment: true
+        role: 'all',
+        fullEnrichment: false
       });
 
       const staffSnaps = await Promise.all(depts.map(d => 
@@ -127,8 +127,6 @@ export default function DailyReportPage() {
       ));
       const allStaff: any[] = [];
       const seenIds = new Set<string>();
-
-      const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
 
       const isEligibleStaff = (s: any) => {
         const r = String(s.role || '').toLowerCase();
@@ -139,16 +137,14 @@ export default function DailyReportPage() {
           return false;
         }
 
-        const isInternee = r.includes('internee');
-        const isTrial = r.includes('trial');
-        const isContract = r.includes('contract');
-        const isWorker = r.includes('worker') || r.includes('junior');
-        const isValidStaffRole = isInternee || isTrial || isContract || isWorker || STAFF_WHITELIST.includes(r);
+        if (r.includes('superadmin') || r.includes('student')) {
+          return false;
+        }
 
         const statusStr = String(s.status || '').toLowerCase();
         const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
 
-        return isActive && isValidStaffRole;
+        return isActive;
       };
 
       // First add from unifiedStaffCards
