@@ -7,14 +7,20 @@ import { SITE } from '@/data/site';
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-/**
- * Safely converts a Firestore Timestamp or unknown date value to a Date object.
- */
 export function toDate(val: any): Date {
   if (!val) return new Date();
   if (typeof val?.toDate === 'function') return val.toDate();
   if (val instanceof Date) return val;
-  return new Date(val);
+  // Handle Firestore Timestamp-like objects (standard SDK or serialized/JSON)
+  if (typeof val === 'object') {
+    const seconds = val.seconds ?? val._seconds;
+    const nanoseconds = val.nanoseconds ?? val._nanoseconds;
+    if (typeof seconds === 'number') {
+      return new Date(seconds * 1000 + Math.floor((nanoseconds || 0) / 1000000));
+    }
+  }
+  const parsed = new Date(val);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 /**

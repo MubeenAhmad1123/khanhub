@@ -239,11 +239,10 @@ export default function PatientDetailPage() {
     });
   }, [visits, dateFilter]);
 
-  // Filter payments based on date bounds
   const filteredPayments = useMemo(() => {
     if (!dateFilter) return allPayments;
     return allPayments.filter((p: any) => {
-      const pDate = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+      const pDate = toDate(p.date);
 
       let start = dateFilter.admissionDate;
       if (start) {
@@ -2297,7 +2296,7 @@ export default function PatientDetailPage() {
                     {/* Mobile transaction cards layout */}
                     <div className="block lg:hidden space-y-4">
                       {allPayments.map((p: any) => {
-                        const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+                        const dateObj = toDate(p.date);
                         return (
                           <div key={p.id} className="bg-gray-50/80 dark:bg-gray-800/40 border border-gray-100 dark:border-white/5 rounded-2xl p-4 space-y-3">
                             <div className="flex items-center justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2">
@@ -2366,7 +2365,7 @@ export default function PatientDetailPage() {
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                           {allPayments.map((p: any) => {
-                            const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+                            const dateObj = toDate(p.date);
                             return (
                               <tr key={p.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                                 <td className="py-5">
