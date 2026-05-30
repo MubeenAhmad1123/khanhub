@@ -86,6 +86,17 @@ export function getDefaultSections(
 }
 
 // Get the current visibleSections for an entity
+function getSimpleId(id: string): string {
+  if (!id) return '';
+  const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'];
+  for (const pref of prefixes) {
+    if (id.startsWith(pref)) {
+      return id.substring(pref.length);
+    }
+  }
+  return id;
+}
+
 export async function getVisibleSections(
   department: string,
   collectionInput: string,
@@ -96,7 +107,8 @@ export async function getVisibleSections(
   }
   try {
     const resolvedCol = resolveCollectionName(department, collectionInput);
-    const docRef = doc(db, resolvedCol, entityId);
+    const cleanId = getSimpleId(entityId);
+    const docRef = doc(db, resolvedCol, cleanId);
     const snap = await getDoc(docRef);
     
     const entityType = getEntityTypeFromCollection(resolvedCol);
@@ -126,7 +138,8 @@ export async function saveVisibleSections(
   sections: Record<string, boolean>
 ): Promise<void> {
   const resolvedCol = resolveCollectionName(department, collectionInput);
-  const docRef = doc(db, resolvedCol, entityId);
+  const cleanId = getSimpleId(entityId);
+  const docRef = doc(db, resolvedCol, cleanId);
   await updateDoc(docRef, {
     visibleSections: sections
   });
