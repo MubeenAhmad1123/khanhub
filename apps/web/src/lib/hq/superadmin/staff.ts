@@ -522,6 +522,8 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     secondaryDepts: data.secondaryDepts || [],
     basicInfoExtras: data.basicInfoExtras || {},
     seniority: data.seniority,
+    visibleSections: data.visibleSections || undefined,
+    documents: data.documents || [],
   };
 }
 
@@ -550,6 +552,8 @@ export type StaffProfile = StaffCardRow & {
   secondaryDepts?: StaffDept[];
   basicInfoExtras?: Record<string, string>;
   seniority?: string;
+  visibleSections?: Record<string, boolean>;
+  documents?: { title: string; url: string }[];
 };
 
 export async function updateStaffProfile(

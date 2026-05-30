@@ -18,6 +18,7 @@ import FinanceSummaryTab from '@/components/spims/student-profile/FinanceSummary
 import TestsTab from '@/components/spims/student-profile/TestsTab';
 import AttendanceTab from '@/components/spims/student-profile/AttendanceTab';
 import ProfileHeader from '@/components/spims/student-profile/ProfileHeader';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance' | 'tests' | 'attendance';
 
@@ -30,6 +31,28 @@ export default function StudentSelfServicePage() {
   const [student, setStudent] = useState<SpimsStudent | null>(null);
   const [tab, setTab] = useState<Tab>('fees');
   const [loading, setLoading] = useState(true);
+
+  const { sections, loading: visibilityLoading } = useVisibleSections('spims', 'students', studentId);
+
+  useEffect(() => {
+    if (visibilityLoading) return;
+    const tabVisibility: Record<Tab, boolean> = {
+      fees: sections.feeRecord !== false,
+      finance: sections.feeRecord !== false,
+      tests: sections.examRecords !== false,
+      attendance: sections.attendance !== false,
+      exam: sections.examRecords !== false,
+      admission: sections.admissionDetails !== false,
+      documents: sections.documents !== false,
+    };
+    
+    if (tabVisibility[tab] === false) {
+      const firstVisible = (Object.keys(tabVisibility) as Tab[]).find(k => tabVisibility[k] !== false);
+      if (firstVisible) {
+        setTab(firstVisible);
+      }
+    }
+  }, [sections, visibilityLoading, tab]);
 
   const load = useCallback(async () => {
     try {
@@ -164,15 +187,15 @@ export default function StudentSelfServicePage() {
     );
   }
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'fees', label: 'Fee record' },
-    { id: 'finance', label: 'Finance summary' },
-    { id: 'tests', label: 'Tests' },
-    { id: 'attendance', label: 'Attendance' },
-    { id: 'exam', label: 'Exam record' },
-    { id: 'admission', label: 'Admission' },
-    { id: 'documents', label: 'Documents' },
-  ];
+  const tabs = [
+    { id: 'fees', label: 'Fee record', visible: sections.feeRecord !== false },
+    { id: 'finance', label: 'Finance summary', visible: sections.feeRecord !== false },
+    { id: 'tests', label: 'Tests', visible: sections.examRecords !== false },
+    { id: 'attendance', label: 'Attendance', visible: sections.attendance !== false },
+    { id: 'exam', label: 'Exam record', visible: sections.examRecords !== false },
+    { id: 'admission', label: 'Admission', visible: sections.admissionDetails !== false },
+    { id: 'documents', label: 'Documents', visible: sections.documents !== false },
+  ].filter(t => t.visible !== false) as { id: Tab; label: string }[];
 
   return (
     <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 pb-24">

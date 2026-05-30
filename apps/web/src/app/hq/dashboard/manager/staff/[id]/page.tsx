@@ -17,7 +17,7 @@ import {
   TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X, UserMinus,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
-  Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff
+  Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff, FileText, Loader2
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import {
@@ -46,6 +46,8 @@ import {
 import { awardStaffPoint } from '@/app/hq/actions/points';
 import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
 import LeadsCRM from '@/components/shared/LeadsCRM';
+import VisibilityManager from '@/components/shared/VisibilityManager';
+import { saveVisibleSections } from '@/lib/visibilityManager';
 
 // Define unified icons for tasks
 import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS } from '@/data/hqConfig';
@@ -1615,33 +1617,50 @@ export default function StaffProfilePage() {
               {[
                 { id: 'profile', label: 'View Profile', icon: <User size={12} /> },
                 { id: 'edit', label: 'Edit Profile', icon: <Lock size={12} /> },
-                { id: 'action', label: 'Action & Logs', icon: <Activity size={12} /> },
+                { id: 'action', label: 'Action & Logs', icon: <Activity size={12} />, visibilityKey: 'reports' },
                 { id: 'tasks', label: 'Special Tasks', icon: <Target size={12} /> },
-                { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} /> },
-                { id: 'payroll', label: 'Finance', icon: <DollarSign size={12} /> },
-                { id: 'dress', label: 'Dress Code', icon: <Shield size={12} /> },
-                { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} /> },
-                { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} /> },
+                { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} />, visibilityKey: 'attendance' },
+                { id: 'payroll', label: 'Finance', icon: <DollarSign size={12} />, visibilityKey: 'salary' },
+                { id: 'dress', label: 'Dress Code', icon: <Shield size={12} />, visibilityKey: 'uniform' },
+                { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} />, visibilityKey: 'duties' },
+                { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} />, visibilityKey: 'growthPoints' },
                 ...(staffId === 'hospital_5mHY2l3o6NhGDji4CysY' || staffId?.includes('5mHY2l3o6NhGDji4CysY') ? [{ id: 'leads', label: 'Leads CRM', icon: <ClipboardList size={12} /> }] : []),
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as any);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
-                    ? `${theme.accent} text-white shadow-lg ${theme.shadow}`
-                    : 'text-black hover:bg-black/5'
-                    }`}
-                >
-                  {tab.icon} <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              ))}
+              ].map(tab => {
+                const isHidden = (tab as any).visibilityKey && staff?.visibleSections && (staff.visibleSections as any)[(tab as any).visibilityKey] === false;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                    }}
+                    className={`flex items-center gap-2 px-4 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
+                      ? `${theme.accent} text-white shadow-lg ${theme.shadow}`
+                      : 'text-black hover:bg-black/5'
+                      }`}
+                  >
+                    {tab.icon} <span className="hidden sm:inline">{tab.label}</span>
+                    {isHidden && <span className="text-[10px] font-bold" title="Hidden from Staff Self-View">🔒</span>}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Panels */}
             {activeTab === 'profile' && (
               <div className="space-y-6 animate-in fade-in duration-500">
+                {session && (session.role === 'manager' || session.role === 'superadmin') && (
+                  <VisibilityManager
+                    entityType="staff"
+                    entityId={staffId}
+                    department={staff?.dept || 'hq'}
+                    currentSections={staff?.visibleSections || {}}
+                    onSave={async (updated) => {
+                      await saveVisibleSections(staff?.dept || 'hq', 'staff', staffId, updated);
+                      setStaff(prev => prev ? { ...prev, visibleSections: updated } : null);
+                    }}
+                  />
+                )}
+
                 <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm relative overflow-hidden`}>
                   <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${theme.bg} blur-3xl opacity-20 -mr-32 -mt-32`} />
                   

@@ -16,6 +16,7 @@ import TherapyTab from '@/components/hospital/patient-profile/TherapyTab';
 import MedicationTab from '@/components/hospital/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
 import { getCached, setCached } from '@/lib/queryCache';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 
 function toDate(val: any): Date {
@@ -34,6 +35,26 @@ export default function HospitalPatientViewPage() {
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'therapy' | 'meds' | 'progress'>('overview');
+
+  const { sections, loading: visibilityLoading } = useVisibleSections('hospital', 'patients', patientId);
+
+  useEffect(() => {
+    if (visibilityLoading) return;
+    const tabVisibility: Record<string, boolean> = {
+      overview: sections.admissionDetails !== false,
+      daily: sections.dailySheet !== false,
+      therapy: sections.therapy !== false,
+      meds: sections.medication !== false,
+      progress: sections.progressNotes !== false,
+    };
+    
+    if (tabVisibility[activeTab] === false) {
+      const firstVisible = Object.keys(tabVisibility).find(k => tabVisibility[k] !== false);
+      if (firstVisible) {
+        setActiveTab(firstVisible as any);
+      }
+    }
+  }, [sections, visibilityLoading, activeTab]);
 
   const fetchPatientData = useCallback(async () => {
     try {
@@ -208,40 +229,42 @@ export default function HospitalPatientViewPage() {
       </div>
 
       {/* Finance Summary */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="rounded-[2.5rem] bg-white border border-gray-100 shadow-sm p-6 md:p-8">
-          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">Financial Ledger</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Package</span>
-              <span className="text-xl font-black text-gray-900">₨{patient.totalDues?.toLocaleString() || '0'}</span>
-            </div>
-            <div className="flex flex-col gap-1.5 border-l border-gray-100 pl-6">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Received</span>
-              <span className="text-xl font-black text-emerald-600">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
-            </div>
-            <div className="flex flex-col gap-1.5 border-l border-gray-100 pl-6">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Remaining</span>
-              <span className={`text-xl font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
-            </div>
-            <div className="flex flex-col gap-1.5 border-l border-gray-100 pl-6">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Canteen Balance</span>
-              <span className="text-xl font-black text-amber-600">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
+      {sections.financialStatement !== false && (
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="rounded-[2.5rem] bg-white border border-gray-100 shadow-sm p-6 md:p-8">
+            <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">Financial Ledger</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Package</span>
+                <span className="text-xl font-black text-gray-900">₨{patient.totalDues?.toLocaleString() || '0'}</span>
+              </div>
+              <div className="flex flex-col gap-1.5 border-l border-gray-100 pl-6">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Received</span>
+                <span className="text-xl font-black text-emerald-600">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
+              </div>
+              <div className="flex flex-col gap-1.5 border-l border-gray-100 pl-6">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Remaining</span>
+                <span className={`text-xl font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
+              </div>
+              <div className="flex flex-col gap-1.5 border-l border-gray-100 pl-6">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Canteen Balance</span>
+                <span className="text-xl font-black text-amber-600">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-4 pb-20">
         <div className="flex overflow-x-auto gap-2 pb-6 no-scrollbar">
           {[
-            { key: 'overview', label: 'Summary', icon: User },
-            { key: 'daily', label: 'Vital Sheet', icon: Activity },
-            { key: 'therapy', label: 'Treatment', icon: Heart },
-            { key: 'meds', label: 'Pharmacy', icon: Pill },
-            { key: 'progress', label: 'Growth', icon: TrendingUp },
-          ].map(tab => (
+            { key: 'overview', label: 'Summary', icon: User, visible: sections.admissionDetails !== false },
+            { key: 'daily', label: 'Vital Sheet', icon: Activity, visible: sections.dailySheet !== false },
+            { key: 'therapy', label: 'Treatment', icon: Heart, visible: sections.therapy !== false },
+            { key: 'meds', label: 'Pharmacy', icon: Pill, visible: sections.medication !== false },
+            { key: 'progress', label: 'Growth', icon: TrendingUp, visible: sections.progressNotes !== false },
+          ].filter(t => t.visible !== false).map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
@@ -259,7 +282,7 @@ export default function HospitalPatientViewPage() {
 
         <div className="transition-all duration-300">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 gap-6 ${sections.familyContact !== false ? 'md:grid-cols-2' : ''}`}>
               <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
                 <h2 className="font-black text-gray-900 text-lg mb-6 flex items-center gap-3"><Shield className="text-emerald-600" size={20} /> Medical Clearance</h2>
                 <div className="grid grid-cols-2 gap-4">
@@ -280,23 +303,25 @@ export default function HospitalPatientViewPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
-                <h2 className="font-black text-gray-900 text-lg mb-6 flex items-center gap-3"><User className="text-emerald-600" size={20} /> Emergency Contact</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100/50">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Guardian</span>
-                    <span className="font-bold text-gray-900">{patient.guardianName || '—'}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100/50">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Relation</span>
-                    <span className="font-bold text-gray-900 text-xs px-3 py-1 bg-white rounded-lg shadow-sm">{patient.guardianRelationship || '—'}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100/50">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone</span>
-                    <a href={`tel:${patient.contactNumber}`} className="font-bold text-emerald-600 hover:text-emerald-700 transition-colors">{patient.contactNumber || '—'}</a>
+              {sections.familyContact !== false && (
+                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
+                  <h2 className="font-black text-gray-900 text-lg mb-6 flex items-center gap-3"><User className="text-emerald-600" size={20} /> Emergency Contact</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100/50">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Guardian</span>
+                      <span className="font-bold text-gray-900">{patient.guardianName || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100/50">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Relation</span>
+                      <span className="font-bold text-gray-900 text-xs px-3 py-1 bg-white rounded-lg shadow-sm">{patient.guardianRelationship || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100/50">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone</span>
+                      <a href={`tel:${patient.contactNumber}`} className="font-bold text-emerald-600 hover:text-emerald-700 transition-colors">{patient.contactNumber || '—'}</a>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

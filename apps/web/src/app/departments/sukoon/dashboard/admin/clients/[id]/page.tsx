@@ -23,6 +23,8 @@ import ProgressTab from '@/components/sukoon/client-profile/ProgressTab';
 import TherapyTab from '@/components/sukoon/client-profile/TherapyTab';
 import MedicationTab from '@/components/sukoon/client-profile/MedicationTab';
 import AdmissionTab from '@/components/sukoon/client-profile/AdmissionTab';
+import VisibilityManager from '@/components/shared/VisibilityManager';
+import { saveVisibleSections } from '@/lib/visibilityManager';
 
 export default function ClientDetailPage() {
   const router = useRouter();
@@ -815,6 +817,18 @@ export default function ClientDetailPage() {
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
             <div className="space-y-8 w-full">
+              {session && (session.role === 'admin' || session.role === 'superadmin') && (
+                <VisibilityManager
+                  entityType="patient"
+                  entityId={patientId}
+                  department="sukoon"
+                  currentSections={patient?.visibleSections || {}}
+                  onSave={async (updated) => {
+                    await saveVisibleSections('sukoon', 'rehab_patients', patientId, updated);
+                    setPatient((prev: any) => prev ? { ...prev, visibleSections: updated } : null);
+                  }}
+                />
+              )}
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
                 {!isEditing ? (

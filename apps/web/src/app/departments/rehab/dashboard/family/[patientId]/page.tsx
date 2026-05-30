@@ -17,6 +17,7 @@ import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
 import { Patient } from '@/types/rehab';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -36,6 +37,28 @@ export default function FamilyPatientViewPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'progress' | 'visits'>('overview');
   const [payments, setPayments] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
+
+  const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'patients', patientId);
+
+  useEffect(() => {
+    if (visibilityLoading) return;
+    const tabVisibility: Record<string, boolean> = {
+      overview: sections.admissionDetails !== false,
+      finance: sections.financialStatement !== false,
+      daily: sections.dailySheet !== false,
+      visits: sections.familyContact !== false,
+      therapy: sections.therapy !== false,
+      meds: sections.medication !== false,
+      progress: sections.progressNotes !== false,
+    };
+    
+    if (tabVisibility[activeTab] === false) {
+      const firstVisible = Object.keys(tabVisibility).find(k => tabVisibility[k] !== false);
+      if (firstVisible) {
+        setActiveTab(firstVisible as any);
+      }
+    }
+  }, [sections, visibilityLoading, activeTab]);
 
   const fetchPatientData = useCallback(async () => {
     try {
@@ -207,54 +230,56 @@ export default function FamilyPatientViewPage() {
       </div>
 
       {/* Finance Summary */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="bg-gray-900 rounded-[2rem] p-5 sm:p-6 text-white shadow-xl shadow-gray-200 overflow-hidden relative border border-gray-800">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
-          <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-4 relative z-10">Real-time Financial History</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 relative z-10">
-            <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Monthly Package</span>
-              <span className="text-xl font-black text-white">₨{patient.monthlyPackage?.toLocaleString()}</span>
-              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">PKR {patient.dailyRate}/Day</span>
+      {sections.financialStatement !== false && (
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="bg-gray-900 rounded-[2rem] p-5 sm:p-6 text-white shadow-xl shadow-gray-200 overflow-hidden relative border border-gray-800">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+            <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-4 relative z-10">Real-time Financial History</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 relative z-10">
+              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
+                <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Monthly Package</span>
+                <span className="text-xl font-black text-white">₨{patient.monthlyPackage?.toLocaleString()}</span>
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">PKR {patient.dailyRate}/Day</span>
+              </div>
+              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
+                <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Total Received</span>
+                <span className="text-xl font-black text-teal-400">₨{patient.totalReceived?.toLocaleString()}</span>
+                <span className="text-[9px] text-teal-500/70 font-bold uppercase tracking-tighter">Verified Payments</span>
+              </div>
+              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
+                <span className="text-[10px] uppercase font-black text-orange-400/80 tracking-widest">Current Balance</span>
+                <span className="text-xl font-black text-orange-400">₨{(patient.remainingTillDate || 0).toLocaleString()}</span>
+                <span className="text-[9px] text-orange-400/70 font-bold uppercase tracking-tighter">{patient.durationFormatted}</span>
+              </div>
+              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
+                <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Canteen</span>
+                <span className={`text-xl font-black ${patient.canteenBalance >= 0 ? 'text-white' : 'text-red-500'}`}>₨{patient.canteenBalance?.toLocaleString()}</span>
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Current Wallet</span>
+              </div>
             </div>
-            <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Total Received</span>
-              <span className="text-xl font-black text-teal-400">₨{patient.totalReceived?.toLocaleString()}</span>
-              <span className="text-[9px] text-teal-500/70 font-bold uppercase tracking-tighter">Verified Payments</span>
-            </div>
-            <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-              <span className="text-[10px] uppercase font-black text-orange-400/80 tracking-widest">Current Balance</span>
-              <span className="text-xl font-black text-orange-400">₨{(patient.remainingTillDate || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-orange-400/70 font-bold uppercase tracking-tighter">{patient.durationFormatted}</span>
-            </div>
-            <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Canteen</span>
-              <span className={`text-xl font-black ${patient.canteenBalance >= 0 ? 'text-white' : 'text-red-500'}`}>₨{patient.canteenBalance?.toLocaleString()}</span>
-              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Current Wallet</span>
-            </div>
+            <button 
+              onClick={() => setActiveTab('finance')}
+              className="w-full mt-6 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-teal-400 flex items-center justify-center gap-2 active:scale-95"
+            >
+              View Full Billing Details <DollarSign size={12} />
+            </button>
           </div>
-          <button 
-            onClick={() => setActiveTab('finance')}
-            className="w-full mt-6 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-teal-400 flex items-center justify-center gap-2 active:scale-95"
-          >
-            View Full Billing Details <DollarSign size={12} />
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Sticky Tabs for Mobile */}
       <div className="sticky top-[72px] sm:static z-30 bg-gray-50/90 backdrop-blur-md border-b border-gray-150 py-2">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
             {[
-              { key: 'overview', label: 'Overview', icon: User },
-              { key: 'finance', label: 'Finance', icon: DollarSign },
-              { key: 'daily', label: 'Sheet', icon: Activity },
-              { key: 'visits', label: 'Visits', icon: Clock },
-              { key: 'therapy', label: 'Therapy', icon: Heart },
-              { key: 'meds', label: 'Meds', icon: Pill },
-              { key: 'progress', label: 'Progress', icon: TrendingUp },
-            ].map(tab => (
+              { key: 'overview', label: 'Overview', icon: User, visible: sections.admissionDetails !== false },
+              { key: 'finance', label: 'Finance', icon: DollarSign, visible: sections.financialStatement !== false },
+              { key: 'daily', label: 'Sheet', icon: Activity, visible: sections.dailySheet !== false },
+              { key: 'visits', label: 'Visits', icon: Clock, visible: sections.familyContact !== false },
+              { key: 'therapy', label: 'Therapy', icon: Heart, visible: sections.therapy !== false },
+              { key: 'meds', label: 'Meds', icon: Pill, visible: sections.medication !== false },
+              { key: 'progress', label: 'Progress', icon: TrendingUp, visible: sections.progressNotes !== false },
+            ].filter(t => t.visible !== false).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
@@ -454,29 +479,31 @@ export default function FamilyPatientViewPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-              <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Name</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Relationship</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Phone</p>
-                  <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">WhatsApp</p>
-                  {patient.whatsappNumber ? (
-                    <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
-                  ) : <p className="font-bold text-gray-400 mt-1">—</p>}
+            {sections.familyContact !== false && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+                <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Name</p>
+                    <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Relationship</p>
+                    <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Phone</p>
+                    <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">WhatsApp</p>
+                    {patient.whatsappNumber ? (
+                      <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
+                    ) : <p className="font-bold text-gray-400 mt-1">—</p>}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

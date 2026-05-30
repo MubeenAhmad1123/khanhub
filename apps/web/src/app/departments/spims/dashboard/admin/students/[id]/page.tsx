@@ -18,6 +18,8 @@ import ExamRecordTab from '@/components/spims/student-profile/ExamRecordTab';
 import DocumentsTab from '@/components/spims/student-profile/DocumentsTab';
 import FinanceSummaryTab from '@/components/spims/student-profile/FinanceSummaryTab';
 import ProfileHeader from '@/components/spims/student-profile/ProfileHeader';
+import VisibilityManager from '@/components/shared/VisibilityManager';
+import { saveVisibleSections } from '@/lib/visibilityManager';
 
 type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance';
 
@@ -364,6 +366,18 @@ export default function AdminStudentProfilePage() {
 
           {/* Stacked Sections */}
           <div className="w-full flex flex-col gap-10">
+            {session && (session.role === 'admin' || session.role === 'superadmin' || session.role === 'manager') && (
+              <VisibilityManager
+                entityType="student"
+                entityId={studentId}
+                department="spims"
+                currentSections={student?.visibleSections || {}}
+                onSave={async (updated) => {
+                  await saveVisibleSections('spims', 'students', studentId, updated);
+                  setStudent((prev: any) => prev ? { ...prev, visibleSections: updated } : null);
+                }}
+              />
+            )}
             <div id="section-admission" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
                 <BookOpen className="w-6 h-6 text-[#1D9E75]" />

@@ -1011,14 +1011,14 @@ service cloud.firestore {
       allow read: if (isAuth() && (request.auth.uid == uid || isItAdminOrManager()))
         || isHqTier1() || isDiscoveryQuery();
       allow create, delete: if isItAdminOrManager() || isHqSuperOrManager();
-      allow update: if (isAuth() && request.auth.uid == uid)
+      allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['visibleSections']))
         || isItAdminOrManager() || isHqSuperOrManager();
     }
     match /media_users/{uid} {
       allow read: if (isAuth() && (request.auth.uid == uid || isMediaAdminOrManager() || isItAdminOrManager()))
         || isHqTier1() || isDiscoveryQuery();
       allow create, delete: if isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
-      allow update: if (isAuth() && request.auth.uid == uid)
+      allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['visibleSections']))
         || isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
     }
 

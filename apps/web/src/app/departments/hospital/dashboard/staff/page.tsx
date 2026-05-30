@@ -15,6 +15,7 @@ import {
   Trophy, Sparkles, Activity, CheckCircle2, Circle, Shirt, LogOut, ArrowRight, UserCheck, ShieldAlert
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 export default function StaffSelfPage() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+  const { sections, loading: visibilityLoading } = useVisibleSections('hospital', 'staff', staffProfile?.id || user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -341,8 +343,7 @@ export default function StaffSelfPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 mt-8 space-y-6">
-        
-        {/* Welcome Header */}
+               {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
@@ -354,88 +355,98 @@ export default function StaffSelfPage() {
               {formatDateDMY(new Date())}
             </p>
           </div>
-          <span className="self-start sm:self-center px-4 py-1.5 rounded-full bg-[#1D9E75]/10 border border-[#1D9E75]/10 text-[#1D9E75] text-[10px] font-bold uppercase tracking-wider">
-            {staffProfile?.designation || staffProfile?.role || 'Healthcare Staff'}
-          </span>
-        </div>
-
-        {/* Attendance Marking Slider Panel */}
-        <div className={`${cardStyle} relative overflow-hidden bg-gradient-to-r from-white to-gray-50/50`}>
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1D9E75]"></div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
-                <Clock size={16} className="text-[#1D9E75]" />
-                Daily Presence Logger
-              </h3>
-              <p className="text-xs text-gray-400 font-medium">Record check-in and check-out timing securely.</p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {todayRecord?.checkInTime && (
-                <div className="text-right hidden sm:block">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Checked In</p>
-                  <p className="text-xs font-bold text-gray-700">{todayRecord.checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-              )}
-              <button
-                onClick={handleCheckIn}
-                disabled={checkLoading || (todayRecord?.checkInTime && todayRecord?.checkOutTime)}
-                className={`px-6 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2.5 transition-all duration-300 active:scale-[0.97]
-                  ${todayRecord?.checkInTime && !todayRecord?.checkOutTime
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/10'
-                    : todayRecord?.checkInTime && todayRecord?.checkOutTime
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                      : 'bg-gray-900 hover:bg-black text-white shadow-md shadow-gray-900/10'
-                  }`}
-              >
-                {checkLoading ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : todayRecord?.checkInTime && !todayRecord?.checkOutTime ? (
-                  <>Check Out <ArrowRight size={14} /></>
-                ) : todayRecord?.checkInTime && todayRecord?.checkOutTime ? (
-                  <>Attendance Completed <UserCheck size={14} /></>
-                ) : (
-                  <>Check In <UserCheck size={14} /></>
-                )}
-              </button>
-            </div>
-          </div>
-          {todayRecord?.checkInTime && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Shift</span>
-              <span className="text-gray-400">Shift Start: {staffProfile?.dutyStartTime || '08:00'}</span>
-            </div>
+          {sections.designation !== false && (
+            <span className="self-start sm:self-center px-4 py-1.5 rounded-full bg-[#1D9E75]/10 border border-[#1D9E75]/10 text-[#1D9E75] text-[10px] font-bold uppercase tracking-wider">
+              {staffProfile?.designation || staffProfile?.role || 'Healthcare Staff'}
+            </span>
           )}
         </div>
 
-        {/* Quick Stats Matrix */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className={cardStyle}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Growth Ledger</span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                <Trophy size={16} />
+        {/* Attendance Marking Slider Panel */}
+        {sections.attendance !== false && (
+          <div className={`${cardStyle} relative overflow-hidden bg-gradient-to-r from-white to-gray-50/50`}>
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1D9E75]"></div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
+                  <Clock size={16} className="text-[#1D9E75]" />
+                  Daily Presence Logger
+                </h3>
+                <p className="text-xs text-gray-400 font-medium">Record check-in and check-out timing securely.</p>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                {todayRecord?.checkInTime && (
+                  <div className="text-right hidden sm:block">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Checked In</p>
+                    <p className="text-xs font-bold text-gray-700">{todayRecord.checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                )}
+                <button
+                  onClick={handleCheckIn}
+                  disabled={checkLoading || (todayRecord?.checkInTime && todayRecord?.checkOutTime)}
+                  className={`px-6 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2.5 transition-all duration-300 active:scale-[0.97]
+                    ${todayRecord?.checkInTime && !todayRecord?.checkOutTime
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/10'
+                      : todayRecord?.checkInTime && todayRecord?.checkOutTime
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                        : 'bg-gray-900 hover:bg-black text-white shadow-md shadow-gray-900/10'
+                    }`}
+                >
+                  {checkLoading ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : todayRecord?.checkInTime && !todayRecord?.checkOutTime ? (
+                    <>Check Out <ArrowRight size={14} /></>
+                  ) : todayRecord?.checkInTime && todayRecord?.checkOutTime ? (
+                    <>Attendance Completed <UserCheck size={14} /></>
+                  ) : (
+                    <>Check In <UserCheck size={14} /></>
+                  )}
+                </button>
               </div>
             </div>
-            <p className="text-3xl font-extrabold text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Growth Points Accumulated</p>
+            {todayRecord?.checkInTime && (
+              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Shift</span>
+                <span className="text-gray-400">Shift Start: {staffProfile?.dutyStartTime || '08:00'}</span>
+              </div>
+            )}
           </div>
+        )}
 
-          <div className={cardStyle}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Punctuality Score</span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                <Activity size={16} />
+        {/* Quick Stats Matrix */}
+        {((sections.growthPoints !== false) || (sections.attendance !== false)) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {sections.growthPoints !== false && (
+              <div className={cardStyle}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Growth Ledger</span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                    <Trophy size={16} />
+                  </div>
+                </div>
+                <p className="text-3xl font-extrabold text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Growth Points Accumulated</p>
               </div>
-            </div>
-            <p className="text-3xl font-extrabold text-gray-900">{monthlySummary.present}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Present Days This Month</p>
+            )}
+
+            {sections.attendance !== false && (
+              <div className={cardStyle}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Punctuality Score</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <Activity size={16} />
+                  </div>
+                </div>
+                <p className="text-3xl font-extrabold text-gray-900">{monthlySummary.present}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Present Days This Month</p>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Special Tasks Override Alerts */}
-        {specialTasks.length > 0 && (
+        {sections.reports !== false && specialTasks.length > 0 && (
           <div className="p-6 rounded-3xl border border-red-100 bg-red-50/20 space-y-4">
             <div className="flex items-center gap-2 text-red-700">
               <ShieldAlert size={18} className="animate-bounce" />
@@ -461,54 +472,56 @@ export default function StaffSelfPage() {
         )}
 
         {/* Redesigned Premium Pretty Contribution Card */}
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-[0_4px_25px_-5px_rgba(0,0,0,0.03)] space-y-6 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-[0.02] pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700 text-[#1D9E75]">
-            <Sparkles size={120} />
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
-              <Lightbulb size={20} className="animate-pulse" />
+        {sections.reports !== false && (
+          <div className="bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-[0_4px_25px_-5px_rgba(0,0,0,0.03)] space-y-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-6 opacity-[0.02] pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700 text-[#1D9E75]">
+              <Sparkles size={120} />
             </div>
-            <div>
-              <h3 className="text-base font-extrabold text-gray-900">Share Today's Impact</h3>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Submit your daily achievements for Growth Points</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="relative rounded-2xl border border-gray-100 bg-gray-50/30 transition-all focus-within:border-[#1D9E75]/30 focus-within:ring-4 focus-within:ring-[#1D9E75]/5 focus-within:bg-white p-3">
-              <textarea
-                value={contributionText}
-                onChange={(e) => setContributionText(e.target.value)}
-                placeholder="What did you achieve or contribute today? E.g., resolved patient query, completed clinical documentation, supported emergency round..."
-                rows={3}
-                className="w-full bg-transparent p-3 text-sm font-semibold text-gray-800 outline-none resize-none placeholder:text-gray-300"
-              />
-              <div className="flex items-center justify-between px-3 pt-2 border-t border-gray-50 text-[10px] font-bold text-gray-400">
-                <span>Hospital Core Ledger</span>
-                <span>{contributionText.length} characters</span>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
+                <Lightbulb size={20} className="animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-gray-900">Share Today's Impact</h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Submit your daily achievements for Growth Points</p>
               </div>
             </div>
 
-            <button
-              onClick={handleContribution}
-              disabled={contribLoading || hasContributedToday || !contributionText.trim()}
-              className="w-full py-4 rounded-2xl bg-[#1D9E75] hover:bg-[#188864] disabled:bg-gray-100 disabled:text-gray-400 font-extrabold text-xs uppercase tracking-widest text-white transition-all shadow-[0_4px_15px_-3px_rgba(29,158,117,0.3)] hover:shadow-[0_6px_20px_-3px_rgba(29,158,117,0.4)] hover:scale-[1.005] active:scale-[0.99] flex items-center justify-center gap-2"
-            >
-              {contribLoading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : hasContributedToday ? (
-                <>Achievement Shared for Today ✓</>
-              ) : (
-                <>Submit Achievement <Send size={14} /></>
-              )}
-            </button>
+            <div className="space-y-4">
+              <div className="relative rounded-2xl border border-gray-100 bg-gray-50/30 transition-all focus-within:border-[#1D9E75]/30 focus-within:ring-4 focus-within:ring-[#1D9E75]/5 focus-within:bg-white p-3">
+                <textarea
+                  value={contributionText}
+                  onChange={(e) => setContributionText(e.target.value)}
+                  placeholder="What did you achieve or contribute today? E.g., resolved patient query, completed clinical documentation, supported emergency round..."
+                  rows={3}
+                  className="w-full bg-transparent p-3 text-sm font-semibold text-gray-800 outline-none resize-none placeholder:text-gray-300"
+                />
+                <div className="flex items-center justify-between px-3 pt-2 border-t border-gray-50 text-[10px] font-bold text-gray-400">
+                  <span>Hospital Core Ledger</span>
+                  <span>{contributionText.length} characters</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleContribution}
+                disabled={contribLoading || hasContributedToday || !contributionText.trim()}
+                className="w-full py-4 rounded-2xl bg-[#1D9E75] hover:bg-[#188864] disabled:bg-gray-100 disabled:text-gray-400 font-extrabold text-xs uppercase tracking-widest text-white transition-all shadow-[0_4px_15px_-3px_rgba(29,158,117,0.3)] hover:shadow-[0_6px_20px_-3px_rgba(29,158,117,0.4)] hover:scale-[1.005] active:scale-[0.99] flex items-center justify-center gap-2"
+              >
+                {contribLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : hasContributedToday ? (
+                  <>Achievement Shared for Today ✓</>
+                ) : (
+                  <>Submit Achievement <Send size={14} /></>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Timeline of Recent Contributions */}
-        {contributions.length > 0 && (
+        {sections.reports !== false && contributions.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 px-2">
               <Star size={14} className="text-amber-500 fill-amber-500" />
@@ -541,111 +554,113 @@ export default function StaffSelfPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* Duty Checklist */}
-          <div className={cardStyle}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center text-white">
-                <List size={16} />
+          {sections.duties !== false && (
+            <div className={cardStyle}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center text-white">
+                  <List size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Duties Checklist</h3>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Today's assigned schedule</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Duties Checklist</h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Today's assigned schedule</p>
-              </div>
-            </div>
-            
-            {staffProfile?.duties && staffProfile.duties.length > 0 ? (
-              <div className="space-y-2.5">
-                {staffProfile.duties.map((duty: any, idx: number) => {
-                  const isDone = duty.status === 'done';
-                  const label = duty.label || duty.description || 'Duty item';
-                  return (
-                    <div key={idx} className={`flex items-center justify-between p-3.5 rounded-2xl border text-xs font-bold transition-all duration-200
-                      ${isDone 
-                        ? 'bg-emerald-50/40 border-emerald-100 text-emerald-900' 
-                        : 'bg-gray-50/50 border-gray-100 text-gray-700 hover:border-gray-200'
-                      }`}>
-                      <span className="flex items-center gap-3">
-                        <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-extrabold
-                          ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
-                          {idx + 1}
+              
+              {staffProfile?.duties && staffProfile.duties.length > 0 ? (
+                <div className="space-y-2.5">
+                  {staffProfile.duties.map((duty: any, idx: number) => {
+                    const isDone = duty.status === 'done';
+                    const label = duty.label || duty.description || 'Duty item';
+                    return (
+                      <div key={idx} className={`flex items-center justify-between p-3.5 rounded-2xl border text-xs font-bold transition-all duration-200
+                        ${isDone 
+                          ? 'bg-emerald-50/40 border-emerald-100 text-emerald-900' 
+                          : 'bg-gray-50/50 border-gray-100 text-gray-700 hover:border-gray-200'
+                        }`}>
+                        <span className="flex items-center gap-3">
+                          <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-extrabold
+                            ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
+                            {idx + 1}
+                          </span>
+                          <span>{label}</span>
                         </span>
-                        <span>{label}</span>
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider
-                        ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200/60 text-gray-500'}`}>
-                        {isDone ? 'Done' : 'Pending'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">No duties configured for today</p>
-              </div>
-            )}
-          </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider
+                          ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200/60 text-gray-500'}`}>
+                          {isDone ? 'Done' : 'Pending'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">No duties configured for today</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Dress compliance status */}
-          <div className={cardStyle}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                <Shirt size={16} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Uniform Compliance</h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Today's appearance audit</p>
-              </div>
-            </div>
-
-            {todayDressRecord ? (
-              <div className="space-y-3 animate-in fade-in duration-300">
-                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50/50 border border-gray-100">
-                  <span className="text-xs font-bold text-gray-700">Audit Status</span>
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border
-                    ${todayDressRecord.status === 'yes'
-                      ? 'bg-emerald-50 border-emerald-100/60 text-emerald-700'
-                      : todayDressRecord.status === 'no'
-                        ? 'bg-red-50 border-red-100/60 text-red-700'
-                        : 'bg-amber-50 border-amber-100/60 text-amber-700'
-                    }`}>
-                    {todayDressRecord.status === 'yes' ? 'Compliant' : todayDressRecord.status === 'no' ? 'Non-Compliant' : 'Incomplete'}
-                  </span>
+          {sections.uniform !== false && (
+            <div className={cardStyle}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Shirt size={16} />
                 </div>
-
-                {todayDressRecord.items && todayDressRecord.items.length > 0 && (
-                  <div className="space-y-2">
-                    {todayDressRecord.items.map((item: any, idx: number) => {
-                      const isYes = item.status === 'yes';
-                      return (
-                        <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border text-[11px] font-bold
-                          ${isYes ? 'bg-blue-50/20 border-blue-100/40 text-blue-900' : 'bg-orange-50/20 border-orange-100/40 text-orange-950'}`}>
-                          <span>{item.label}</span>
-                          <span className={isYes ? 'text-blue-600 font-extrabold' : 'text-orange-600 font-extrabold'}>
-                            {isYes ? '✓ Compliant' : '✗ Missing'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Uniform Compliance</h3>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Today's appearance audit</p>
+                </div>
               </div>
-            ) : (
-              <div className="py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Audit pending for today</p>
-                {staffProfile?.dressCodeConfig && staffProfile.dressCodeConfig.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-4 justify-center px-4">
-                    {staffProfile.dressCodeConfig.map((item: any, idx: number) => (
-                      <span key={idx} className="px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[9px] font-bold text-gray-500 uppercase tracking-wide">
-                        {item.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
-        </div>
+              {todayDressRecord ? (
+                <div className="space-y-3 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50/50 border border-gray-100">
+                    <span className="text-xs font-bold text-gray-700">Audit Status</span>
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border
+                      ${todayDressRecord.status === 'yes'
+                        ? 'bg-emerald-50 border-emerald-100/60 text-emerald-700'
+                        : todayDressRecord.status === 'no'
+                          ? 'bg-red-50 border-red-100/60 text-red-700'
+                          : 'bg-amber-50 border-amber-100/60 text-amber-700'
+                      }`}>
+                      {todayDressRecord.status === 'yes' ? 'Compliant' : todayDressRecord.status === 'no' ? 'Non-Compliant' : 'Incomplete'}
+                    </span>
+                  </div>
+
+                  {todayDressRecord.items && todayDressRecord.items.length > 0 && (
+                    <div className="space-y-2">
+                      {todayDressRecord.items.map((item: any, idx: number) => {
+                        const isYes = item.status === 'yes';
+                        return (
+                          <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border text-[11px] font-bold
+                            ${isYes ? 'bg-blue-50/20 border-blue-100/40 text-blue-900' : 'bg-orange-50/20 border-orange-100/40 text-orange-950'}`}>
+                            <span>{item.label}</span>
+                            <span className={isYes ? 'text-blue-600 font-extrabold' : 'text-orange-600 font-extrabold'}>
+                              {isYes ? '✓ Compliant' : '✗ Missing'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Audit pending for today</p>
+                  {staffProfile?.dressCodeConfig && staffProfile.dressCodeConfig.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-4 justify-center px-4">
+                      {staffProfile.dressCodeConfig.map((item: any, idx: number) => (
+                        <span key={idx} className="px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[9px] font-bold text-gray-500 uppercase tracking-wide">
+                          {item.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}  </div>
 
       </main>
     </div>

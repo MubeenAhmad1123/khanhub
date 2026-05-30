@@ -16,6 +16,7 @@ import {
   Trophy, User as UserIcon, Sparkles, Activity, Shirt
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 export default function StaffSelfPage() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+  const { sections, loading: visibilityLoading } = useVisibleSections('welfare', 'staff', staffProfile?.id || user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -466,25 +468,33 @@ export default function StaffSelfPage() {
         </div>
 
         {/* Stat Tracker Rows */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`${cardStyle} flex flex-col items-start relative`}>
-             <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 mb-3">
-                <Trophy size={16} />
-             </div>
-             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Score</p>
-             <h4 className="text-2xl font-bold text-slate-900 mt-0.5">{staffProfile?.totalGrowthPoints || 0} PTS</h4>
+        {((sections.growthPoints !== false) || (sections.attendance !== false)) && (
+          <div className={`grid gap-4 ${
+            (sections.growthPoints !== false) && (sections.attendance !== false) ? 'grid-cols-2' : 'grid-cols-1'
+          }`}>
+            {sections.growthPoints !== false && (
+              <div className={`${cardStyle} flex flex-col items-start relative`}>
+                 <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 mb-3">
+                    <Trophy size={16} />
+                 </div>
+                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Score</p>
+                 <h4 className="text-2xl font-bold text-slate-900 mt-0.5">{staffProfile?.totalGrowthPoints || 0} PTS</h4>
+              </div>
+            )}
+            {sections.attendance !== false && (
+              <div className={`${cardStyle} flex flex-col items-start relative`}>
+                 <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 mb-3">
+                    <Activity size={16} />
+                 </div>
+                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Days Present</p>
+                 <h4 className="text-2xl font-bold text-slate-900 mt-0.5">{monthlySummary.present} / Month</h4>
+              </div>
+            )}
           </div>
-          <div className={`${cardStyle} flex flex-col items-start relative`}>
-             <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 mb-3">
-                <Activity size={16} />
-             </div>
-             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Days Present</p>
-             <h4 className="text-2xl font-bold text-slate-900 mt-0.5">{monthlySummary.present} / Month</h4>
-          </div>
-        </div>
+        )}
 
         {/* Active Special Task Row */}
-        {specialTasks.length > 0 && (
+        {sections.reports !== false && specialTasks.length > 0 && (
           <div className={`${cardStyle} bg-slate-50 border-slate-100`}>
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200/40">
               <Sparkles size={16} className="text-slate-700" />
@@ -518,35 +528,37 @@ export default function StaffSelfPage() {
         )}
 
         {/* Contributions Submissions Card */}
-        <div className={`${cardStyle} relative overflow-hidden`}>
-          <div className="flex items-center gap-2.5 mb-2">
-            <Lightbulb size={18} className="text-amber-500" />
-            <h2 className="text-base font-bold text-slate-900">Record Contribution</h2>
-          </div>
-          <p className="text-xs text-slate-500 mb-4">Describe your custom achievements today to gain extra growth scores</p>
-          
-          <div className="space-y-3">
-            <textarea
-              value={contributionText}
-              onChange={(e) => setContributionText(e.target.value)}
-              placeholder="Ex: Solved system delay issue, completed pending donor inquiries..."
-              rows={3}
-              className="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-xl text-slate-800 outline-none focus:border-slate-300 focus:bg-white transition-all placeholder:text-slate-400 resize-none"
-            />
+        {sections.reports !== false && (
+          <div className={`${cardStyle} relative overflow-hidden`}>
+            <div className="flex items-center gap-2.5 mb-2">
+              <Lightbulb size={18} className="text-amber-500" />
+              <h2 className="text-base font-bold text-slate-900">Record Contribution</h2>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">Describe your custom achievements today to gain extra growth scores</p>
             
-            <button
-              onClick={handleContribution}
-              disabled={contribLoading || hasContributedToday || !contributionText.trim()}
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 text-white text-xs font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
-            >
-              {contribLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              {hasContributedToday ? 'Submitted Today' : 'Publish Contribution'}
-            </button>
+            <div className="space-y-3">
+              <textarea
+                value={contributionText}
+                onChange={(e) => setContributionText(e.target.value)}
+                placeholder="Ex: Solved system delay issue, completed pending donor inquiries..."
+                rows={3}
+                className="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-xl text-slate-800 outline-none focus:border-slate-300 focus:bg-white transition-all placeholder:text-slate-400 resize-none"
+              />
+              
+              <button
+                onClick={handleContribution}
+                disabled={contribLoading || hasContributedToday || !contributionText.trim()}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 text-white text-xs font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
+              >
+                {contribLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {hasContributedToday ? 'Submitted Today' : 'Publish Contribution'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Recent Contributions Log */}
-        {contributions.length > 0 && (
+        {sections.reports !== false && contributions.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-1.5 px-1">
               <Star size={14} className="text-amber-500 fill-amber-500" />
@@ -576,7 +588,7 @@ export default function StaffSelfPage() {
         )}
 
         {/* Daily Tasks Accordion Row */}
-        {staffProfile?.duties?.length > 0 && (
+        {sections.duties !== false && staffProfile?.duties?.length > 0 && (
           <div className={cardStyle}>
             <div className="flex items-center gap-2 mb-4">
               <List size={16} className="text-slate-700" />

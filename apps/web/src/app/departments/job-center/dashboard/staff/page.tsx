@@ -15,6 +15,7 @@ import {
   Trophy, TrendingUp, User as UserIcon, Sparkles, Activity
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 export default function StaffSelfPage() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function StaffSelfPage() {
   const [hasContributedToday, setHasContributedToday] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+  const { sections, loading: visibilityLoading } = useVisibleSections('job-center', 'staff', staffProfile?.id || user?.uid || '');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -281,29 +283,37 @@ export default function StaffSelfPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`p-5 ${glassStyle}`}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-                <Trophy size={16} />
+        {((sections.growthPoints !== false) || (sections.attendance !== false)) && (
+          <div className={`grid gap-4 ${
+            (sections.growthPoints !== false) && (sections.attendance !== false) ? 'grid-cols-2' : 'grid-cols-1'
+          }`}>
+            {sections.growthPoints !== false && (
+              <div className={`p-5 ${glassStyle}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                    <Trophy size={16} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Growth Points</p>
+                </div>
+                <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Growth Points</p>
-            </div>
-            <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
-          </div>
-          <div className={`p-5 ${glassStyle}`}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-                <Activity size={16} />
+            )}
+            {sections.attendance !== false && (
+              <div className={`p-5 ${glassStyle}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                    <Activity size={16} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance</p>
+                </div>
+                <p className="text-3xl font-black text-gray-900">{monthlySummary.present}</p>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance</p>
-            </div>
-            <p className="text-3xl font-black text-gray-900">{monthlySummary.present}</p>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Special Tasks Override Card */}
-        {specialTasks.length > 0 && (
+        {sections.reports !== false && specialTasks.length > 0 && (
           <div className={`p-8 rounded-[2.5rem] border-2 border-indigo-100 bg-indigo-50/30 ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
@@ -343,39 +353,41 @@ export default function StaffSelfPage() {
 
 
         {/* Contribution Section */}
-        <div className={`p-8 border-4 border-black ${glassStyle}`}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
-              <Lightbulb size={20} />
+        {sections.reports !== false && (
+          <div className={`p-8 border-4 border-black ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+                <Lightbulb size={20} />
+              </div>
+              <h2 className="text-xl font-black text-gray-900">Record Contribution</h2>
             </div>
-            <h2 className="text-xl font-black text-gray-900">Record Contribution</h2>
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
-          
-          <div className="space-y-4">
-            <div className="p-2 border-2 border-black bg-white">
-              <textarea
-                value={contributionText}
-                onChange={(e) => setContributionText(e.target.value)}
-                placeholder="What did you achieve or contribute today?"
-                rows={4}
-                className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
-              />
-            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
             
-            <button
-              onClick={handleContribution}
-              disabled={contribLoading || hasContributedToday || !contributionText.trim()}
-              className="w-full py-5 bg-black text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            >
-              {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
-            </button>
+            <div className="space-y-4">
+              <div className="p-2 border-2 border-black bg-white">
+                <textarea
+                  value={contributionText}
+                  onChange={(e) => setContributionText(e.target.value)}
+                  placeholder="What did you achieve or contribute today?"
+                  rows={4}
+                  className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
+                />
+              </div>
+              
+              <button
+                onClick={handleContribution}
+                disabled={contribLoading || hasContributedToday || !contributionText.trim()}
+                className="w-full py-5 bg-black text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              >
+                {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Recent Contributions List */}
-        {contributions.length > 0 && (
+        {sections.reports !== false && contributions.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 px-2">
               <Star size={16} className="text-amber-500 fill-amber-500" />
@@ -403,7 +415,7 @@ export default function StaffSelfPage() {
         )}
 
         {/* Duties Section */}
-        {staffProfile?.duties?.length > 0 && (
+        {sections.duties !== false && staffProfile?.duties?.length > 0 && (
           <div className={`p-8 border-4 border-black ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">

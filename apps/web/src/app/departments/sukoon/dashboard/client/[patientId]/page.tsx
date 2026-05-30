@@ -15,6 +15,7 @@ import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -34,6 +35,26 @@ export default function FamilyPatientViewPage() {
   const [feeRecord, setFeeRecord] = useState<any>(null);
   const [canteenRecord, setCanteenRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'therapy' | 'meds' | 'progress'>('overview');
+
+  const { sections, loading: visibilityLoading } = useVisibleSections('sukoon', 'rehab_patients', patientId);
+
+  useEffect(() => {
+    if (visibilityLoading) return;
+    const tabVisibility: Record<string, boolean> = {
+      overview: sections.admissionDetails !== false,
+      daily: sections.dailySheet !== false,
+      therapy: sections.therapy !== false,
+      meds: sections.medication !== false,
+      progress: sections.progressNotes !== false,
+    };
+    
+    if (tabVisibility[activeTab] === false) {
+      const firstVisible = Object.keys(tabVisibility).find(k => tabVisibility[k] !== false);
+      if (firstVisible) {
+        setActiveTab(firstVisible as any);
+      }
+    }
+  }, [sections, visibilityLoading, activeTab]);
 
   const fetchPatientData = useCallback(async () => {
     try {
@@ -191,41 +212,43 @@ export default function FamilyPatientViewPage() {
       </div>
 
       {/* Finance Summary */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="rounded-2xl bg-teal-500/10 border border-teal-500/20 p-4">
-          <p className="text-teal-600 text-[9px] font-black uppercase tracking-widest mb-3">Financial Summary</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalDues?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Package</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Received</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className={`text-lg font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Remaining</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Canteen Balance</span>
+      {sections.financialStatement !== false && (
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="rounded-2xl bg-teal-500/10 border border-teal-500/20 p-4">
+            <p className="text-teal-600 text-[9px] font-black uppercase tracking-widest mb-3">Financial Summary</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-lg font-black text-teal-700">₨{patient.totalDues?.toLocaleString() || '0'}</span>
+                <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Package</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
+                <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Received</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className={`text-lg font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
+                <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Remaining</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-lg font-black text-teal-700">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
+                <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Canteen Balance</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
         <div className="w-full -mx-4 px-4">
           <div className="flex flex-wrap gap-1 pb-1">
             {[
-              { key: 'overview', label: 'Overview', icon: User },
-              { key: 'daily', label: 'Daily Sheet', icon: Activity },
-              { key: 'therapy', label: 'Therapy', icon: Heart },
-              { key: 'meds', label: 'Medication', icon: Pill },
-              { key: 'progress', label: 'Progress', icon: TrendingUp },
-            ].map(tab => (
+              { key: 'overview', label: 'Overview', icon: User, visible: sections.admissionDetails !== false },
+              { key: 'daily', label: 'Daily Sheet', icon: Activity, visible: sections.dailySheet !== false },
+              { key: 'therapy', label: 'Therapy', icon: Heart, visible: sections.therapy !== false },
+              { key: 'meds', label: 'Medication', icon: Pill, visible: sections.medication !== false },
+              { key: 'progress', label: 'Progress', icon: TrendingUp, visible: sections.progressNotes !== false },
+            ].filter(t => t.visible !== false).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
@@ -262,29 +285,31 @@ export default function FamilyPatientViewPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Relationship</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
-                  <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
-                  {patient.whatsappNumber ? (
-                    <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
-                  ) : <p className="font-bold text-gray-400 mt-1">—</p>}
+            {sections.familyContact !== false && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
+                    <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Relationship</p>
+                    <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
+                    <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
+                    {patient.whatsappNumber ? (
+                      <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
+                    ) : <p className="font-bold text-gray-400 mt-1">—</p>}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

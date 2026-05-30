@@ -27,6 +27,8 @@ import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
 import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
+import VisibilityManager from '@/components/shared/VisibilityManager';
+import { saveVisibleSections } from '@/lib/visibilityManager';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -1781,6 +1783,18 @@ export default function PatientDetailPage() {
 
           {/* TAB: PROFILE */}
           <div id="section-profile" className="scroll-mt-24 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-gray-100 dark:border-white/5 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
+            {session && (session.role === 'admin' || session.role === 'superadmin') && (
+              <VisibilityManager
+                entityType="patient"
+                entityId={patientId}
+                department="rehab"
+                currentSections={patient?.visibleSections || {}}
+                onSave={async (updated) => {
+                  await saveVisibleSections('rehab', 'patients', patientId, updated);
+                  setPatient((prev: any) => prev ? { ...prev, visibleSections: updated } : null);
+                }}
+              />
+            )}
             <div className="space-y-8 w-full">
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>

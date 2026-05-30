@@ -961,139 +961,140 @@ export default function ManagerUsersPage() {
                       </div>
 
                       {!formData.isOpenVacancy ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                        <div className="sm:col-span-2 lg:col-span-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200/80 rounded-2xl p-4 aspect-square relative hover:border-indigo-500 hover:bg-indigo-50/10 transition-colors cursor-pointer group bg-gray-50/40">
-                          {formData.photoUrl ? (
-                            <img src={formData.photoUrl} alt="Profile" className="w-full h-full object-cover rounded-xl" />
-                          ) : (
-                            <div className="text-center">
-                              <Camera size={26} className="mx-auto mb-2 text-gray-300 group-hover:text-indigo-500 transition-colors" />
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-indigo-600 transition-colors">Upload WebP Photo</span>
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                            <div className="sm:col-span-2 lg:col-span-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200/80 rounded-2xl p-4 aspect-square relative hover:border-indigo-500 hover:bg-indigo-50/10 transition-colors cursor-pointer group bg-gray-50/40">
+                              {formData.photoUrl ? (
+                                <img src={formData.photoUrl} alt="Profile" className="w-full h-full object-cover rounded-xl" />
+                              ) : (
+                                <div className="text-center">
+                                  <Camera size={26} className="mx-auto mb-2 text-gray-300 group-hover:text-indigo-500 transition-colors" />
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-indigo-600 transition-colors">Upload WebP Photo</span>
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                accept="image/webp"
+                                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'profile')}
+                              />
+                              {uploading === 'photoUrl' && (
+                                <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                  <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          <input
-                            type="file"
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            accept="image/webp"
-                            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'profile')}
-                          />
-                          {uploading === 'photoUrl' && (
-                            <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                              <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
-                            </div>
-                          )}
-                        </div>
 
-                        <div className="sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">First Name*</label>
-                            <input
-                              type="text"
-                              placeholder="First name"
-                              value={formData.firstName}
-                              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                              className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Last Name</label>
-                            <input
-                              type="text"
-                              placeholder="Last name"
-                              value={formData.lastName}
-                              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                              className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Father's Name*</label>
-                            <input
-                              type="text"
-                              placeholder="Father's name"
-                              value={formData.fatherName}
-                              onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
-                              className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Gender*</label>
-                            <div className="flex gap-1.5 p-1 bg-gray-50 border border-gray-200/60 rounded-xl">
-                              {['male', 'female'].map(g => (
-                                <button
-                                  key={g}
-                                  onClick={() => setFormData({ ...formData, gender: g })}
-                                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${formData.gender === g
-                                      ? 'bg-indigo-600 text-white shadow-sm'
-                                      : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
-                                    }`}
-                                >
-                                  {g}
-                                </button>
-                              ))}
+                            <div className="sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">First Name*</label>
+                                <input
+                                  type="text"
+                                  placeholder="First name"
+                                  value={formData.firstName}
+                                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                  className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Last Name</label>
+                                <input
+                                  type="text"
+                                  placeholder="Last name"
+                                  value={formData.lastName}
+                                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                  className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Father's Name*</label>
+                                <input
+                                  type="text"
+                                  placeholder="Father's name"
+                                  value={formData.fatherName}
+                                  onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+                                  className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Gender*</label>
+                                <div className="flex gap-1.5 p-1 bg-gray-50 border border-gray-200/60 rounded-xl">
+                                  {['male', 'female'].map(g => (
+                                    <button
+                                      key={g}
+                                      onClick={() => setFormData({ ...formData, gender: g })}
+                                      className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${formData.gender === g
+                                          ? 'bg-indigo-600 text-white shadow-sm'
+                                          : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
+                                        }`}
+                                    >
+                                      {g}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <BrutalistCalendar
+                                  label="Date of Birth*"
+                                  value={formData.dateOfBirth}
+                                  onChange={(iso: string) => setFormData({ ...formData, dateOfBirth: iso })}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">CNIC Number</label>
+                                <input
+                                  type="text"
+                                  placeholder="42101-XXXXXXX-X"
+                                  value={formData.cnic}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '').substring(0, 13);
+                                    let formatted = val;
+                                    if (val.length > 5) formatted = val.substring(0, 5) + '-' + val.substring(5, 12);
+                                    if (val.length > 12) formatted = formatted + '-' + val.substring(12, 13);
+                                    setFormData({ ...formData, cnic: formatted });
+                                  }}
+                                  className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Phone / WhatsApp*</label>
+                                <div className="relative">
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                                  <input
+                                    type="tel"
+                                    placeholder="+92 3XX XXXXXXX"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    className="w-full pl-11 pr-4 h-12 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <div className="space-y-1.5">
-                            <BrutalistCalendar
-                              label="Date of Birth*"
-                              value={formData.dateOfBirth}
-                              onChange={(iso: string) => setFormData({ ...formData, dateOfBirth: iso })}
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">CNIC Number</label>
-                            <input
-                              type="text"
-                              placeholder="42101-XXXXXXX-X"
-                              value={formData.cnic}
-                              onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '').substring(0, 13);
-                                let formatted = val;
-                                if (val.length > 5) formatted = val.substring(0, 5) + '-' + val.substring(5, 12);
-                                if (val.length > 12) formatted = formatted + '-' + val.substring(12, 13);
-                                setFormData({ ...formData, cnic: formatted });
-                              }}
-                              className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Phone / WhatsApp*</label>
-                            <div className="relative">
-                              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+
+                          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-50 pt-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Emergency Contact Name</label>
+                              <input
+                                type="text"
+                                placeholder="John Doe"
+                                value={formData.emergencyContact.name}
+                                onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, name: e.target.value } })}
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Emergency Contact Phone</label>
                               <input
                                 type="tel"
                                 placeholder="+92 3XX XXXXXXX"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="w-full pl-11 pr-4 h-12 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
+                                value={formData.emergencyContact.phone}
+                                onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, phone: e.target.value } })}
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
                               />
                             </div>
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-50 pt-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Emergency Contact Name</label>
-                          <input
-                            type="text"
-                            placeholder="John Doe"
-                            value={formData.emergencyContact.name}
-                            onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, name: e.target.value } })}
-                            className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 ml-1">Emergency Contact Phone</label>
-                          <input
-                            type="tel"
-                            placeholder="+92 3XX XXXXXXX"
-                            value={formData.emergencyContact.phone}
-                            onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, phone: e.target.value } })}
-                            className="w-full h-12 px-4 rounded-xl border border-gray-200/80 bg-gray-50/50 focus:bg-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-semibold text-sm"
-                          />
-                        </div>
-                      </div>
-                      </div>
+                        </>
                       ) : (
                         <div className="py-8 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
                           <User size={40} className="text-gray-300 mb-3" />
