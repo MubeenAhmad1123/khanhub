@@ -1710,24 +1710,26 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tabs Navigation - Premium Sticky Glass Header */}
-        <div 
-          className="w-full px-2 sm:px-0 mt-6 mb-4 sticky top-0 z-40 bg-slate-50/80 dark:bg-gray-950/80 backdrop-blur-md py-2 overflow-x-auto"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <div className="flex flex-nowrap gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5 min-w-max md:min-w-0 md:w-full">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => scrollToSection(t.id)}
-                className={`px-3.5 py-2.5 text-[10px] sm:px-5 sm:py-3 sm:text-[11px] whitespace-nowrap font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl shrink-0 ${activeTab === t.id
-                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/30 active:scale-95'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
-                  }`}
-              >
-                <t.icon className={`h-4 w-4 ${activeTab === t.id ? 'animate-pulse' : ''}`} />
-                <span>{t.label}</span>
-              </button>
-            ))}
+        <div className="w-full sticky top-0 z-40 bg-slate-50/80 dark:bg-gray-950/80 backdrop-blur-md py-2 no-print">
+          <div 
+            className="w-full overflow-x-auto px-2 sm:px-0 [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <div className="flex flex-nowrap gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5 min-w-max md:min-w-0 md:w-full">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => scrollToSection(t.id)}
+                  className={`px-3.5 py-2.5 text-[10px] sm:px-5 sm:py-3 sm:text-[11px] whitespace-nowrap font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl shrink-0 ${activeTab === t.id
+                    ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/30 active:scale-95'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+                    }`}
+                >
+                  <t.icon className={`h-4 w-4 ${activeTab === t.id ? 'animate-pulse' : ''}`} />
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -2291,74 +2293,134 @@ export default function PatientDetailPage() {
                     <p className="text-gray-400 dark:text-gray-500 font-bold uppercase text-xs tracking-widest">No transactions found</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto w-full no-scrollbar">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-left text-gray-500 dark:text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/10">
-                          <th className="pb-4">Date</th>
-                          <th className="pb-4">Amount</th>
-                          <th className="pb-4">Method</th>
-                          <th className="pb-4">Status</th>
-                          <th className="pb-4">Details</th>
-                          {session?.role === 'superadmin' && <th className="pb-4">Actions</th>}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                        {allPayments.map((p: any) => {
-                          const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
-                          return (
-                            <tr key={p.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
-                              <td className="py-5">
-                                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{dateObj.toLocaleDateString()}</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase">{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                              </td>
-                              <td className="py-5">
-                                <span className="text-base font-black text-[#1a3a5c] dark:text-blue-400">₨{Number(p.amount).toLocaleString()}</span>
-                              </td>
-                              <td className="py-5 font-bold text-xs text-gray-500 dark:text-gray-400">{p.method || 'Cash'}</td>
-                              <td className="py-5">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${
-                                  p.status === 'approved' 
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                                    : p.status === 'rejected' || p.status === 'rejected_cashier'
-                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                }`}>
-                                  {String(p.status || 'pending').toUpperCase()}
-                                </span>
-                              </td>
-                              <td className="py-5">
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
-                                {p.note && <p className="text-[10px] text-[#1a3a5c] dark:text-blue-400 font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
-                              </td>
-                              {session?.role === 'superadmin' && (
-                                <td className="py-5 flex items-center gap-2">
-                                  {p.isPendingTransaction && (
-                                    <button
-                                      onClick={() => handleDirectApprove(p.id)}
-                                      disabled={directApproveLoading === p.id}
-                                      className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-xl font-black text-xs transition-all active:scale-95"
-                                    >
-                                      {directApproveLoading === p.id ? '...' : 'Approve ✓'}
-                                    </button>
-                                  )}
+                  <div className="w-full">
+                    {/* Mobile transaction cards layout */}
+                    <div className="block lg:hidden space-y-4">
+                      {allPayments.map((p: any) => {
+                        const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+                        return (
+                          <div key={p.id} className="bg-gray-50/80 dark:bg-gray-800/40 border border-gray-100 dark:border-white/5 rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2">
+                              <div>
+                                <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{dateObj.toLocaleDateString()}</p>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase">{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                              <span className="text-base font-black text-[#1a3a5c] dark:text-blue-400">₨{Number(p.amount).toLocaleString()}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+                              <span className="text-gray-500 dark:text-gray-400">Method: {p.method || 'Cash'}</span>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider ${
+                                p.status === 'approved' 
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                  : p.status === 'rejected' || p.status === 'rejected_cashier'
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {String(p.status || 'pending').toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                              Verifier: {p.cashierId || 'Admin'}
+                              {p.note && <p className="text-[#1a3a5c] dark:text-blue-400 font-black italic mt-1 break-words">"{p.note}"</p>}
+                            </div>
+                            {session?.role === 'superadmin' && (
+                              <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-white/5">
+                                {p.isPendingTransaction && (
                                   <button
-                                    onClick={() => {
-                                      setDeletingPayment(p);
-                                      setShowDeleteModal(true);
-                                    }}
-                                    className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
-                                    title="Delete Transaction"
+                                    onClick={() => handleDirectApprove(p.id)}
+                                    disabled={directApproveLoading === p.id}
+                                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-xl font-black text-xs transition-all active:scale-95 flex-1"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    {directApproveLoading === p.id ? '...' : 'Approve ✓'}
                                   </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setDeletingPayment(p);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors border border-rose-100 dark:border-rose-900/10 flex items-center justify-center gap-1.5 text-xs font-bold w-full"
+                                  title="Delete Transaction"
+                                >
+                                  <Trash2 className="w-4 h-4" /> Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop transaction log table */}
+                    <div className="hidden lg:block overflow-x-auto w-full [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      <table className="w-full min-w-[700px]">
+                        <thead>
+                          <tr className="text-left text-gray-500 dark:text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/10">
+                            <th className="pb-4">Date</th>
+                            <th className="pb-4">Amount</th>
+                            <th className="pb-4">Method</th>
+                            <th className="pb-4">Status</th>
+                            <th className="pb-4">Details</th>
+                            {session?.role === 'superadmin' && <th className="pb-4">Actions</th>}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                          {allPayments.map((p: any) => {
+                            const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+                            return (
+                              <tr key={p.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+                                <td className="py-5">
+                                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{dateObj.toLocaleDateString()}</p>
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase">{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                 </td>
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                                <td className="py-5">
+                                  <span className="text-base font-black text-[#1a3a5c] dark:text-blue-400">₨{Number(p.amount).toLocaleString()}</span>
+                                </td>
+                                <td className="py-5 font-bold text-xs text-gray-500 dark:text-gray-400">{p.method || 'Cash'}</td>
+                                <td className="py-5">
+                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${
+                                    p.status === 'approved' 
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                      : p.status === 'rejected' || p.status === 'rejected_cashier'
+                                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                      : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  }`}>
+                                    {String(p.status || 'pending').toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="py-5">
+                                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
+                                  {p.note && <p className="text-[10px] text-[#1a3a5c] dark:text-blue-400 font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
+                                </td>
+                                {session?.role === 'superadmin' && (
+                                  <td className="py-5 flex items-center gap-2">
+                                    {p.isPendingTransaction && (
+                                      <button
+                                        onClick={() => handleDirectApprove(p.id)}
+                                        disabled={directApproveLoading === p.id}
+                                        className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-xl font-black text-xs transition-all active:scale-95"
+                                      >
+                                        {directApproveLoading === p.id ? '...' : 'Approve ✓'}
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        setDeletingPayment(p);
+                                        setShowDeleteModal(true);
+                                      }}
+                                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Delete Transaction"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                )}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3863,7 +3925,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 flex justify-center report-scroll-wrapper">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 bg-slate-100 dark:bg-black/20 md:flex md:justify-center report-scroll-wrapper">
           <div ref={reportRef} className="printable-report bg-white shadow-2xl rounded-[1.5rem] p-10 w-[794px] min-w-[794px] text-gray-900 font-sans min-h-[1123px] flex flex-col justify-between border border-gray-100">
             <div>
               {/* Report Header */}
