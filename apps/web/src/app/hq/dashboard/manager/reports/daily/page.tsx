@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
@@ -111,6 +111,24 @@ export default function DailyReportPage() {
   const fetchReport = async () => {
     try {
       setLoading(true);
+      
+      if (!auth.currentUser) {
+        console.warn("[daily page] Firebase Auth user is null. Permission errors expected.");
+        toast.error("Firebase Session Expired. Please log out and log back in to reload your profile permissions.", { duration: 8000 });
+        setLoading(false);
+        return;
+      }
+
+      let permissionErrorCount = 0;
+      const handleQueryError = (err: any) => {
+        console.error("[daily page query error]:", err);
+        const errMsg = String(err || '').toLowerCase();
+        if (err?.code === 'permission-denied' || errMsg.includes('permission') || errMsg.includes('insufficient')) {
+          permissionErrorCount++;
+        }
+        return { docs: [] } as any;
+      };
+
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
       // 1. Fetch from listStaffCards to align with Staff Roster
@@ -119,11 +137,11 @@ export default function DailyReportPage() {
         status: 'all',
         role: 'all',
         fullEnrichment: false
-      });
+      }).catch(handleQueryError);
 
       const staffSnaps = await Promise.all(depts.map(d => 
         getDocs(collection(db, getDeptCollection(d)))
-          .catch(() => ({ docs: [] } as any))
+          .catch(handleQueryError)
       ));
       const allStaff: any[] = [];
       const seenIds = new Set<string>();
@@ -148,16 +166,18 @@ export default function DailyReportPage() {
       };
 
       // First add from unifiedStaffCards
-      unifiedStaffCards.forEach(s => {
-        if (isEligibleStaff(s)) {
-          allStaff.push({
-            ...s,
-            id: s.staffId,
-            department: s.dept
-          });
-          seenIds.add(s.staffId);
-        }
-      });
+      if (Array.isArray(unifiedStaffCards)) {
+        unifiedStaffCards.forEach(s => {
+          if (isEligibleStaff(s)) {
+            allStaff.push({
+              ...s,
+              id: s.staffId,
+              department: s.dept
+            });
+            seenIds.add(s.staffId);
+          }
+        });
+      }
 
       // Supplement with manual fetch to make sure NO active staff is missed
       staffSnaps.forEach((snap, i) => {
@@ -175,24 +195,28 @@ export default function DailyReportPage() {
       // 2. Fetch Daily Logs for each department
       const attSnaps = await Promise.all(depts.map(d => 
         getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', reportDate)))
-          .catch(() => ({ docs: [] } as any))
+          .catch(handleQueryError)
       ));
       const dressSnaps = await Promise.all(depts.map(d => 
         getDocs(query(collection(db, `${getDeptPrefix(d)}_dress_logs`), where('date', '==', reportDate)))
-          .catch(() => ({ docs: [] } as any))
+          .catch(handleQueryError)
       ));
       const dutySnaps = await Promise.all(depts.map(d => 
         getDocs(query(collection(db, `${getDeptPrefix(d)}_duty_logs`), where('date', '==', reportDate)))
-          .catch(() => ({ docs: [] } as any))
+          .catch(handleQueryError)
       ));
       const fineSnaps = await Promise.all(depts.map(d => 
         getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('date', '==', reportDate)))
-          .catch(() => ({ docs: [] } as any))
+          .catch(handleQueryError)
       ));
       const contribSnaps = await Promise.all(depts.map(d => 
         getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate)))
-          .catch(() => ({ docs: [] } as any))
+          .catch(handleQueryError)
       ));
+
+      if (permissionErrorCount > 0) {
+        toast.error("Some database collections returned permission errors. Your session may have expired! Please log out and log back in to fully restore permissions.", { duration: 10000 });
+      }
 
       // Maps for fast lookup
       const attMap = new Map();

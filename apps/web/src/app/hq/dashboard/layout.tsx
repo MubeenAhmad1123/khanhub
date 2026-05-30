@@ -231,18 +231,24 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         setTimeout(() => setMounted(true), 50);
       } else {
         const localSession = localStorage.getItem(SESSION_KEY);
-        if (!localSession) {
-          console.warn('[HQ Layout] No Firebase user and no local session. Redirecting...');
-          router.push('/hq/login');
-        } else {
+        const isDailyAuditRoute = pathname === '/hq/dashboard/manager/reports/daily' || 
+                                  pathname.startsWith('/hq/dashboard/manager/reports/daily/');
+        const hospitalSession = localStorage.getItem('hospital_session');
+
+        if (isDailyAuditRoute && hospitalSession) {
           setIsChecking(false);
           setTimeout(() => setMounted(true), 50);
+        } else {
+          console.warn('[HQ Layout] No Firebase user. Redirecting to login...');
+          localStorage.removeItem(SESSION_KEY);
+          setUser(null);
+          router.push('/hq/login');
         }
       }
     });
 
     return () => unsubAuth();
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
