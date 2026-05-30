@@ -479,7 +479,7 @@
 
   /* Ensure tables never cause page overflow globally */
   table {
-    min-width: 100%;
+    max-width: 100%;
   }
 
   /* ─── Responsive Tab Bar ─── */

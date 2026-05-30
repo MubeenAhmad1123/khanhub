@@ -96,7 +96,7 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records: i
   return (
     <div 
       ref={sectionRef}
-      className="w-full bg-slate-50/50 dark:bg-gray-950/20 py-8 sm:py-12 px-0 overflow-visible relative"
+      className="w-full bg-slate-50/50 dark:bg-gray-950/20 py-8 sm:py-12 px-0 overflow-hidden relative"
     >
       <style jsx>{`
         @keyframes fadeIn {
@@ -108,7 +108,7 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records: i
         }
       `}</style>
 
-      <div className="max-w-5xl mx-auto relative z-10 px-4 sm:px-6">
+      <div className="w-full relative z-10 px-4 sm:px-6">
         {/* Statement Style Header */}
         <div className={`mb-10 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 sm:p-8 rounded-3xl shadow-sm">

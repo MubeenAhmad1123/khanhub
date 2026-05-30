@@ -1618,10 +1618,10 @@ export default function PatientDetailPage() {
           entityName={patient?.name}
         />
       </div>
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0 no-print">
+      <div className="max-w-5xl mx-auto w-full space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0 no-print">
 
         {/* Top Link - Back Navigation */}
-        <div className="px-4 sm:px-0 mt-4 leading-none">
+        <div className="mt-4 leading-none">
           <Link
             href="/departments/rehab/dashboard/admin/patients"
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-black text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-all uppercase tracking-widest group"
@@ -1714,7 +1714,7 @@ export default function PatientDetailPage() {
             className="w-full overflow-x-auto px-2 sm:px-0 [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            <div className="flex flex-nowrap gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5 min-w-max md:min-w-0 md:w-full">
+            <div className="inline-flex gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5">
               {TABS.map((t) => (
                 <button
                   key={t.id}

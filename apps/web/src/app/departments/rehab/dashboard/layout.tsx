@@ -407,7 +407,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       </aside>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 overflow-x-hidden ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'}`}>
         {/* Background Decorative Elements */}
         <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-rose-500/10 to-orange-500/5 rounded-full blur-[140px] -mr-64 -mt-64 pointer-events-none" />
         <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-pink-500/10 to-indigo-500/5 rounded-full blur-[140px] -ml-64 -mb-64 pointer-events-none" />
@@ -455,8 +455,8 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           </div>
         </header>
 
-        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <div className="max-w-7xl mx-auto relative">{children}</div>
+        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <div className="max-w-7xl mx-auto relative w-full overflow-x-hidden">{children}</div>
         </main>
       </div>
     </div>
