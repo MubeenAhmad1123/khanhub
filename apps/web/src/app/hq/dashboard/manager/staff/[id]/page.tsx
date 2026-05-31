@@ -600,7 +600,7 @@ export default function StaffProfilePage() {
     }
   }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable
 
-  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated') => {
+  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy') => {
     if (!staff) return;
     try {
       setSaving(true);
@@ -1425,11 +1425,23 @@ export default function StaffProfilePage() {
         return docStates[idx]?.status !== 'deleting';
       });
 
-      const res = await updateStaffProfile(staff.id, {
+      let finalUpdates: any = {
         ...editForm,
         documents: finalDocuments,
         updatedAt: serverTimestamp()
-      });
+      };
+
+      // Auto-hire: Transition active vacancy to active when hired
+      if (
+        (staff.status === 'active_vacancy' || staff.name?.toLowerCase() === 'vacant') &&
+        editForm.name &&
+        editForm.name.toLowerCase() !== 'vacant'
+      ) {
+        finalUpdates.status = 'active';
+        finalUpdates.isActive = true;
+      }
+
+      const res = await updateStaffProfile(staff.id, finalUpdates);
 
       if (!res.success) throw new Error(res.error);
 
@@ -1512,7 +1524,7 @@ export default function StaffProfilePage() {
         fatherName: "",
         joiningDate: "",
         isActive: false,
-        status: "inactive",
+        status: "active_vacancy",
         dept: staff.dept,
         role: staff.role || "staff",
         designation: staff.designation || "",
@@ -1624,6 +1636,7 @@ export default function StaffProfilePage() {
                   <select 
                     className={`bg-transparent font-black text-xs uppercase outline-none border-none cursor-pointer w-full p-0 m-0 ${
                       staff?.status === 'active' ? 'text-teal-500' : 
+                      staff?.status === 'active_vacancy' ? 'text-indigo-500' : 
                       staff?.status === 'resigned' ? 'text-amber-500' : 
                       staff?.status === 'terminated' ? 'text-rose-500' : 
                       'text-slate-900'
@@ -1635,6 +1648,7 @@ export default function StaffProfilePage() {
                     <option value="inactive">Inactive</option>
                     <option value="resigned">Resigned</option>
                     <option value="terminated">Terminated</option>
+                    <option value="active_vacancy">Active Vacancy</option>
                   </select>
                 </div>
                 <div className={`rounded-2xl p-4 text-left bg-gray-50`}>

@@ -6,7 +6,7 @@ import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'personnel' | 'student' | 'other';
-export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated';
+export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy';
 
 export function getDeptCollection(dept: StaffDept): string {
   if (dept === 'hq') return 'hq_users';
@@ -349,7 +349,7 @@ export async function listStaffCards({
   includeTodayStats = true,
 }: {
   dept: 'all' | StaffDept;
-  status: 'all' | 'active' | 'inactive';
+  status: 'all' | 'active' | 'inactive' | 'active_vacancy';
   role: 'all' | 'admin' | 'staff' | 'cashier' | 'personnel';
   fullEnrichment?: boolean;
   includeTodayStats?: boolean;
@@ -380,10 +380,17 @@ export async function listStaffCards({
 
     // 2. Strict Active Check
     const statusStr = String(s.status || '').toLowerCase();
-    const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
+    const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'active_vacancy';
     
-    if (status === 'active' && !isActuallyActive) return false;
-    if (status === 'inactive' && isActuallyActive) return false;
+    if (status === 'active') {
+      if (!isActuallyActive || statusStr === 'active_vacancy') return false;
+    } else if (status === 'inactive') {
+      if (isActuallyActive || statusStr === 'active_vacancy') return false;
+    } else if (status === 'active_vacancy') {
+      if (statusStr !== 'active_vacancy') return false;
+    } else if (status === 'all') {
+      if (statusStr === 'active_vacancy') return false;
+    }
 
     const normalizedRole = normalizeRole(s.role);
     if (normalizedRole === 'superadmin') return false;

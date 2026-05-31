@@ -112,11 +112,12 @@ export default function ManagerStaffPage() {
         (s.designation || '').toLowerCase().includes(search.toLowerCase());
 
       const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
-      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.isActive !== false)) ||
-        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false)) ||
+      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.status !== 'active_vacancy' && s.isActive !== false)) ||
+        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false) && s.status !== 'active_vacancy') ||
         (statusFilter === 'inactive' && s.status === 'inactive') ||
         (statusFilter === 'resigned' && s.status === 'resigned') ||
-        (statusFilter === 'terminated' && s.status === 'terminated');
+        (statusFilter === 'terminated' && s.status === 'terminated') ||
+        (statusFilter === 'active_vacancy' && s.status === 'active_vacancy');
 
       return matchesSearch && matchesDept && matchesStatus;
     });
@@ -296,6 +297,7 @@ export default function ManagerStaffPage() {
               <option value="inactive">Inactive Only</option>
               <option value="resigned">Resigned</option>
               <option value="terminated">Terminated</option>
+              <option value="active_vacancy">Active Vacancies</option>
             </select>
             <select
               className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'

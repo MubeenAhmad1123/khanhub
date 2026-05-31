@@ -186,7 +186,7 @@ export default function DailyReportPage() {
           return false;
         }
 
-        if (n === 'vacant' || n.includes('vacant') || String(s.status || '').toLowerCase() === 'vacant') {
+        if (n === 'vacant' || n.includes('vacant') || String(s.status || '').toLowerCase() === 'vacant' || String(s.status || '').toLowerCase() === 'active_vacancy') {
           return false;
         }
 

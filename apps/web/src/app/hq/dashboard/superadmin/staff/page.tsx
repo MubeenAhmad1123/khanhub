@@ -52,7 +52,7 @@ export default function SuperadminStaffPage() {
   const sp = useSearchParams();
   const { session, loading: sessionLoading } = useHqSession();
   const [dept, setDept] = useState<'all' | StaffDept>((sp.get('dept') as any) || 'all');
-  const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('active');
+  const [status, setStatus] = useState<'all' | 'active' | 'inactive' | 'active_vacancy'>('active');
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<StaffCardRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -470,18 +470,59 @@ export default function SuperadminStaffPage() {
               )}
             </div>
 
-            <button
-              onClick={() => setStatus(status === 'active' ? 'all' : 'active')}
-              className={cn(
-                "h-16 px-8 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-3 shadow-sm hover:scale-[1.02]",
-                status === 'active'
-                  ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/10'
-                  : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
-              )}
-            >
-              <div className={cn("w-2.5 h-2.5 rounded-full", status === 'active' ? 'bg-white animate-pulse' : 'bg-slate-300 dark:bg-slate-700')} />
-              <span>{status === 'active' ? 'Active Matrix' : 'All Personnel'}</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setStatus('active')}
+                className={cn(
+                  "h-16 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 shadow-sm hover:scale-[1.02]",
+                  status === 'active'
+                    ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/10'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", status === 'active' ? 'bg-white animate-pulse' : 'bg-emerald-500')} />
+                <span>Active Matrix</span>
+              </button>
+
+              <button
+                onClick={() => setStatus('active_vacancy')}
+                className={cn(
+                  "h-16 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 shadow-sm hover:scale-[1.02]",
+                  status === 'active_vacancy'
+                    ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/10'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-indigo-300 shadow-sm'
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", status === 'active_vacancy' ? 'bg-white animate-pulse' : 'bg-indigo-500')} />
+                <span>Active Vacancies</span>
+              </button>
+
+              <button
+                onClick={() => setStatus('inactive')}
+                className={cn(
+                  "h-16 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 shadow-sm hover:scale-[1.02]",
+                  status === 'inactive'
+                    ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600 shadow-md shadow-emerald-500/10'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", status === 'inactive' ? 'bg-white animate-pulse' : 'bg-amber-500')} />
+                <span>Inactive</span>
+              </button>
+
+              <button
+                onClick={() => setStatus('all')}
+                className={cn(
+                  "h-16 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 shadow-sm hover:scale-[1.02]",
+                  status === 'all'
+                    ? 'bg-slate-800 text-white border-slate-800 hover:bg-slate-900 shadow-md shadow-slate-800/10 dark:bg-slate-700 dark:border-slate-700'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", status === 'all' ? 'bg-white animate-pulse' : 'bg-slate-400')} />
+                <span>All Personnel</span>
+              </button>
+            </div>
           </div>
 
           <div className="border-t border-slate-50 dark:border-slate-800/50 pt-5">
