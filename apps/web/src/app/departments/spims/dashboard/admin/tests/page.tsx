@@ -26,6 +26,7 @@ export default function SpimsAdminTestsPage() {
   const [cohortSession, setCohortSession] = useState('');
   const [studentId, setStudentId] = useState('');
   const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
+  const [type, setType] = useState('exam');
 
   useEffect(() => {
     const raw = localStorage.getItem('spims_session');
@@ -87,6 +88,7 @@ export default function SpimsAdminTestsPage() {
         note: note.trim() || null,
         createdBy: session?.customId || 'Admin',
         testDate: testDate,
+        type: type,
       });
 
       if (result.success) {
@@ -155,6 +157,20 @@ export default function SpimsAdminTestsPage() {
               <option value="course_session">Class (course + session)</option>
               <option value="student">Single student</option>
               <option value="all">All students</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Type / Category</label>
+            <select
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-900"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            >
+              <option value="exam">Exam / Test</option>
+              <option value="task">Homework / Assignment</option>
+              <option value="lesson">Syllabus Lesson</option>
+              <option value="notice">General Notice</option>
             </select>
           </div>
 

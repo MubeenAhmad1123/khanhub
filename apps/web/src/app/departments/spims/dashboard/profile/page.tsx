@@ -200,6 +200,12 @@ export default function ProfilePage() {
         }
 
         const finalRole = uData?.role || parsed.role;
+        if (finalRole === 'student' || finalRole === 'family') {
+          const sid = parsed.studentId || parsed.patientId || parsed.uid;
+          router.replace(`/departments/spims/dashboard/student/${sid}`);
+          return;
+        }
+
         if (finalRole !== 'student' && finalRole !== 'family') {
           let sSnap = await getDocs(query(collection(db, 'spims_staff'), where('loginUserId', '==', parsed.uid))).catch(() => ({ docs: [] } as any));
           if (sSnap.empty) {

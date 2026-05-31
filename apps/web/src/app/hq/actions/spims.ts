@@ -32,6 +32,7 @@ export async function announceSpimsTestServer(params: {
   note?: string | null;
   createdBy: string;
   testDate?: string | null;
+  type?: string | null;
 }) {
   try {
     const app = getAdminApp();
