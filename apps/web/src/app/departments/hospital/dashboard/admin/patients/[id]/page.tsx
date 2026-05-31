@@ -40,6 +40,7 @@ export default function PatientDetailPage() {
   const [feeRecord, setFeeRecord] = useState<any>(null);
   const [canteenRecord, setCanteenRecord] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
+  const [videoStates, setVideoStates] = useState<Record<string, { status: 'normal' | 'confirm' | 'deleting'; timeLeft: number; intervalId?: any; timeoutId?: any }>>({});
 
   // State
   const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'progress' | 'therapy' | 'meds' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
@@ -119,6 +120,15 @@ export default function PatientDetailPage() {
     }
     setSession(parsed);
   }, [router]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(videoStates).forEach(state => {
+        if (state.intervalId) clearInterval(state.intervalId);
+        if (state.timeoutId) clearTimeout(state.timeoutId);
+      });
+    };
+  }, [videoStates]);
 
 
   const fetchData = useCallback(async () => {
@@ -570,7 +580,6 @@ export default function PatientDetailPage() {
   };
 
   const handleDeleteVideo = async (videoId: string) => {
-    if (!window.confirm("Delete this file?")) return;
     try {
       await deleteDoc(doc(db, 'hospital_videos', videoId));
       toast.success('Deleted');
@@ -1296,12 +1305,110 @@ export default function PatientDetailPage() {
                     const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
                     const isImage = vid.fileType?.startsWith('image/');
                     const isPdf = vid.fileType === 'application/pdf';
+                    const vidState = videoStates[vid.id]?.status || 'normal';
+                    const timeLeft = videoStates[vid.id]?.timeLeft || 0;
+
+                    if (vidState === 'deleting') {
+                      return (
+                        <div key={vid.id} className="border border-red-200 rounded-2xl overflow-hidden bg-red-50/10 p-6 flex flex-col items-center justify-center min-h-[220px] text-center w-full animate-in fade-in duration-300 relative">
+                          <div className="w-10 h-10 rounded-full border-4 border-rose-500 border-t-transparent animate-spin mb-3"></div>
+                          <p className="text-xs font-black uppercase tracking-wider text-rose-700">Deleting File...</p>
+                          <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase">Permanently in {timeLeft}s</p>
+                          <button
+                            onClick={() => {
+                              const state = videoStates[vid.id];
+                              if (state) {
+                                if (state.intervalId) clearInterval(state.intervalId);
+                                if (state.timeoutId) clearTimeout(state.timeoutId);
+                              }
+                              setVideoStates(prev => ({
+                                ...prev,
+                                [vid.id]: { status: 'normal', timeLeft: 0 }
+                              }));
+                              toast.success("Deletion cancelled");
+                            }}
+                            className="mt-4 bg-gray-900 hover:bg-black text-white font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 z-20"
+                          >
+                            Undo Delete
+                          </button>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative">
-                        {session?.role === 'superadmin' && (
+                        {vidState === 'confirm' ? (
+                          <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center z-30 animate-in fade-in duration-300">
+                            <p className="text-white text-xs font-black uppercase tracking-widest mb-4 leading-relaxed">
+                              Are you sure you want to delete this file?
+                            </p>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  let currentSeconds = 6;
+                                  const intervalId = setInterval(() => {
+                                    currentSeconds -= 1;
+                                    setVideoStates(prev => {
+                                      if (!prev[vid.id] || prev[vid.id].status !== 'deleting') {
+                                        clearInterval(intervalId);
+                                        return prev;
+                                      }
+                                      return {
+                                        ...prev,
+                                        [vid.id]: { ...prev[vid.id], timeLeft: currentSeconds }
+                                      };
+                                    });
+                                  }, 1000);
+
+                                  const timeoutId = setTimeout(async () => {
+                                    clearInterval(intervalId);
+                                    try {
+                                      await handleDeleteVideo(vid.id);
+                                      setVideoStates(prev => {
+                                        const copy = { ...prev };
+                                        delete copy[vid.id];
+                                        return copy;
+                                      });
+                                    } catch (error) {
+                                      console.error("Delete error", error);
+                                      setVideoStates(prev => ({
+                                        ...prev,
+                                        [vid.id]: { status: 'normal', timeLeft: 0 }
+                                      }));
+                                    }
+                                  }, 6000);
+
+                                  setVideoStates(prev => ({
+                                    ...prev,
+                                    [vid.id]: {
+                                      status: 'deleting',
+                                      timeLeft: currentSeconds,
+                                      intervalId,
+                                      timeoutId
+                                    }
+                                  }));
+                                }}
+                                className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl active:scale-95 transition-all shadow-md"
+                              >
+                                Yes, Delete
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setVideoStates(prev => ({ ...prev, [vid.id]: { status: 'normal', timeLeft: 0 } }));
+                                }}
+                                className="bg-gray-200 hover:bg-gray-300 text-black font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl active:scale-95 transition-all shadow-md"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {session?.role === 'superadmin' && vidState === 'normal' && (
                           <button
-                            onClick={() => handleDeleteVideo(vid.id)}
+                            onClick={() => {
+                              setVideoStates(prev => ({ ...prev, [vid.id]: { status: 'confirm', timeLeft: 0 } }));
+                            }}
                             className="absolute top-2 right-2 z-20 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                             title="Delete"
                           >
@@ -1316,7 +1423,7 @@ export default function PatientDetailPage() {
                           ) : (
                             <Video className="w-10 h-10 text-gray-600 z-0" />
                           )}
-                          
+
                           <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
                             <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
                               <Play className="w-5 h-5 ml-1" />
@@ -1326,12 +1433,11 @@ export default function PatientDetailPage() {
                         <div className="p-4">
                           <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
                           <div className="flex items-center justify-between mt-2">
-                             <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500">
                               {formatDateDMY(vid.createdAt)}
                             </p>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                              isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                            }`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                              }`}>
                               {isVideo ? 'Video' : isPdf ? 'Document' : 'Image'}
                             </span>
                           </div>

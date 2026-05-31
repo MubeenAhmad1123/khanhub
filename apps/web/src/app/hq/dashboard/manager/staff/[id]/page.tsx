@@ -151,6 +151,24 @@ export default function StaffProfilePage() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
+  // States to track document deletion confirmation and countdown timers
+  const [docStates, setDocStates] = useState<Record<number, {
+    status: 'normal' | 'confirm' | 'deleting';
+    timeLeft: number;
+    intervalId?: any;
+    timeoutId?: any;
+  }>>({});
+
+  useEffect(() => {
+    return () => {
+      // Cleanup all active timers on unmount
+      Object.values(docStates).forEach((state) => {
+        if (state.intervalId) clearInterval(state.intervalId);
+        if (state.timeoutId) clearTimeout(state.timeoutId);
+      });
+    };
+  }, [docStates]);
+
   const getDeptColor = (dept: string) => {
     switch (dept?.toLowerCase()) {
       case 'it': return { bg: 'from-indigo-600/20 to-indigo-600/5', border: 'border-indigo-500/30', text: 'text-indigo-600', accent: 'bg-indigo-600', light: 'bg-indigo-50', shadow: 'shadow-indigo-500/20' };
@@ -1352,12 +1370,25 @@ export default function StaffProfilePage() {
       setSaving(true);
       if (!staff) return;
 
+      // Filter out any documents currently in deleting/counting down state
+      const finalDocuments = (editForm.documents || []).filter((_, idx) => {
+        return docStates[idx]?.status !== 'deleting';
+      });
+
       const res = await updateStaffProfile(staff.id, {
         ...editForm,
+        documents: finalDocuments,
         updatedAt: serverTimestamp()
       });
 
       if (!res.success) throw new Error(res.error);
+
+      // Clear any pending deletion timers/states since profile saved
+      Object.values(docStates).forEach((state) => {
+        if (state.intervalId) clearInterval(state.intervalId);
+        if (state.timeoutId) clearTimeout(state.timeoutId);
+      });
+      setDocStates({});
 
       toast.success("Profile updated successfully");
       
@@ -3684,53 +3715,148 @@ export default function StaffProfilePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {(editForm.documents || []).map((doc: { title: string; url: string }, idx: number) => (
-                <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 transition-all duration-300 shadow-sm flex flex-col w-full">
-                  <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
-                    {doc.url.toLowerCase().endsWith('.pdf') ? (
-                      <div className="flex flex-col items-center justify-center gap-2 p-4">
-                        <FileText size={36} className="text-red-500" />
-                        <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-2 py-1 rounded">PDF Document</span>
-                      </div>
-                    ) : (
-                      <img 
-                        src={doc.url} 
-                        alt={doc.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-                      <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:scale-105 transition-all shadow-md">
-                        Open Original
-                      </a>
+              {(editForm.documents || []).map((doc: { title: string; url: string }, idx: number) => {
+                const docState = docStates[idx]?.status || 'normal';
+                const timeLeft = docStates[idx]?.timeLeft || 0;
+
+                if (docState === 'deleting') {
+                  return (
+                    <div key={idx} className="relative rounded-2xl overflow-hidden border border-dashed border-red-300 bg-red-50/10 p-6 flex flex-col items-center justify-center min-h-[220px] text-center w-full animate-in fade-in duration-300">
+                      <div className="w-10 h-10 rounded-full border-4 border-rose-500 border-t-transparent animate-spin mb-3"></div>
+                      <p className="text-xs font-black uppercase tracking-wider text-rose-700">Deleting Document...</p>
+                      <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase">Permanently in {timeLeft}s</p>
                       <button
                         onClick={() => {
-                          const next = [...editForm.documents];
-                          next.splice(idx, 1);
-                          setEditForm({ ...editForm, documents: next });
+                          const state = docStates[idx];
+                          if (state) {
+                            if (state.intervalId) clearInterval(state.intervalId);
+                            if (state.timeoutId) clearTimeout(state.timeoutId);
+                          }
+                          setDocStates(prev => ({
+                            ...prev,
+                            [idx]: { status: 'normal', timeLeft: 0 }
+                          }));
+                          toast.success("Deletion cancelled", { id: `cancel-${idx}` });
                         }}
-                        className="bg-rose-600 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:scale-105 transition-all shadow-md"
+                        className="mt-4 bg-gray-900 hover:bg-black text-white font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95"
                       >
-                        Delete
+                        Undo Delete
                       </button>
                     </div>
+                  );
+                }
+
+                return (
+                  <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 transition-all duration-300 shadow-sm flex flex-col w-full">
+                    <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                      {doc.url.toLowerCase().endsWith('.pdf') ? (
+                        <div className="flex flex-col items-center justify-center gap-2 p-4">
+                          <FileText size={36} className="text-red-500" />
+                          <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-2 py-1 rounded">PDF Document</span>
+                        </div>
+                      ) : (
+                        <img 
+                          src={doc.url} 
+                          alt={doc.title} 
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      
+                      {docState === 'confirm' ? (
+                        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-4 text-center z-20 animate-in fade-in duration-300">
+                          <p className="text-white text-[10px] font-black uppercase tracking-widest mb-3 leading-relaxed">
+                            Are you sure you want to delete this document?
+                          </p>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                let currentSeconds = 6;
+                                const intervalId = setInterval(() => {
+                                  currentSeconds -= 1;
+                                  setDocStates(prev => {
+                                    if (!prev[idx] || prev[idx].status !== 'deleting') {
+                                      clearInterval(intervalId);
+                                      return prev;
+                                    }
+                                    return {
+                                      ...prev,
+                                      [idx]: { ...prev[idx], timeLeft: currentSeconds }
+                                    };
+                                  });
+                                }, 1000);
+
+                                const timeoutId = setTimeout(() => {
+                                  clearInterval(intervalId);
+                                  setEditForm(prev => {
+                                    const next = [...prev.documents];
+                                    next.splice(idx, 1);
+                                    return { ...prev, documents: next };
+                                  });
+                                  setDocStates(prev => {
+                                    const copy = { ...prev };
+                                    delete copy[idx];
+                                    return copy;
+                                  });
+                                  toast.success("Document deleted permanently.");
+                                }, 6000);
+
+                                setDocStates(prev => ({
+                                  ...prev,
+                                  [idx]: {
+                                    status: 'deleting',
+                                    timeLeft: currentSeconds,
+                                    intervalId,
+                                    timeoutId
+                                  }
+                                }));
+                              }}
+                              className="bg-rose-600 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2 rounded-xl active:scale-95 transition-all shadow-md"
+                            >
+                              Yes, Delete
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setDocStates(prev => ({ ...prev, [idx]: { status: 'normal', timeLeft: 0 } }));
+                              }}
+                              className="bg-gray-200 text-black font-black text-[10px] uppercase tracking-wider px-4 py-2 rounded-xl active:scale-95 transition-all shadow-md"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                          <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:scale-105 transition-all shadow-md">
+                            Open Original
+                          </a>
+                          <button
+                            onClick={() => {
+                              setDocStates(prev => ({ ...prev, [idx]: { status: 'confirm', timeLeft: 0 } }));
+                            }}
+                            className="bg-rose-600 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:scale-105 transition-all shadow-md"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Document Title</label>
+                      <input
+                        type="text"
+                        value={doc.title}
+                        onChange={(e) => {
+                          const next = [...editForm.documents];
+                          next[idx] = { ...next[idx], title: e.target.value };
+                          setEditForm({ ...editForm, documents: next });
+                        }}
+                        className="w-full h-12 px-4 rounded-xl text-xs font-black uppercase outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500 focus:bg-white"
+                        placeholder="Edit Document Title..."
+                      />
+                    </div>
                   </div>
-                  <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Document Title</label>
-                    <input
-                      type="text"
-                      value={doc.title}
-                      onChange={(e) => {
-                        const next = [...editForm.documents];
-                        next[idx] = { ...next[idx], title: e.target.value };
-                        setEditForm({ ...editForm, documents: next });
-                      }}
-                      className="w-full h-12 px-4 rounded-xl text-xs font-black uppercase outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500 focus:bg-white"
-                      placeholder="Edit Document Title..."
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {(!editForm.documents || editForm.documents.length === 0) && (
                 <div className="col-span-full flex flex-col items-center justify-center py-8 text-black border-2 border-dashed border-gray-200 rounded-[2.5rem] bg-gray-50/50">
                   <FileText size={36} className="opacity-20 mb-2 text-teal-600" />
