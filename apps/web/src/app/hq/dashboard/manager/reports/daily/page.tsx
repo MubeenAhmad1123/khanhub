@@ -66,6 +66,7 @@ export default function DailyReportPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [downloading, setDownloading] = useState(false);
+  const [showVacancies, setShowVacancies] = useState(false);
 
   // Step-by-step navigation flow states
   const [activeStep, setActiveStep] = useState<'overview' | 'departments' | 'designations' | 'roster'>('overview');
@@ -186,7 +187,13 @@ export default function DailyReportPage() {
           return false;
         }
 
-        if (n === 'vacant' || n.includes('vacant') || String(s.status || '').toLowerCase() === 'vacant' || String(s.status || '').toLowerCase() === 'active_vacancy') {
+        const statusStr = String(s.status || '').toLowerCase();
+
+        if (showVacancies) {
+          return statusStr === 'active_vacancy' || n === 'vacant' || n.includes('vacant') || statusStr === 'vacant';
+        }
+
+        if (n === 'vacant' || n.includes('vacant') || statusStr === 'vacant' || statusStr === 'active_vacancy') {
           return false;
         }
 
@@ -202,7 +209,6 @@ export default function DailyReportPage() {
           return false;
         }
 
-        const statusStr = String(s.status || '').toLowerCase();
         const isActive = statusStr === 'active' && s.isActive !== false;
 
         return isActive;
@@ -474,7 +480,7 @@ export default function DailyReportPage() {
   useEffect(() => {
     if (!session) return;
     fetchReport();
-  }, [session, reportDate]);
+  }, [session, reportDate, showVacancies]);
 
   const filteredData = useMemo(() => {
     let result = reportData.filter(r => {
@@ -906,6 +912,18 @@ export default function DailyReportPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowVacancies(!showVacancies)}
+              className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider border flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-[1.02] duration-200 w-full sm:w-auto ${
+                showVacancies
+                  ? "bg-indigo-650 text-white border-indigo-600 shadow-md shadow-indigo-600/10"
+                  : "bg-white text-gray-500 border-gray-100 hover:border-gray-300"
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${showVacancies ? "bg-white animate-pulse" : "bg-indigo-500"}`} />
+              <span>Active Vacancies Only</span>
+            </button>
             <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:border-gray-200 w-full sm:w-auto">
               <Calendar size={18} className="text-indigo-500" />
               <input

@@ -55,10 +55,17 @@ export default function ManagerStaffPage() {
     const fetchAllStaff = async () => {
       try {
         setLoading(true);
+        setEnriched(false);
+        
+        let queryStatus: any = 'all';
+        if (statusFilter === 'active') queryStatus = 'active';
+        else if (statusFilter === 'inactive') queryStatus = 'inactive';
+        else if (statusFilter === 'active_vacancy') queryStatus = 'active_vacancy';
+
         // Unified personnel registry fetch (7 departments) - Basic data only
         const unified = await listStaffCards({
           dept: 'all',
-          status: 'all',
+          status: queryStatus,
           role: 'personnel',
           fullEnrichment: false
         });
@@ -89,20 +96,26 @@ export default function ManagerStaffPage() {
     };
 
     fetchAllStaff();
-  }, [session]);
+  }, [session, statusFilter]);
 
   // Lazy Enrichment for Manager
   useEffect(() => {
     if (!enriched && !enriching && (search.length > 0 || deptFilter !== 'all')) {
       setEnriching(true);
-      listStaffCards({ dept: 'all', status: 'all', role: 'personnel', fullEnrichment: true })
+
+      let queryStatus: any = 'all';
+      if (statusFilter === 'active') queryStatus = 'active';
+      else if (statusFilter === 'inactive') queryStatus = 'inactive';
+      else if (statusFilter === 'active_vacancy') queryStatus = 'active_vacancy';
+
+      listStaffCards({ dept: 'all', status: queryStatus, role: 'personnel', fullEnrichment: true })
         .then(enrichedRows => {
           setStaff(enrichedRows);
           setEnriched(true);
         })
         .finally(() => setEnriching(false));
     }
-  }, [search, deptFilter, enriched, enriching]);
+  }, [search, deptFilter, enriched, enriching, statusFilter]);
 
   const filtered = useMemo(() => {
     let result = staff.filter(s => {
@@ -256,59 +269,102 @@ export default function ManagerStaffPage() {
             Enriching dossiers with efficiency metrics & historical logs...
           </div>
         )}
-        <div className={`p-4 md:p-6 rounded-[2rem] shadow-xl border flex flex-col sm:flex-row gap-4 mb-10 transition-all ${darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-gray-200/30'}`}>
-          <div className="flex-1 relative group">
-            <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-blue-500' : 'text-gray-400 group-focus-within:text-gray-900'}`} size={18} />
-            <input
-              type="text"
-              placeholder="Filter by name, identifier, or node designation..."
-              className={`w-full pl-14 pr-6 py-4 border-none rounded-2xl text-sm font-bold outline-none transition-all ${darkMode ? 'bg-white/5 text-white placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:bg-white shadow-inner'
-                }`}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+        <div className={`p-6 rounded-[2rem] shadow-xl border flex flex-col gap-6 mb-10 transition-all ${darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-gray-200/30'}`}>
+          <div className="flex flex-col sm:flex-row gap-4 w-full">
+            <div className="flex-1 relative group">
+              <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-blue-500' : 'text-gray-400 group-focus-within:text-gray-900'}`} size={18} />
+              <input
+                type="text"
+                placeholder="Filter by name, identifier, or node designation..."
+                className={`w-full pl-14 pr-6 py-4 border-none rounded-2xl text-sm font-bold outline-none transition-all ${darkMode ? 'bg-white/5 text-white placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:bg-white shadow-inner'
+                  }`}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
+              <select
+                className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
+                  }`}
+                value={deptFilter}
+                onChange={e => setDeptFilter(e.target.value)}
+              >
+                <option value="all">Unified System</option>
+                <option value="hq">HQ Command</option>
+                <option value="rehab">Rehab Node</option>
+                <option value="spims">SPIMS Node</option>
+                <option value="hospital">Medical Node</option>
+                <option value="sukoon">Sukoon Node</option>
+                <option value="welfare">Welfare Node</option>
+                <option value="job-center">Workforce Node</option>
+                <option value="social-media">Broadcast Node</option>
+                <option value="it">Digital Node</option>
+              </select>
+              <select
+                className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
+                  }`}
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as any)}
+              >
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="id">Sort: ID (Numeric)</option>
+                <option value="seniority">Sort: Seniority</option>
+              </select>
+            </div>
           </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
-            <select
-              className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
-                }`}
-              value={deptFilter}
-              onChange={e => setDeptFilter(e.target.value)}
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-gray-100/70">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('active')}
+              className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                statusFilter === 'active'
+                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
             >
-              <option value="all">Unified System</option>
-              <option value="hq">HQ Command</option>
-              <option value="rehab">Rehab Node</option>
-              <option value="spims">SPIMS Node</option>
-              <option value="hospital">Medical Node</option>
-              <option value="sukoon">Sukoon Node</option>
-              <option value="welfare">Welfare Node</option>
-              <option value="job-center">Workforce Node</option>
-              <option value="social-media">Broadcast Node</option>
-              <option value="it">Digital Node</option>
-            </select>
-            <select
-              className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
-                }`}
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              <div className={`w-2 h-2 rounded-full ${statusFilter === 'active' ? 'bg-white animate-pulse' : 'bg-emerald-500'}`} />
+              <span>Active Matrix</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter('active_vacancy')}
+              className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                statusFilter === 'active_vacancy'
+                  ? 'bg-indigo-650 text-white border-indigo-600 shadow-md shadow-indigo-600/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-indigo-300'
+              }`}
             >
-              <option value="all">Active/Inactive</option>
-              <option value="active">Active Only</option>
-              <option value="inactive">Inactive Only</option>
-              <option value="resigned">Resigned</option>
-              <option value="terminated">Terminated</option>
-              <option value="active_vacancy">Active Vacancies</option>
-            </select>
-            <select
-              className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
-                }`}
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              <div className={`w-2 h-2 rounded-full ${statusFilter === 'active_vacancy' ? 'bg-white animate-pulse' : 'bg-indigo-500'}`} />
+              <span>Active Vacancies</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter('inactive')}
+              className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                statusFilter === 'inactive'
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
             >
-              <option value="name">Sort: Name (A-Z)</option>
-              <option value="id">Sort: ID (Numeric)</option>
-              <option value="seniority">Sort: Seniority</option>
-            </select>
+              <div className={`w-2 h-2 rounded-full ${statusFilter === 'inactive' ? 'bg-white animate-pulse' : 'bg-amber-500'}`} />
+              <span>Inactive</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                statusFilter === 'all'
+                  ? 'bg-slate-800 text-white border-slate-800 shadow-md animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${statusFilter === 'all' ? 'bg-white animate-pulse' : 'bg-slate-400'}`} />
+              <span>All Personnel</span>
+            </button>
           </div>
         </div>
 
