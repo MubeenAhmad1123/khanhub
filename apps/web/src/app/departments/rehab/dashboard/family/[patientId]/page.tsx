@@ -5,9 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
-  User, DollarSign, ShoppingCart, Heart, Calendar, Clock, 
-  CheckCircle, AlertCircle, Loader2, Phone, MessageCircle,
-  Shield, Pill, TrendingUp, Activity, ArrowLeft, Users, CheckCircle2
+  User, DollarSign, Heart, Calendar, Clock, 
+  Loader2, Phone, MessageCircle,
+  Shield, Pill, TrendingUp, Activity, ArrowLeft, Users
 } from 'lucide-react';
 import Link from 'next/link';
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
@@ -186,7 +186,7 @@ export default function FamilyPatientViewPage() {
       <div className="bg-white border-b border-gray-100 sticky top-0 z-40 sm:relative">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
           <div className="block mb-3 sm:mb-4">
-            <Link href="/departments/rehab/dashboard/family" className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-800 text-xs font-black uppercase tracking-widest transition-colors">
+            <Link href="/departments/rehab/dashboard/family" className="no-print inline-flex items-center gap-2 text-gray-400 hover:text-gray-800 text-xs font-black uppercase tracking-widest transition-colors">
               <ArrowLeft size={16} /> Back to dashboard
             </Link>
           </div>
@@ -213,7 +213,7 @@ export default function FamilyPatientViewPage() {
                 {patient.isActive ? 'Active' : 'Discharged'}
               </span>
               <div className="flex flex-wrap gap-2">
-                {patient.contactNumber && (
+                {patient.contactNumber && session?.role !== 'family' && (
                    <a href={`tel:${patient.contactNumber}`} className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-[11px] font-black hover:bg-blue-100 transition-all border border-blue-100/50 shadow-sm active:scale-95">
                      <Phone size={14} /> Call
                    </a>
@@ -229,37 +229,37 @@ export default function FamilyPatientViewPage() {
         </div>
       </div>
 
-      {/* Finance Summary */}
+      {/* Finance Summary card rewritten with premium white background and black text */}
       {sections.financialStatement !== false && (
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="bg-gray-900 rounded-[2rem] p-5 sm:p-6 text-white shadow-xl shadow-gray-200 overflow-hidden relative border border-gray-800">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+          <div className="bg-white rounded-[2rem] p-5 sm:p-6 text-gray-900 shadow-sm border border-gray-200 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
             <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-4 relative z-10">Real-time Financial History</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 relative z-10">
-              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-                <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Monthly Package</span>
-                <span className="text-xl font-black text-white">₨{patient.monthlyPackage?.toLocaleString()}</span>
-                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">PKR {patient.dailyRate}/Day</span>
+              <div className="flex flex-col gap-1 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 sm:bg-transparent sm:border-0 sm:p-0">
+                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Monthly Package</span>
+                <span className="text-xl font-black text-gray-900">₨{patient.monthlyPackage?.toLocaleString()}</span>
+                <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-tighter">PKR {patient.dailyRate}/Day</span>
               </div>
-              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-                <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Total Received</span>
-                <span className="text-xl font-black text-teal-400">₨{patient.totalReceived?.toLocaleString()}</span>
-                <span className="text-[9px] text-teal-500/70 font-bold uppercase tracking-tighter">Verified Payments</span>
+              <div className="flex flex-col gap-1 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 sm:bg-transparent sm:border-0 sm:p-0">
+                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Total Received</span>
+                <span className="text-xl font-black text-teal-600">₨{patient.totalReceived?.toLocaleString()}</span>
+                <span className="text-[9px] text-teal-500/70 font-semibold uppercase tracking-tighter">Verified Payments</span>
               </div>
-              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-                <span className="text-[10px] uppercase font-black text-orange-400/80 tracking-widest">Current Balance</span>
-                <span className="text-xl font-black text-orange-400">₨{(patient.remainingTillDate || 0).toLocaleString()}</span>
-                <span className="text-[9px] text-orange-400/70 font-bold uppercase tracking-tighter">{patient.durationFormatted}</span>
+              <div className="flex flex-col gap-1 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 sm:bg-transparent sm:border-0 sm:p-0">
+                <span className="text-[10px] uppercase font-black text-orange-600/80 tracking-widest">Current Balance</span>
+                <span className="text-xl font-black text-orange-600">₨{(patient.remainingTillDate || 0).toLocaleString()}</span>
+                <span className="text-[9px] text-orange-500/70 font-semibold uppercase tracking-tighter">{patient.durationFormatted}</span>
               </div>
-              <div className="flex flex-col gap-1 bg-white/5 p-4 rounded-2xl sm:bg-transparent sm:p-0">
-                <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Canteen</span>
-                <span className={`text-xl font-black ${patient.canteenBalance >= 0 ? 'text-white' : 'text-red-500'}`}>₨{patient.canteenBalance?.toLocaleString()}</span>
-                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Current Wallet</span>
+              <div className="flex flex-col gap-1 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 sm:bg-transparent sm:border-0 sm:p-0">
+                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Canteen</span>
+                <span className={`text-xl font-black ${patient.canteenBalance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>₨{patient.canteenBalance?.toLocaleString()}</span>
+                <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-tighter">Current Wallet</span>
               </div>
             </div>
             <button 
               onClick={() => setActiveTab('finance')}
-              className="w-full mt-6 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-teal-400 flex items-center justify-center gap-2 active:scale-95"
+              className="w-full mt-6 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-teal-600 flex items-center justify-center gap-2 active:scale-95"
             >
               View Full Billing Details <DollarSign size={12} />
             </button>
@@ -344,70 +344,6 @@ export default function FamilyPatientViewPage() {
                 });
               })()}
             />
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <div className="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                  <Activity size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Days Since Admission</p>
-                  <p className="text-lg sm:text-xl font-black text-[#1a3a5c] capitalize">{patient.daysAdmitted} Days</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 shrink-0">
-                  <TrendingUp size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Received</p>
-                  <p className="text-lg sm:text-xl font-black text-green-700">PKR {Number(patient.overallReceived).toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-l-orange-500">
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
-                  <Clock size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Remaining till Date</p>
-                  <p className="text-lg sm:text-xl font-black text-orange-600">PKR {Number(patient.remainingTillDate).toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Audit Trail Table */}
-            <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100">
-              <h3 className="text-xs sm:text-sm font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
-                 <Clock size={16} className="text-teal-600" /> Audit Trail
-              </h3>
-              <div className="overflow-x-auto w-full no-scrollbar">
-                 <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
-                      <th className="pb-4 whitespace-nowrap">Date</th>
-                      <th className="pb-4 whitespace-nowrap">Amount</th>
-                      <th className="pb-4 whitespace-nowrap">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {payments.map((payment, idx) => (
-                      <tr key={payment.id || idx} className="text-xs">
-                        <td className="py-4 text-gray-500 font-medium whitespace-nowrap">{toDate(payment.date).toLocaleDateString()}</td>
-                        <td className="py-4 font-black text-gray-900 whitespace-nowrap">₨{Number(payment.amount).toLocaleString()}</td>
-                        <td className="py-4 whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${payment.approved || payment.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                            {payment.approved || payment.status === 'approved' ? 'APPROVED' : 'PENDING'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
         )}
 

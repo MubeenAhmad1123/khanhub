@@ -184,15 +184,15 @@ export default function ProfilePage() {
   const cardStyle = "bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-2xl transition-all";
   const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-rose-500/20 outline-none text-sm transition-all text-gray-800";
 
-  // Dynamic Navigation Tabs filtered by visibleSections claims
+  // Dynamic Navigation Tabs filtered by visibleSections claims and renamed appropriately
   const visibleTabs = useMemo(() => {
     const list = [
-      { id: 'tasks' as const, label: 'Task Board', icon: Target, visible: sections.reports !== false },
-      { id: 'attendance' as const, label: 'Presence', icon: Calendar, visible: sections.attendance !== false },
+      { id: 'tasks' as const, label: 'Special Tasks', icon: Target, visible: sections.reports !== false },
+      { id: 'attendance' as const, label: 'Attendance', icon: Calendar, visible: sections.attendance !== false },
       { id: 'duty' as const, label: 'Duties', icon: Briefcase, visible: sections.duties !== false },
-      { id: 'dress' as const, label: 'Apparel', icon: Shirt, visible: sections.uniform !== false },
-      { id: 'score' as const, label: 'Scoring', icon: Award, visible: sections.growthPoints !== false },
-      { id: 'finance' as const, label: 'Ledger', icon: DollarSign, visible: sections.salary !== false },
+      { id: 'dress' as const, label: 'Dress Code', icon: Shirt, visible: sections.uniform !== false },
+      { id: 'score' as const, label: 'Score', icon: Award, visible: sections.growthPoints !== false },
+      { id: 'finance' as const, label: 'Financial', icon: DollarSign, visible: sections.salary !== false },
       { id: 'profile' as const, label: 'Identity', icon: Info, visible: true },
     ];
     return list.filter(t => t.visible);
@@ -520,7 +520,7 @@ export default function ProfilePage() {
                       <Target size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Assigned Mission Criticals</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Assigned Special Tasks</h3>
                       <p className="text-xs text-gray-500 font-medium">Review special tasks designated by administration</p>
                     </div>
                   </div>
@@ -579,7 +579,7 @@ export default function ProfilePage() {
                       <Calendar size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Time & Presence Audit</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Time & Attendance Audit</h3>
                       <p className="text-xs text-gray-500 font-medium">Official timeline of check-ins and daily presence</p>
                     </div>
                   </div>
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                       <Shirt size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Appearance Compliance</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Dress Code Compliance</h3>
                       <p className="text-xs text-gray-500 font-medium">Review uniform code status evaluations</p>
                     </div>
                   </div>
@@ -919,7 +919,31 @@ export default function ProfilePage() {
                   <div className="space-y-6">
                     <InfoRow label="Designated Operational Shift" value={`${profile?.dutyStartTime || '09:00'} - ${profile?.dutyEndTime || '17:00'}`} icon={Clock} />
                     <InfoRow label="Blood Group Matrix" value={profile?.bloodGroup || 'N/A'} icon={Heart} />
-                    <InfoRow label="Emergency Contact Protocol" value={`${profile?.emergencyContactName || 'Contact'} (${profile?.emergencyPhone || profile?.emergencyContact || 'N/A'})`} icon={AlertCircle} />
+                    <InfoRow label="Emergency Contact Protocol" value={(() => {
+                      let name = 'Contact';
+                      let phone = 'N/A';
+                      const rawName = profile?.emergencyContactName || profile?.emergencyContact;
+                      if (rawName) {
+                        if (typeof rawName === 'object') {
+                          name = rawName.name || rawName.displayName || rawName.label || 'Contact';
+                        } else {
+                          name = rawName;
+                        }
+                      }
+                      const rawPhone = profile?.emergencyPhone || profile?.emergencyContactPhone;
+                      if (rawPhone) {
+                        if (typeof rawPhone === 'object') {
+                          phone = rawPhone.phone || rawPhone.phoneNumber || rawPhone.number || 'N/A';
+                        } else {
+                          phone = rawPhone;
+                        }
+                      } else if (typeof profile?.emergencyContact === 'object') {
+                        phone = profile.emergencyContact.phone || profile.emergencyContact.phoneNumber || profile.emergencyContact.number || 'N/A';
+                      }
+                      if (name.includes('[object Object]')) name = 'Contact';
+                      if (phone.includes('[object Object]')) phone = 'N/A';
+                      return `${name} (${phone})`;
+                    })()} icon={AlertCircle} />
                   </div>
                 </div>
                 
