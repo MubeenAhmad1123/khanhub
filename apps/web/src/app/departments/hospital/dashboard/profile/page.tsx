@@ -19,6 +19,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 // --- Enhanced Types matched with HQ data schema ---
 interface AttendanceLog {
@@ -176,9 +177,36 @@ export default function ProfilePage() {
   const [growthHistory, setGrowthHistory] = useState<GrowthRecord[]>([]);
   const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
 
+  // Fetch visibility settings using standard hook
+  const { sections, loading: visibilityLoading } = useVisibleSections('hospital', 'staff', session?.uid || '');
+
   // Design Tokens for Clean Minimalism
   const cardStyle = "bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-2xl transition-all";
   const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-rose-500/20 outline-none text-sm transition-all text-gray-800";
+
+  // Dynamic Navigation Tabs filtered by visibleSections claims
+  const visibleTabs = useMemo(() => {
+    const list = [
+      { id: 'tasks' as const, label: 'Task Board', icon: Target, visible: sections.reports !== false },
+      { id: 'attendance' as const, label: 'Presence', icon: Calendar, visible: sections.attendance !== false },
+      { id: 'duty' as const, label: 'Duties', icon: Briefcase, visible: sections.duties !== false },
+      { id: 'dress' as const, label: 'Apparel', icon: Shirt, visible: sections.uniform !== false },
+      { id: 'score' as const, label: 'Scoring', icon: Award, visible: sections.growthPoints !== false },
+      { id: 'finance' as const, label: 'Ledger', icon: DollarSign, visible: sections.salary !== false },
+      { id: 'profile' as const, label: 'Identity', icon: Info, visible: true },
+    ];
+    return list.filter(t => t.visible);
+  }, [sections]);
+
+  // Adjust current tab if the loaded one has been disabled/hidden
+  useEffect(() => {
+    if (!visibilityLoading && visibleTabs.length > 0) {
+      const isCurrentTabVisible = visibleTabs.some(t => t.id === activeTab);
+      if (!isCurrentTabVisible) {
+        setActiveTab(visibleTabs[0].id);
+      }
+    }
+  }, [visibleTabs, activeTab, visibilityLoading]);
 
   // Robust Dual Fetcher matching HQ dashboard patterns
   const fetchMetrics = useCallback(async (sId: string) => {
@@ -327,7 +355,7 @@ export default function ProfilePage() {
     return Math.round((present / recent30.length) * 100);
   }, [attendance]);
 
-  if (loading) return (
+  if (loading || visibilityLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]">
       <Loader2 className="animate-spin text-rose-600 w-10 h-10 mb-4" />
       <p className="text-xs font-medium text-gray-400 tracking-widest uppercase">Synchronizing Data Nexus...</p>
@@ -355,10 +383,12 @@ export default function ProfilePage() {
           </div>
           
           <div className="flex items-center gap-3">
-             <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
-                <Award className="text-amber-500" size={16} />
-                <span className="text-xs font-bold text-gray-700">{profile?.totalGrowthPoints || 0} Points</span>
-             </div>
+             {sections.growthPoints !== false && (
+               <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
+                  <Award className="text-amber-500" size={16} />
+                  <span className="text-xs font-bold text-gray-700">{profile?.totalGrowthPoints || 0} Points</span>
+               </div>
+             )}
              <button 
                onClick={handleLogout}
                className="p-2.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all tooltip" 
@@ -391,9 +421,12 @@ export default function ProfilePage() {
             </div>
 
             <h2 className="text-xl font-bold text-gray-900">{profile?.displayName || profile?.name}</h2>
-            <p className="text-rose-600 font-semibold text-xs uppercase tracking-wider mt-1 bg-rose-50 px-3 py-1 rounded-full inline-block">
-              {profile?.designation || 'Healthcare Member'}
-            </p>
+            
+            {sections.designation !== false && (
+              <p className="text-rose-600 font-semibold text-xs uppercase tracking-wider mt-1 bg-rose-50 px-3 py-1 rounded-full inline-block">
+                {profile?.designation || 'Healthcare Member'}
+              </p>
+            )}
 
             <div className="mt-8 space-y-2">
               <div className="flex items-center gap-3 p-3.5 bg-gray-50/50 rounded-xl border border-gray-50 text-left group hover:border-gray-200 transition-colors">
@@ -419,29 +452,35 @@ export default function ProfilePage() {
           </div>
 
           {/* Quick Overview Analytics Card */}
-          <div className={`${cardStyle} p-6`}>
-            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <TrendingUp size={16} className="text-rose-500" />
-              Performance Index
-            </h3>
-            <div className="space-y-5">
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500 font-medium">Attendance Rate (Past 30d)</span>
-                  <span className="font-bold text-gray-900">{attendancePerformance}%</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-50">
-                <span className="text-xs text-gray-500 font-medium">Task Success Ratio</span>
-                <span className="text-sm font-bold text-gray-800">
-                  {specialTasks.filter(t => t.status === 'completed').length} / {specialTasks.length}
-                </span>
+          {(sections.attendance !== false || sections.reports !== false) && (
+            <div className={`${cardStyle} p-6`}>
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                <TrendingUp size={16} className="text-rose-500" />
+                Performance Index
+              </h3>
+              <div className="space-y-5">
+                {sections.attendance !== false && (
+                  <div>
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-gray-500 font-medium">Attendance Rate (Past 30d)</span>
+                      <span className="font-bold text-gray-900">{attendancePerformance}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
+                    </div>
+                  </div>
+                )}
+                {sections.reports !== false && (
+                  <div className={`flex justify-between items-center ${sections.attendance !== false ? 'pt-2 border-t border-gray-50' : ''}`}>
+                    <span className="text-xs text-gray-500 font-medium">Task Success Ratio</span>
+                    <span className="text-sm font-bold text-gray-800">
+                      {specialTasks.filter(t => t.status === 'completed').length} / {specialTasks.length}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
         </aside>
 
         {/* Right Content Block */}
@@ -449,21 +488,13 @@ export default function ProfilePage() {
           
           {/* Minimalist Top Navigation Tabs */}
           <nav className="flex gap-1 overflow-x-auto no-scrollbar bg-white p-1.5 rounded-xl border border-gray-100 shadow-sm">
-            {[
-              { id: 'tasks', label: 'Task Board', icon: Target },
-              { id: 'attendance', label: 'Presence', icon: Calendar },
-              { id: 'duty', label: 'Duties', icon: Briefcase },
-              { id: 'dress', label: 'Apparel', icon: Shirt },
-              { id: 'score', label: 'Scoring', icon: Award },
-              { id: 'finance', label: 'Ledger', icon: DollarSign },
-              { id: 'profile', label: 'Identity', icon: Info },
-            ].map(tab => {
+            {visibleTabs.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2.5 px-5 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all duration-200
                     ${isActive 
                       ? 'bg-gray-900 text-white shadow-md shadow-gray-200' 
@@ -481,7 +512,7 @@ export default function ProfilePage() {
           <div className={`${cardStyle} p-6 min-h-[500px]`}>
             
             {/* --- TASKS TAB --- */}
-            {activeTab === 'tasks' && (
+            {activeTab === 'tasks' && sections.reports !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -540,7 +571,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- ATTENDANCE TAB --- */}
-            {activeTab === 'attendance' && (
+            {activeTab === 'attendance' && sections.attendance !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -556,7 +587,6 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {attendance.length > 0 ? attendance.map(log => {
-                    const isNegative = ['absent', 'unpaid_leave'].includes(log.status);
                     const isLate = log.status === 'late' || !log.arrivedOnTime;
                     
                     return (
@@ -601,7 +631,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- DUTY LOGS TAB --- */}
-            {activeTab === 'duty' && (
+            {activeTab === 'duty' && sections.duties !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -660,7 +690,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- DRESS CODE TAB --- */}
-            {activeTab === 'dress' && (
+            {activeTab === 'dress' && sections.uniform !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -719,7 +749,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- SCORING TAB --- */}
-            {activeTab === 'score' && (
+            {activeTab === 'score' && sections.growthPoints !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -780,7 +810,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- FINANCE TAB --- */}
-            {activeTab === 'finance' && (
+            {activeTab === 'finance' && sections.salary !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -797,10 +827,10 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                   <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
                      <div className="flex justify-between items-start mb-4">
-                       <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
-                         <CreditCard size={18} />
-                       </div>
-                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
+                        <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
+                          <CreditCard size={18} />
+                        </div>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
                      </div>
                      <p className="text-xs font-medium text-gray-500">Total Gross Structure</p>
                      <h4 className="text-2xl font-black text-gray-900">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
