@@ -842,6 +842,9 @@ service cloud.firestore {
           request.auth.uid == docId 
           || request.auth.token.get('role', '') in ['superadmin', 'manager', 'cashier']
           || isSystemAdmin()
+          || (exists(/databases/$(database)/documents/hq_users/$(request.auth.uid)) && get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role in ['superadmin', 'manager', 'cashier'])
+          || request.auth.uid == '5mHY2l3o6NhGDji4CysY' 
+          || request.auth.uid == 'hospital_5mHY2l3o6NhGDji4CysY'
         )
       ) || isDiscoveryQuery();
       allow create, delete: if false;
@@ -1064,7 +1067,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_dress_code$')
           || collectionId.matches('^[a-z0-9_-]+_fines$')
           || collectionId.matches('^[a-z0-9_-]+_growth_points$')
-          || collectionId.matches('^[a-z0-9_-]+_users$')
+          || (collectionId.matches('^[a-z0-9_-]+_users$') && collectionId != 'hq_users')
           || collectionId.matches('^[a-z0-9_-]+_debtors$')
           || collectionId.matches('^[a-z0-9_-]+_audit$')
           || collectionId.matches('^[a-z0-9_-]+_contributions$')
@@ -1072,7 +1075,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
           || collectionId.matches('^[a-z0-9_-]+_notifications$')
-        ) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
+        ) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$') && collectionId != 'hq_users');
       allow create, update: if (
         isHqSuperOrManager() 
         || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$'))
@@ -1088,7 +1091,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_dress_code$')
           || collectionId.matches('^[a-z0-9_-]+_fines$')
           || collectionId.matches('^[a-z0-9_-]+_growth_points$')
-          || collectionId.matches('^[a-z0-9_-]+_users$')
+          || (collectionId.matches('^[a-z0-9_-]+_users$') && collectionId != 'hq_users')
           || collectionId.matches('^[a-z0-9_-]+_debtors$')
           || collectionId.matches('^[a-z0-9_-]+_audit$')
           || collectionId.matches('^[a-z0-9_-]+_contributions$')
@@ -1100,7 +1103,7 @@ service cloud.firestore {
       allow delete: if isHqSuperOrManager()
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
-          || collectionId.matches('^[a-z0-9_-]+_users$')
+          || (collectionId.matches('^[a-z0-9_-]+_users$') && collectionId != 'hq_users')
           || collectionId.matches('^[a-z0-9_-]+_fines$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
