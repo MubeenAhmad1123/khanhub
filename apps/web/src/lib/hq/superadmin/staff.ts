@@ -586,8 +586,9 @@ export async function updateStaffProfile(
     }
 
     // Handle department change (Migration)
-    if (updates.dept && updates.dept !== currentDept) {
-      const newDept = updates.dept as StaffDept;
+    const targetDept = updates.dept || updates.department;
+    if (targetDept && targetDept !== currentDept) {
+      const newDept = targetDept as StaffDept;
       const newCol = getDeptCollection(newDept);
       const newDocRef = firestoreDoc(db, newCol, uid);
 
@@ -600,6 +601,8 @@ export async function updateStaffProfile(
       await setDoc(newDocRef, {
         ...currentData,
         ...updates,
+        dept: newDept,
+        department: newDept,
         updatedAt: new Date()
       });
 
@@ -611,7 +614,12 @@ export async function updateStaffProfile(
     }
 
     // Standard update within same collection
-    await updateDoc(oldDocRef, updates);
+    const finalUpdates = {
+      ...updates,
+      ...(updates.department ? { dept: updates.department } : {}),
+      ...(updates.dept ? { department: updates.dept } : {})
+    };
+    await updateDoc(oldDocRef, finalUpdates);
     return { success: true };
   } catch (err: any) {
     console.error('Update failed:', err);
