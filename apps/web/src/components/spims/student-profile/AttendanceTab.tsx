@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { subscribeStudentAttendance, type SpimsStudentAttendance } from '@/lib/spims/studentAttendance';
 
-export default function AttendanceTab({ studentId }: { studentId: string }) {
+export default function AttendanceTab({ studentId }: { studentId: string }): any {
   const [rows, setRows] = useState<SpimsStudentAttendance[]>([]);
   const [loading, setLoading] = useState(true);
 

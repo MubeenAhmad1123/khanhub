@@ -14,7 +14,7 @@ const AuthContext = createContext<AuthContextType>({ user: null, loading: true }
 
 export const useUniversalAuth = () => useContext(AuthContext);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: any }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 

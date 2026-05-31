@@ -19,11 +19,13 @@ import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 
-import DailySheetTab from '@/components/welfare/child-profile/DailySheetTab';
-import ProgressTab from '@/components/welfare/child-profile/ProgressTab';
-import TherapyTab from '@/components/welfare/child-profile/TherapyTab';
-import MedicationTab from '@/components/welfare/child-profile/MedicationTab';
-import AdmissionTab from '@/components/welfare/child-profile/AdmissionTab';
+import dynamic from 'next/dynamic';
+
+const DailySheetTab = dynamic(() => import('@/components/welfare/child-profile/DailySheetTab'), { ssr: false }) as any;
+const ProgressTab = dynamic(() => import('@/components/welfare/child-profile/ProgressTab'), { ssr: false }) as any;
+const TherapyTab = dynamic(() => import('@/components/welfare/child-profile/TherapyTab'), { ssr: false }) as any;
+const MedicationTab = dynamic(() => import('@/components/welfare/child-profile/MedicationTab'), { ssr: false }) as any;
+const AdmissionTab = dynamic(() => import('@/components/welfare/child-profile/AdmissionTab'), { ssr: false }) as any;
 
 export default function ChildDetailPage() {
   const router = useRouter();
@@ -980,7 +982,7 @@ export default function ChildDetailPage() {
 
           {/* TAB: ADMISSION */}
           {activeTab === 'admission' && (
-            <AdmissionTab child={child} onUpdate={(updated) => setChild({...child, ...updated})} />
+            <AdmissionTab child={child} onUpdate={(updated: any) => setChild({...child, ...updated})} />
           )}
 
           {/* TAB: DAILY SHEET */}

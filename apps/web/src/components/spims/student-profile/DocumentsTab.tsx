@@ -27,7 +27,7 @@ export default function DocumentsTab({
 }: {
   studentId: string;
   session: SpimsSessionLike;
-}) {
+}): any {
   const [docs, setDocs] = useState<SpimsStudentDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);

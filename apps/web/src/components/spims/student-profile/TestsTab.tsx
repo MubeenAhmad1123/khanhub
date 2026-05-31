@@ -6,7 +6,7 @@ import { ClipboardList, Loader2 } from 'lucide-react';
 import type { SpimsStudent } from '@/types/spims';
 import { subscribeStudentTests, type SpimsTest } from '@/lib/spims/tests';
 
-export default function TestsTab({ student }: { student: SpimsStudent }) {
+export default function TestsTab({ student }: { student: SpimsStudent }): any {
   const [rows, setRows] = useState<SpimsTest[]>([]);
   const [loading, setLoading] = useState(true);
 

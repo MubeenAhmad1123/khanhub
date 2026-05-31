@@ -63,6 +63,10 @@ export default function ManagerAttendancePage() {
       
       const staffList = results.flat().filter(s => {
         const role = String(s.role || '').toLowerCase();
+        const nameLower = String(s.name || s.displayName || '').toLowerCase();
+        if (nameLower === 'vacant' || nameLower.includes('vacant') || s.status === 'vacant') {
+          return false;
+        }
         return STAFF_ROLES.includes(role);
       });
       

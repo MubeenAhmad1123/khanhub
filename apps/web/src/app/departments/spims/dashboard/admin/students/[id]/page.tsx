@@ -12,12 +12,14 @@ import { toPng } from 'html-to-image';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import type { SpimsStudent } from '@/types/spims';
-import AdmissionTab from '@/components/spims/student-profile/AdmissionTab';
-import FeeRecordTab from '@/components/spims/student-profile/FeeRecordTab';
-import ExamRecordTab from '@/components/spims/student-profile/ExamRecordTab';
-import DocumentsTab from '@/components/spims/student-profile/DocumentsTab';
-import FinanceSummaryTab from '@/components/spims/student-profile/FinanceSummaryTab';
-import ProfileHeader from '@/components/spims/student-profile/ProfileHeader';
+import dynamic from 'next/dynamic';
+
+const AdmissionTab = dynamic(() => import('@/components/spims/student-profile/AdmissionTab'), { ssr: false }) as any;
+const FeeRecordTab = dynamic(() => import('@/components/spims/student-profile/FeeRecordTab'), { ssr: false }) as any;
+const ExamRecordTab = dynamic(() => import('@/components/spims/student-profile/ExamRecordTab'), { ssr: false }) as any;
+const DocumentsTab = dynamic(() => import('@/components/spims/student-profile/DocumentsTab'), { ssr: false }) as any;
+const FinanceSummaryTab = dynamic(() => import('@/components/spims/student-profile/FinanceSummaryTab'), { ssr: false }) as any;
+const ProfileHeader = dynamic(() => import('@/components/spims/student-profile/ProfileHeader'), { ssr: false }) as any;
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
 

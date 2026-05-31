@@ -25,6 +25,7 @@ export default function ManagerStaffPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [sortBy, setSortBy] = useState<'name' | 'id' | 'seniority'>('name');
 
   // Stats
   const [stats, setStats] = useState({
@@ -104,7 +105,7 @@ export default function ManagerStaffPage() {
   }, [search, deptFilter, enriched, enriching]);
 
   const filtered = useMemo(() => {
-    return staff.filter(s => {
+    let result = staff.filter(s => {
       const matchesSearch = search === '' ||
         (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (s.employeeId || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -119,7 +120,48 @@ export default function ManagerStaffPage() {
 
       return matchesSearch && matchesDept && matchesStatus;
     });
-  }, [staff, search, deptFilter, statusFilter]);
+
+    // Apply advanced sorting based on selected sortBy criteria
+    if (sortBy === 'id') {
+      const extractNumericId = (idStr: string) => {
+        const match = idStr.match(/\d+/);
+        return match ? parseInt(match[0], 10) : Infinity;
+      };
+      result = [...result].sort((a, b) => {
+        const idA = extractNumericId(a.employeeId || '');
+        const idB = extractNumericId(b.employeeId || '');
+        if (idA !== idB) return idA - idB;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    } else if (sortBy === 'seniority') {
+      const getSeniorityRank = (seniority: string, desig: string) => {
+        const s = String(seniority || '').toLowerCase();
+        const d = String(desig || '').toLowerCase();
+        if (s.includes('senior') || d.includes('executive') || d.includes('director') || d.includes('head')) return 10;
+        if (d.includes('manager')) return 9;
+        if (d.includes('supervisor') || s.includes('mid')) return 8;
+        if (d.includes('doctor') || d.includes('clinical') || d.includes('physiotherapist')) return 7;
+        if (d.includes('nurse') || d.includes('teacher') || d.includes('lecturer') || d.includes('counselor') || d.includes('personnel')) return 6;
+        if (d.includes('worker') || d.includes('junior') || s.includes('junior')) return 5;
+        if (d.includes('contract')) return 4;
+        if (d.includes('trial')) return 3;
+        if (d.includes('internee') || d.includes('intern') || s.includes('internee')) return 2;
+        if (d.includes('volunteer')) return 1;
+        return 0;
+      };
+      result = [...result].sort((a, b) => {
+        const rankA = getSeniorityRank(a.seniority || '', a.designation || '');
+        const rankB = getSeniorityRank(b.seniority || '', b.designation || '');
+        if (rankA !== rankB) return rankB - rankA; // Highest seniority rank first
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    } else {
+      // Default: sort alphabetically by name
+      result = [...result].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+
+    return result;
+  }, [staff, search, deptFilter, statusFilter, sortBy]);
 
   const getDeptColor = (dept: string) => {
     switch (dept) {
@@ -161,7 +203,7 @@ export default function ManagerStaffPage() {
                   <p className="text-2xl font-black text-gray-900 leading-none">{stats.total}</p>
                 </div>
                 <div className="px-6 py-2 pr-8">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Sync State</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Mark State</p>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
                     <p className="text-2xl font-black text-blue-600 leading-none">{stats.present}</p>
@@ -182,7 +224,7 @@ export default function ManagerStaffPage() {
               <AlertCircle size={36} strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0 text-center md:text-left">
-              <h4 className="font-black text-2xl text-gray-900 uppercase tracking-tight">Pending Synchronization</h4>
+              <h4 className="font-black text-2xl text-gray-900 uppercase tracking-tight">Pending Marking</h4>
               <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-2 text-amber-600/80">
                 {unmarkedStaff.length} personnel missing logs for current cycle
               </p>
@@ -254,6 +296,16 @@ export default function ManagerStaffPage() {
               <option value="inactive">Inactive Only</option>
               <option value="resigned">Resigned</option>
               <option value="terminated">Terminated</option>
+            </select>
+            <select
+              className={`border-none rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
+                }`}
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+            >
+              <option value="name">Sort: Name (A-Z)</option>
+              <option value="id">Sort: ID (Numeric)</option>
+              <option value="seniority">Sort: Seniority</option>
             </select>
           </div>
         </div>
@@ -344,7 +396,7 @@ export default function ManagerStaffPage() {
               <Users size={40} strokeWidth={1.5} />
             </div>
             <h4 className={`text-xl font-black mb-2 transition-colors ${darkMode ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>No Nodes Found</h4>
-            <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-xs font-bold uppercase tracking-widest max-w-xs mx-auto`}>Zero records matching current synchronization parameters.</p>
+            <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-xs font-bold uppercase tracking-widest max-w-xs mx-auto`}>Zero records matching current marking parameters.</p>
           </div>
         )}
       </div>

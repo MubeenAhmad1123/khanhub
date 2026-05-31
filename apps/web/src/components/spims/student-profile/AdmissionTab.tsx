@@ -52,7 +52,7 @@ export default function AdmissionTab({
   student: SpimsStudent;
   session: SpimsSessionLike;
   onSaved?: () => void;
-}) {
+}): any {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<SpimsStudent>>({});
 
@@ -115,7 +115,7 @@ export default function AdmissionTab({
     }
   };
 
-  const fld = (label: string, child: React.ReactNode) => (
+  const fld = (label: string, child: any) => (
     <div className="space-y-1.5">
       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</label>
       {child}

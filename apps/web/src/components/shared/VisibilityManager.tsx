@@ -45,7 +45,7 @@ export default function VisibilityManager({
   department,
   currentSections,
   onSave,
-}: VisibilityManagerProps) {
+}: VisibilityManagerProps): any {
   const [sections, setSections] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);

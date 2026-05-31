@@ -219,13 +219,93 @@ export default function ProfilePage() {
     }
   };
 
-  const totalEarnings = useMemo(() => {
-    if (!profile?.monthlySalary) return 0;
-    const fineTotal = fines.reduce((acc, f) => acc + (f.amount || 0), 0);
-    return Math.max(0, profile.monthlySalary - fineTotal);
-  }, [profile, fines]);
+    // Standardized Dynamic Finance Calculations
+  const salaryDetails = useMemo(() => {
+    if (!profile) {
+      return {
+        dailyWage: 0,
+        presentDays: 0,
+        lateDays: 0,
+        paidLeaves: 0,
+        unpaidLeaves: 0,
+        absentDays: 0,
+        payableDays: 0,
+        unpaidDays: 0,
+        earnings: 0,
+        absentDeduction: 0,
+        estimatedSalary: 0,
+        fines: 0
+      };
+    }
 
-  const totalFines = useMemo(() => fines.reduce((a, c) => a + (c.amount || 0), 0), [fines]);
+    const monthlySalary = Number(profile.monthlySalary || profile.salary || 0);
+    const dailyWage = monthlySalary / 30;
+
+    let presentDays = 0;
+    let lateDays = 0;
+    let leavesCount = 0;
+    let paidLeaves = 0;
+    let unpaidLeaves = 0;
+    let absentDays = 0;
+    let unmarkedDays = 0;
+
+    attendance.forEach(a => {
+      const status = a.status;
+      if (status === 'present') {
+        presentDays++;
+      } else if (status === 'late') {
+        lateDays++;
+      } else if (status === 'leave' || status === 'paid_leave') {
+        leavesCount++;
+        if (leavesCount <= 2) {
+          paidLeaves++;
+        } else {
+          unpaidLeaves++;
+        }
+      } else if (status === 'unpaid_leave') {
+        unpaidLeaves++;
+      } else if (status === 'absent') {
+        absentDays++;
+      } else {
+        unmarkedDays++;
+      }
+    });
+
+    const payableDays = presentDays + lateDays + paidLeaves;
+    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+
+    const earnings = payableDays * dailyWage;
+    const absentDeduction = unpaidDays * dailyWage;
+    const totalFines = fines.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
+
+    return {
+      dailyWage,
+      presentDays,
+      lateDays,
+      paidLeaves,
+      unpaidLeaves,
+      absentDays,
+      payableDays,
+      unpaidDays,
+      earnings,
+      absentDeduction,
+      estimatedSalary,
+      fines: totalFines
+    };
+  }, [profile, attendance, fines]);
+
+  const currentMonthTotalPayable = useMemo(() => {
+    return salaryDetails.estimatedSalary;
+  }, [salaryDetails]);
+
+  const totalEarnings = useMemo(() => {
+    return salaryDetails.estimatedSalary;
+  }, [salaryDetails]);
+
+  const totalFines = useMemo(() => {
+    return salaryDetails.fines;
+  }, [salaryDetails]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">

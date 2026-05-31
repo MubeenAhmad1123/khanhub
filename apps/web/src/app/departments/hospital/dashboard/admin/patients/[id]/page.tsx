@@ -18,11 +18,13 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
-import DailySheetTab from '@/components/hospital/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/hospital/patient-profile/ProgressTab';
-import TherapyTab from '@/components/hospital/patient-profile/TherapyTab';
-import MedicationTab from '@/components/hospital/patient-profile/MedicationTab';
-import AdmissionTab from '@/components/hospital/patient-profile/AdmissionTab';
+import dynamic from 'next/dynamic';
+
+const DailySheetTab = dynamic(() => import('@/components/hospital/patient-profile/DailySheetTab'), { ssr: false }) as any;
+const ProgressTab = dynamic(() => import('@/components/hospital/patient-profile/ProgressTab'), { ssr: false }) as any;
+const TherapyTab = dynamic(() => import('@/components/hospital/patient-profile/TherapyTab'), { ssr: false }) as any;
+const MedicationTab = dynamic(() => import('@/components/hospital/patient-profile/MedicationTab'), { ssr: false }) as any;
+const AdmissionTab = dynamic(() => import('@/components/hospital/patient-profile/AdmissionTab'), { ssr: false }) as any;
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
 
@@ -1018,7 +1020,7 @@ export default function PatientDetailPage() {
 
           {/* TAB: ADMISSION */}
           {activeTab === 'admission' && (
-            <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({...patient, ...updated})} />
+            <AdmissionTab patient={patient} onUpdate={(updated: any) => setPatient({...patient, ...updated})} />
           )}
 
           {/* TAB: DAILY SHEET */}

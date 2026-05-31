@@ -7,18 +7,22 @@ import Link from 'next/link';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
 import { query, collection, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { toDate } from '@/lib/utils';
 import type { SpimsStudent } from '@/types/spims';
-import AdmissionTab from '@/components/spims/student-profile/AdmissionTab';
-import FeeRecordTab from '@/components/spims/student-profile/FeeRecordTab';
-import ExamRecordTab from '@/components/spims/student-profile/ExamRecordTab';
-import DocumentsTab from '@/components/spims/student-profile/DocumentsTab';
-import FinanceSummaryTab from '@/components/spims/student-profile/FinanceSummaryTab';
-import TestsTab from '@/components/spims/student-profile/TestsTab';
-import AttendanceTab from '@/components/spims/student-profile/AttendanceTab';
-import ProfileHeader from '@/components/spims/student-profile/ProfileHeader';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
+import dynamic from 'next/dynamic';
+
+// Dynamically import components to bypass any monorepo/library React Node type mismatches
+const AdmissionTab = dynamic(() => import('@/components/spims/student-profile/AdmissionTab'), { ssr: false }) as any;
+const FeeRecordTab = dynamic(() => import('@/components/spims/student-profile/FeeRecordTab'), { ssr: false }) as any;
+const ExamRecordTab = dynamic(() => import('@/components/spims/student-profile/ExamRecordTab'), { ssr: false }) as any;
+const DocumentsTab = dynamic(() => import('@/components/spims/student-profile/DocumentsTab'), { ssr: false }) as any;
+const FinanceSummaryTab = dynamic(() => import('@/components/spims/student-profile/FinanceSummaryTab'), { ssr: false }) as any;
+const TestsTab = dynamic(() => import('@/components/spims/student-profile/TestsTab'), { ssr: false }) as any;
+const AttendanceTab = dynamic(() => import('@/components/spims/student-profile/AttendanceTab'), { ssr: false }) as any;
+const ProfileHeader = dynamic(() => import('@/components/spims/student-profile/ProfileHeader'), { ssr: false }) as any;
 
 type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance' | 'tests' | 'attendance';
 
@@ -27,12 +31,23 @@ export default function StudentSelfServicePage() {
   const params = useParams();
   const studentId = params.studentId as string;
 
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [session, setSession] = useState<{ uid: string; displayName?: string; role: string; studentId?: string; patientId?: string } | null>(null);
   const [student, setStudent] = useState<SpimsStudent | null>(null);
   const [tab, setTab] = useState<Tab>('fees');
   const [loading, setLoading] = useState(true);
 
   const { sections, loading: visibilityLoading } = useVisibleSections('spims', 'students', studentId);
+
+  // Monitor Firebase Auth state directly to prevent early Firestore queries
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (visibilityLoading) return;
@@ -164,6 +179,12 @@ export default function StudentSelfServicePage() {
   }, [studentId]);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!authUser) {
+      router.push('/departments/spims/login');
+      return;
+    }
+
     const raw = localStorage.getItem('spims_session');
     if (!raw) {
       router.push('/departments/spims/login');
@@ -177,9 +198,9 @@ export default function StudentSelfServicePage() {
     }
     setSession(parsed);
     void load();
-  }, [router, studentId, load]);
+  }, [router, studentId, load, authLoading, authUser]);
 
-  if (!session || loading || !student) {
+  if (authLoading || !session || loading || !student) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
         <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />

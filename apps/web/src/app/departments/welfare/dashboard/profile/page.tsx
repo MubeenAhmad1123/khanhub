@@ -237,11 +237,93 @@ export default function ProfilePage() {
     }
   };
 
+  // Standardized Dynamic Finance Calculations
+  const salaryDetails = useMemo(() => {
+    if (!profile) {
+      return {
+        dailyWage: 0,
+        presentDays: 0,
+        lateDays: 0,
+        paidLeaves: 0,
+        unpaidLeaves: 0,
+        absentDays: 0,
+        payableDays: 0,
+        unpaidDays: 0,
+        earnings: 0,
+        absentDeduction: 0,
+        estimatedSalary: 0,
+        fines: 0
+      };
+    }
+
+    const monthlySalary = Number(profile.monthlySalary || profile.salary || 0);
+    const dailyWage = monthlySalary / 30;
+
+    let presentDays = 0;
+    let lateDays = 0;
+    let leavesCount = 0;
+    let paidLeaves = 0;
+    let unpaidLeaves = 0;
+    let absentDays = 0;
+    let unmarkedDays = 0;
+
+    attendance.forEach(a => {
+      const status = a.status;
+      if (status === 'present') {
+        presentDays++;
+      } else if (status === 'late') {
+        lateDays++;
+      } else if (status === 'leave' || status === 'paid_leave') {
+        leavesCount++;
+        if (leavesCount <= 2) {
+          paidLeaves++;
+        } else {
+          unpaidLeaves++;
+        }
+      } else if (status === 'unpaid_leave') {
+        unpaidLeaves++;
+      } else if (status === 'absent') {
+        absentDays++;
+      } else {
+        unmarkedDays++;
+      }
+    });
+
+    const payableDays = presentDays + lateDays + paidLeaves;
+    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+
+    const earnings = payableDays * dailyWage;
+    const absentDeduction = unpaidDays * dailyWage;
+    const totalFines = fines.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
+
+    return {
+      dailyWage,
+      presentDays,
+      lateDays,
+      paidLeaves,
+      unpaidLeaves,
+      absentDays,
+      payableDays,
+      unpaidDays,
+      earnings,
+      absentDeduction,
+      estimatedSalary,
+      fines: totalFines
+    };
+  }, [profile, attendance, fines]);
+
+  const currentMonthTotalPayable = useMemo(() => {
+    return salaryDetails.estimatedSalary;
+  }, [salaryDetails]);
+
   const totalEarnings = useMemo(() => {
-    if (!profile?.monthlySalary) return 0;
-    const fineTotal = fines.reduce((acc, f) => acc + (f.amount || 0), 0);
-    return Math.max(0, profile.monthlySalary - fineTotal);
-  }, [profile, fines]);
+    return salaryDetails.estimatedSalary;
+  }, [salaryDetails]);
+
+  const totalFines = useMemo(() => {
+    return salaryDetails.fines;
+  }, [salaryDetails]);
 
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
@@ -388,14 +470,48 @@ export default function ProfilePage() {
 
             {activeTab === 'finance' && (
               <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="p-5 rounded-2xl bg-slate-900 text-white">
-                     <p className="text-[9px] font-bold uppercase opacity-70 tracking-wider">Net Earnings</p>
-                     <h4 className="text-2xl font-bold mt-1">Rs. {totalEarnings.toLocaleString()}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+                     <div className="flex justify-between items-start mb-4">
+                       <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
+                          <CreditCard size={18} />
+                       </div>
+                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
+                     </div>
+                     <p className="text-xs font-medium text-gray-500">Total Monthly Salary</p>
+                     <h4 className="text-2xl font-black text-gray-900">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
+                     
+                     <div className="border-t border-gray-50 mt-4 pt-4 space-y-1.5 text-[10px] font-bold text-gray-700 uppercase">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Daily Rate (Base / 30):</span>
+                          <span className="font-black text-gray-900">Rs. {Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Payable Days:</span>
+                          <span className="font-black text-emerald-600">{salaryDetails.payableDays} Days</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Unpaid Deductions:</span>
+                          <span className="font-black text-rose-500">{salaryDetails.unpaidDays} Days (-Rs. {Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Total Fines:</span>
+                          <span className="font-black text-rose-500">-Rs. {totalFines.toLocaleString()}</span>
+                        </div>
+                     </div>
                   </div>
-                  <div className="p-5 rounded-2xl border border-slate-100 bg-slate-50">
-                     <p className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Deductions</p>
-                     <h4 className="text-2xl font-bold mt-1 text-rose-600">Rs. {fines.reduce((a,c)=>a+(c.amount||0), 0).toLocaleString()}</h4>
+                  
+                  <div className="bg-teal-600 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden shadow-teal-100 flex flex-col justify-between">
+                     <div className="absolute -right-4 -bottom-4 text-white opacity-10 w-24 h-24 rotate-12">
+                        <DollarSign size={96} />
+                     </div>
+                     <div>
+                       <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Est. Retainable Net</p>
+                       <h4 className="text-3xl font-black">Rs. {totalEarnings.toLocaleString()}</h4>
+                     </div>
+                     <p className="text-xs mt-2 font-medium opacity-70 border-t border-teal-500 pt-2">
+                       Calculated dynamically for current marked attendance (2 paid leaves limit).
+                     </p>
                   </div>
                 </div>
 

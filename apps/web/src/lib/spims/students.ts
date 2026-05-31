@@ -50,16 +50,29 @@ export async function getUnifiedStudent(id: string): Promise<any | null> {
   // Try getting profile first
   let profile = await getStudent(id);
   
-  // Try finding login by studentId or UID
-  const qLogin = query(
-    collection(db, 'spims_users'), 
-    where('role', '==', 'student')
-  );
-  const loginSnap = await getDocs(qLogin);
-  
-  // Look for match in logins
-  const login = loginSnap.docs.find(d => d.id === id || (d.data() as any).studentId === id);
-  const loginData = login ? { uid: login.id, ...login.data() } as any : null;
+  let loginData: any = null;
+
+  try {
+    // 1. Try finding login by UID first (if id is a UID)
+    const directDoc = await getDoc(doc(db, 'spims_users', id));
+    if (directDoc.exists()) {
+      loginData = { uid: directDoc.id, ...directDoc.data() };
+    } else {
+      // 2. If not found, try querying by studentId
+      const q = query(
+        collection(db, 'spims_users'),
+        where('studentId', '==', id),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const loginDoc = snap.docs[0];
+        loginData = { uid: loginDoc.id, ...loginDoc.data() };
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching student login data:', err);
+  }
 
   if (profile) {
     return { ...profile, login: loginData };

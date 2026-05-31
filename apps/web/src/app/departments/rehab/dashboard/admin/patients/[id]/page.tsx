@@ -20,12 +20,15 @@ import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
 import { toPng } from 'html-to-image';
 
-import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
-import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
-import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
-import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
-import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
-import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
+import type { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
+import dynamic from 'next/dynamic';
+
+const DailySheetTab = dynamic(() => import('@/components/rehab/patient-profile/DailySheetTab'), { ssr: false }) as any;
+const FinanceHistory = dynamic(() => import('@/components/rehab/patient-profile/FinanceHistory'), { ssr: false }) as any;
+const ProgressTab = dynamic(() => import('@/components/rehab/patient-profile/ProgressTab'), { ssr: false }) as any;
+const TherapyTab = dynamic(() => import('@/components/rehab/patient-profile/TherapyTab'), { ssr: false }) as any;
+const MedicationTab = dynamic(() => import('@/components/rehab/patient-profile/MedicationTab'), { ssr: false }) as any;
+const AdmissionTab = dynamic(() => import('@/components/rehab/patient-profile/AdmissionTab'), { ssr: false }) as any;
 import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
@@ -2194,7 +2197,7 @@ export default function PatientDetailPage() {
               </div>
             )}
 
-            <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({ ...patient, ...updated })} />
+            <AdmissionTab patient={patient} onUpdate={(updated: any) => setPatient({ ...patient, ...updated })} />
           </div>
 
           {/* TAB: DAILY SHEET */}

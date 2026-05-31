@@ -11,7 +11,7 @@ interface ProfileHeaderProps {
   onGenerateReport?: () => void;
 }
 
-export default function ProfileHeader({ student, onGenerateReport }: ProfileHeaderProps) {
+export default function ProfileHeader({ student, onGenerateReport }: ProfileHeaderProps): any {
   const totalPkg = Number(student.totalPackage) || 0;
 
   return (

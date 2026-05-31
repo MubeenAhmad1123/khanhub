@@ -18,11 +18,13 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 
-import DailySheetTab from '@/components/sukoon/client-profile/DailySheetTab';
-import ProgressTab from '@/components/sukoon/client-profile/ProgressTab';
-import TherapyTab from '@/components/sukoon/client-profile/TherapyTab';
-import MedicationTab from '@/components/sukoon/client-profile/MedicationTab';
-import AdmissionTab from '@/components/sukoon/client-profile/AdmissionTab';
+import dynamic from 'next/dynamic';
+
+const DailySheetTab = dynamic(() => import('@/components/sukoon/client-profile/DailySheetTab'), { ssr: false }) as any;
+const ProgressTab = dynamic(() => import('@/components/sukoon/client-profile/ProgressTab'), { ssr: false }) as any;
+const TherapyTab = dynamic(() => import('@/components/sukoon/client-profile/TherapyTab'), { ssr: false }) as any;
+const MedicationTab = dynamic(() => import('@/components/sukoon/client-profile/MedicationTab'), { ssr: false }) as any;
+const AdmissionTab = dynamic(() => import('@/components/sukoon/client-profile/AdmissionTab'), { ssr: false }) as any;
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
 
@@ -993,7 +995,7 @@ export default function ClientDetailPage() {
 
           {/* TAB: ADMISSION */}
           {activeTab === 'admission' && (
-            <AdmissionTab client={patient} onUpdate={(updated) => setPatient({...patient, ...updated})} />
+            <AdmissionTab client={patient} onUpdate={(updated: any) => setPatient({...patient, ...updated})} />
           )}
 
           {/* TAB: DAILY SHEET */}

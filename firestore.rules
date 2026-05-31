@@ -347,7 +347,8 @@ service cloud.firestore {
     // Superadmin approves/rejects (update). Cashier forwards requests (update).
     // Nobody deletes transactions — full audit trail.
     match /rehab_transactions/{docId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier') || isHqTier1();
+      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier') || isHqTier1()
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
       allow create: if isRehabRole('cashier')
         || isRehabAdminOrAbove()
         || isHqCashier()
@@ -631,7 +632,9 @@ service cloud.firestore {
     }
 
     match /spims_transactions/{docId} {
-      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqTier1();
+      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqTier1()
+        || (isSpimsRole('student') && resource.data.studentId == spimsStudentId())
+        || (isSpimsRole('student') && resource.data.patientId == spimsStudentId());
       allow create: if isSpimsRole('cashier')
         || isSpimsAdminOrAbove()
         || isHqCashier()

@@ -13,8 +13,6 @@ import {
 import { db } from '@/lib/firebase';
 import { getCached, setCached } from '@/lib/queryCache';
 
-
-
 import { Loader2, TrendingUp, Wallet } from 'lucide-react';
 import type { SpimsFeePayment, SpimsStudent } from '@/types/spims';
 import { formatDateDMY, toDate } from '@/lib/utils';
@@ -23,7 +21,7 @@ export default function FinanceSummaryTab({
   student,
 }: {
   student: SpimsStudent;
-}) {
+}): any {
   const [rows, setRows] = useState<SpimsFeePayment[]>([]);
   const [loading, setLoading] = useState(true);
 

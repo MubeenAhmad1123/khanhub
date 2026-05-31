@@ -35,7 +35,7 @@ export default function FeeRecordTab({
 }: {
   student: SpimsStudent;
   session: SpimsSessionLike;
-}) {
+}): any {
   const [rows, setRows] = useState<SpimsFeePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);

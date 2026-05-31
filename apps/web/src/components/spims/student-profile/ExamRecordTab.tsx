@@ -45,7 +45,7 @@ export default function ExamRecordTab({
   student: SpimsStudent;
   session: SpimsSessionLike;
   onSaved?: () => void;
-}) {
+}): any {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ExamForm>({
     year1_rollNo: '',
@@ -115,7 +115,7 @@ export default function ExamRecordTab({
 
   const resOpts = ['', 'Pass', 'Fail', 'Supply'];
 
-  const section = (title: string, body: React.ReactNode) => (
+  const section = (title: string, body: any) => (
     <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-4">
       <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest">{title}</h3>
       {body}

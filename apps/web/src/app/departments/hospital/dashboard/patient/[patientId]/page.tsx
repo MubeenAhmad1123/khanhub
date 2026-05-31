@@ -10,14 +10,16 @@ import {
   Shield, Pill, TrendingUp, Activity, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
-import DailySheetTab from '@/components/hospital/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/hospital/patient-profile/ProgressTab';
-import TherapyTab from '@/components/hospital/patient-profile/TherapyTab';
-import MedicationTab from '@/components/hospital/patient-profile/MedicationTab';
+import dynamic from 'next/dynamic';
 import { formatDateDMY } from '@/lib/utils';
 import { getCached, setCached } from '@/lib/queryCache';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
 
+// Dynamically import components to bypass any monorepo/library React Node type mismatches
+const DailySheetTab = dynamic(() => import('@/components/hospital/patient-profile/DailySheetTab'), { ssr: false }) as any;
+const ProgressTab = dynamic(() => import('@/components/hospital/patient-profile/ProgressTab'), { ssr: false }) as any;
+const TherapyTab = dynamic(() => import('@/components/hospital/patient-profile/TherapyTab'), { ssr: false }) as any;
+const MedicationTab = dynamic(() => import('@/components/hospital/patient-profile/MedicationTab'), { ssr: false }) as any;
 
 function toDate(val: any): Date {
   if (!val) return new Date();

@@ -77,7 +77,7 @@ interface Staff {
 interface AttendanceLog {
   id: string;
   date: any;
-  status: 'present' | 'absent' | 'leave';
+  status: 'present' | 'absent' | 'leave' | 'late' | 'paid_leave' | 'unpaid_leave' | 'unmarked';
   arrivalTime?: string;
   departureTime?: string;
 }
@@ -274,38 +274,88 @@ export default function StaffProfilePage() {
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
   const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
 
-  const tillDateSalary = useMemo(() => {
-    if (!staff) return 0;
-    const monthlySalary = Number(staff.monthlySalary) || 0;
-    const daysInMonth = 30; // Standard month division as requested
-    const dailyRate = monthlySalary / daysInMonth;
-
-    // Count present days in the selected month
-    const presentDays = attendance.filter(a => a.status === 'present').length;
-    const earnings = dailyRate * presentDays;
-
-    // Fines for the current month/staff
-    const totalFines = staff.totalFines || 0;
-
-    return Math.floor(Math.max(0, earnings - totalFines));
-  }, [staff, attendance]);
-
   const salaryDetails = useMemo(() => {
-    if (!staff) return { dailyWage: 0, absentDays: 0, absentDeduction: 0 };
+    if (!staff) {
+      return {
+        dailyWage: 0,
+        presentDays: 0,
+        lateDays: 0,
+        paidLeaves: 0,
+        unpaidLeaves: 0,
+        absentDays: 0,
+        payableDays: 0,
+        unpaidDays: 0,
+        earnings: 0,
+        absentDeduction: 0,
+        estimatedSalary: 0,
+        fines: 0
+      };
+    }
+
     const monthlySalary = Number(staff.monthlySalary) || 0;
     const dailyWage = monthlySalary / 30;
-    const absentDays = attendance.filter(a => a.status === 'absent').length;
-    const absentDeduction = absentDays * dailyWage;
+
+    let presentDays = 0;
+    let lateDays = 0;
+    let leavesCount = 0;
+    let paidLeaves = 0;
+    let unpaidLeaves = 0;
+    let absentDays = 0;
+    let unmarkedDays = 0;
+
+    attendance.forEach(a => {
+      const status = a.status;
+      if (status === 'present') {
+        presentDays++;
+      } else if (status === 'late') {
+        lateDays++;
+      } else if (status === 'leave' || status === 'paid_leave') {
+        leavesCount++;
+        if (leavesCount <= 2) {
+          paidLeaves++;
+        } else {
+          unpaidLeaves++;
+        }
+      } else if (status === 'unpaid_leave') {
+        unpaidLeaves++;
+      } else if (status === 'absent') {
+        absentDays++;
+      } else {
+        unmarkedDays++;
+      }
+    });
+
+    const payableDays = presentDays + lateDays + paidLeaves;
+    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+
+    const earnings = payableDays * dailyWage;
+    const absentDeduction = unpaidDays * dailyWage;
+    const fines = staff.totalFines || 0;
+    const estimatedSalary = Math.floor(Math.max(0, earnings - fines));
+
     return {
       dailyWage,
+      presentDays,
+      lateDays,
+      paidLeaves,
+      unpaidLeaves,
       absentDays,
-      absentDeduction
+      payableDays,
+      unpaidDays,
+      earnings,
+      absentDeduction,
+      estimatedSalary,
+      fines
     };
   }, [staff, attendance]);
 
+  const tillDateSalary = useMemo(() => {
+    return salaryDetails.estimatedSalary;
+  }, [salaryDetails]);
+
   const presentDaysCount = useMemo(() => {
-    return attendance.filter(a => a.status === 'present').length;
-  }, [attendance]);
+    return salaryDetails.presentDays + salaryDetails.lateDays;
+  }, [salaryDetails]);
   const [timePopup, setTimePopup] = useState<{
     isOpen: boolean;
     date: string;
@@ -1606,15 +1656,19 @@ export default function StaffProfilePage() {
                     <span className="font-black text-gray-900">₨{Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Absents:</span>
-                    <span className="font-black text-rose-500">{salaryDetails.absentDays} Days (-₨{Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
+                    <span>Payable Days (Incl. Leaves):</span>
+                    <span className="font-black text-emerald-600">{salaryDetails.payableDays} Days</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Unpaid Days Deductions:</span>
+                    <span className="font-black text-rose-500">{salaryDetails.unpaidDays} Days (-₨{Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Fines:</span>
-                    <span className="font-black text-rose-500">-₨{(staff?.totalFines || 0).toLocaleString()}</span>
+                    <span className="font-black text-rose-500">-₨{salaryDetails.fines.toLocaleString()}</span>
                   </div>
                 </div>
-                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Calculated dynamically for current marked attendance</p>
+                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Calculated dynamically for current marked attendance (2 paid leaves limit)</p>
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-4 text-left border bg-amber-50/50 border-amber-100`}>

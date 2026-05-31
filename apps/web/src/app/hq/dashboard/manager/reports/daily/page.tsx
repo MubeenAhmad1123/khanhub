@@ -186,6 +186,10 @@ export default function DailyReportPage() {
           return false;
         }
 
+        if (n === 'vacant' || n.includes('vacant') || String(s.status || '').toLowerCase() === 'vacant') {
+          return false;
+        }
+
         // Validate name exists and is not blank/placeholder
         const nameVal = (s.name || s.displayName || '').trim();
         if (!nameVal || nameVal === '—' || nameVal === '-') {
