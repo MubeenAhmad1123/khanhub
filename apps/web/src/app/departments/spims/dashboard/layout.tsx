@@ -29,8 +29,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
-  { label: 'Student portal', href: '/departments/spims/dashboard/student', icon: <User size={16} />, roles: ['student'] },
-  { label: 'My Profile', href: '/departments/spims/dashboard/profile', icon: <UserCog size={16} />, roles: ['admin', 'staff', 'student', 'cashier', 'superadmin'] },
+  
+  // Student Portal Tabs
+  { label: 'My Portal', href: '/departments/spims/dashboard/student', icon: <LayoutDashboard size={16} />, roles: ['student'] },
+  { label: 'My Tasks', href: '/departments/spims/dashboard/student?tab=tasks', icon: <ClipboardCheck size={16} />, roles: ['student'] },
+  { label: 'My Lessons', href: '/departments/spims/dashboard/student?tab=lessons', icon: <GraduationCap size={16} />, roles: ['student'] },
+  { label: 'My Progress', href: '/departments/spims/dashboard/student?tab=progress', icon: <TrendingUp size={16} />, roles: ['student'] },
+  { label: 'Academic Tracking', href: '/departments/spims/dashboard/student?tab=tracking', icon: <BarChart2 size={16} />, roles: ['student'] },
+  
+  { label: 'My Profile', href: '/departments/spims/dashboard/profile', icon: <UserCog size={16} />, roles: ['admin', 'staff', 'cashier', 'superadmin'] },
   { label: 'Data Cleanup', href: '/departments/spims/dashboard/superadmin/cleanup', icon: <Shield size={16} />, roles: ['superadmin'] },
 ];
 
@@ -186,14 +193,31 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
     : HQ_NAV_ITEMS;
 
   const navItems = rawNavItems.map(item => {
-    if (viewMode === 'dept' && item.label === 'Student portal' && (user?.studentId || user?.patientId)) {
-      return { ...item, href: `/departments/spims/dashboard/student/${user.studentId || user.patientId}` };
+    if (viewMode === 'dept' && item.href.startsWith('/departments/spims/dashboard/student') && (user?.studentId || user?.patientId)) {
+      const sid = user.studentId || user.patientId;
+      const suffix = item.href.includes('?tab=') ? `?tab=${item.href.split('?tab=')[1]}` : '';
+      return { ...item, href: `/departments/spims/dashboard/student/${sid}${suffix}` };
     }
     return item;
   });
 
   const SidebarContent = () => {
     const [portalOpen, setPortalOpen] = useState(false);
+    const [currentTab, setCurrentTab] = useState('');
+
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        const updateTab = () => {
+          const params = new URLSearchParams(window.location.search);
+          setCurrentTab(params.get('tab') || '');
+        };
+        updateTab();
+        
+        // Listen to navigation events in client
+        window.addEventListener('popstate', updateTab);
+        return () => window.removeEventListener('popstate', updateTab);
+      }
+    }, []);
 
     return (
       <div className="flex flex-col h-full bg-white border-r border-gray-200">
@@ -293,7 +317,13 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
         {/* Navigation */}
         <nav className="flex-1 px-6 space-y-2 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const hasTab = item.href.includes('?tab=');
+            const targetTab = hasTab ? item.href.split('?tab=')[1] : '';
+            const basePath = item.href.split('?')[0];
+            const isPathMatch = pathname === basePath || pathname.startsWith(basePath + '/');
+            const isActive = hasTab 
+              ? (isPathMatch && currentTab === targetTab)
+              : (isPathMatch && !currentTab);
             return (
               <Link
                 key={item.href}
