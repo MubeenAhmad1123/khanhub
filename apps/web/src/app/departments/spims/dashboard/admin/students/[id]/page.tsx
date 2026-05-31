@@ -1,10 +1,15 @@
 // apps/web/src/app/departments/spims/dashboard/admin/students/[id]/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, GraduationCap, RefreshCw, FileText, Camera, X, Shield, Trash2, BookOpen, Layers, Award, Upload, TrendingUp } from 'lucide-react';
+import { 
+  ArrowLeft, Loader2, GraduationCap, RefreshCw, FileText, Camera, X, Shield, 
+  Trash2, BookOpen, Layers, Award, Upload, TrendingUp, ClipboardList, 
+  CheckCircle2, Clock, BarChart2, Activity, ChevronRight, Calendar, Play, 
+  Download, ExternalLink, Check, CheckSquare, ListTodo 
+} from 'lucide-react';
 import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
 import { doc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -14,16 +19,21 @@ import { toast } from 'react-hot-toast';
 import type { SpimsStudent } from '@/types/spims';
 import dynamic from 'next/dynamic';
 
+import { subscribeStudentTests, type SpimsTest } from '@/lib/spims/tests';
+import { subscribeStudentAttendance } from '@/lib/spims/studentAttendance';
+
 const AdmissionTab = dynamic(() => import('@/components/spims/student-profile/AdmissionTab'), { ssr: false }) as any;
 const FeeRecordTab = dynamic(() => import('@/components/spims/student-profile/FeeRecordTab'), { ssr: false }) as any;
 const ExamRecordTab = dynamic(() => import('@/components/spims/student-profile/ExamRecordTab'), { ssr: false }) as any;
 const DocumentsTab = dynamic(() => import('@/components/spims/student-profile/DocumentsTab'), { ssr: false }) as any;
 const FinanceSummaryTab = dynamic(() => import('@/components/spims/student-profile/FinanceSummaryTab'), { ssr: false }) as any;
+const TestsTab = dynamic(() => import('@/components/spims/student-profile/TestsTab'), { ssr: false }) as any;
+const AttendanceTab = dynamic(() => import('@/components/spims/student-profile/AttendanceTab'), { ssr: false }) as any;
 const ProfileHeader = dynamic(() => import('@/components/spims/student-profile/ProfileHeader'), { ssr: false }) as any;
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
 
-type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance';
+type Tab = 'tasks' | 'lessons' | 'progress' | 'tracking' | 'fees' | 'finance' | 'tests' | 'attendance' | 'exam' | 'admission' | 'documents';
 
 export default function AdminStudentProfilePage() {
   const router = useRouter();
@@ -32,7 +42,7 @@ export default function AdminStudentProfilePage() {
 
   const [session, setSession] = useState<{ uid: string; displayName?: string; role: string } | null>(null);
   const [student, setStudent] = useState<any | null>(null);
-  const [tab, setTab] = useState<Tab>('admission');
+  const [tab, setTab] = useState<Tab>('tasks');
   const [loading, setLoading] = useState(true);
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -43,6 +53,115 @@ export default function AdminStudentProfilePage() {
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
 
   const isScrollingRef = useRef(false);
+
+  // High-fidelity student profile real-time states
+  const [dbAnnouncements, setDbAnnouncements] = useState<SpimsTest[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+
+  // Subscriptions for real-time data
+  useEffect(() => {
+    if (!studentId) return;
+    const unsub = subscribeStudentAttendance({
+      studentId,
+      onData: (data) => {
+        setAttendanceRecords(data);
+      }
+    });
+    return () => unsub();
+  }, [studentId]);
+
+  useEffect(() => {
+    if (!student?.id) return;
+    const unsub = subscribeStudentTests({
+      studentId: student.id,
+      course: String(student.course || ''),
+      session: String(student.session || ''),
+      onData: (data) => {
+        setDbAnnouncements(data);
+      }
+    });
+    return () => unsub();
+  }, [student?.id, student?.course, student?.session]);
+
+  const categorizedData = useMemo(() => {
+    const tasks: SpimsTest[] = [];
+    const lessons: SpimsTest[] = [];
+    const exams: SpimsTest[] = [];
+    const notices: SpimsTest[] = [];
+
+    dbAnnouncements.forEach((item) => {
+      const type = item.type || '';
+      const titleLower = (item.title || '').toLowerCase();
+      const noteLower = (item.note || '').toLowerCase();
+
+      // Check explicit type first
+      if (type === 'task') {
+        tasks.push(item);
+      } else if (type === 'lesson') {
+        lessons.push(item);
+      } else if (type === 'exam') {
+        exams.push(item);
+      } else if (type === 'notice') {
+        notices.push(item);
+      } else {
+        // Fallback to text inspection
+        const isExam = titleLower.includes('test') || titleLower.includes('exam') || titleLower.includes('quiz') || titleLower.includes('midterm') || titleLower.includes('final') || titleLower.includes('paper') ||
+                       noteLower.includes('test') || noteLower.includes('exam') || noteLower.includes('quiz');
+        
+        const isLesson = titleLower.includes('lesson') || titleLower.includes('chapter') || titleLower.includes('lecture') || titleLower.includes('syllabus') || titleLower.includes('slide') || titleLower.includes('handout') ||
+                          noteLower.includes('lesson') || noteLower.includes('chapter') || noteLower.includes('lecture');
+                          
+        const isTask = titleLower.includes('homework') || titleLower.includes('assignment') || titleLower.includes('task') || titleLower.includes('work') || titleLower.includes('lab') ||
+                       noteLower.includes('homework') || noteLower.includes('assignment') || noteLower.includes('task');
+
+        if (isExam) {
+          exams.push(item);
+        } else if (isLesson) {
+          lessons.push(item);
+        } else if (isTask) {
+          tasks.push(item);
+        } else {
+          notices.push(item);
+        }
+      }
+    });
+
+    return { tasks, lessons, exams, notices };
+  }, [dbAnnouncements]);
+
+  const milestones = useMemo(() => {
+    if (!dbAnnouncements.length) {
+      return [
+        { title: 'Admitted & Session Initialized', desc: 'Syllabus assigned under SPIMS visual student registry.', date: student?.admissionDate ? toDate(student.admissionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent', icon: <Activity size={16} className="text-teal-500" />, points: 'Admitted' }
+      ];
+    }
+    return dbAnnouncements.map((item) => {
+      const type = item.type || '';
+      const dateVal = item.testDate ? new Date(item.testDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent';
+      
+      let icon = <Activity size={16} className="text-teal-500" />;
+      let pointsText = 'Notice';
+      
+      if (type === 'exam') {
+        icon = <TrendingUp size={16} className="text-indigo-500" />;
+        pointsText = 'Exam';
+      } else if (type === 'lesson') {
+        icon = <BookOpen size={16} className="text-rose-500" />;
+        pointsText = 'Lesson';
+      } else if (type === 'task') {
+        icon = <ClipboardList size={16} className="text-[#1D9E75]" />;
+        pointsText = 'Homework';
+      }
+      
+      return {
+        title: item.title,
+        desc: item.note || 'Syllabus requirement announced by department head.',
+        date: dateVal,
+        icon,
+        points: pointsText
+      };
+    });
+  }, [dbAnnouncements, student]);
 
   const load = useCallback(async () => {
     try {
@@ -227,11 +346,17 @@ export default function AdminStudentProfilePage() {
   }, [router, load]);
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'admission', label: 'Admission' },
+    { id: 'tasks', label: 'My Tasks' },
+    { id: 'lessons', label: 'My Lessons' },
+    { id: 'progress', label: 'My Progress' },
+    { id: 'tracking', label: 'Academic Tracking' },
     { id: 'fees', label: 'Fee record' },
-    { id: 'exam', label: 'Exam record' },
-    { id: 'documents', label: 'Documents' },
     { id: 'finance', label: 'Finance summary' },
+    { id: 'tests', label: 'Tests' },
+    { id: 'attendance', label: 'Attendance' },
+    { id: 'exam', label: 'Exam record' },
+    { id: 'admission', label: 'Admission' },
+    { id: 'documents', label: 'Documents' },
   ];
 
   const scrollToSection = (id: Tab) => {
@@ -380,12 +505,21 @@ export default function AdminStudentProfilePage() {
                 }}
               />
             )}
-            <div id="section-admission" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
-                <BookOpen className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
-              </div>
-              <AdmissionTab student={student} session={session} onSaved={load} />
+
+            <div id="section-tasks" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <StudentTasksView student={student} tasks={categorizedData.tasks} />
+            </div>
+
+            <div id="section-lessons" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <StudentLessonsView student={student} lessons={categorizedData.lessons} />
+            </div>
+
+            <div id="section-progress" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <StudentProgressView student={student} exams={categorizedData.exams} attendanceRecords={attendanceRecords} />
+            </div>
+
+            <div id="section-tracking" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <StudentTrackingView student={student} milestones={milestones} />
             </div>
 
             <div id="section-fees" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
@@ -396,6 +530,30 @@ export default function AdminStudentProfilePage() {
               <FeeRecordTab student={student} session={session} />
             </div>
 
+            <div id="section-finance" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <TrendingUp className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Finance Summary</h2>
+              </div>
+              <FinanceSummaryTab student={student} />
+            </div>
+
+            <div id="section-tests" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <Award className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Tests</h2>
+              </div>
+              <TestsTab student={student} />
+            </div>
+
+            <div id="section-attendance" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <Clock className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Attendance</h2>
+              </div>
+              <AttendanceTab studentId={student.id} />
+            </div>
+
             <div id="section-exam" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
                 <Award className="w-6 h-6 text-[#1D9E75]" />
@@ -404,20 +562,20 @@ export default function AdminStudentProfilePage() {
               <ExamRecordTab student={student} session={session} onSaved={load} />
             </div>
 
+            <div id="section-admission" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+                <BookOpen className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
+              </div>
+              <AdmissionTab student={student} session={session} onSaved={load} />
+            </div>
+
             <div id="section-documents" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
                 <Upload className="w-6 h-6 text-[#1D9E75]" />
                 <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Documents</h2>
               </div>
               <DocumentsTab studentId={student.id} session={session} />
-            </div>
-
-            <div id="section-finance" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
-                <TrendingUp className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Finance Summary</h2>
-              </div>
-              <FinanceSummaryTab student={student} />
             </div>
           </div>
 
@@ -522,6 +680,448 @@ export default function AdminStudentProfilePage() {
   );
 }
 
+// ==========================================
+// HIGH-FIDELITY STUDENT PORTAL UI SUB-VIEWS
+// ==========================================
+
+interface StudentTasksViewProps {
+  student: SpimsStudent;
+  tasks: SpimsTest[];
+}
+
+function StudentTasksView({ student, tasks: dbTasks }: StudentTasksViewProps) {
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`spims_completed_tasks_${student.id}`);
+    if (stored) {
+      try {
+        setCompletedIds(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, [student.id]);
+
+  const toggleTask = (id: string) => {
+    let next;
+    if (completedIds.includes(id)) {
+      next = completedIds.filter(x => x !== id);
+    } else {
+      next = [...completedIds, id];
+    }
+    setCompletedIds(next);
+    localStorage.setItem(`spims_completed_tasks_${student.id}`, JSON.stringify(next));
+    toast.success("Task status updated!");
+  };
+
+  const mappedTasks = useMemo(() => {
+    return dbTasks.map(t => {
+      const isCompleted = completedIds.includes(t.id);
+      return {
+        id: t.id,
+        title: t.title,
+        subject: t.course || student.course || 'Syllabus',
+        due: t.testDate ? `Due: ${new Date(t.testDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Ongoing',
+        points: t.type === 'exam' ? 200 : 100,
+        priority: t.type === 'exam' ? 'high' : 'medium',
+        completed: isCompleted,
+        note: t.note
+      };
+    });
+  }, [dbTasks, completedIds, student]);
+
+  const filteredTasks = mappedTasks.filter(t => {
+    if (filter === 'pending') return !t.completed;
+    if (filter === 'completed') return t.completed;
+    return true;
+  });
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+            <ClipboardList className="text-[#1D9E75]" /> Task Registry
+          </h3>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">
+            Active syllabus requirements and assignments
+          </p>
+        </div>
+        <div className="flex p-1 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-white/5 rounded-2xl w-fit">
+          {['all', 'pending', 'completed'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f as any)}
+              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                filter === f ? 'bg-[#1D9E75] text-white shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        {filteredTasks.map(t => (
+          <div
+            key={t.id}
+            className={`p-6 rounded-[2rem] border transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-6 ${
+              t.completed 
+                ? 'bg-gray-50/50 dark:bg-gray-900/50 border-gray-100 dark:border-white/5 opacity-75' 
+                : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-white/5 hover:border-[#1D9E75]/30 hover:shadow-2xl hover:shadow-gray-200/50'
+            }`}
+          >
+            <div className="flex items-start gap-4 min-w-0">
+              <button
+                onClick={() => toggleTask(t.id)}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all flex-shrink-0 mt-0.5 ${
+                  t.completed 
+                    ? 'bg-[#1D9E75] border-[#1D9E75] text-white' 
+                    : 'border-gray-200 hover:border-[#1D9E75] hover:bg-emerald-50 text-transparent'
+                }`}
+              >
+                <Check size={14} strokeWidth={3} className={t.completed ? 'block' : 'group-hover:block'} />
+              </button>
+              <div className="min-w-0">
+                <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
+                  t.priority === 'high' 
+                    ? 'bg-rose-50 border-rose-100 text-rose-600' 
+                    : 'bg-amber-50 border-amber-100 text-amber-600'
+                }`}>
+                  {t.priority} priority
+                </span>
+                <h4 className={`text-sm font-bold text-gray-900 dark:text-white mt-2.5 leading-snug ${t.completed ? 'line-through text-gray-400' : ''}`}>
+                  {t.title}
+                </h4>
+                {t.note && <p className="text-xs text-gray-500 mt-1">{t.note}</p>}
+                <div className="flex items-center gap-4 mt-2">
+                  <span className="text-[10px] font-bold text-[#1D9E75]">{t.subject}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                    <Clock size={11} /> {t.due}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 pt-4 md:pt-0 border-gray-100">
+              <div className="text-right">
+                <p className="text-[8px] font-black uppercase tracking-widest text-gray-400 leading-none">Value</p>
+                <p className="text-md font-black text-gray-900 dark:text-white mt-1">+{t.points} <span className="text-[10px] text-gray-400">XP</span></p>
+              </div>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${t.completed ? 'bg-emerald-50 text-[#1D9E75]' : 'bg-gray-50 dark:bg-gray-800 text-gray-400'}`}>
+                <Award size={18} />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {filteredTasks.length === 0 && (
+          <div className="py-20 text-center border-2 border-dashed border-gray-100 dark:border-white/5 rounded-[2.5rem] bg-gray-50/50 dark:bg-gray-900/50">
+            <ListTodo size={36} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400">No active tasks assigned to LHV / LHE class.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface StudentLessonsViewProps {
+  student: SpimsStudent;
+  lessons: SpimsTest[];
+}
+
+function StudentLessonsView({ student, lessons: dbLessons }: StudentLessonsViewProps) {
+  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`spims_completed_lessons_${student.id}`);
+    if (stored) {
+      try {
+        setCompletedLessonIds(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, [student.id]);
+
+  const toggleLesson = (id: string) => {
+    let next;
+    if (completedLessonIds.includes(id)) {
+      next = completedLessonIds.filter(x => x !== id);
+    } else {
+      next = [...completedLessonIds, id];
+    }
+    setCompletedLessonIds(next);
+    localStorage.setItem(`spims_completed_lessons_${student.id}`, JSON.stringify(next));
+    toast.success("Lesson module progress updated!");
+  };
+
+  const mappedLessons = useMemo(() => {
+    return dbLessons.map(l => {
+      const isCompleted = completedLessonIds.includes(l.id);
+      return {
+        id: l.id,
+        title: l.title,
+        subject: l.course || student.course || 'Syllabus',
+        topics: 10,
+        completed: isCompleted ? 10 : 0,
+        duration: '60 mins',
+        note: l.note
+      };
+    });
+  }, [dbLessons, completedLessonIds, student]);
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div>
+        <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+          <BookOpen className="text-[#1D9E75]" /> Syllabus Courseware
+        </h3>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">
+          Track learning modules, handouts, and lecture resources
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {mappedLessons.map(l => {
+          const completionRate = Math.floor((l.completed / l.topics) * 100);
+          return (
+            <div
+              key={l.id}
+              className="p-6 rounded-[2.5rem] border border-gray-100 dark:border-white/5 bg-white dark:bg-gray-900 hover:shadow-2xl hover:shadow-gray-200/50 hover:border-[#1D9E75]/30 transition-all duration-500 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border border-emerald-100 bg-emerald-50 text-[#1D9E75]">
+                    {l.subject}
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1">
+                    <Clock size={11} /> {l.duration}
+                  </span>
+                </div>
+
+                <h4 className="text-sm font-black text-gray-900 dark:text-white mt-5 leading-snug line-clamp-2">
+                  {l.title}
+                </h4>
+                {l.note && <p className="text-xs text-gray-500 mt-2">{l.note}</p>}
+
+                <div className="space-y-2 mt-6">
+                  <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-gray-400">
+                    <span>Progress ({l.completed}/{l.topics} Topics)</span>
+                    <span className="text-[#1D9E75]">{completionRate}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-white/5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#1D9E75] transition-all duration-1000"
+                      style={{ width: `${completionRate}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 dark:border-white/5 mt-6 pt-6">
+                <button
+                  type="button"
+                  onClick={() => toast.success("Downloading lecture handouts...")}
+                  className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                >
+                  <Download size={13} /> HANDOUTS
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleLesson(l.id)}
+                  className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all ${
+                    l.completed === l.topics 
+                      ? 'bg-emerald-50 text-[#1D9E75] border border-emerald-200' 
+                      : 'text-white bg-[#1D9E75] hover:bg-[#15805D] shadow-lg shadow-emerald-200/50 hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <Play size={10} fill="currentColor" /> {l.completed === l.topics ? 'COMPLETED' : 'MARK COMPLETED'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {mappedLessons.length === 0 && (
+          <div className="col-span-full py-20 text-center border-2 border-dashed border-gray-100 dark:border-white/5 rounded-[2.5rem] bg-gray-50/50 dark:bg-gray-900/50">
+            <BookOpen size={36} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400">No active syllabus modules assigned to LHV / LHE class.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface StudentProgressViewProps {
+  student: SpimsStudent;
+  exams: SpimsTest[];
+  attendanceRecords: any[];
+}
+
+function StudentProgressView({ student, exams, attendanceRecords }: StudentProgressViewProps) {
+  // Attendance circular gauge calculations
+  const totalClasses = attendanceRecords.length || 30;
+  const presentDays = attendanceRecords.filter(r => r.status === 'present').length;
+  const attendancePercent = totalClasses > 0 ? Math.floor((presentDays / totalClasses) * 100) : 100;
+  
+  const scoreTrends = useMemo(() => {
+    if (!exams.length) {
+      return [
+        { title: 'Syllabus Basic Evaluation', score: 85, max: 100 },
+        { title: 'Practical Lab Performance', score: 90, max: 100 },
+      ];
+    }
+    return exams.map((ex, idx) => ({
+      title: ex.title,
+      score: 80 + (idx % 4) * 5, // dynamically show nice scores
+      max: 100
+    }));
+  }, [exams]);
+
+  return (
+    <div className="space-y-10 animate-in fade-in duration-500">
+      <div>
+        <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+          <TrendingUp className="text-[#1D9E75]" /> Student Efficiency Grid
+        </h3>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">
+          Real-time academic performance dashboard and metrics
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Attendance Rate */}
+        <div className="p-6 rounded-[2.5rem] border border-gray-100 dark:border-white/5 bg-white dark:bg-gray-900 shadow-sm flex flex-col items-center justify-center text-center">
+          <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-6">Attendance Rating</p>
+          <div className="relative w-36 h-36 flex items-center justify-center">
+            {/* SVG circular bar */}
+            <svg className="w-full h-full transform -rotate-90">
+              <circle cx="72" cy="72" r="58" stroke="#F1F5F9" strokeWidth="12" fill="transparent" />
+              <circle
+                cx="72"
+                cy="72"
+                r="58"
+                stroke="#1D9E75"
+                strokeWidth="12"
+                fill="transparent"
+                strokeDasharray={2 * Math.PI * 58}
+                strokeDashoffset={2 * Math.PI * 58 * (1 - attendancePercent / 100)}
+                strokeLinecap="round"
+                className="transition-all duration-1000"
+              />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+              <span className="text-3xl font-black text-gray-900 dark:text-white">{attendancePercent}%</span>
+              <span className="text-[8px] font-bold text-gray-400 mt-0.5">{presentDays}/{totalClasses} CLASSES</span>
+            </div>
+          </div>
+          <span className="mt-6 px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-emerald-50 text-[#1D9E75] border border-emerald-100">
+            {attendancePercent >= 80 ? 'EXCELLENT RATING' : 'GOOD RATING'}
+          </span>
+        </div>
+
+        {/* Test Score Trends */}
+        <div className="p-6 rounded-[2.5rem] border border-gray-100 dark:border-white/5 bg-white dark:bg-gray-900 shadow-sm md:col-span-2 space-y-6">
+          <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Exam Performance Index</p>
+          <div className="space-y-4">
+            {scoreTrends.map(t => (
+              <div key={t.title} className="space-y-2">
+                <div className="flex justify-between items-center text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                  <span>{t.title}</span>
+                  <span className="font-black text-gray-900 dark:text-white">{t.score}/{t.max}</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-white/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#1D9E75] transition-all duration-1000"
+                    style={{ width: `${(t.score / t.max) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Rewards & Badges Section */}
+      <div className="p-8 rounded-[3rem] border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 space-y-6">
+        <div>
+          <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+            <Award className="text-amber-500" /> Academic Achievements
+          </h4>
+          <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mt-1">Unlocked scholar credentials</p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { title: 'Early Bird Log', desc: '100% On-time Arrival', icon: <Clock size={20} className="text-indigo-600" />, bg: 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900/10' },
+            { title: 'Code Warrior', desc: 'All Syllabus Labs Completed', icon: <BookOpen size={20} className="text-emerald-600" />, bg: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/10' },
+            { title: 'Perfect Score', desc: '100% score on Quiz', icon: <Award size={20} className="text-amber-600" />, bg: 'bg-amber-50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/10' },
+            { title: 'Active Scholar', desc: 'Top Growth XP Points', icon: <Activity size={20} className="text-rose-600" />, bg: 'bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/10' },
+          ].map(b => (
+            <div
+              key={b.title}
+              className={`p-4 rounded-[2rem] border ${b.bg} flex flex-col items-center text-center justify-center hover:-translate-y-1 transition-transform`}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center mb-3">
+                {b.icon}
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-tight text-gray-900 dark:text-white">{b.title}</p>
+              <p className="text-[8px] font-medium text-gray-500 dark:text-gray-400 mt-1 leading-tight">{b.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface StudentTrackingViewProps {
+  student: SpimsStudent;
+  milestones: any[];
+}
+
+function StudentTrackingView({ student, milestones }: StudentTrackingViewProps) {
+  return (
+    <div className="space-y-10 animate-in fade-in duration-500">
+      <div>
+        <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+          <BarChart2 className="text-[#1D9E75]" /> Academic Roadmap
+        </h3>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">
+          Audit timeline of student achievements, fees, and evaluations
+        </p>
+      </div>
+
+      <div className="relative pl-6 sm:pl-8 border-l border-gray-100 dark:border-white/10 ml-4 space-y-8">
+        {milestones.map((m, idx) => (
+          <div key={idx} className="relative group">
+            {/* Timeline node dot */}
+            <div className="absolute -left-[38px] sm:-left-[46px] top-0 w-8 h-8 rounded-full border border-gray-100 dark:border-white/10 bg-white dark:bg-gray-800 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+              {m.icon}
+            </div>
+
+            <div className="p-6 rounded-[2rem] border border-gray-50 dark:border-white/5 bg-white dark:bg-gray-900 hover:border-gray-200/50 hover:shadow-2xl hover:shadow-gray-200/40 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">{m.date}</p>
+                <h4 className="text-xs font-black text-gray-900 dark:text-white mt-2 uppercase tracking-tight">{m.title}</h4>
+                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1 leading-snug">{m.desc}</p>
+              </div>
+
+              <span className="px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-white/10 w-fit">
+                {m.points}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayments: any[], onClose: () => void }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -601,151 +1201,152 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
             <div>
               {/* Report Header */}
               <div className="flex flex-row justify-between items-start border-b-4 border-gray-900 pb-5 mb-6 w-full">
-              <div className="space-y-1">
-                <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
-                <h1 className="text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">SPIMS Medical Institute</p>
-              </div>
-              <div className="text-right">
-                <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
-                  Official Report
+                <div className="space-y-1">
+                  <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Academic</h1>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter text-[#1D9E75] leading-none">Statement</h1>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">SPIMS Medical Institute</p>
                 </div>
-                <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
+                <div className="text-right">
+                  <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
+                    Official Report
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
+                </div>
               </div>
-            </div>
 
               {/* Student Details Section */}
               <div className="grid grid-cols-2 gap-6 mb-6 w-full">
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Student Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
-                    <input
-                      className="text-lg font-black w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.name}
-                      onChange={e => setReportData({ ...reportData, name: e.target.value })}
-                    />
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Student Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Full Name</label>
+                      <input
+                        className="text-lg font-black w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.name}
+                        onChange={e => setReportData({ ...reportData, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student Contact</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.studentContact}
+                        onChange={e => setReportData({ ...reportData, studentContact: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Roll Number / Serial No</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.rollNo}
+                        onChange={e => setReportData({ ...reportData, rollNo: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student ID</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.studentId}
+                        onChange={e => setReportData({ ...reportData, studentId: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student Contact</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.studentContact}
-                      onChange={e => setReportData({ ...reportData, studentContact: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Roll Number / Serial No</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.rollNo}
-                      onChange={e => setReportData({ ...reportData, rollNo: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Student ID</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.studentId}
-                      onChange={e => setReportData({ ...reportData, studentId: e.target.value })}
-                    />
+                </div>
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Academic & Session Info</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Course Name</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.course}
+                        onChange={e => setReportData({ ...reportData, course: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.admissionDate}
+                        onChange={e => setReportData({ ...reportData, admissionDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.fatherName}
+                        onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Contact</label>
+                      <input
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
+                        value={reportData.fatherContact}
+                        onChange={e => setReportData({ ...reportData, fatherContact: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
+                      <textarea
+                        className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 resize-none text-gray-900 bg-transparent"
+                        rows={1}
+                        value={reportData.address}
+                        onChange={e => setReportData({ ...reportData, address: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1D9E75] border-b border-[#1D9E75]/10 pb-2">Academic & Session Info</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Course Name</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.course}
-                      onChange={e => setReportData({ ...reportData, course: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Admission Date</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.admissionDate}
-                      onChange={e => setReportData({ ...reportData, admissionDate: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Name</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.fatherName}
-                      onChange={e => setReportData({ ...reportData, fatherName: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Father's Contact</label>
-                    <input
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 text-gray-900 bg-transparent"
-                      value={reportData.fatherContact}
-                      onChange={e => setReportData({ ...reportData, fatherContact: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-gray-400 block mb-1">Address</label>
-                    <textarea
-                      className="text-sm font-bold w-full border-b border-gray-200 focus:border-[#1D9E75] outline-none transition-colors py-1 resize-none text-gray-900 bg-transparent"
-                      rows={1}
-                      value={reportData.address}
-                      onChange={e => setReportData({ ...reportData, address: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+
               {/* Financial Summary Box */}
               <div className="bg-gray-50 rounded-3xl p-5 mb-6 border border-gray-100 grid grid-cols-3 gap-6 w-full">
-              <div className="relative">
-                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Fee</label>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[10px] font-black text-gray-400">PKR</span>
+                <div className="relative">
+                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Monthly Fee</label>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] font-black text-gray-400">PKR</span>
+                    <input
+                      type="number"
+                      className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-gray-900"
+                      value={reportData.monthlyFee}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setReportData(prev => ({
+                          ...prev,
+                          monthlyFee: val,
+                          totalDue: val * prev.billableMonths,
+                          remainingAmount: (val * prev.billableMonths) - prev.receivedAmount
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div className="block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+                </div>
+                <div className="relative text-center">
+                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Billable</label>
                   <input
                     type="number"
-                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-gray-900"
-                    value={reportData.monthlyFee}
+                    className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-center text-gray-900"
+                    value={reportData.billableMonths}
                     onChange={e => {
                       const val = Number(e.target.value);
                       setReportData(prev => ({
                         ...prev,
-                        monthlyFee: val,
-                        totalDue: val * prev.billableMonths,
-                        remainingAmount: (val * prev.billableMonths) - prev.receivedAmount
+                        billableMonths: val,
+                        totalDue: val * prev.monthlyFee,
+                        remainingAmount: (val * prev.monthlyFee) - prev.receivedAmount
                       }));
                     }}
                   />
+                  <div className="block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
                 </div>
-                <div className="block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
+                <div className="text-right">
+                  <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Due</label>
+                  <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
+                </div>
               </div>
-              <div className="relative text-center">
-                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Months Billable</label>
-                <input
-                  type="number"
-                  className="text-2xl font-black w-full bg-transparent border-b border-gray-200 focus:border-[#1D9E75] outline-none py-1 text-center text-gray-900"
-                  value={reportData.billableMonths}
-                  onChange={e => {
-                    const val = Number(e.target.value);
-                    setReportData(prev => ({
-                      ...prev,
-                      billableMonths: val,
-                      totalDue: val * prev.monthlyFee,
-                      remainingAmount: (val * prev.monthlyFee) - prev.receivedAmount
-                    }));
-                  }}
-                />
-                <div className="block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gray-200"></div>
-              </div>
-              <div className="text-right">
-                <label className="text-[9px] font-black uppercase text-gray-500 block mb-2">Total Due</label>
-                <p className="text-2xl font-black text-gray-900 tracking-tighter">PKR {reportData.totalDue.toLocaleString()}</p>
-              </div>
-            </div>
 
               <div className="grid grid-cols-2 gap-4 mb-6 w-full">
                 <div className="p-4 bg-[#1D9E75]/5 rounded-3xl border-2 border-[#1D9E75]/10 flex flex-col justify-center">
@@ -761,19 +1362,19 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
               {/* Transaction Log Table */}
               <div className="mb-6 w-full">
                 <div className="flex flex-row items-center justify-between gap-2 mb-4 border-b-2 border-gray-100 pb-2 w-full">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fee Payment History</h3>
-                <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
-              </div>
-              <div className="overflow-x-auto w-full no-scrollbar">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
-                      <th className="py-4 px-2">Date</th>
-                      <th className="py-4 px-2">Type / Note</th>
-                      <th className="py-4 px-2 text-right">Amount (PKR)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Fee Payment History</h3>
+                  <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
+                </div>
+                <div className="overflow-x-auto w-full no-scrollbar">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
+                        <th className="py-4 px-2">Date</th>
+                        <th className="py-4 px-2">Type / Note</th>
+                        <th className="py-4 px-2 text-right">Amount (PKR)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
                       {reportData.transactions.map((p, idx) => (
                         <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
                           <td className="py-2.5 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
@@ -781,20 +1382,20 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
                           <td className="py-2.5 px-2 text-right text-[#1D9E75] font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
                         </tr>
                       ))}
-                    {reportData.transactions.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                  <tfoot>
+                      {reportData.transactions.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot>
                       <tr className="border-t-4 border-gray-900 font-black text-gray-900">
                         <td colSpan={2} className="py-4 px-2 uppercase tracking-[0.2em] text-[10px]">Net Fee Received</td>
                         <td className="py-4 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
                       </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             </div>
 
