@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { FileText, Printer, Shield } from 'lucide-react';
+import { FileText, Printer } from 'lucide-react';
 
 type Payment = {
   date: string; // e.g. "28 12 2025"
@@ -48,8 +48,8 @@ export default function FinanceHistory({ payments, monthlyDetails }: FinanceHist
 
   // Process transactions chronologically to calculate the accurate running balance
   const processedTransactions = useMemo(() => {
-    // Show only Approved payments as requested
-    const approved = payments.filter(p => p.status === 'Approved' || p.status === 'approved');
+    // Show only Approved payments as requested (Capitalized 'Approved' from Payment type)
+    const approved = payments.filter(p => p.status === 'Approved');
     
     // Sort oldest first to calculate running balance
     const sorted = [...approved].sort((a, b) => parseDateSafe(a.date).getTime() - parseDateSafe(b.date).getTime());

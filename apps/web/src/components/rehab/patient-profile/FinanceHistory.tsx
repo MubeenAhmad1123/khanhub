@@ -64,8 +64,8 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records, o
 
   // Filter and compute running balance chronologically
   const processedTransactions = useMemo(() => {
-    // Show only Approved payments in statement
-    const approved = allPayments.filter(p => p.status === 'Approved' || p.status === 'approved');
+    // Show only Approved payments in statement (capitalized 'Approved' matches Payment union type exactly)
+    const approved = allPayments.filter(p => p.status === 'Approved');
     
     // Sort oldest first
     const sorted = [...approved].sort((a, b) => parseDateSafe(a.date).getTime() - parseDateSafe(b.date).getTime());
