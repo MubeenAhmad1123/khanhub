@@ -483,6 +483,12 @@ export default function CashierStationPage() {
   }, [selectedEntity, fetchEntityHistory]);
 
   const handleDeleteTransaction = async (tx: any) => {
+    const isProcessed = tx.status === 'approved' || tx.status === 'rejected' || tx.status === 'rejected_cashier';
+    if (session?.role !== 'superadmin' && isProcessed) {
+      toast.error('Processed transactions can only be deleted by the Super Admin.');
+      return;
+    }
+
     const isPermanent = tx.status === 'approved' || tx.status === 'rejected';
     const msg = isPermanent 
       ? 'WARNING: This transaction is already PROCESSED. Deleting it will permanently remove it from the ledger and financial records. Are you ABSOLUTELY SURE?' 
@@ -903,6 +909,8 @@ export default function CashierStationPage() {
         proofUrl = await uploadToCloudinary(proofFile, 'Khan Hub/hq/receipts');
       }
 
+      const isSuperadmin = session?.role === 'superadmin';
+
       const createPayload: Record<string, any> = {
         type: txnType,
         amount: Number(amount),
@@ -929,7 +937,13 @@ export default function CashierStationPage() {
         description,
         paymentMethod,
         referenceNo,
-        status: 'pending',
+        status: isSuperadmin ? 'approved' : 'pending',
+        ...(isSuperadmin ? {
+          approvedAt: Timestamp.now(),
+          approvedBy: session?.customId || 'SUPERADMIN',
+          processedAt: Timestamp.now(),
+          processedBy: session?.customId || 'SUPERADMIN',
+        } : {}),
         cashierId: session?.customId || 'HQ-CASHIER',
         proofRequired: true,
         date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
@@ -999,7 +1013,7 @@ export default function CashierStationPage() {
             receivedBy: session?.displayName || session?.name || 'HQ Cashier',
             type: spimsFeeSubtype || 'monthly',
             note: description || `Payment via HQ Cashier`,
-            status: 'pending', 
+            status: isSuperadmin ? 'approved' : 'pending', 
             createdBy: session?.uid,
             createdAt: Timestamp.now(),
             linkedTransactionId: txRef.id
@@ -1013,20 +1027,31 @@ export default function CashierStationPage() {
         }
       }
 
+      if (!isSuperadmin) {
+        void sendHqPushNotification({
+          recipientId: superadminRecipient.customId,
+          recipientUid: superadminRecipient.id,
+          recipientRole: 'superadmin',
+          type: 'tx_forwarded',
+          title: 'New Transaction Submitted',
+          body: `${session?.name || 'Cashier'} submitted a Rs ${Number(amount).toLocaleString()} transaction for ${selectedEntity?.name || 'General Hospital'}.`,
+          relatedId: txRef.id,
+          actionUrl: '/hq/dashboard/superadmin/approvals',
+        });
+      } else {
+        try {
+          const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+          await syncDirectApprovedTransaction({ 
+            dept: activeDepartment.code as any, 
+            txId: txRef.id,
+            approvedBy: session?.customId || 'SUPERADMIN'
+          });
+        } catch (syncErr) {
+          console.error('[HQ Cashier] Sync direct approved transaction failed:', syncErr);
+        }
+      }
 
-
-      void sendHqPushNotification({
-        recipientId: superadminRecipient.customId,
-        recipientUid: superadminRecipient.id,
-        recipientRole: 'superadmin',
-        type: 'tx_forwarded',
-        title: 'New Transaction Submitted',
-        body: `${session?.name || 'Cashier'} submitted a Rs ${Number(amount).toLocaleString()} transaction for ${selectedEntity?.name || 'General Hospital'}.`,
-        relatedId: txRef.id,
-        actionUrl: '/hq/dashboard/superadmin/approvals',
-      });
-
-      toast.success('Transaction submitted successfully ✓');
+      toast.success(isSuperadmin ? 'Transaction approved & synced successfully ✓' : 'Transaction submitted successfully ✓');
       
       setSelectedEntity(null);
       setAmount('');

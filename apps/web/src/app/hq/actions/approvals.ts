@@ -518,3 +518,204 @@ export async function bulkDecideTransactions(params: {
     return { success: false, processed: 0, error: err?.message || 'Failed.' };
   }
 }
+
+export async function editApprovedTransaction(params: {
+  dept: Dept;
+  txId: string;
+  amount: number;
+  date: string;
+  description?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const caller = await requireHqSuperadmin();
+  try {
+    const app = getAdminApp();
+    const adminDb = getFirestore(app);
+
+    const col = txCollection(params.dept);
+    const ref = adminDb.collection(col).doc(params.txId);
+    const snap = await ref.get();
+    if (!snap.exists) return { success: false, error: 'Transaction not found.' };
+
+    const oldData = snap.data() as any;
+    if (oldData?.status !== 'approved') {
+      return { success: false, error: 'Only approved transactions can be edited using this action.' };
+    }
+
+    const newAmount = Number(params.amount) || 0;
+    const oldAmount = Number(oldData.amount) || 0;
+    const amountDiff = newAmount - oldAmount;
+
+    // 1. Update the transaction document
+    const transactionDate = new Date(`${params.date}T00:00:00`);
+    const updatePayload: Record<string, any> = {
+      amount: newAmount,
+      date: transactionDate,
+      transactionDate: transactionDate,
+      description: String(params.description || '').trim(),
+      updatedAt: new Date(),
+      editedBy: caller.customId,
+    };
+    await ref.set(updatePayload, { merge: true });
+
+    // Update corresponding SPIMS fee record if applicable
+    if (params.dept === 'spims' && oldData.feePaymentId) {
+      try {
+        await adminDb.collection('spims_fees').doc(oldData.feePaymentId).set({
+          amount: newAmount,
+          date: transactionDate,
+          note: String(params.description || '').trim(),
+          updatedAt: new Date(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn('[Approvals] Failed to update linked SPIMS fee record:', e);
+      }
+    }
+
+    // 2. Adjust patient/student totals if amount changed
+    if (amountDiff !== 0) {
+      const entityId = oldData.patientId || oldData.studentId || oldData.seekerId || oldData.donorId;
+      if (entityId) {
+        let entityCol = '';
+        if (params.dept === 'rehab') entityCol = 'rehab_patients';
+        else if (params.dept === 'spims') entityCol = 'spims_students';
+        else if (params.dept === 'job-center') entityCol = 'job_center_seekers';
+        else if (params.dept === 'hospital') entityCol = 'hospital_patients';
+        else if (params.dept === 'sukoon-center') entityCol = 'sukoon_clients';
+        else if (params.dept === 'welfare') entityCol = 'welfare_donors';
+
+        if (entityCol) {
+          const entityRef = adminDb.collection(entityCol).doc(entityId);
+          const entitySnap = await entityRef.get();
+          if (entitySnap.exists) {
+            const isIncome = oldData.type === 'income';
+            const diffAdjustment = isIncome ? amountDiff : -amountDiff;
+
+            const entityUpdate: Record<string, any> = {};
+            if (params.dept === 'rehab' && oldData.category === 'medicine_charge') {
+              entityUpdate.medicineCharges = FieldValue.increment(amountDiff);
+            } else {
+              entityUpdate.totalReceived = FieldValue.increment(diffAdjustment);
+            }
+
+            if (params.dept === 'spims' && isIncome && oldData.category !== 'medicine_charge') {
+              const subtype = oldData.spimsFeeSubtype;
+              if (subtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(amountDiff);
+              if (subtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(amountDiff);
+              if (subtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(amountDiff);
+            }
+
+            await entityRef.update(entityUpdate);
+
+            // Re-read and recalculate remaining balance
+            const updatedSnap = await entityRef.get();
+            const updatedData = updatedSnap.data() as any;
+            const medCharges = Number(updatedData?.medicineCharges) || 0;
+            const received = Number(updatedData?.totalReceived) || 0;
+
+            let totalObligation = 0;
+            if (params.dept === 'rehab') {
+              const monthlyPkg = Number(updatedData?.monthlyPackage || updatedData?.packageAmount) || 0;
+              let admissionDate = new Date();
+              const ad = updatedData?.admissionDate;
+              if (ad) {
+                if (typeof ad.toDate === 'function') admissionDate = ad.toDate();
+                else if (typeof ad.seconds === 'number') admissionDate = new Date(ad.seconds * 1000);
+                else if (ad && typeof ad._seconds === 'number') admissionDate = new Date(ad._seconds * 1000);
+                else {
+                  const parsed = new Date(ad);
+                  if (!isNaN(parsed.getTime())) admissionDate = parsed;
+                }
+              }
+
+              let endDate = new Date();
+              if (updatedData?.isActive === false && updatedData?.dischargeDate) {
+                const dd = updatedData.dischargeDate;
+                if (typeof dd.toDate === 'function') endDate = dd.toDate();
+                else if (typeof dd.seconds === 'number') endDate = new Date(dd.seconds * 1000);
+                else if (dd && typeof dd._seconds === 'number') endDate = new Date(dd._seconds * 1000);
+                else {
+                  const parsed = new Date(dd);
+                  if (!isNaN(parsed.getTime())) endDate = parsed;
+                }
+              }
+
+              const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+              let completedMonths = rawMonths;
+              let hasExtraDays = false;
+
+              if (endDate.getDate() < admissionDate.getDate()) {
+                completedMonths = rawMonths - 1;
+                hasExtraDays = true;
+              } else if (endDate.getDate() > admissionDate.getDate()) {
+                completedMonths = rawMonths;
+                hasExtraDays = true;
+              } else {
+                completedMonths = rawMonths;
+                hasExtraDays = false;
+              }
+              const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+              totalObligation = (billableMonths * monthlyPkg) + medCharges;
+            } else {
+              const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+              totalObligation = pkg + medCharges;
+            }
+
+            await entityRef.update({
+              remaining: Math.max(0, totalObligation - received),
+              remainingBalance: Math.max(0, totalObligation - received),
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Add to Audit Log
+    await adminDb.collection('hq_audit').add({
+      action: 'tx_edited',
+      actorId: caller.uid,
+      actorName: caller.name,
+      dept: params.dept,
+      entityId: oldData.patientId || oldData.studentId || oldData.seekerId || oldData.staffId || null,
+      entityLabel: oldData.patientName || oldData.studentName || oldData.seekerName || oldData.staffName || null,
+      message: `Edited approved ${params.dept} transaction`,
+      details: {
+        txId: params.txId,
+        oldAmount,
+        newAmount,
+        oldDate: oldData.date || oldData.transactionDate || null,
+        newDate: params.date,
+      },
+      createdAt: new Date(),
+      performedBy: 'hq_superadmin',
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed.' };
+  }
+}
+
+export async function syncDirectApprovedTransaction(params: {
+  dept: Dept;
+  txId: string;
+  approvedBy?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const app = getAdminApp();
+    const adminDb = getFirestore(app);
+
+    const col = txCollection(params.dept);
+    const ref = adminDb.collection(col).doc(params.txId);
+    const snap = await ref.get();
+    if (!snap.exists) return { success: false, error: 'Transaction not found.' };
+
+    const data = snap.data();
+    await updateEntityTotals(adminDb, params.dept, data);
+    if (params.dept === 'rehab') {
+      await syncRehabRecords(adminDb, params.txId, data, params.approvedBy || 'SUPERADMIN');
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to sync totals.' };
+  }
+}

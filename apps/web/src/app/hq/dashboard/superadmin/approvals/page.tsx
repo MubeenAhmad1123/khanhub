@@ -51,7 +51,7 @@ import {
 } from '@/lib/hq/superadmin/approvals';
 import { ErrorState } from '@/components/hq/superadmin/DataState';
 import { debounce, toDate } from '@/lib/utils';
-import { decideTransaction, bulkDecideTransactions, type Dept } from '@/app/hq/actions/approvals';
+import { decideTransaction, bulkDecideTransactions, editApprovedTransaction, type Dept } from '@/app/hq/actions/approvals';
 import type { UnifiedTx, DeptFilter } from '@/lib/hq/superadmin/types';
 import { db } from '@/lib/firebase';
 import { typeLabel, mapTxToTypeOption } from '@/lib/hq/superadmin/approvals';
@@ -236,6 +236,112 @@ function PillGroup<T extends string>({
           {labelMap?.[opt] ?? opt}
         </button>
       ))}
+    </div>
+  );
+}
+
+function EditTransactionModal({
+  tx,
+  onClose,
+  onConfirm,
+  busy,
+}: {
+  tx: UnifiedTx;
+  onClose: () => void;
+  onConfirm: (amount: number, date: string, description: string) => void;
+  busy: boolean;
+}) {
+  const [amount, setAmount] = useState(String(tx.amount || ''));
+  const [date, setDate] = useState(() => {
+    const raw = (tx.transactionDate || tx.date || tx.createdAt) as any;
+    if (!raw) return new Date().toISOString().split('T')[0];
+    let d = new Date();
+    if (typeof raw.toDate === 'function') d = raw.toDate();
+    else if (typeof raw.seconds === 'number') d = new Date(raw.seconds * 1000);
+    else if (typeof raw._seconds === 'number') d = new Date(raw._seconds * 1000);
+    else {
+      const p = new Date(raw);
+      if (!isNaN(p.getTime())) d = p;
+    }
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [description, setDescription] = useState(tx.description || '');
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-md mx-auto p-8 shadow-2xl z-10 max-h-[95vh] overflow-y-auto animate-in zoom-in-95 border border-gray-100">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-black uppercase tracking-tight">Edit Transaction</h2>
+          <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+            <X className="w-5 h-5 text-black" />
+          </button>
+        </div>
+
+        <div className="mb-6 p-6 rounded-[2rem] bg-indigo-600 text-white shadow-lg relative overflow-hidden group">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-2 italic">Target Subject</div>
+          <div className="text-lg font-black uppercase tracking-tight">{entityName(tx)}</div>
+          <div className="text-sm font-semibold tracking-wide opacity-90">{tx.dept?.toUpperCase()} Center</div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Transaction Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Amount (PKR)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter amount..."
+              className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Description / Reference</label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe this transaction adjustment..."
+              className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors resize-none"
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const numAmt = Number(amount);
+            if (numAmt > 0 && date) {
+              onConfirm(numAmt, date, description);
+            }
+          }}
+          disabled={!amount || Number(amount) <= 0 || !date || busy}
+          className="w-full h-14 rounded-2xl bg-black text-white hover:bg-zinc-800 text-xs font-black uppercase tracking-widest transition disabled:opacity-50 disabled:cursor-not-allowed mt-6 shadow-xl shadow-zinc-800/10 flex items-center justify-center gap-2"
+        >
+          {busy ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Saving Changes...
+            </>
+          ) : (
+            'Save Adjustments'
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -742,6 +848,9 @@ export default function HqApprovalsPage() {
   const [rejectTx, setRejectTx] = useState<UnifiedTx | null>(null);
   const [rejectBusy, setRejectBusy] = useState(false);
 
+  const [editTx, setEditTx] = useState<UnifiedTx | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
 
@@ -1079,6 +1188,40 @@ export default function HqApprovalsPage() {
     }
   };
 
+  const runEditApprovedTransaction = async (amount: number, date: string, description: string) => {
+    if (!editTx) return;
+    setEditSaving(true);
+    try {
+      const res = await editApprovedTransaction({
+        dept: editTx.dept as Dept,
+        txId: editTx.id,
+        amount,
+        date,
+        description,
+      });
+      if (!res.success) throw new Error(res.error ?? 'Failed to edit transaction');
+      
+      addToast('Transaction edited successfully ✓', 'green');
+      
+      const txAny = editTx as any;
+      const entityIdVal = txAny.patientId || txAny.studentId || txAny.seekerId || txAny.donorId;
+      if (entityIdVal) {
+        const k = `${editTx.dept}_${entityIdVal}`;
+        setEnriched((prev) => {
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
+
+      setEditTx(null);
+    } catch (e: unknown) {
+      addToast(`Error: ${(e as Error)?.message ?? 'Failed to save changes'}`, 'red');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleBulkApprove = async () => {
     setBulkBusy(true);
     try {
@@ -1358,6 +1501,14 @@ export default function HqApprovalsPage() {
                                 Reject
                               </button>
                             </div>
+                          ) : tx.status === 'approved' ? (
+                            <button
+                              type="button"
+                              className="text-xs font-black text-indigo-600 hover:text-indigo-800 transition"
+                              onClick={() => setEditTx(tx)}
+                            >
+                              Edit
+                            </button>
                           ) : (
                             '—'
                           )}
@@ -1723,6 +1874,15 @@ export default function HqApprovalsPage() {
           onClose={() => setRejectTx(null)}
           onConfirm={(reason) => runReject(rejectTx, reason)}
           busy={rejectBusy}
+        />
+      ) : null}
+
+      {editTx ? (
+        <EditTransactionModal
+          tx={editTx}
+          onClose={() => setEditTx(null)}
+          onConfirm={runEditApprovedTransaction}
+          busy={editSaving}
         />
       ) : null}
 
