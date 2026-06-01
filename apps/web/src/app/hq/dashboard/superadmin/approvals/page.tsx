@@ -248,7 +248,14 @@ function EditTransactionModal({
 }: {
   tx: UnifiedTx;
   onClose: () => void;
-  onConfirm: (amount: number, date: string, description: string) => void;
+  onConfirm: (
+    amount: number,
+    date: string,
+    description: string,
+    category: string,
+    categoryName: string,
+    spimsFeeSubtype: string
+  ) => void;
   busy: boolean;
 }) {
   const [amount, setAmount] = useState(String(tx.amount || ''));
@@ -269,6 +276,24 @@ function EditTransactionModal({
     return `${yyyy}-${mm}-${dd}`;
   });
   const [description, setDescription] = useState(tx.description || '');
+  const [category, setCategory] = useState(tx.category || '');
+  const [spimsFeeSubtype, setSpimsFeeSubtype] = useState((tx as any).spimsFeeSubtype || 'monthly');
+
+  const categoryOptions = [
+    { id: tx.dept === 'rehab' ? 'patient_fee' : 'fee', label: 'Admission / Fees' },
+    { id: 'medicine_charge', label: 'Medicine / Treatment Charge' },
+    { id: 'donation', label: 'Donation' },
+    { id: tx.dept === 'rehab' ? 'canteen_deposit' : 'canteen', label: 'Canteen Funds' },
+    { id: 'utilities', label: 'Utilities' },
+    { id: 'maintenance', label: 'Maintenance' },
+    { id: 'other_income', label: 'Other Income' },
+    { id: 'other_expense', label: 'Other Expense' },
+  ];
+
+  const listOptions = [...categoryOptions];
+  if (tx.category && !listOptions.some(opt => opt.id === tx.category)) {
+    listOptions.push({ id: tx.category, label: tx.categoryName || tx.category });
+  }
 
   return (
     <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
@@ -299,6 +324,37 @@ function EditTransactionModal({
           </div>
 
           <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Transaction Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+            >
+              {listOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {tx.dept === 'spims' && category === 'fee' && (
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Spims Fee Type</label>
+              <select
+                value={spimsFeeSubtype}
+                onChange={(e) => setSpimsFeeSubtype(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="monthly">Monthly Fee</option>
+                <option value="admission">Admission Fee</option>
+                <option value="registration">Registration Fee</option>
+                <option value="examination">Examination Fee</option>
+              </select>
+            </div>
+          )}
+
+          <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Amount (PKR)</label>
             <input
               type="number"
@@ -326,7 +382,16 @@ function EditTransactionModal({
           onClick={() => {
             const numAmt = Number(amount);
             if (numAmt > 0 && date) {
-              onConfirm(numAmt, date, description);
+              const selectedOpt = listOptions.find(o => o.id === category);
+              const categoryName = selectedOpt ? selectedOpt.label : category;
+              onConfirm(
+                numAmt,
+                date,
+                description,
+                category,
+                categoryName,
+                tx.dept === 'spims' && category === 'fee' ? spimsFeeSubtype : ''
+              );
             }
           }}
           disabled={!amount || Number(amount) <= 0 || !date || busy}
@@ -1188,7 +1253,14 @@ export default function HqApprovalsPage() {
     }
   };
 
-  const runEditApprovedTransaction = async (amount: number, date: string, description: string) => {
+  const runEditApprovedTransaction = async (
+    amount: number,
+    date: string,
+    description: string,
+    category: string,
+    categoryName: string,
+    spimsFeeSubtype: string
+  ) => {
     if (!editTx) return;
     setEditSaving(true);
     try {
@@ -1197,6 +1269,9 @@ export default function HqApprovalsPage() {
         txId: editTx.id,
         amount,
         date,
+        category,
+        categoryName,
+        spimsFeeSubtype,
         description,
       });
       if (!res.success) throw new Error(res.error ?? 'Failed to edit transaction');

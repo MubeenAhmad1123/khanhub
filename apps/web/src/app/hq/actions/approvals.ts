@@ -524,6 +524,9 @@ export async function editApprovedTransaction(params: {
   txId: string;
   amount: number;
   date: string;
+  category?: string;
+  categoryName?: string;
+  spimsFeeSubtype?: string;
   description?: string;
 }): Promise<{ success: boolean; error?: string }> {
   const caller = await requireHqSuperadmin();
@@ -545,6 +548,15 @@ export async function editApprovedTransaction(params: {
     const oldAmount = Number(oldData.amount) || 0;
     const amountDiff = newAmount - oldAmount;
 
+    const newCategory = params.category || oldData.category;
+    const oldCategory = oldData.category;
+    const newSubtype = params.spimsFeeSubtype || oldData.spimsFeeSubtype || '';
+    const oldSubtype = oldData.spimsFeeSubtype || '';
+
+    const isAmountChanged = amountDiff !== 0;
+    const isCategoryChanged = newCategory !== oldCategory;
+    const isSubtypeChanged = newSubtype !== oldSubtype;
+
     // 1. Update the transaction document
     const transactionDate = new Date(`${params.date}T00:00:00`);
     const updatePayload: Record<string, any> = {
@@ -555,6 +567,15 @@ export async function editApprovedTransaction(params: {
       updatedAt: new Date(),
       editedBy: caller.customId,
     };
+    if (params.category) {
+      updatePayload.category = params.category;
+      if (params.categoryName) {
+        updatePayload.categoryName = params.categoryName;
+      }
+    }
+    if (params.spimsFeeSubtype !== undefined) {
+      updatePayload.spimsFeeSubtype = params.spimsFeeSubtype;
+    }
     await ref.set(updatePayload, { merge: true });
 
     // Update corresponding SPIMS fee record if applicable
@@ -564,6 +585,7 @@ export async function editApprovedTransaction(params: {
           amount: newAmount,
           date: transactionDate,
           note: String(params.description || '').trim(),
+          type: params.spimsFeeSubtype || oldData.spimsFeeSubtype || 'monthly',
           updatedAt: new Date(),
         }, { merge: true });
       } catch (e) {
@@ -571,8 +593,8 @@ export async function editApprovedTransaction(params: {
       }
     }
 
-    // 2. Adjust patient/student totals if amount changed
-    if (amountDiff !== 0) {
+    // 2. Adjust patient/student totals if amount, category, or subtype changed
+    if (isAmountChanged || isCategoryChanged || isSubtypeChanged) {
       const entityId = oldData.patientId || oldData.studentId || oldData.seekerId || oldData.donorId;
       if (entityId) {
         let entityCol = '';
@@ -588,23 +610,54 @@ export async function editApprovedTransaction(params: {
           const entitySnap = await entityRef.get();
           if (entitySnap.exists) {
             const isIncome = oldData.type === 'income';
-            const diffAdjustment = isIncome ? amountDiff : -amountDiff;
-
             const entityUpdate: Record<string, any> = {};
-            if (params.dept === 'rehab' && oldData.category === 'medicine_charge') {
-              entityUpdate.medicineCharges = FieldValue.increment(amountDiff);
+
+            if (params.dept === 'rehab') {
+              if (oldCategory === 'medicine_charge' && newCategory !== 'medicine_charge') {
+                entityUpdate.medicineCharges = FieldValue.increment(-oldAmount);
+                entityUpdate.totalReceived = FieldValue.increment(isIncome ? newAmount : -newAmount);
+              } else if (oldCategory !== 'medicine_charge' && newCategory === 'medicine_charge') {
+                entityUpdate.totalReceived = FieldValue.increment(isIncome ? -oldAmount : oldAmount);
+                entityUpdate.medicineCharges = FieldValue.increment(newAmount);
+              } else {
+                if (newCategory === 'medicine_charge') {
+                  entityUpdate.medicineCharges = FieldValue.increment(amountDiff);
+                } else {
+                  entityUpdate.totalReceived = FieldValue.increment(isIncome ? amountDiff : -amountDiff);
+                }
+              }
             } else {
+              const diffAdjustment = isIncome ? amountDiff : -amountDiff;
               entityUpdate.totalReceived = FieldValue.increment(diffAdjustment);
+
+              if (params.dept === 'spims' && isIncome && newCategory === 'fee') {
+                if (oldCategory !== 'fee') {
+                  if (newSubtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(newAmount);
+                  if (newSubtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(newAmount);
+                  if (newSubtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(newAmount);
+                } else if (oldSubtype !== newSubtype) {
+                  if (oldSubtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(-oldAmount);
+                  if (oldSubtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(-oldAmount);
+                  if (oldSubtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(-oldAmount);
+                  
+                  if (newSubtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(newAmount);
+                  if (newSubtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(newAmount);
+                  if (newSubtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(newAmount);
+                } else {
+                  if (newSubtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(amountDiff);
+                  if (newSubtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(amountDiff);
+                  if (newSubtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(amountDiff);
+                }
+              } else if (params.dept === 'spims' && isIncome && oldCategory === 'fee' && newCategory !== 'fee') {
+                if (oldSubtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(-oldAmount);
+                if (oldSubtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(-oldAmount);
+                if (oldSubtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(-oldAmount);
+              }
             }
 
-            if (params.dept === 'spims' && isIncome && oldData.category !== 'medicine_charge') {
-              const subtype = oldData.spimsFeeSubtype;
-              if (subtype === 'admission') entityUpdate.admissionPaid = FieldValue.increment(amountDiff);
-              if (subtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(amountDiff);
-              if (subtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(amountDiff);
+            if (Object.keys(entityUpdate).length > 0) {
+              await entityRef.update(entityUpdate);
             }
-
-            await entityRef.update(entityUpdate);
 
             // Re-read and recalculate remaining balance
             const updatedSnap = await entityRef.get();
