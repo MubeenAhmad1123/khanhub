@@ -151,16 +151,25 @@ function sortComparator(order: SortOrder) {
 
 export function typeLabel(tx: UnifiedTx): string {
   const raw = String(tx.categoryName || tx.category || tx.type || 'Transaction');
-  if (raw.toLowerCase().includes('fee') || raw.toLowerCase().includes('month')) return 'Monthly Fee';
+  const lower = raw.toLowerCase();
+  
+  if (lower === 'fee' || lower === 'monthly' || lower === 'monthly_fee') {
+    return 'Monthly Fee';
+  }
+  
+  if (lower === 'admission') return 'Admission Fee';
+  if (lower === 'registration') return 'Registration Fee';
+  if (lower === 'examination') return 'Examination Fee';
+  
   return raw;
 }
 
 export function mapTxToTypeOption(tx: UnifiedTx): string {
-  const t = typeLabel(tx).toLowerCase();
-  if (t.includes('month') || t.includes('fee')) return 'Monthly Fee';
+  const t = String(tx.categoryName || tx.category || tx.type || '').toLowerCase();
   if (t.includes('admission')) return 'Admission';
   if (t.includes('registration')) return 'Registration';
   if (t.includes('exam')) return 'Examination';
+  if (t.includes('month') || t.includes('fee') || t === 'fee') return 'Monthly Fee';
   return 'Other';
 }
 
