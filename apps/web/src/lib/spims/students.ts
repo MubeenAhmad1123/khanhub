@@ -7,6 +7,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -260,7 +261,16 @@ export async function updateStudent(id: string, data: Partial<SpimsStudent>): Pr
     patch[key] = v instanceof Timestamp ? v : Timestamp.fromDate(toDate(v));
   }
 
-  await updateDoc(doc(db, 'spims_students', id), patch);
+  const docRef = doc(db, 'spims_students', id);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) {
+    await setDoc(docRef, {
+      ...patch,
+      createdAt: serverTimestamp(),
+    });
+  } else {
+    await updateDoc(docRef, patch);
+  }
 }
 
 export async function updateStudentStatus(id: string, status: SpimsStudentStatus, note?: string): Promise<void> {
@@ -268,7 +278,16 @@ export async function updateStudentStatus(id: string, status: SpimsStudentStatus
   if (note) {
     patch.statusNote = note;
   }
-  await updateDoc(doc(db, 'spims_students', id), patch);
+  const docRef = doc(db, 'spims_students', id);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) {
+    await setDoc(docRef, {
+      ...patch,
+      createdAt: serverTimestamp(),
+    });
+  } else {
+    await updateDoc(docRef, patch);
+  }
 }
 
 export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayment[]> {
