@@ -600,7 +600,7 @@ function TxCard({
             <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 italic">Temporal Stamp</p>
               <div className="space-y-1">
-                <p className="text-sm font-black text-gray-900 uppercase">{fmtDate(tx.createdAt || tx.date || tx.transactionDate)}</p>
+                <p className="text-sm font-black text-gray-900 uppercase">{fmtDate(tx.transactionDate || tx.date || tx.createdAt)}</p>
                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{fmtTime(tx.createdAt || tx.date)}</p>
               </div>
             </div>
@@ -925,8 +925,8 @@ export default function HqApprovalsPage() {
       return r.sort((a, b) => {
         if (filters.sort === 'highest') return (b.amount || 0) - (a.amount || 0);
         if (filters.sort === 'lowest') return (a.amount || 0) - (b.amount || 0);
-        const ta = toDate(a.createdAt || a.date).getTime();
-        const tb = toDate(b.createdAt || b.date).getTime();
+        const ta = toDate(a.transactionDate || a.date || a.createdAt).getTime();
+        const tb = toDate(b.transactionDate || b.date || b.createdAt).getTime();
         return filters.sort === 'oldest' ? ta - tb : tb - ta;
       });
     }
@@ -1280,49 +1280,49 @@ export default function HqApprovalsPage() {
               <ArrowLeft className="w-4 h-4" />
               Back to All Transactions
             </button>
-            <div className="rounded-3xl border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#111111] shadow-md p-5 max-w-[680px] mx-auto w-full">
-              <p className="text-xs font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400">Entity</p>
-              <p className="text-xl font-black text-[#111827] dark:text-white mt-1">{selectedEntity.name}</p>
+            <div className="rounded-3xl border border-gray-250 bg-[#FCFBF8] shadow-md p-5 max-w-[680px] mx-auto w-full">
+              <p className="text-xs font-black uppercase tracking-widest text-[#6B7280]">Entity</p>
+              <p className="text-xl font-black text-gray-900 mt-1">{selectedEntity.name}</p>
               {selectedEntity.dept === 'spims' && (entitySummary?.course || entitySummary?.session) ? (
-                <p className="text-sm text-[#4B5563] dark:text-gray-300 mt-1">
+                <p className="text-sm text-gray-600 mt-1">
                   {entitySummary?.course} · {entitySummary?.session}
                 </p>
               ) : null}
               {entitySummary?.totalPackage != null ? (
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase tracking-wide mb-1">
+                  <div className="flex justify-between text-xs font-bold text-[#6B7280] uppercase tracking-wide mb-1">
                     <span>Package progress</span>
-                    <span>
+                    <span className="text-gray-900">
                       {fmtPKR(entitySummary.totalReceived || 0)} / {fmtPKR(entitySummary.totalPackage)}
                     </span>
                   </div>
-                  <div className="h-3 rounded-full bg-[#F3F4F6] dark:bg-white/10 overflow-hidden">
+                  <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
                     <div
-                      className="h-full bg-purple-600 rounded-full transition-all"
+                      className="h-full bg-indigo-600 rounded-full transition-all"
                       style={{
                         width: `${Math.min(100, ((entitySummary.totalReceived || 0) / Math.max(1, entitySummary.totalPackage)) * 100)}%`,
                       }}
                     />
                   </div>
-                  <p className="text-sm font-semibold text-[#111827] dark:text-gray-100 mt-2">
-                    Remaining balance: {fmtPKR(entitySummary.remaining ?? 0)}
+                  <p className="text-sm font-semibold text-gray-900 mt-2">
+                    Remaining balance: <span className="font-black text-indigo-700">{fmtPKR(entitySummary.remaining ?? 0)}</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-[#6B7280] dark:text-gray-400 mt-2">Loading package info…</p>
+                <p className="text-sm text-gray-400 mt-2">Loading package info…</p>
               )}
             </div>
 
-            <div className="rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111111] overflow-x-auto shadow-sm">
+            <div className="rounded-2xl border border-gray-150 bg-white overflow-x-auto shadow-sm">
               {entityLoading ? (
                 <div className="p-8 flex justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-black dark:text-white" />
+                  <Loader2 className="w-6 h-6 animate-spin text-black" />
                 </div>
               ) : (
                 <div className="table-responsive">
 
                 <table className="w-full text-sm min-w-[640px]">
-                  <thead className="bg-[#F3F4F6] dark:bg-white/5 text-[10px] uppercase tracking-widest text-[#6B7280] dark:text-gray-300 font-black">
+                  <thead className="bg-[#F3F4F6] text-[10px] uppercase tracking-widest text-[#6B7280] font-black">
                     <tr>
                       <th className="text-left px-4 py-3">Date</th>
                       <th className="text-left px-4 py-3">Type</th>
@@ -1334,23 +1334,27 @@ export default function HqApprovalsPage() {
                   </thead>
                   <tbody>
                     {entityRows.map((tx) => (
-                      <tr key={tx.id} className="border-t border-gray-100 dark:border-white/10">
-                        <td className="px-4 py-3 whitespace-nowrap">{fmtDate(tx.createdAt || tx.date)}</td>
-                        <td className="px-4 py-3">{typeLabel(tx)}</td>
-                        <td className="px-4 py-3 font-semibold">{fmtPKR(tx.amount)}</td>
-                        <td className="px-4 py-3">{tx.cashierName || '—'}</td>
-                        <td className="px-4 py-3">{statusLabel(tx.status)}</td>
+                      <tr key={tx.id} className="border-t border-gray-100 font-bold">
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-black">{fmtDate(tx.transactionDate || tx.date || tx.createdAt)}</td>
+                        <td className="px-4 py-3 text-gray-700">{typeLabel(tx)}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">{fmtPKR(tx.amount)}</td>
+                        <td className="px-4 py-3 text-gray-600">{tx.cashierName || '—'}</td>
+                        <td className="px-4 py-3 text-gray-700">{statusLabel(tx.status)}</td>
                         <td className="px-4 py-3">
                           {tx.status === 'pending' || tx.status === 'pending_cashier' ? (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col sm:flex-row gap-3">
                               <button
                                 type="button"
-                                className="text-xs font-black text-green-600"
+                                className="text-xs font-black text-emerald-600 hover:text-emerald-800 transition"
                                 onClick={() => handleApprove(tx)}
                               >
                                 Approve
                               </button>
-                              <button type="button" className="text-xs font-black text-red-600" onClick={() => setRejectTx(tx)}>
+                              <button
+                                type="button"
+                                className="text-xs font-black text-rose-600 hover:text-rose-800 transition"
+                                onClick={() => setRejectTx(tx)}
+                              >
                                 Reject
                               </button>
                             </div>

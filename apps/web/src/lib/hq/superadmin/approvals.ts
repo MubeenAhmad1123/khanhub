@@ -138,8 +138,8 @@ function getAmountBucketPredicate(bucket: AmountBucket) {
 
 function sortComparator(order: SortOrder) {
   return (a: UnifiedTx, b: UnifiedTx) => {
-    const tA = toDate(a.createdAt || a.date || a.transactionDate as any).getTime();
-    const tB = toDate(b.createdAt || b.date || b.transactionDate as any).getTime();
+    const tA = toDate(a.transactionDate || a.date || a.createdAt).getTime();
+    const tB = toDate(b.transactionDate || b.date || b.createdAt).getTime();
     if (order === 'newest') return tB - tA;
     if (order === 'oldest') return tA - tB;
     if (order === 'highest') return (b.amount || 0) - (a.amount || 0);
@@ -172,7 +172,7 @@ function pickRange(filters: ApprovalsFilters): { from: Date; to: Date } {
 }
 
 function inDateRange(tx: UnifiedTx, from: Date, to: Date) {
-  const raw = tx.createdAt || tx.date || tx.transactionDate;
+  const raw = tx.transactionDate || tx.date || tx.createdAt;
   const t = toDate(raw);
   return t >= from && t <= to;
 }
