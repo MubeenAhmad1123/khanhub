@@ -559,6 +559,27 @@ export async function searchEntitiesByNamePrefix({
       limit(10)
     );
     queries.push(getDocs(qRoll).then(s => s.docs));
+
+    // Search by studentId prefix
+    const qStudentId = query(
+      collection(db, col),
+      orderBy('studentId'),
+      startAt(pUpper),
+      endAt(pUpper + '\uf8ff'),
+      limit(10)
+    );
+    queries.push(getDocs(qStudentId).then(s => s.docs));
+
+    if (p !== pUpper) {
+      const qStudentIdOrig = query(
+        collection(db, col),
+        orderBy('studentId'),
+        startAt(p),
+        endAt(p + '\uf8ff'),
+        limit(10)
+      );
+      queries.push(getDocs(qStudentIdOrig).then(s => s.docs));
+    }
   }
 
   const results = await Promise.all(queries);
@@ -577,7 +598,10 @@ export async function searchEntitiesByNamePrefix({
       if (dept === 'rehab') {
         idTag = String(data.inpatientNumber || (data.serialNumber ? `SN: ${data.serialNumber}` : ''));
       } else if (dept === 'spims') {
-        idTag = String(data.rollNo || '');
+        const parts = [];
+        if (data.studentId) parts.push(String(data.studentId));
+        if (data.rollNo) parts.push(`Roll: ${data.rollNo}`);
+        idTag = parts.join(' | ');
       }
 
       const nameWithId = idTag ? `${finalName} (${idTag})` : finalName;
