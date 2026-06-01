@@ -271,7 +271,7 @@ function RejectModal({
           </div>
         </div>
         <div className="mb-4">
-          <div className="text-[10px] font-black uppercase tracking-widest text-black dark:text-black mb-3 italic">Selection Reason</div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 italic">Selection Reason</div>
           <div className="flex flex-wrap gap-2">
             {REJECT_PRESETS.map((p) => (
               <button
@@ -279,7 +279,7 @@ function RejectModal({
                 type="button"
                 onClick={() => setReason(p)}
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                  reason === p ? 'bg-black text-white border-black dark:bg-white dark:text-black' : 'bg-white dark:bg-black text-black dark:text-black border-gray-200 dark:border-white/10 hover:border-black dark:hover:border-white'
+                  reason === p ? 'bg-black text-white border-black dark:bg-white dark:text-black' : 'bg-white dark:bg-white/5 text-black dark:text-gray-200 border-gray-200 dark:border-white/10 hover:border-black dark:hover:border-white'
                 }`}
               >
                 {p}
@@ -1130,7 +1130,7 @@ export default function HqApprovalsPage() {
   if (sessionLoading) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#6B7280] dark:text-black" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#6B7280] dark:text-white" />
       </div>
     );
   }
@@ -1232,7 +1232,7 @@ export default function HqApprovalsPage() {
                   <span>{t.label}</span>
                   {currentOption && currentOption.value !== 'all' && (
                     <span className={`text-[9px] font-semibold normal-case tracking-normal ${
-                      isActive ? 'text-white/80 dark:text-gray-900/70' : 'text-[#6B7280] dark:text-black'
+                      isActive ? 'text-white/80 dark:text-gray-900/70' : 'text-[#6B7280] dark:text-gray-400'
                     }`}>
                       {currentOption.label}
                     </span>
@@ -1281,16 +1281,16 @@ export default function HqApprovalsPage() {
               Back to All Transactions
             </button>
             <div className="rounded-3xl border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#111111] shadow-md p-5 max-w-[680px] mx-auto w-full">
-              <p className="text-xs font-black uppercase tracking-widest text-[#6B7280] dark:text-black">Entity</p>
+              <p className="text-xs font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400">Entity</p>
               <p className="text-xl font-black text-[#111827] dark:text-white mt-1">{selectedEntity.name}</p>
               {selectedEntity.dept === 'spims' && (entitySummary?.course || entitySummary?.session) ? (
-                <p className="text-sm text-[#4B5563] dark:text-black mt-1">
+                <p className="text-sm text-[#4B5563] dark:text-gray-300 mt-1">
                   {entitySummary?.course} · {entitySummary?.session}
                 </p>
               ) : null}
               {entitySummary?.totalPackage != null ? (
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs font-bold text-[#6B7280] dark:text-black uppercase tracking-wide mb-1">
+                  <div className="flex justify-between text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase tracking-wide mb-1">
                     <span>Package progress</span>
                     <span>
                       {fmtPKR(entitySummary.totalReceived || 0)} / {fmtPKR(entitySummary.totalPackage)}
@@ -1309,20 +1309,20 @@ export default function HqApprovalsPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-[#6B7280] dark:text-black mt-2">Loading package info…</p>
+                <p className="text-sm text-[#6B7280] dark:text-gray-400 mt-2">Loading package info…</p>
               )}
             </div>
 
             <div className="rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111111] overflow-x-auto shadow-sm">
               {entityLoading ? (
                 <div className="p-8 flex justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-black dark:text-black" />
+                  <Loader2 className="w-6 h-6 animate-spin text-black dark:text-white" />
                 </div>
               ) : (
                 <div className="table-responsive">
 
                 <table className="w-full text-sm min-w-[640px]">
-                  <thead className="bg-[#F3F4F6] dark:bg-white/5 text-[10px] uppercase tracking-widest text-[#6B7280] dark:text-black font-black">
+                  <thead className="bg-[#F3F4F6] dark:bg-white/5 text-[10px] uppercase tracking-widest text-[#6B7280] dark:text-gray-300 font-black">
                     <tr>
                       <th className="text-left px-4 py-3">Date</th>
                       <th className="text-left px-4 py-3">Type</th>
@@ -1386,7 +1386,7 @@ export default function HqApprovalsPage() {
                 <div className={`${filtersPanelOpen ? 'block' : 'hidden'} lg:block p-4 sm:p-5 space-y-4`}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Department</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Department</p>
                       <PillGroup
                         options={['all', 'rehab', 'spims', 'job-center'] as const}
                         value={filters.dept === 'hq' ? 'all' : filters.dept}
@@ -1395,7 +1395,7 @@ export default function HqApprovalsPage() {
                       />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Date range</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Date range</p>
                       <PillGroup
                         options={['all', 'today', 'yesterday', 'this_week', 'custom'] as const}
                         value={filters.datePreset}
@@ -1423,7 +1423,7 @@ export default function HqApprovalsPage() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Sort by</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Sort by</p>
                       <select
                         value={filters.sort}
                         onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ApprovalsFilters['sort'] }))}
@@ -1437,7 +1437,7 @@ export default function HqApprovalsPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Amount range</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Amount range</p>
                       <select
                         value={filters.amountBucket}
                         onChange={(e) => setFilters((f) => ({ ...f, amountBucket: e.target.value as ApprovalsFilters['amountBucket'] }))}
@@ -1454,9 +1454,9 @@ export default function HqApprovalsPage() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div ref={searchWrapRef} className="relative">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Entity search</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Entity search</p>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] dark:text-black" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] dark:text-gray-400" />
                         <input
                           value={searchDraft}
                           onChange={(e) => {
@@ -1482,7 +1482,7 @@ export default function HqApprovalsPage() {
                                 }}
                               >
                                 <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{h.name}</span>
-                                <span className="text-[10px] font-black uppercase text-black dark:text-black shrink-0">{h.dept}</span>
+                                <span className="text-[10px] font-black uppercase text-black dark:text-white shrink-0">{h.dept}</span>
                               </button>
                             </li>
                           ))}
@@ -1490,7 +1490,7 @@ export default function HqApprovalsPage() {
                       ) : null}
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Proof</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Proof</p>
                       <PillGroup
                         options={['all', 'has_proof', 'missing_proof'] as const}
                         value={filters.proof}
@@ -1511,7 +1511,7 @@ export default function HqApprovalsPage() {
                     </button>
                     <div className={`${moreFiltersOpen ? 'block' : 'hidden'} lg:grid lg:grid-cols-2 lg:col-span-2 lg:gap-4 lg:!block space-y-4`}>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Cashier name</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Cashier name</p>
                         <select
                           value={filters.cashierName}
                           onChange={(e) => setFilters((f) => ({ ...f, cashierName: e.target.value }))}
@@ -1525,7 +1525,7 @@ export default function HqApprovalsPage() {
                         </select>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-black mb-2">Transaction type</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-400 mb-2">Transaction type</p>
                         <div className="flex flex-wrap gap-2">
                           {TRANSACTION_TYPE_OPTIONS.map((t) => {
                             const isSelected = (filters.txTypes || []).includes(t) || (t === 'All' && (filters.txTypes || []).length === 0);
@@ -1546,7 +1546,7 @@ export default function HqApprovalsPage() {
                                 className={`px-2.5 py-1.5 rounded-full text-[10px] font-black border transition ${
                                   isSelected
                                     ? 'bg-[#111827] text-white border-[#111827] dark:bg-gray-100 dark:text-[#111827]'
-                                    : 'bg-white dark:bg-[#111111] text-[#4B5563] dark:text-black border-[#D1D5DB] dark:bg-gray-800 dark:text-black dark:border-gray-700 hover:border-gray-400'
+                                    : 'bg-white dark:bg-white/5 text-[#4B5563] dark:text-gray-300 border-[#D1D5DB] dark:border-white/10 hover:border-gray-400'
                                 }`}
                               >
                                 {t}
@@ -1764,7 +1764,7 @@ function EmptyApprovals({ tab }: { tab: ApprovalsTab }) {
         {isPending ? '✅' : '📋'}
       </div>
       <div className="text-lg font-black text-[#111827] dark:text-white">{isPending ? 'No pending approvals' : 'No transactions found'}</div>
-      <div className="text-sm text-[#6B7280] dark:text-black mt-2 font-medium">
+      <div className="text-sm text-[#6B7280] dark:text-gray-400 mt-2 font-medium">
         {isPending ? 'All caught up — nothing is waiting for you.' : 'Try adjusting filters or date range.'}
       </div>
     </div>

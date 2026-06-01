@@ -417,7 +417,7 @@ export default function AdminStudentProfilePage() {
   }
 
   return (
-    <div className="w-full overflow-x-hidden bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen pb-24">
+    <div className="w-full overflow-x-hidden bg-[#FCFAF2] transition-colors duration-300 min-h-screen pb-24">
       <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 w-full">
         <Link
           href="/departments/spims/dashboard/admin/students"
@@ -474,15 +474,15 @@ export default function AdminStudentProfilePage() {
         <div className="space-y-10 w-full">
           {/* Sticky Tab Bar */}
           <div className="sticky top-4 z-40 w-full flex justify-center">
-            <div className="flex flex-wrap gap-1.5 p-1.5 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-[1.5rem] w-full sm:w-fit shadow-xl shadow-gray-100/50 dark:shadow-none">
+            <div className="flex flex-wrap gap-1.5 p-1.5 bg-white/80 backdrop-blur-md border border-gray-100 rounded-[1.5rem] w-full sm:w-fit shadow-xl shadow-gray-100/50">
               {tabs.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => scrollToSection(t.id)}
                   className={`px-4 sm:px-5 md:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-1 sm:flex-none text-center ${tab === t.id
-                      ? 'bg-white dark:bg-gray-800 text-[#1D9E75] shadow-lg shadow-gray-200/50 dark:shadow-none transform -translate-y-0.5 font-extrabold'
-                      : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+                      ? 'bg-white text-[#1D9E75] shadow-lg shadow-gray-200/50 transform -translate-y-0.5 font-extrabold'
+                      : 'text-gray-400 hover:text-gray-600'
                     }`}
                 >
                   {t.label}
@@ -506,74 +506,74 @@ export default function AdminStudentProfilePage() {
               />
             )}
 
-            <div id="section-tasks" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+            <div id="section-tasks" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <StudentTasksView student={student} tasks={categorizedData.tasks} />
             </div>
 
-            <div id="section-lessons" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+            <div id="section-lessons" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <StudentLessonsView student={student} lessons={categorizedData.lessons} />
             </div>
 
-            <div id="section-progress" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+            <div id="section-progress" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <StudentProgressView student={student} exams={categorizedData.exams} attendanceRecords={attendanceRecords} />
             </div>
 
-            <div id="section-tracking" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+            <div id="section-tracking" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
               <StudentTrackingView student={student} milestones={milestones} />
             </div>
 
-            <div id="section-fees" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-fees" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <Layers className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Fee Record</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Fee Record</h2>
               </div>
               <FeeRecordTab student={student} session={session} />
             </div>
 
-            <div id="section-finance" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-finance" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <TrendingUp className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Finance Summary</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Finance Summary</h2>
               </div>
               <FinanceSummaryTab student={student} />
             </div>
 
-            <div id="section-tests" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-tests" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <Award className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Tests</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Tests</h2>
               </div>
               <TestsTab student={student} />
             </div>
 
-            <div id="section-attendance" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-attendance" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <Clock className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Attendance</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Attendance</h2>
               </div>
               <AttendanceTab studentId={student.id} />
             </div>
 
-            <div id="section-exam" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-exam" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <Award className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Exam Record</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Exam Record</h2>
               </div>
               <ExamRecordTab student={student} session={session} onSaved={load} />
             </div>
 
-            <div id="section-admission" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-admission" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <BookOpen className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Admission Details</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Admission Details</h2>
               </div>
               <AdmissionTab student={student} session={session} onSaved={load} />
             </div>
 
-            <div id="section-documents" className="scroll-mt-24 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div id="section-documents" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <Upload className="w-6 h-6 text-[#1D9E75]" />
-                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Documents</h2>
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Documents</h2>
               </div>
               <DocumentsTab studentId={student.id} session={session} />
             </div>

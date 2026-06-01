@@ -355,6 +355,32 @@ export default function ManagerStaffPage() {
 
             <button
               type="button"
+              onClick={() => setStatusFilter('resigned')}
+              className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                statusFilter === 'resigned'
+                  ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${statusFilter === 'resigned' ? 'bg-white animate-pulse' : 'bg-rose-500'}`} />
+              <span>Resigned</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter('terminated')}
+              className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                statusFilter === 'terminated'
+                  ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${statusFilter === 'terminated' ? 'bg-white animate-pulse' : 'bg-red-650'}`} />
+              <span>Terminated</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setStatusFilter('all')}
               className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
                 statusFilter === 'all'

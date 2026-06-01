@@ -34,6 +34,7 @@ import {
   DailyDeptBreakdown,
 } from "@/lib/hq/superadmin/finance";
 import { FinanceHub } from "@/components/hq/finance/FinanceHub";
+import { RemainingFlowModal } from "@/components/hq/superadmin/RemainingFlowModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn, formatDateDMY, parseDateDMY } from "@/lib/utils";
@@ -283,6 +284,7 @@ export default function SuperadminFinancePage() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [dailyResult, setDailyResult] = useState<DailyBreakdownResult | null>(null);
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
+  const [remainingsOpen, setRemainingsOpen] = useState(false);
 
   const todayStr = todayLocalDateString();
 
@@ -492,7 +494,10 @@ export default function SuperadminFinancePage() {
         </div>
 
         {/* 3. Remaining Balance */}
-        <div className="p-10 rounded-[3rem] bg-white border border-gray-100 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 shadow-2xl shadow-gray-200/50">
+        <div 
+          onClick={() => setRemainingsOpen(true)}
+          className="p-10 rounded-[3rem] bg-white border border-gray-100 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 shadow-2xl shadow-gray-200/50 cursor-pointer active:scale-[0.98]"
+        >
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-rose-500/5 rounded-full blur-3xl" />
           <div className="flex items-center justify-between mb-8">
              <div className="p-4 rounded-2xl bg-rose-500 text-white shadow-xl shadow-rose-500/20">
@@ -794,6 +799,14 @@ export default function SuperadminFinancePage() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Remaining Flow Modal */}
+      {remainingsOpen && (
+        <RemainingFlowModal
+          open={remainingsOpen}
+          onClose={() => setRemainingsOpen(false)}
+        />
+      )}
 
       {/* Decorative glows */}
       <div className="fixed -top-96 -left-96 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[200px] -z-10 pointer-events-none" />

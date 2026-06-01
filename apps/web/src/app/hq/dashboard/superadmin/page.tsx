@@ -5,13 +5,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Activity, BadgeCheck, Building2, ClipboardList, CreditCard, 
-  Users2, UserPlus, TrendingUp, Search, ShieldCheck, ChevronRight 
+  Users2, UserPlus, TrendingUp, Search, ShieldCheck, ChevronRight, Wallet 
 } from 'lucide-react';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
 import { fetchTodayClientCounts, formatPKTDate, type TodayClientsResult } from '@/lib/hq/superadmin/clients';
+import { fetchRemainingBalances } from '@/lib/hq/superadmin/remainings';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
+import { RemainingFlowModal } from '@/components/hq/superadmin/RemainingFlowModal';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -47,6 +49,11 @@ export default function HqSuperadminPage() {
   const [clientsLoading, setClientsLoading] = useState(true);
   const [flowOpen, setFlowOpen] = useState(false);
   const todayLabel = useMemo(() => formatPKTDate(new Date()), []);
+
+  // ── Remaining balance flow state ──────────────────────────────────────────
+  const [remainingsTotal, setRemainingsTotal] = useState<number>(0);
+  const [remainingsLoading, setRemainingsLoading] = useState(true);
+  const [remainingsOpen, setRemainingsOpen] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -85,6 +92,17 @@ export default function HqSuperadminPage() {
     return () => { alive = false; };
   }, [session]);
 
+  useEffect(() => {
+    if (!session || session.role !== 'superadmin') return;
+    let alive = true;
+    setRemainingsLoading(true);
+    fetchRemainingBalances()
+      .then((res) => alive && setRemainingsTotal(res.total))
+      .catch(() => alive && setRemainingsTotal(0))
+      .finally(() => alive && setRemainingsLoading(false));
+    return () => { alive = false; };
+  }, [session]);
+
   const cards = useMemo(
     () => [
       {
@@ -103,6 +121,15 @@ export default function HqSuperadminPage() {
         icon: CreditCard,
         tone: 'primary' as const,
         format: 'pkr' as const,
+      },
+      {
+        title: 'Outstanding Debts',
+        value: remainingsLoading ? '—' : remainingsTotal,
+        subtitle: 'Central remaining balance',
+        icon: Wallet,
+        tone: 'warning' as const,
+        format: 'pkr' as const,
+        onClick: () => setRemainingsOpen(true),
       },
       {
         title: 'Clients today',
@@ -160,7 +187,7 @@ export default function HqSuperadminPage() {
         tone: 'primary' as const,
       },
     ],
-    [stats, clientsData, clientsLoading]
+    [stats, clientsData, clientsLoading, remainingsTotal, remainingsLoading]
   );
 
   return (
@@ -174,6 +201,14 @@ export default function HqSuperadminPage() {
             byDept={clientsData.byDept}
             total={clientsData.total}
             todayLabel={todayLabel}
+          />
+        )}
+
+        {/* ── Remaining Flow Modal ──────────────────────────────────────────── */}
+        {remainingsOpen && (
+          <RemainingFlowModal
+            open={remainingsOpen}
+            onClose={() => setRemainingsOpen(false)}
           />
         )}
 
