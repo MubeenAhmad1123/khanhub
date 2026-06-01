@@ -25,6 +25,7 @@ export default function ManagerStaffPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'present' | 'absent' | 'leave' | 'unmarked'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'id' | 'seniority'>('name');
 
   // Stats
@@ -132,7 +133,13 @@ export default function ManagerStaffPage() {
         (statusFilter === 'terminated' && s.status === 'terminated') ||
         (statusFilter === 'active_vacancy' && s.status === 'active_vacancy');
 
-      return matchesSearch && matchesDept && matchesStatus;
+      const matchesAttendance = attendanceFilter === 'all' ||
+        (attendanceFilter === 'present' && (s.todayAttendanceStatus === 'present' || s.todayAttendanceStatus === 'late')) ||
+        (attendanceFilter === 'leave' && s.todayAttendanceStatus === 'leave') ||
+        (attendanceFilter === 'absent' && s.todayAttendanceStatus === 'absent') ||
+        (attendanceFilter === 'unmarked' && (s.todayAttendanceStatus === 'unmarked' || !s.todayAttendanceStatus));
+
+      return matchesSearch && matchesDept && matchesStatus && matchesAttendance;
     });
 
     // Apply advanced sorting based on selected sortBy criteria
@@ -175,7 +182,48 @@ export default function ManagerStaffPage() {
     }
 
     return result;
-  }, [staff, search, deptFilter, statusFilter, sortBy]);
+  }, [staff, search, deptFilter, statusFilter, attendanceFilter, sortBy]);
+
+  const getAttendanceBadge = (status?: string) => {
+    const s = status || 'unmarked';
+    switch (s) {
+      case 'present':
+        return (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-150 text-emerald-700 font-extrabold text-[8px] uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Present</span>
+          </div>
+        );
+      case 'late':
+        return (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-150 text-amber-700 font-extrabold text-[8px] uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            <span>Late</span>
+          </div>
+        );
+      case 'leave':
+        return (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 border border-blue-150 text-blue-700 font-extrabold text-[8px] uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <span>Leave</span>
+          </div>
+        );
+      case 'absent':
+        return (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 border border-rose-150 text-rose-700 font-extrabold text-[8px] uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <span>Absent</span>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-50 border border-gray-150 text-gray-500 font-extrabold text-[8px] uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            <span>Unmarked</span>
+          </div>
+        );
+    }
+  };
 
   const getDeptColor = (dept: string) => {
     switch (dept) {
@@ -392,6 +440,74 @@ export default function ManagerStaffPage() {
               <span>All Personnel</span>
             </button>
           </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-gray-100/70">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mr-2">Today's Duty:</span>
+            
+            <button
+              type="button"
+              onClick={() => setAttendanceFilter('all')}
+              className={`h-11 px-5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                attendanceFilter === 'all'
+                  ? 'bg-slate-800 text-white border-slate-800 shadow-md animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <span>All Statuses</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAttendanceFilter('present')}
+              className={`h-11 px-5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                attendanceFilter === 'present'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${attendanceFilter === 'present' ? 'bg-white animate-pulse' : 'bg-emerald-500'}`} />
+              <span>Present</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAttendanceFilter('leave')}
+              className={`h-11 px-5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                attendanceFilter === 'leave'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${attendanceFilter === 'leave' ? 'bg-white animate-pulse' : 'bg-blue-500'}`} />
+              <span>On Leave</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAttendanceFilter('absent')}
+              className={`h-11 px-5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                attendanceFilter === 'absent'
+                  ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/10 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${attendanceFilter === 'absent' ? 'bg-white animate-pulse' : 'bg-rose-500'}`} />
+              <span>Absent</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAttendanceFilter('unmarked')}
+              className={`h-11 px-5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] ${
+                attendanceFilter === 'unmarked'
+                  ? 'bg-gray-600 text-white border-gray-600 shadow-md animate-fadeIn'
+                  : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${attendanceFilter === 'unmarked' ? 'bg-white animate-pulse' : 'bg-gray-400'}`} />
+              <span>Unmarked</span>
+            </button>
+          </div>
         </div>
 
         {/* Staff Grid */}
@@ -407,6 +523,11 @@ export default function ManagerStaffPage() {
                 {/* Decorative Background Icon */}
                 <div className={`absolute -right-6 -top-6 w-32 h-32 opacity-[0.05] transition-transform duration-1000 group-hover:scale-125 group-hover:rotate-12 ${colors.text}`}>
                    <Users size={128} strokeWidth={1} />
+                </div>
+
+                {/* Today's Attendance Badge on top left */}
+                <div className="absolute top-8 left-8 z-20">
+                  {getAttendanceBadge(s.todayAttendanceStatus)}
                 </div>
 
                 {/* Status Indicator */}

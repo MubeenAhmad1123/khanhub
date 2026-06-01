@@ -61,8 +61,9 @@ export default function SuperadminStaffPage() {
   
   // Drill-down States
   const [drillLevel, setDrillLevel] = useState<'overview' | 'presence' | 'department' | 'list'>('overview');
-  const [drillPresence, setDrillPresence] = useState<'present' | 'absent' | null>(null);
+  const [drillPresence, setDrillPresence] = useState<'present' | 'absent' | 'leave' | null>(null);
   const [drillDept, setDrillDept] = useState<StaffDept | null>(null);
+  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'present' | 'absent' | 'leave' | 'unmarked'>('all');
   const [activeChecklist, setActiveChecklist] = useState<{
     staffId: string;
     dept: StaffDept;
@@ -608,15 +609,20 @@ export default function SuperadminStaffPage() {
             )}
 
             {drillLevel === 'presence' && (
-              <div className="grid grid-cols-2 gap-3 sm:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <PresenceCard 
                   type="present"
-                  count={filtered.filter(r => r.isPresentToday).length}
+                  count={filtered.filter(r => r.todayAttendanceStatus === 'present' || r.todayAttendanceStatus === 'late').length}
                   onClick={() => { setDrillLevel('department'); setDrillPresence('present'); }}
                 />
                 <PresenceCard 
+                  type="leave"
+                  count={filtered.filter(r => r.todayAttendanceStatus === 'leave').length}
+                  onClick={() => { setDrillLevel('department'); setDrillPresence('leave'); }}
+                />
+                <PresenceCard 
                   type="absent"
-                  count={filtered.filter(r => !r.isPresentToday).length}
+                  count={filtered.filter(r => r.todayAttendanceStatus === 'absent').length}
                   onClick={() => { setDrillLevel('department'); setDrillPresence('absent'); }}
                 />
               </div>
@@ -625,7 +631,11 @@ export default function SuperadminStaffPage() {
             {drillLevel === 'department' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {Object.entries(groupedByDept).map(([d, members]) => {
-                  const filteredMembers = members.filter(r => drillPresence === 'present' ? r.isPresentToday : !r.isPresentToday);
+                  const filteredMembers = members.filter(r => {
+                    if (drillPresence === 'present') return r.todayAttendanceStatus === 'present' || r.todayAttendanceStatus === 'late';
+                    if (drillPresence === 'leave') return r.todayAttendanceStatus === 'leave';
+                    return r.todayAttendanceStatus === 'absent';
+                  });
                   if (filteredMembers.length === 0) return null;
                   
                   const info = DEPT_INFO[d] || { label: d.toUpperCase(), bg: 'bg-gray-50', text: 'text-gray-600' };
@@ -646,7 +656,7 @@ export default function SuperadminStaffPage() {
                       </div>
                       <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{info.label}</h3>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">
-                        {drillPresence === 'present' ? 'Present' : 'Absent'} Personnel
+                        {drillPresence === 'present' ? 'Present' : drillPresence === 'leave' ? 'On Leave' : 'Absent'} Personnel
                       </p>
                     </div>
                   );
@@ -655,19 +665,99 @@ export default function SuperadminStaffPage() {
             )}
 
             {drillLevel === 'list' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
                 {enriching && (
                   <div className="mb-8 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3 text-indigo-600 text-xs font-bold animate-pulse">
                     <Zap className="animate-spin" size={14} />
                     Syncing historical dossiers for {drillDept ? DEPT_INFO[drillDept]?.label : 'All Departments'}...
                   </div>
                 )}
+                
+                {/* Attendance Filter Selector inside List Level */}
+                {!drillPresence && (
+                  <div className="flex flex-wrap items-center gap-2.5 p-4 rounded-3xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-2">Today's Duty:</span>
+                    
+                    <button
+                      onClick={() => setAttendanceFilter('all')}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        attendanceFilter === 'all'
+                          ? "bg-slate-800 text-white dark:bg-slate-750 font-bold"
+                          : "text-slate-450 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300 font-bold"
+                      )}
+                    >
+                      All Statuses
+                    </button>
+                    
+                    <button
+                      onClick={() => setAttendanceFilter('present')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        attendanceFilter === 'present'
+                          ? "bg-emerald-500 text-white font-bold"
+                          : "text-slate-450 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300 font-bold"
+                      )}
+                    >
+                      <span className={cn("w-1.5 h-1.5 rounded-full", attendanceFilter === 'present' ? 'bg-white' : 'bg-emerald-500')} />
+                      <span>Present</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setAttendanceFilter('leave')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        attendanceFilter === 'leave'
+                          ? "bg-blue-500 text-white font-bold"
+                          : "text-slate-450 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300 font-bold"
+                      )}
+                    >
+                      <span className={cn("w-1.5 h-1.5 rounded-full", attendanceFilter === 'leave' ? 'bg-white' : 'bg-blue-500')} />
+                      <span>On Leave</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setAttendanceFilter('absent')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        attendanceFilter === 'absent'
+                          ? "bg-rose-500 text-white font-bold"
+                          : "text-slate-450 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300 font-bold"
+                      )}
+                    >
+                      <span className={cn("w-1.5 h-1.5 rounded-full", attendanceFilter === 'absent' ? 'bg-white' : 'bg-rose-500')} />
+                      <span>Absent</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setAttendanceFilter('unmarked')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        attendanceFilter === 'unmarked'
+                          ? "bg-slate-500 text-white font-bold"
+                          : "text-slate-450 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300 font-bold"
+                      )}
+                    >
+                      <span className={cn("w-1.5 h-1.5 rounded-full", attendanceFilter === 'unmarked' ? 'bg-white' : 'bg-slate-450')} />
+                      <span>Unmarked</span>
+                    </button>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                   {(drillDept ? (groupedByDept[drillDept] || []) : filtered)
                     ?.filter(r => {
-                      if (!drillPresence) return true;
-                      const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
-                      return drillPresence === 'present' ? isPresent : !isPresent;
+                      if (drillPresence) {
+                        if (drillPresence === 'present') return r.todayAttendanceStatus === 'present' || r.todayAttendanceStatus === 'late';
+                        if (drillPresence === 'leave') return r.todayAttendanceStatus === 'leave';
+                        return r.todayAttendanceStatus === 'absent';
+                      }
+                      if (attendanceFilter === 'all') return true;
+                      if (attendanceFilter === 'present') return r.todayAttendanceStatus === 'present' || r.todayAttendanceStatus === 'late';
+                      if (attendanceFilter === 'leave') return r.todayAttendanceStatus === 'leave';
+                      if (attendanceFilter === 'absent') return r.todayAttendanceStatus === 'absent';
+                      if (attendanceFilter === 'unmarked') return r.todayAttendanceStatus === 'unmarked' || !r.todayAttendanceStatus;
+                      return true;
                     })
                     ?.map(r => (
                       <StaffInteractiveCard 
@@ -750,10 +840,49 @@ export default function SuperadminStaffPage() {
   );
 }
 
+const getAttendanceBadge = (status?: string) => {
+  const s = status || 'unmarked';
+  switch (s) {
+    case 'present':
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-250 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400 font-extrabold text-[8px] uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Present</span>
+        </div>
+      );
+    case 'late':
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-250 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 font-extrabold text-[8px] uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span>Late</span>
+        </div>
+      );
+    case 'leave':
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-250 dark:border-blue-800/40 text-blue-700 dark:text-blue-400 font-extrabold text-[8px] uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span>Leave</span>
+        </div>
+      );
+    case 'absent':
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-250 dark:border-rose-800/40 text-rose-700 dark:text-rose-400 font-extrabold text-[8px] uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+          <span>Absent</span>
+        </div>
+      );
+    default:
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-gray-50 dark:bg-slate-900 border border-gray-250 dark:border-slate-800 text-gray-500 dark:text-slate-400 font-extrabold text-[8px] uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+          <span>Unmarked</span>
+        </div>
+      );
+  }
+};
+
 function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; onStatusChange: (row: StaffCardRow, type: 'uniform' | 'duty', status: any) => void }) {
   const info = DEPT_INFO[r.dept] || { color: 'bg-gray-600', border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-600', gradient: '' };
-  
-  const isPresent = r.isPresentToday || (r.todayDailyScore || 0) > 0;
   
   return (
     <Link
@@ -765,12 +894,7 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
           <span className={cn("text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-lg border shadow-sm", info.bg, info.text, info.border)}>
             {r.dept}
           </span>
-          <div className="flex items-center gap-1.5">
-            <span className={cn("w-2 h-2 rounded-full", isPresent ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500')} />
-            <span className={cn("text-[10px] font-bold uppercase", isPresent ? 'text-emerald-600' : 'text-rose-600')}>
-              {isPresent ? 'Online' : 'Offline'}
-            </span>
-          </div>
+          {getAttendanceBadge(r.todayAttendanceStatus)}
         </div>
 
         <div className="flex items-center gap-4">
@@ -850,35 +974,73 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
   );
 }
 
-function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent', count: number, onClick: () => void }) {
+function PresenceCard({ type, count, onClick }: { type: 'present' | 'absent' | 'leave', count: number, onClick: () => void }) {
   const isPresent = type === 'present';
+  const isLeave = type === 'leave';
+  
+  let cardClass = "";
+  let iconBgClass = "";
+  let textClass = "";
+  let numClass = "";
+  let buttonClass = "";
+  let icon = null;
+  let title = "";
+  let gradFrom = "";
+  
+  if (type === 'present') {
+    cardClass = "bg-emerald-50 border-emerald-100 dark:bg-emerald-950/10 dark:border-emerald-800/30 shadow-emerald-500/5 hover:border-emerald-500/20 shadow-xl hover:shadow-2xl";
+    iconBgClass = "bg-white text-emerald-600 shadow-emerald-500/10 dark:bg-slate-900";
+    textClass = "text-emerald-900 dark:text-emerald-400";
+    numClass = "text-emerald-600";
+    buttonClass = "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/10";
+    icon = <ShieldCheck className="w-5 h-5 sm:w-10 sm:h-10" />;
+    title = "Present Now";
+    gradFrom = "from-emerald-500";
+  } else if (type === 'leave') {
+    cardClass = "bg-blue-50 border-blue-100 dark:bg-blue-950/10 dark:border-blue-800/30 shadow-blue-500/5 hover:border-blue-500/20 shadow-xl hover:shadow-2xl";
+    iconBgClass = "bg-white text-blue-600 shadow-blue-500/10 dark:bg-slate-900";
+    textClass = "text-blue-900 dark:text-blue-400";
+    numClass = "text-blue-600";
+    buttonClass = "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/10";
+    icon = <Clock className="w-5 h-5 sm:w-10 sm:h-10" />;
+    title = "On Leave";
+    gradFrom = "from-blue-500";
+  } else {
+    cardClass = "bg-rose-50 border-rose-100 dark:bg-rose-950/10 dark:border-rose-800/30 shadow-rose-500/5 hover:border-rose-500/20 shadow-xl hover:shadow-2xl";
+    iconBgClass = "bg-white text-rose-600 shadow-rose-500/10 dark:bg-slate-900";
+    textClass = "text-rose-900 dark:text-rose-400";
+    numClass = "text-rose-600";
+    buttonClass = "bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/10";
+    icon = <Zap className="w-5 h-5 sm:w-10 sm:h-10" />;
+    title = "Absent Units";
+    gradFrom = "from-rose-500";
+  }
+  
   return (
     <div 
       onClick={onClick}
       className={cn(
         "group relative p-4 sm:p-12 rounded-[2rem] sm:rounded-[3rem] border transition-all cursor-pointer overflow-hidden",
-        isPresent 
-          ? "bg-emerald-50 border-emerald-100 dark:bg-emerald-950/10 dark:border-emerald-800/30 shadow-emerald-500/5 hover:border-emerald-500/20 shadow-xl hover:shadow-2xl" 
-          : "bg-rose-50 border-rose-100 dark:bg-rose-950/10 dark:border-rose-800/30 shadow-rose-500/5 hover:border-rose-500/20 shadow-xl hover:shadow-2xl"
+        cardClass
       )}
     >
-      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity", isPresent ? "from-emerald-500" : "from-rose-500")} />
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity", gradFrom)} />
       <div className="relative z-10 flex flex-col items-center text-center gap-3 sm:gap-6">
-        <div className={cn("w-10 h-10 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center shadow-lg", isPresent ? "bg-white text-emerald-600 shadow-emerald-500/10 dark:bg-slate-900" : "bg-white text-rose-600 shadow-rose-500/10 dark:bg-slate-900")}>
-          {isPresent ? <ShieldCheck className="w-5 h-5 sm:w-10 sm:h-10" /> : <Zap className="w-5 h-5 sm:w-10 sm:h-10" />}
+        <div className={cn("w-10 h-10 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center shadow-lg", iconBgClass)}>
+          {icon}
         </div>
         <div>
-          <h2 className={cn("text-xs sm:text-4xl font-black uppercase tracking-tight sm:mb-2", isPresent ? "text-emerald-900 dark:text-emerald-400" : "text-rose-900 dark:text-rose-400")}>
-            {isPresent ? 'Present Now' : 'Absent Units'}
+          <h2 className={cn("text-xs sm:text-4xl font-black uppercase tracking-tight sm:mb-2", textClass)}>
+            {title}
           </h2>
           <p className="hidden sm:block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily attendance synchronization</p>
         </div>
-        <div className={cn("text-2xl sm:text-7xl font-black leading-none", isPresent ? "text-emerald-600" : "text-rose-600")}>
+        <div className={cn("text-2xl sm:text-7xl font-black leading-none", numClass)}>
           {count}
         </div>
         <button className={cn(
           "px-3 py-1.5 sm:px-8 sm:py-4 text-white rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-[0.2em] transition-all whitespace-nowrap",
-          isPresent ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/10" : "bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/10"
+          buttonClass
         )}>
           View Depts
         </button>

@@ -1279,18 +1279,25 @@ export default function DailyReportPage() {
               </div>
 
               {/* Status Filters */}
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none animate-fadeIn">
-                {['all', 'present', 'absent', 'late', 'leave'].map(f => (
+              <div className="flex flex-wrap items-center gap-2 pb-2 animate-fadeIn">
+                {[
+                  { id: 'all', label: 'All Statuses', colorClass: 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/15' },
+                  { id: 'present', label: 'Present', colorClass: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/15' },
+                  { id: 'leave', label: 'On Leave', colorClass: 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/15' },
+                  { id: 'absent', label: 'Absent', colorClass: 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/15' },
+                  { id: 'late', label: 'Late', colorClass: 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/15' },
+                  { id: 'unmarked', label: 'Unmarked', colorClass: 'bg-gray-650 text-white border-gray-650 shadow-md shadow-gray-500/15' }
+                ].map(f => (
                   <button
-                    key={f}
-                    onClick={() => setActiveFilter(f)}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${
-                      activeFilter === f
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
+                    key={f.id}
+                    onClick={() => setActiveFilter(f.id)}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                      activeFilter === f.id
+                        ? f.colorClass
+                        : 'bg-white text-gray-500 border-gray-100 hover:border-gray-250 hover:bg-gray-50/50 hover:text-gray-700'
                     }`}
                   >
-                    {f}
+                    {f.label}
                   </button>
                 ))}
               </div>

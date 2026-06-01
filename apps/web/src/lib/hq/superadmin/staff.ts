@@ -49,6 +49,7 @@ export type StaffCardRow = {
   todayDutyStatus?: 'yes' | 'no' | 'incomplete' | 'na';
   todayDailyScore?: number;
   isPresentToday?: boolean;
+  todayAttendanceStatus?: 'present' | 'absent' | 'late' | 'leave' | 'unmarked';
   dutyConfig?: { key: string; label: string }[];
   dressCodeConfig?: { key: string; label: string }[];
   dutyStartTime?: string;
@@ -334,7 +335,8 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
     results[staffId] = {
       uniform: uniformStatus,
       duty: dutyStatus,
-      score: attPoint + uniformPoint + dutyPoint + contribPoint
+      score: attPoint + uniformPoint + dutyPoint + contribPoint,
+      attendance: att?.status || 'unmarked'
     };
   });
 
@@ -451,7 +453,8 @@ export async function listStaffCards({
         todayUniformStatus: today.uniform,
         todayDutyStatus: today.duty,
         todayDailyScore: today.score,
-        isPresentToday: today.score > 0,
+        isPresentToday: today.score > 0 || today.attendance === 'present' || today.attendance === 'late',
+        todayAttendanceStatus: today.attendance || 'unmarked',
         dutyConfig: s.dutyConfig || [],
         dressCodeConfig: s.dressCodeConfig || [],
         dutyStartTime: s.dutyStartTime || '09:00',
