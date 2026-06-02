@@ -43,26 +43,7 @@ export default function SeekersListPage() {
       return;
     }
     setSession(parsed);
-
-    // Wait for auth to resolve to avoid permission-denied race condition
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user && user.uid === parsed.uid) {
-        fetchSeekers();
-      } else {
-        // Fallback fetch if auth state does not change but user is already active
-        if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
-          fetchSeekers();
-        } else {
-          // Give it a brief timeout then fetch anyway to be resilient
-          const t = setTimeout(() => {
-            fetchSeekers();
-          }, 1500);
-          return () => clearTimeout(t);
-        }
-      }
-    });
-
-    return () => unsubscribe();
+    fetchSeekers();
   }, [router]);
 
   const fetchSeekers = async () => {

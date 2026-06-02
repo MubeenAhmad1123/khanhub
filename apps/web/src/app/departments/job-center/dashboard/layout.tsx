@@ -10,7 +10,8 @@ import {
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, Briefcase, Search
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { JobCenterRole } from '@/types/job-center';
 import StaffNotifications from '@/components/layout/StaffNotifications';
 
@@ -97,42 +98,59 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
   useEffect(() => {
     setMounted(true);
-    let session = localStorage.getItem('jobcenter_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-          const syncSession = {
-            uid: hqSession.uid,
-            customId: hqSession.customId || hqSession.email || 'HQ-USER',
-            role: 'superadmin',
-            displayName: hqSession.displayName || 'Superadmin',
-          };
-          localStorage.setItem('jobcenter_session', JSON.stringify(syncSession));
-          localStorage.setItem('jobcenter_login_time', Date.now().toString());
-          session = JSON.stringify(syncSession);
-          setIsHqAdmin(true);
-        }
-      } catch (e) {}
-    }
 
-    if (!session) { router.push('/departments/job-center/login'); return; }
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      let session = localStorage.getItem('jobcenter_session');
+      const hqSessionStr = localStorage.getItem('hq_session');
+      
+      if (hqSessionStr) {
+        try {
+          const hqSession = JSON.parse(hqSessionStr);
+          if (hqSession?.role === 'superadmin') {
+            const syncSession = {
+              uid: hqSession.uid,
+              customId: hqSession.customId || hqSession.email || 'HQ-USER',
+              role: 'superadmin',
+              displayName: hqSession.displayName || 'Superadmin',
+            };
+            localStorage.setItem('jobcenter_session', JSON.stringify(syncSession));
+            localStorage.setItem('jobcenter_login_time', Date.now().toString());
+            session = JSON.stringify(syncSession);
+            setIsHqAdmin(true);
+          }
+        } catch (e) {}
+      }
 
-    const performAuthCheck = () => {
+      if (!session) { 
+        router.push('/departments/job-center/login'); 
+        return; 
+      }
+
+      if (!firebaseUser) {
+        const timeout = setTimeout(() => {
+          if (!auth.currentUser) {
+            router.push('/departments/job-center/login');
+          }
+        }, 8000);
+        return () => clearTimeout(timeout);
+      }
+
       try {
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
+
+        if (parsed.uid !== firebaseUser.uid) {
+          throw new Error('UID mismatch');
+        }
 
         setUser(parsed);
         setIsChecking(false);
       } catch (err) {
         handleSignOut();
       }
-    };
+    });
 
-    performAuthCheck();
+    return () => unsubscribeAuth();
   }, [router, handleSignOut]);
 
   useEffect(() => {
