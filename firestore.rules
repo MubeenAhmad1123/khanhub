@@ -1653,12 +1653,12 @@ service cloud.firestore {
 
     function isJobCenterAuth() {
       return request.auth != null
-        && (exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid))
-            || exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)));
+        && (exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid))
+            || exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid)));
     }
     function jobCenterRole() {
-      let p1 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
-      let p2 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let p1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let p2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
       return exists(p1) ? get(p1).data.get('role', '') : (exists(p2) ? get(p2).data.get('role', '') : '');
     }
     function isJobCenterRole(role) {
@@ -1672,13 +1672,13 @@ service cloud.firestore {
       return isJobCenterRole('superadmin');
     }
     function jobCenterSeekerId() {
-      let p1 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
-      let p2 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let p1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let p2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
       return exists(p1) ? get(p1).data.get('seekerId', null) : (exists(p2) ? get(p2).data.get('seekerId', null) : null);
     }
     function jobCenterStaffId() {
-      let p1 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
-      let p2 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let p1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let p2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
       return exists(p1) ? get(p1).data.get('staffId', null) : (exists(p2) ? get(p2).data.get('staffId', null) : null);
     }
 

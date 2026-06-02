@@ -427,19 +427,21 @@ service cloud.firestore {
     }
 
     function isJobCenterAuth() {
-      return request.auth != null;
+      return request.auth != null
+        && exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid));
     }
     
     function jobCenterUserDoc() {
-      return get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data;
+      let p = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return exists(p) ? get(p).data : null;
     }
     
     function isJobCenterAdmin() {
-      return isJobCenterAuth() && (jobCenterUserDoc().role == 'admin' || jobCenterUserDoc().role == 'superadmin');
+      return isJobCenterAuth() && (jobCenterUserDoc().get('role', '') == 'admin' || jobCenterUserDoc().get('role', '') == 'superadmin');
     }
     
     function isJobCenterStaff() {
-      return isJobCenterAuth() && (jobCenterUserDoc().role == 'staff' || isJobCenterAdmin());
+      return isJobCenterAuth() && (jobCenterUserDoc().get('role', '') == 'staff' || isJobCenterAdmin());
     }
 
     // ═══════════════════════════════════════════════════════════
