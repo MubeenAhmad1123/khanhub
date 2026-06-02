@@ -778,7 +778,7 @@ service cloud.firestore {
     function isHqAuth() { 
       return request.auth != null && (
         isSystemAdmin()
-        || request.auth.token.role != null
+        || ('role' in request.auth.token && request.auth.token.role != null)
         || exists(/databases/$(database)/documents/hq_users/$(request.auth.uid))
       ); 
     } 
