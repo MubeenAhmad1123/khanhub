@@ -44,32 +44,14 @@ export default function SeekersListPage() {
     }
     setSession(parsed);
 
-    // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
+    // Wait for auth + force token refresh before fetching
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.uid === parsed.uid) {
-        try {
-          await user.getIdToken(true);
-        } catch (e) {
-          console.error("Token refresh error:", e);
-        }
+        await user.getIdToken(true); // force fresh token for Firestore rules
         fetchSeekers();
-      } else {
-        // Fallback fetch if auth state does not change but user is already active
-        const activeUser = auth.currentUser;
-        if (activeUser && activeUser.uid === parsed.uid) {
-          try {
-            await activeUser.getIdToken(true);
-          } catch (e) {
-            console.error("Token refresh error:", e);
-          }
-          fetchSeekers();
-        } else {
-          // Give it a brief timeout then fetch anyway to be resilient
-          const t = setTimeout(() => {
-            fetchSeekers();
-          }, 1500);
-          return () => clearTimeout(t);
-        }
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        fetchSeekers();
       }
     });
 
