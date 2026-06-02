@@ -48,10 +48,14 @@ export default function SeekersListPage() {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.uid === parsed.uid) {
         await user.getIdToken(true); // force fresh token for Firestore rules
-        fetchSeekers();
+        setTimeout(() => {
+          fetchSeekers();
+        }, 250);
       } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
         await auth.currentUser.getIdToken(true);
-        fetchSeekers();
+        setTimeout(() => {
+          fetchSeekers();
+        }, 250);
       }
     });
 
