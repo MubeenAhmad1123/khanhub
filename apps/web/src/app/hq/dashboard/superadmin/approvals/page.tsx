@@ -37,6 +37,7 @@ import {
   orderBy,
   query,
   where,
+  onSnapshot,
 } from 'firebase/firestore';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import {
@@ -1025,6 +1026,45 @@ export default function HqApprovalsPage() {
     return () => unsub();
   }, [session, selectedEntity]);
 
+  // Real-time listener for the currently selected entity's package progress info
+  useEffect(() => {
+    if (!session || session.role !== 'superadmin') return;
+    if (!selectedEntity) return;
+
+    let coll = '';
+    if (selectedEntity.dept === 'rehab') coll = 'rehab_patients';
+    else if (selectedEntity.dept === 'spims') coll = 'spims_students';
+    else if (selectedEntity.dept === 'job-center') coll = 'job_center_seekers';
+    else if (selectedEntity.dept === 'hospital') coll = 'hospital_patients';
+    else if (selectedEntity.dept === 'sukoon-center') coll = 'sukoon_clients';
+    else if (selectedEntity.dept === 'welfare') coll = 'welfare_donors';
+
+    if (!coll) return;
+
+    const ref = doc(db, coll, selectedEntity.id);
+    const unsub = onSnapshot(ref, (snap: any) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        const k = `${selectedEntity.dept}_${selectedEntity.id}`;
+        const next: EntityEnrich = {
+          name: String(d.name || ''),
+          totalPackageAmount: Number(d.totalPackageAmount || d.totalPackage || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
+          totalPackage: Number(d.totalPackage || d.totalPackageAmount || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
+          totalReceived: Number(d.totalReceived || d.overallReceived || 0),
+          remaining: Number(d.remaining ?? d.remainingBalance ?? d.overallRemaining ?? 0),
+        };
+        if (selectedEntity.dept === 'spims') {
+          next.course = String(d.course || '');
+          next.session = String(d.session || '');
+          next.rollNo = (d.year2_rollNo as string) || (d.year1_rollNo as string) || (d.rollNo as string) || undefined;
+        }
+        setEnriched((prev) => ({ ...prev, [k]: { ...prev[k], ...next } }));
+      }
+    });
+
+    return () => unsub();
+  }, [session, selectedEntity]);
+
   useEffect(() => {
     setVisibleLimit(PAGE_SIZE);
     setSelected(new Set());
@@ -1063,10 +1103,10 @@ export default function HqApprovalsPage() {
           const d = snap.data() as Record<string, unknown>;
           const next: EntityEnrich = {
             name: String(d.name || ''),
-            totalPackageAmount: Number(d.totalPackageAmount || d.totalPackage) || undefined,
-            totalPackage: Number(d.totalPackage || d.totalPackageAmount) || undefined,
-            totalReceived: Number(d.totalReceived) || undefined,
-            remaining: Number(d.remaining) || undefined,
+            totalPackageAmount: Number(d.totalPackageAmount || d.totalPackage || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
+            totalPackage: Number(d.totalPackage || d.totalPackageAmount || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
+            totalReceived: Number(d.totalReceived || d.overallReceived || 0),
+            remaining: Number(d.remaining ?? d.remainingBalance ?? d.overallRemaining ?? 0),
           };
           if (v.dept === 'spims') {
             next.course = String(d.course || '');
@@ -1198,6 +1238,17 @@ export default function HqApprovalsPage() {
     if (res.success) {
       setCardPhase({ ...cardPhase, [tx.id]: 'success' });
       addToast(`Node authorized: ${fmtPKR(tx.amount)}`, 'green');
+      
+      const eid = entityId(tx);
+      if (eid) {
+        const k = `${tx.dept}_${eid}`;
+        setEnriched((prev) => {
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
+      
       setTimeout(() => setDismissed((prev) => new Set([...prev, tx.id])), 800);
     } else {
       setCardPhase({ ...cardPhase, [tx.id]: 'fail' });
@@ -1223,6 +1274,17 @@ export default function HqApprovalsPage() {
     if (res.success) {
       setCardPhase({ ...cardPhase, [tx.id]: 'fail' });
       addToast(`Transaction Removed`, 'green');
+      
+      const eid = entityId(tx);
+      if (eid) {
+        const k = `${tx.dept}_${eid}`;
+        setEnriched((prev) => {
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
+      
       setTimeout(() => setDismissed((prev) => new Set([...prev, tx.id])), 800);
     } else {
       addToast(res.error || 'Removal failed', 'red');
@@ -1238,6 +1300,17 @@ export default function HqApprovalsPage() {
       setRejectTx(null);
       setCardPhase((p) => ({ ...p, [tx.id]: 'fail' }));
       addToast(`✗ Rejected — ${fmtPKR(tx.amount)} for ${entityName(tx)}`, 'red');
+      
+      const eid = entityId(tx);
+      if (eid) {
+        const k = `${tx.dept}_${eid}`;
+        setEnriched((prev) => {
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
+      
       setTimeout(() => {
         setDismissed((prev) => new Set([...prev, tx.id]));
         setCardPhase((p) => {
@@ -1314,6 +1387,19 @@ export default function HqApprovalsPage() {
         const failed = results.find((r) => !r.success);
         throw new Error(failed?.error || 'Bulk failed');
       }
+
+      // Clear cache for all processed transactions
+      ids.forEach((id) => {
+        const tx = txMap.get(id);
+        if (tx) {
+          const eid = entityId(tx);
+          if (eid) {
+            delete enriched[`${tx.dept}_${eid}`];
+          }
+        }
+      });
+      setEnriched({ ...enriched });
+
       setDismissed((prev) => new Set([...prev, ...selected]));
       setSelected(new Set());
       setShowBulkConfirm(false);
