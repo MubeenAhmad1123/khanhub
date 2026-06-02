@@ -45,12 +45,23 @@ export default function SeekersListPage() {
     setSession(parsed);
 
     // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.uid === parsed.uid) {
+        try {
+          await user.getIdToken(true);
+        } catch (e) {
+          console.error("Token refresh error:", e);
+        }
         fetchSeekers();
       } else {
         // Fallback fetch if auth state does not change but user is already active
-        if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        const activeUser = auth.currentUser;
+        if (activeUser && activeUser.uid === parsed.uid) {
+          try {
+            await activeUser.getIdToken(true);
+          } catch (e) {
+            console.error("Token refresh error:", e);
+          }
           fetchSeekers();
         } else {
           // Give it a brief timeout then fetch anyway to be resilient

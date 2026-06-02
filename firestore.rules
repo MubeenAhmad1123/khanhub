@@ -582,7 +582,7 @@ service cloud.firestore {
     }
 
     match /spims_users/{uid} {
-      allow read: if isAuth();
+      allow read: if isAuth() || isDiscoveryQuery();
       allow create: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1206,7 +1206,8 @@ service cloud.firestore {
     match /hospital_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isHospitalAdminOrAbove()))
-        || isHqSuperOrManager();
+        || isHqSuperOrManager()
+        || isDiscoveryQuery();
       allow create: if isHospitalAdminOrAbove() || isHqSuperOrManager();
       allow update: if (request.auth != null
         && request.auth.uid == uid
@@ -1508,7 +1509,8 @@ service cloud.firestore {
     match /welfare_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isWelfareAdminOrAbove()))
-        || isHqSuperOrManager();
+        || isHqSuperOrManager()
+        || isDiscoveryQuery();
       allow create: if isWelfareAdminOrAbove() || isHqSuperOrManager();
       allow update: if (request.auth != null
         && request.auth.uid == uid
@@ -1652,34 +1654,30 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isJobCenterAuth() {
-      return request.auth != null
-        && (exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid))
-            || exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid)));
+      return request.auth != null && exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid));
     }
     function jobCenterRole() {
-      let p1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      let p2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
-      return exists(p1) ? get(p1).data.get('role', '') : (exists(p2) ? get(p2).data.get('role', '') : '');
+      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return request.auth != null && exists(path) ? get(path).data.get('role', '') : '';
     }
     function isJobCenterRole(role) {
-      return isJobCenterAuth() && jobCenterRole() == role;
+      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return request.auth != null && exists(path) && get(path).data.get('role', '') == role;
     }
     function isJobCenterAdminOrAbove() {
-      return isJobCenterAuth()
-        && (jobCenterRole() == 'admin' || jobCenterRole() == 'superadmin');
+      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return request.auth != null && exists(path) && (get(path).data.get('role', '') == 'admin' || get(path).data.get('role', '') == 'superadmin');
     }
     function isJobCenterSuperAdmin() {
       return isJobCenterRole('superadmin');
     }
     function jobCenterSeekerId() {
-      let p1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      let p2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
-      return exists(p1) ? get(p1).data.get('seekerId', null) : (exists(p2) ? get(p2).data.get('seekerId', null) : null);
+      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return request.auth != null && exists(path) ? get(path).data.get('seekerId', null) : null;
     }
     function jobCenterStaffId() {
-      let p1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      let p2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
-      return exists(p1) ? get(p1).data.get('staffId', null) : (exists(p2) ? get(p2).data.get('staffId', null) : null);
+      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      return request.auth != null && exists(path) ? get(path).data.get('staffId', null) : null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1698,7 +1696,8 @@ service cloud.firestore {
     match /job_center_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isJobCenterAdminOrAbove()))
-        || isHqSuperOrManager();
+        || isHqSuperOrManager()
+        || isDiscoveryQuery();
       allow create: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1712,7 +1711,8 @@ service cloud.firestore {
     match /jobcenter_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isJobCenterAdminOrAbove()))
-        || isHqSuperOrManager();
+        || isHqSuperOrManager()
+        || isDiscoveryQuery();
       allow create: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1724,13 +1724,7 @@ service cloud.firestore {
     }
 
     match /jobcenter_seekers/{seekerId} {
-      allow read: if resource.data.isActive == true 
-        || isJobCenterAdminOrAbove()
-        || isJobCenterRole('cashier')
-        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
-        || isHqTier1()
-        || isAdmin()
-        || isHqSuperOrManager();
+      allow read: if isJobCenterAuth() || isHqAuth();
       allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
