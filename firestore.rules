@@ -1728,33 +1728,41 @@ service cloud.firestore {
         || isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
-        || isHqTier1();
-      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+        || isHqTier1()
+        || isAdmin()
+        || isHqSuperOrManager();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
     match /job_center_seekers/{seekerId} {
       allow read: if resource.data.isActive == true 
         || isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
-        || isHqTier1();
-      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+        || isHqTier1()
+        || isAdmin()
+        || isHqSuperOrManager();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
 
     match /jobcenter_employers/{employerId} {
       allow read: if resource.data.isActive == true 
         || isJobCenterAdminOrAbove()
-        || isHqTier1();
-      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+        || isHqTier1()
+        || isAdmin()
+        || isHqSuperOrManager();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
     match /job_center_employers/{employerId} {
       allow read: if resource.data.isActive == true 
         || isJobCenterAdminOrAbove()
-        || isHqTier1();
-      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+        || isHqTier1()
+        || isAdmin()
+        || isHqSuperOrManager();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
 
     match /jobcenter_fees/{docId} {

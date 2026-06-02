@@ -246,7 +246,7 @@ export default function PatientDetailPage() {
   }, [visits, dateFilter]);
 
   const filteredPayments = useMemo(() => {
-    if (!dateFilter) return allPayments;
+    if (!dateFilter || selectedStayIndex === -1) return allPayments;
     return allPayments.filter((p: any) => {
       const pDate = toDate(p.date);
 
@@ -268,7 +268,7 @@ export default function PatientDetailPage() {
       if (end && pDate > end) return false;
       return true;
     });
-  }, [allPayments, dateFilter]);
+  }, [allPayments, dateFilter, selectedStayIndex]);
 
   useEffect(() => {
     let sessionData = localStorage.getItem('rehab_session');
@@ -2440,7 +2440,7 @@ export default function PatientDetailPage() {
               {/* Premium Journey Section */}
               <FinanceHistory
                 patientName={patient?.name || "Patient"}
-                totalPackage={patient?.dueTillDate}
+                totalPackage={(patient?.dueTillDate || 0) + (patient?.medicineCharges || 0)}
                 records={(() => {
                   const records: MonthRecord[] = [];
                   const monthlyPkg = Number(patient?.monthlyPackage || 40000);

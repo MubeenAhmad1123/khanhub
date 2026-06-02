@@ -317,7 +317,7 @@ export default function FamilyPatientViewPage() {
         {activeTab === 'finance' && (
           <div className="space-y-6 sm:space-y-8 mt-6">
              <FinanceHistory 
-              totalPackage={patient.dueTillDate}
+              totalPackage={(patient.dueTillDate || 0) + (patient.medicineCharges || 0)}
               payments={payments.map(p => ({
                 date: toDate(p.date).toLocaleDateString('en-PK', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, ' '),
                 amount: Number(p.amount),

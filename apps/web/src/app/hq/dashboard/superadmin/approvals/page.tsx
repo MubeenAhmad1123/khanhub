@@ -1028,7 +1028,9 @@ export default function HqApprovalsPage() {
 
   // Helper to calculate total stay-based package due for rehab patients
   const getRehabTotalPackage = (d: any) => {
-    if (!d.admissionDate) return Number(d.packageAmount || d.monthlyPackage || 0);
+    const pkgAmt = Number(d.packageAmount || d.monthlyPackage || 0);
+    const medCharges = Number(d.medicineCharges || 0);
+    if (!d.admissionDate) return pkgAmt + medCharges;
     const admission = toDate(d.admissionDate);
     const endDate = d.isActive === false && d.dischargeDate
       ? toDate(d.dischargeDate)
@@ -1050,8 +1052,7 @@ export default function HqApprovalsPage() {
     }
 
     const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-    const pkgAmt = Number(d.packageAmount || d.monthlyPackage || 0);
-    return billableMonths * pkgAmt;
+    return (billableMonths * pkgAmt) + medCharges;
   };
 
   // Real-time listener for the currently selected entity's package progress info
@@ -1471,6 +1472,21 @@ export default function HqApprovalsPage() {
 
   const entitySummary = selectedEntity ? enriched[`${selectedEntity.dept}_${selectedEntity.id}`] : undefined;
 
+  const computedSummary = useMemo(() => {
+    if (!selectedEntity || !entitySummary) return null;
+    const approvedPayments = entityRows.filter((tx) => tx.status === 'approved');
+    const totalReceived = approvedPayments.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    const totalPackage = entitySummary.totalPackage || 0;
+    const remaining = totalPackage - totalReceived;
+    return {
+      ...entitySummary,
+      totalReceived,
+      remaining,
+    };
+  }, [selectedEntity, entitySummary, entityRows]);
+
+  const summary = computedSummary || entitySummary;
+
   if (sessionLoading) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center">
@@ -1627,29 +1643,29 @@ export default function HqApprovalsPage() {
             <div className="rounded-3xl border border-gray-250 bg-[#FCFBF8] shadow-md p-5 max-w-[680px] mx-auto w-full">
               <p className="text-xs font-black uppercase tracking-widest text-[#6B7280]">Entity</p>
               <p className="text-xl font-black text-gray-900 mt-1">{selectedEntity.name}</p>
-              {selectedEntity.dept === 'spims' && (entitySummary?.course || entitySummary?.session) ? (
+              {selectedEntity.dept === 'spims' && (summary?.course || summary?.session) ? (
                 <p className="text-sm text-gray-600 mt-1">
-                  {entitySummary?.course} · {entitySummary?.session}
+                  {summary?.course} · {summary?.session}
                 </p>
               ) : null}
-              {entitySummary?.totalPackage != null ? (
+              {summary?.totalPackage != null ? (
                 <div className="mt-4">
                   <div className="flex justify-between text-xs font-bold text-[#6B7280] uppercase tracking-wide mb-1">
                     <span>Package progress</span>
                     <span className="text-gray-900">
-                      {fmtPKR(entitySummary.totalReceived || 0)} / {fmtPKR(entitySummary.totalPackage)}
+                      {fmtPKR(summary.totalReceived || 0)} / {fmtPKR(summary.totalPackage)}
                     </span>
                   </div>
                   <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
                     <div
                       className="h-full bg-indigo-600 rounded-full transition-all"
                       style={{
-                        width: `${Math.min(100, ((entitySummary.totalReceived || 0) / Math.max(1, entitySummary.totalPackage)) * 100)}%`,
+                        width: `${Math.min(100, ((summary.totalReceived || 0) / Math.max(1, summary.totalPackage)) * 100)}%`,
                       }}
                     />
                   </div>
                   <p className="text-sm font-semibold text-gray-900 mt-2">
-                    Remaining balance: <span className="font-black text-indigo-700">{fmtPKR(entitySummary.remaining ?? 0)}</span>
+                    Remaining balance: <span className="font-black text-indigo-700">{fmtPKR(summary.remaining ?? 0)}</span>
                   </p>
                 </div>
               ) : (
