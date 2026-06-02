@@ -514,5 +514,12 @@ service cloud.firestore {
       allow write: if isJobCenterAdmin();
     }
 
+    match /jobcenter_custom_options/{docId} {
+      allow read, write: if isJobCenterAdmin() || isHqAdmin();
+    }
+    match /job_center_custom_options/{docId} {
+      allow read, write: if isJobCenterAdmin() || isHqAdmin();
+    }
+
   }
 }

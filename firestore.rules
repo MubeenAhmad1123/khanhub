@@ -1957,6 +1957,13 @@ service cloud.firestore {
       allow update, delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
     }
 
+    match /jobcenter_custom_options/{docId} {
+      allow read, write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+    }
+    match /job_center_custom_options/{docId} {
+      allow read, write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+    }
+
   }
 }
 
