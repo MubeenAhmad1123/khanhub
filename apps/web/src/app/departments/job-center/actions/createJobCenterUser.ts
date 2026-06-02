@@ -14,7 +14,9 @@ export async function createJobCenterUserServer(
   seekerId?: string,
   employerId?: string,
   emailDomain: string = DOMAIN,
-  userCollection: string = 'jobcenter_users'
+  userCollection: string = 'jobcenter_users',
+  employerType?: string,
+  jobCategory?: string
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -69,6 +71,10 @@ export async function createJobCenterUserServer(
           employerId: employerId || null,
           isActive: true,
           createdAt: FieldValue.serverTimestamp(),
+          employerType: employerType || null,
+          tsemployerType: employerType || null,
+          jobCategory: jobCategory || null,
+          tsjobCategory: jobCategory || null,
         });
         return { success: true, uid: existingUser.uid };
       }
@@ -105,6 +111,10 @@ export async function createJobCenterUserServer(
           seekerId: nextSeekerId,
           employerId: employerId || null,
           isActive: true,
+          employerType: employerType || null,
+          tsemployerType: employerType || null,
+          jobCategory: jobCategory || null,
+          tsjobCategory: jobCategory || null,
         },
         { merge: true }
       );
@@ -124,6 +134,10 @@ export async function createJobCenterUserServer(
       employerId: employerId || null,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
+      employerType: employerType || null,
+      tsemployerType: employerType || null,
+      jobCategory: jobCategory || null,
+      tsjobCategory: jobCategory || null,
     });
     
     try {

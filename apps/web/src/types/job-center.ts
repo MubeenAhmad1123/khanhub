@@ -66,6 +66,8 @@ export interface JobSeeker {
   email?: string | null;
   maritalStatus?: string | null;
   phone?: string | null;
+  tsjobCategory?: string | null;
+  preferredWorkType?: string[];
 
   // Education & Skills
   education: {
@@ -136,6 +138,11 @@ export interface Employer {
   isActive: boolean;
   createdAt: Timestamp | Date;
   createdBy?: string;
+
+  // Dual Employer Mode Fields
+  tsemployerType?: 'company' | 'individual' | null;
+  requirementTypes?: string[];
+  cnic?: string | null;
 }
 
 // ─── JOB POSTING ─────────────────────────────────────────────────────────
