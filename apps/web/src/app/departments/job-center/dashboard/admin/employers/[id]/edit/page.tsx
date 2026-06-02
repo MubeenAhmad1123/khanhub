@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   ArrowLeft, Building, User, MapPin, Globe, Mail, Phone, 
   Settings, Loader2, Save, X, Camera, CheckCircle, 
@@ -53,7 +53,24 @@ export default function UniversalEditProfilePage() {
       router.push('/departments/job-center/login');
       return;
     }
-    fetchProfile();
+    const parsed = JSON.parse(sessionData);
+
+    // Wait for auth + force token refresh before loading profile
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
+          fetchProfile();
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          fetchProfile();
+        }, 250);
+      }
+    });
+
+    return () => unsubscribe();
   }, [id, router]);
 
   const fetchProfile = async () => {

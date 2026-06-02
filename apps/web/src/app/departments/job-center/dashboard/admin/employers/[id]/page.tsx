@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { 
   doc, getDoc, updateDoc, collection, addDoc, query, where, orderBy, getDocs, Timestamp, deleteDoc 
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   ArrowLeft, Building, MapPin, Globe, Mail, Phone, 
   Settings, Loader2, Save, Edit3, Briefcase, Users, 
@@ -53,9 +53,28 @@ export default function EmployerDetailPage() {
       router.push('/departments/job-center/login');
       return;
     }
-    fetchEmployer();
-    fetchMeetings();
-    fetchSeekers();
+    const parsed = JSON.parse(sessionData);
+
+    // Wait for auth + force token refresh before loading employer data
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
+          fetchEmployer();
+          fetchMeetings();
+          fetchSeekers();
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          fetchEmployer();
+          fetchMeetings();
+          fetchSeekers();
+        }, 250);
+      }
+    });
+
+    return () => unsubscribe();
   }, [id, router]);
 
   const fetchMeetings = async () => {

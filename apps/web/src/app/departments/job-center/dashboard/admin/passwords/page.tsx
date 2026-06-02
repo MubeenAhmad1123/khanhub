@@ -70,18 +70,17 @@ export default function JobCenterAdminPasswordsPage() {
     };
 
     // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.uid === session.uid) {
-        void fetchseekerCredentials();
-      } else {
-        if (auth.currentUser && auth.currentUser.uid === session.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
           void fetchseekerCredentials();
-        } else {
-          const t = setTimeout(() => {
-            void fetchseekerCredentials();
-          }, 1500);
-          return () => clearTimeout(t);
-        }
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === session.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          void fetchseekerCredentials();
+        }, 250);
       }
     });
 

@@ -51,20 +51,20 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (!session) return;
+    const parsed = session;
 
     // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user && user.uid === session.uid) {
-        fetchUsers();
-      } else {
-        if (auth.currentUser && auth.currentUser.uid === session.uid) {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
           fetchUsers();
-        } else {
-          const t = setTimeout(() => {
-            fetchUsers();
-          }, 1500);
-          return () => clearTimeout(t);
-        }
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          fetchUsers();
+        }, 250);
       }
     });
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { formatDateDMY } from '@/lib/utils';
 import {
@@ -45,6 +45,17 @@ export default function AdminReportsPage() {
       router.push('/departments/job-center/login'); return;
     }
     setSession(parsed);
+
+    // Wait for auth + force token refresh on mount so they are ready when generate is clicked
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   const handleGenerate = async () => {

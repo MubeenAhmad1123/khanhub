@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection, getDocs, query, where, orderBy, limit, Timestamp, getCountFromServer
 } from 'firebase/firestore';
@@ -40,12 +40,24 @@ export default function AdminDashboardPage() {
       router.push('/departments/job-center/login'); return;
     }
     setSession(parsed);
-  }, [router]);
 
-  useEffect(() => {
-    if (!session) return;
-    loadDashboard();
-  }, [session]);
+    // Wait for auth + force token refresh before loading dashboard
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
+          loadDashboard();
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          loadDashboard();
+        }, 250);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const loadDashboard = async () => {
     try {

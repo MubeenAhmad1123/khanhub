@@ -9,7 +9,7 @@ import {
   doc, getDoc, collection, getDocs, query, where, 
   orderBy, updateDoc, Timestamp, deleteDoc, addDoc
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
@@ -111,21 +111,6 @@ export default function SeekerDetailPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  useEffect(() => {
-    const sessionData = localStorage.getItem('jobcenter_session');
-    if (!sessionData) {
-      router.push('/departments/job-center/login');
-      return;
-    }
-    const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin' && parsed.role !== 'superadmin' && parsed.role !== 'staff') {
-      router.push('/departments/job-center/login');
-      return;
-    }
-    setSession(parsed);
-  }, [router]);
-
-
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -197,9 +182,35 @@ export default function SeekerDetailPage() {
   }, [seekerId, router]);
 
   useEffect(() => {
-    if (!session || !seekerId) return;
-    fetchData();
-  }, [session, seekerId, fetchData]);
+    const sessionData = localStorage.getItem('jobcenter_session');
+    if (!sessionData) {
+      router.push('/departments/job-center/login');
+      return;
+    }
+    const parsed = JSON.parse(sessionData);
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin' && parsed.role !== 'staff') {
+      router.push('/departments/job-center/login');
+      return;
+    }
+    setSession(parsed);
+
+    // Wait for auth + force token refresh before loading seeker data
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
+          fetchData();
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          fetchData();
+        }, 250);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router, seekerId, fetchData]);
 
   useEffect(() => {
     if (!seekerId || !session) return;

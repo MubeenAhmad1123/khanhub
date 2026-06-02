@@ -48,18 +48,17 @@ export default function JobCenterFinancePage() {
     const parsed = JSON.parse(sessionData);
 
     // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.uid === parsed.uid) {
-        fetchFinanceData();
-      } else {
-        if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
           fetchFinanceData();
-        } else {
-          const t = setTimeout(() => {
-            fetchFinanceData();
-          }, 1500);
-          return () => clearTimeout(t);
-        }
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          fetchFinanceData();
+        }, 250);
       }
     });
 

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, deleteDoc, query, orderBy, limit, getDocs, updateDoc, increment, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { createJobCenterUserServer } from '@/app/departments/job-center/actions/createJobCenterUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import {
@@ -102,11 +102,7 @@ export default function RegisterSeekerPage() {
       router.push('/departments/job-center/login');
       return;
     }
-    setLoading(false);
-  }, [router]);
 
-  // Load custom options on mount
-  useEffect(() => {
     const fetchSuggestions = async () => {
       try {
         const q = query(collection(db, 'jobcenter_custom_options'));
@@ -129,10 +125,28 @@ export default function RegisterSeekerPage() {
         setCustomSuggestions(suggestionsMap);
       } catch (e) {
         console.error("Error fetching custom options: ", e);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchSuggestions();
-  }, []);
+
+    // Wait for auth + force token refresh before loading suggestions
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user && user.uid === parsed.uid) {
+        await user.getIdToken(true);
+        setTimeout(() => {
+          fetchSuggestions();
+        }, 250);
+      } else if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+        await auth.currentUser.getIdToken(true);
+        setTimeout(() => {
+          fetchSuggestions();
+        }, 250);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   // Calculate age automatically from Date of Birth
   useEffect(() => {

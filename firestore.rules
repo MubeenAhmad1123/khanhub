@@ -1958,6 +1958,36 @@ service cloud.firestore {
       allow read, write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
     }
 
+    // ── Meetings & Interactions ────────────────────────
+    match /jobcenter_meetings/{meetingId} {
+      allow read: if isJobCenterAuth() || isHqAuth();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || (isJobCenterAuth() && jobCenterRole() == 'staff');
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+    }
+    match /job_center_meetings/{meetingId} {
+      allow read: if isJobCenterAuth() || isHqAuth();
+      allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || (isJobCenterAuth() && jobCenterRole() == 'staff');
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+    }
+
+    // ── Canteen ───────────────────────────────────────
+    match /jobcenter_canteen/{docId} {
+      allow read: if isJobCenterAdminOrAbove()
+        || (isJobCenterRole('cashier'))
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId)
+        || isHqTier1();
+      allow write: if isJobCenterRole('cashier') || isJobCenterAdminOrAbove() || isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+    }
+    match /job_center_canteen/{docId} {
+      allow read: if isJobCenterAdminOrAbove()
+        || (isJobCenterRole('cashier'))
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId)
+        || isHqTier1();
+      allow write: if isJobCenterRole('cashier') || isJobCenterAdminOrAbove() || isHqSuperOrManager()
+        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+    }
+
   }
 }
 
