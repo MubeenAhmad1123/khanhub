@@ -301,8 +301,10 @@ export default function DailyReportPage() {
         const simpleSid = getSimpleId(sid);
         const existingSid = fineMap.get(sid) || [];
         fineMap.set(sid, [...existingSid, data]);
-        const existingSimple = fineMap.get(simpleSid) || [];
-        fineMap.set(simpleSid, [...existingSimple, data]);
+        if (simpleSid !== sid) {
+          const existingSimple = fineMap.get(simpleSid) || [];
+          fineMap.set(simpleSid, [...existingSimple, data]);
+        }
       }));
 
       contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
