@@ -246,7 +246,7 @@ export default function AdminDashboardPage() {
 
       {/* Shortcuts & Info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <Link href="/departments/job-center/dashboard/admin/seekers/new" className="bg-white border border-black/5 p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-black hover:text-white transition-all group shadow-sm hover:shadow-2xl">
             <UserPlus size={28} className="group-hover:scale-110 transition-transform" />
             <span className="text-[11px] font-black uppercase tracking-[0.2em]">Add Seeker</span>
@@ -254,10 +254,6 @@ export default function AdminDashboardPage() {
           <Link href="/departments/job-center/dashboard/admin/employers/new" className="bg-pink-50 border border-pink-100 p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-pink-600 hover:text-white transition-all group shadow-sm hover:shadow-2xl text-pink-600">
             <Building size={28} className="group-hover:scale-110 transition-transform" />
             <span className="text-[11px] font-black uppercase tracking-[0.2em]">Add Employer</span>
-          </Link>
-          <Link href="/departments/job-center/dashboard/admin/staff" className="bg-white border border-black/5 p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-black hover:text-white transition-all group shadow-sm hover:shadow-2xl">
-            <Users size={28} className="group-hover:scale-110 transition-transform" />
-            <span className="text-[11px] font-black uppercase tracking-[0.2em]">Staff</span>
           </Link>
           <Link href="/departments/job-center/dashboard/profile" className="bg-white border border-black/5 p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-black hover:text-white transition-all group shadow-sm hover:shadow-2xl">
             <Activity size={28} className="group-hover:scale-110 transition-transform" />

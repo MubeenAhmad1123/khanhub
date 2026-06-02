@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Seekers',       href: '/departments/job-center/dashboard/admin/seekers',  icon: <User size={16}/>,            roles: ['admin', 'superadmin'] },
   { label: 'Employers',     href: '/departments/job-center/dashboard/admin/employers',icon: <Building2 size={16}/>,       roles: ['admin', 'superadmin'] },
   { label: 'Finance',       href: '/departments/job-center/dashboard/admin/finance',  icon: <Banknote size={16}/>,        roles: ['admin', 'superadmin'] },
-  { label: 'Staff Management', href: '/departments/job-center/dashboard/admin/staff',  icon: <Users size={16}/>,           roles: ['admin', 'superadmin'] },
+  { label: 'Staff Management', href: '/departments/job-center/dashboard/admin/staff',  icon: <Users size={16}/>,           roles: ['superadmin'] },
   { label: 'My Attendance', href: '/departments/job-center/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'Seeker Portal', href: '/departments/job-center/dashboard/seeker',         icon: <Briefcase size={16}/>,       roles: ['seeker'] },
   { label: 'Employer Portal', href: '/departments/job-center/dashboard/employer',     icon: <Building2 size={16}/>,       roles: ['employer'] },
@@ -165,13 +165,13 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#FFFBF7] dark:bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FFFBF7] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="relative w-16 h-16">
             <div className="absolute inset-0 border-4 border-orange-500/20 rounded-full" />
             <div className="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
           </div>
-          <p className="text-orange-600 dark:text-orange-400 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Workforce Grid...</p>
+          <p className="text-orange-600 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Workforce Grid...</p>
         </div>
       </div>
     );
@@ -186,7 +186,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     const [portalOpen, setPortalOpen] = useState(false);
 
     return (
-      <div className="flex flex-col h-full bg-white/50 dark:bg-black/50 backdrop-blur-xl border-r border-gray-200/50 dark:border-white/5">
+      <div className="flex flex-col h-full bg-white/50 backdrop-blur-xl border-r border-gray-200/50">
         {/* Header */}
         <div className="p-8">
           <Link 
@@ -204,7 +204,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
               {viewMode === 'hq' ? <Shield size={24} /> : <Briefcase size={24} />}
             </div>
             <div>
-              <h1 className="font-black text-lg leading-tight tracking-tight dark:text-white uppercase">
+              <h1 className="font-black text-lg leading-tight tracking-tight text-gray-900 uppercase">
                 {viewMode === 'hq' ? 'HQ Link' : 'Job Center'}
               </h1>
               <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
@@ -218,17 +218,17 @@ export default function JobCenterDashboardLayout({ children }: { children: React
             <div className="relative mb-6">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-orange-500/30 transition-all group"
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-orange-500/30 transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <ExternalLink size={16} className="text-orange-500" />
-                  <span className="text-[11px] font-black uppercase tracking-tight dark:text-white">Jump Portal</span>
+                  <span className="text-[11px] font-black uppercase tracking-tight text-gray-950">Jump Portal</span>
                 </div>
                 <ChevronLeft size={16} className={`text-gray-400 transition-transform duration-300 ${portalOpen ? '-rotate-90 text-orange-500' : ''}`} />
               </button>
 
               {portalOpen && (
-                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-[2rem] border border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-black/90 backdrop-blur-2xl shadow-2xl p-4 animate-in fade-in zoom-in-95 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 rounded-[2rem] border border-gray-200/50 bg-white/90 backdrop-blur-2xl shadow-2xl p-4 animate-in fade-in zoom-in-95 overflow-hidden">
                   <div className="grid grid-cols-1 gap-1">
                     {Object.entries(DEPT_INFO).map(([key, info]) => (
                       <Link
@@ -237,12 +237,12 @@ export default function JobCenterDashboardLayout({ children }: { children: React
                         onClick={() => setPortalOpen(false)}
                         className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all group ${
                           pathname.includes(key)
-                            ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-                            : 'text-gray-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
+                            ? 'bg-orange-500/10 text-orange-600'
+                            : 'text-gray-500 hover:text-black hover:bg-gray-50'
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                          pathname.includes(key) ? 'bg-orange-500 text-white scale-110 shadow-lg' : 'bg-gray-100 dark:bg-white/5'
+                          pathname.includes(key) ? 'bg-orange-500 text-white scale-110 shadow-lg' : 'bg-gray-100'
                         }`}>
                           {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
                         </div>
@@ -257,11 +257,11 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
           {/* Navigation Mode Switcher */}
           {isHqAdmin && (
-            <div className="flex p-1.5 bg-gray-100/50 dark:bg-white/5 rounded-2xl mb-8">
+            <div className="flex p-1.5 bg-gray-100/50 rounded-2xl mb-8">
               <button
                 onClick={() => setViewMode('dept')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'dept' ? 'bg-white dark:bg-white/10 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'dept' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 DEPARTMENT
@@ -269,7 +269,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
               <button
                 onClick={() => setViewMode('hq')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black transition-all ${
-                  viewMode === 'hq' ? 'bg-white dark:bg-white/10 text-indigo-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  viewMode === 'hq' ? 'bg-white text-indigo-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 HEADQUARTERS
@@ -288,8 +288,8 @@ export default function JobCenterDashboardLayout({ children }: { children: React
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
                     isActive 
-                      ? 'bg-gradient-to-r from-orange-500/10 to-transparent text-orange-600 dark:text-orange-400' 
-                      : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/50 dark:hover:bg-white/5'
+                      ? 'bg-gradient-to-r from-orange-500/10 to-transparent text-orange-600' 
+                      : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50/50'
                   }`}
                 >
                   {isActive && (
@@ -311,11 +311,11 @@ export default function JobCenterDashboardLayout({ children }: { children: React
         {/* Footer User Section */}
         <div className="mt-auto p-8 space-y-6">
           <div className="flex items-center gap-4 px-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black dark:from-white dark:to-gray-300 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-xl">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white font-black text-sm shadow-xl">
               {user?.displayName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+              <p className="text-xs font-black truncate text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
               <div className="flex items-center gap-2 mt-1">
                  <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
                  <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{role} node</p>
@@ -325,7 +325,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
           <button 
             onClick={handleSignOut} 
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-[11px] font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 transition-all group"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/50 text-[11px] font-black text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all group"
           >
             <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
             DISCONNECT
@@ -336,7 +336,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
   };
 
   return (
-    <div className="min-h-screen flex bg-[#FDFDFD] dark:bg-[#050505] text-black dark:text-white transition-colors duration-500 font-sans">
+    <div className="min-h-screen flex bg-[#FDFDFD] text-black transition-colors duration-500 font-sans">
       {/* Sidebar Desktop */}
       <aside className="hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30">
         <SidebarContent />
@@ -353,10 +353,10 @@ export default function JobCenterDashboardLayout({ children }: { children: React
       {/* Mobile Sidebar */}
       <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
-      } bg-white dark:bg-[#0A0A0A] shadow-2xl`}>
+      } bg-white shadow-2xl`} font-sans>
         <button 
           onClick={() => setSidebarOpen(false)} 
-          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white z-50 hover:rotate-90 transition-all"
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black z-50 hover:rotate-90 transition-all"
         >
           <X size={18} />
         </button>
@@ -370,11 +370,11 @@ export default function JobCenterDashboardLayout({ children }: { children: React
         <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
 
         {/* Top Header */}
-        <header className="sticky top-0 z-20 bg-white/80 dark:bg-black/80 lg:bg-[#FDFDFD]/80 lg:dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between">
+        <header className="sticky top-0 z-20 bg-white/80 lg:bg-[#FDFDFD]/80 backdrop-blur-xl border-b border-gray-100 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <button 
               onClick={() => setSidebarOpen(true)} 
-              className="lg:hidden w-10 h-10 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white"
+              className="lg:hidden w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center text-black"
             >
               <Menu size={20} />
             </button>
@@ -383,14 +383,14 @@ export default function JobCenterDashboardLayout({ children }: { children: React
               <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-2">Central Job Terminal</p>
             </div>
             
-            <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10" />
+            <div className="hidden lg:block h-8 w-px bg-gray-200" />
 
             <div className="relative group hidden md:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
               <input 
                 type="text" 
                 placeholder="Search workforce data..." 
-                className="bg-gray-100/50 dark:bg-white/5 border border-transparent focus:border-orange-500/30 rounded-2xl pl-12 pr-6 py-2.5 text-xs font-medium w-80 outline-none transition-all"
+                className="bg-gray-100/50 border border-transparent focus:border-orange-500/30 rounded-2xl pl-12 pr-6 py-2.5 text-xs font-medium w-80 outline-none transition-all"
               />
             </div>
           </div>
@@ -398,16 +398,16 @@ export default function JobCenterDashboardLayout({ children }: { children: React
           <div className="flex items-center gap-4 lg:gap-8">
              {user?.uid && <StaffNotifications uid={user.uid} dept="job-center" />}
              
-             <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10" />
+             <div className="hidden lg:block h-8 w-px bg-gray-200" />
 
              <div className="flex items-center gap-4">
                 <div className="hidden sm:flex flex-col items-end">
-                   <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
+                   <p className="text-xs font-black text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
                    <span className="px-2 py-0.5 rounded-lg bg-orange-500/10 text-orange-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-orange-500/20">
                       {role}
                    </span>
                 </div>
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
+                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center text-gray-900 font-black text-sm shadow-sm">
                    {user?.displayName?.[0]}
                 </div>
              </div>

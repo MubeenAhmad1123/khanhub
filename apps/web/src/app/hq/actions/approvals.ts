@@ -5,6 +5,7 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireHqSuperadmin } from './auth';
 import { sendHqPushServer } from '@/lib/hqNotificationsServer';
+import { toDate } from '@/lib/utils';
 
 export type Dept = 'rehab' | 'spims' | 'job-center' | 'hospital' | 'sukoon-center' | 'welfare';
 type Decision = 'approved' | 'rejected';
@@ -332,6 +333,65 @@ async function syncRehabRecords(
   }
 }
 
+async function syncSpimsFeeRecords(
+  adminDb: FirebaseFirestore.Firestore,
+  txId: string,
+  txData: any,
+  decision: Decision
+) {
+  const studentId = txData.studentId;
+  if (!studentId) return;
+
+  try {
+    const feePaymentId = txData.feePaymentId;
+    if (feePaymentId) {
+      await adminDb.collection('spims_fees').doc(feePaymentId).set({
+        status: decision,
+        updatedAt: new Date()
+      }, { merge: true });
+    }
+
+    const studentRef = adminDb.collection('spims_students').doc(studentId);
+    const studentSnap = await studentRef.get();
+    if (studentSnap.exists) {
+      const studentData = studentSnap.data() as any;
+      const pkg = Number(studentData?.totalPackage || studentData?.totalPackageAmount) || 0;
+
+      const feesSnap = await adminDb.collection('spims_fees')
+        .where('studentId', '==', studentId)
+        .get();
+
+      const approvedRows = feesSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(r => r.status === 'approved');
+
+      approvedRows.sort((a, b) => {
+        const tA = toDate(a.date || a.createdAt).getTime();
+        const tB = toDate(b.date || b.createdAt).getTime();
+        return tA - tB;
+      });
+
+      let bal = pkg;
+      for (const r of approvedRows) {
+        bal -= Number(r.amount) || 0;
+        await adminDb.collection('spims_fees').doc(r.id).set({
+          remaining: Math.max(0, bal)
+        }, { merge: true });
+      }
+
+      const remainingBal = Math.max(0, bal);
+      await studentRef.update({
+        totalReceived: pkg - remainingBal,
+        remaining: remainingBal,
+        remainingBalance: remainingBal,
+        updatedAt: new Date(),
+      });
+    }
+  } catch (err) {
+    console.error('[syncSpimsFeeRecords] Error:', err);
+  }
+}
+
 export async function decideTransaction(params: {
   dept: Dept;
   txId: string;
@@ -371,6 +431,13 @@ export async function decideTransaction(params: {
       await updateEntityTotals(adminDb, params.dept, data);
       if (params.dept === 'rehab') {
         await syncRehabRecords(adminDb, params.txId, data, caller.customId);
+      }
+      if (params.dept === 'spims') {
+        await syncSpimsFeeRecords(adminDb, params.txId, data, 'approved');
+      }
+    } else {
+      if (params.dept === 'spims') {
+        await syncSpimsFeeRecords(adminDb, params.txId, data, 'rejected');
       }
     }
 
@@ -472,6 +539,15 @@ export async function bulkDecideTransactions(params: {
         await updateEntityTotals(adminDb, params.dept, snap.data());
         if (params.dept === 'rehab') {
           await syncRehabRecords(adminDb, snap.id, snap.data(), caller.customId);
+        }
+        if (params.dept === 'spims') {
+          await syncSpimsFeeRecords(adminDb, snap.id, snap.data(), 'approved');
+        }
+      }
+    } else {
+      if (params.dept === 'spims') {
+        for (const snap of validSnaps) {
+          await syncSpimsFeeRecords(adminDb, snap.id, snap.data(), 'rejected');
         }
       }
     }
@@ -722,6 +798,10 @@ export async function editApprovedTransaction(params: {
       }
     }
 
+    if (params.dept === 'spims') {
+      await syncSpimsFeeRecords(adminDb, params.txId, oldData, 'approved');
+    }
+
     // 3. Add to Audit Log
     await adminDb.collection('hq_audit').add({
       action: 'tx_edited',
@@ -766,6 +846,9 @@ export async function syncDirectApprovedTransaction(params: {
     await updateEntityTotals(adminDb, params.dept, data);
     if (params.dept === 'rehab') {
       await syncRehabRecords(adminDb, params.txId, data, params.approvedBy || 'SUPERADMIN');
+    }
+    if (params.dept === 'spims') {
+      await syncSpimsFeeRecords(adminDb, params.txId, data, 'approved');
     }
     return { success: true };
   } catch (err: any) {
