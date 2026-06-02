@@ -422,14 +422,14 @@ export default function PatientDetailPage() {
           const docPayments = feeData.payments || [];
           docPayments.forEach((p: any) => {
             const status = p.status || 'approved';
-            if (status === 'approved') overallReceived += Number(p.amount || 0);
             if (p.transactionId) syncedTxIds.add(p.transactionId);
             if (p.id) syncedTxIds.add(p.id); // Support legacy/manual entry ID field for deduplication
             aggregatedPayments.push({
               id: `${doc.id}_${p.date}`,
               ...p,
               status,
-              month: feeData.month
+              month: feeData.month,
+              _collection: 'rehab_fees'
             });
           });
         });
@@ -461,10 +461,10 @@ export default function PatientDetailPage() {
               status: txData.status || 'approved',
               isMedicineCharge: true,
               isPendingTransaction: txData.status !== 'approved' && txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
-              method: txData.paymentMethod || txData.method || 'Credit'
+              method: txData.paymentMethod || txData.method || 'Credit',
+              _collection: 'rehab_transactions'
             });
           } else if (isApproved && !isSynced) {
-            overallReceived += Number(txData.amount || 0);
             aggregatedPayments.push({
               id: txId,
               amount: Number(txData.amount || 0),
@@ -472,7 +472,8 @@ export default function PatientDetailPage() {
               cashierId: txData.cashierId || txData.createdByName || 'Office',
               note: txData.description || txData.categoryName || '',
               status: 'approved',
-              method: txData.paymentMethod || txData.method || 'Cash'
+              method: txData.paymentMethod || txData.method || 'Cash',
+              _collection: 'rehab_transactions'
             });
           } else if (!isApproved && !isSynced) {
             aggregatedPayments.push({
@@ -483,7 +484,8 @@ export default function PatientDetailPage() {
               note: txData.description || txData.categoryName || '',
               status: txData.status || 'pending',
               isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
-              method: txData.paymentMethod || txData.method || 'Cash'
+              method: txData.paymentMethod || txData.method || 'Cash',
+              _collection: 'rehab_transactions'
             });
           }
         });
@@ -491,12 +493,28 @@ export default function PatientDetailPage() {
         console.warn("Error fetching aggregated fees", err);
       }
 
-      aggregatedPayments.sort((a, b) => {
+      // Deduplicate consolidated array
+      const seen = new Set<string>();
+      const deduped = aggregatedPayments.filter(tx => {
+        if (!tx.id) return true;
+        const txIdentifier = tx._collection === 'rehab_transactions' ? tx.id : (tx.transactionId || tx.id);
+        if (seen.has(tx.id)) return false;
+        if (txIdentifier && seen.has(txIdentifier)) return false;
+        seen.add(tx.id);
+        if (txIdentifier) seen.add(txIdentifier);
+        return true;
+      });
+
+      // Calculate total approved received amount from the deduplicated entries
+      const approvedTxs = deduped.filter(tx => tx.status === 'approved');
+      overallReceived = approvedTxs.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+      deduped.sort((a, b) => {
         const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date || 0);
         const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date || 0);
         return dateB.getTime() - dateA.getTime();
       });
-      setAllPayments(aggregatedPayments);
+      setAllPayments(deduped);
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const dailyRate = Math.floor(monthlyPkg / 30);
@@ -701,14 +719,14 @@ export default function PatientDetailPage() {
         const docPayments = feeData.payments || [];
         docPayments.forEach((p: any) => {
           const status = p.status || 'approved';
-          if (status === 'approved') overallReceived += Number(p.amount || 0);
           if (p.transactionId) syncedTxIds.add(p.transactionId);
           if (p.id) syncedTxIds.add(p.id);
           aggregatedPayments.push({
             id: `${d.id}_${p.date}`,
             ...p,
             status,
-            month: feeData.month
+            month: feeData.month,
+            _collection: 'rehab_fees'
           });
         });
       });
@@ -734,10 +752,10 @@ export default function PatientDetailPage() {
             status: txData.status || 'approved',
             isMedicineCharge: true,
             isPendingTransaction: txData.status !== 'approved' && txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
-            method: txData.paymentMethod || txData.method || 'Credit'
+            method: txData.paymentMethod || txData.method || 'Credit',
+            _collection: 'rehab_transactions'
           });
         } else if (isApproved && !isSynced) {
-          overallReceived += Number(txData.amount || 0);
           aggregatedPayments.push({
             id: txId,
             amount: Number(txData.amount || 0),
@@ -745,7 +763,8 @@ export default function PatientDetailPage() {
             cashierId: txData.cashierId || txData.createdByName || 'Office',
             note: txData.description || txData.categoryName || '',
             status: 'approved',
-            method: txData.paymentMethod || txData.method || 'Cash'
+            method: txData.paymentMethod || txData.method || 'Cash',
+            _collection: 'rehab_transactions'
           });
         } else if (!isApproved && !isSynced) {
           aggregatedPayments.push({
@@ -756,17 +775,34 @@ export default function PatientDetailPage() {
             note: txData.description || txData.categoryName || '',
             status: txData.status || 'pending',
             isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
-            method: txData.paymentMethod || txData.method || 'Cash'
+            method: txData.paymentMethod || txData.method || 'Cash',
+            _collection: 'rehab_transactions'
           });
         }
       });
 
-      aggregatedPayments.sort((a, b) => {
+      // Deduplicate consolidated array
+      const seen = new Set<string>();
+      const deduped = aggregatedPayments.filter(tx => {
+        if (!tx.id) return true;
+        const txIdentifier = tx._collection === 'rehab_transactions' ? tx.id : (tx.transactionId || tx.id);
+        if (seen.has(tx.id)) return false;
+        if (txIdentifier && seen.has(txIdentifier)) return false;
+        seen.add(tx.id);
+        if (txIdentifier) seen.add(txIdentifier);
+        return true;
+      });
+
+      // Calculate total approved received amount from the deduplicated entries
+      const approvedTxs = deduped.filter(tx => tx.status === 'approved');
+      overallReceived = approvedTxs.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+      deduped.sort((a, b) => {
         const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date || 0);
         const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date || 0);
         return dateB.getTime() - dateA.getTime();
       });
-      setAllPayments(aggregatedPayments);
+      setAllPayments(deduped);
 
       const monthlyPkg = Number(currentPatientData.monthlyPackage || currentPatientData.packageAmount || 0);
       const dailyRate = Math.floor(monthlyPkg / 30);
@@ -1706,41 +1742,48 @@ export default function PatientDetailPage() {
     try {
       setIsDeletingTransaction(true);
 
-      // 1. Find the fee doc id
-      const [feeDocId] = deletingPayment.id.split('_');
-      const feeRef = doc(db, 'rehab_fees', feeDocId);
-      const feeSnap = await getDoc(feeRef);
+      const sourceCollection = deletingPayment._collection || (deletingPayment.id.includes('_') ? 'rehab_fees' : 'rehab_transactions');
 
-      if (!feeSnap.exists()) {
-        toast.error("Original fee record not found");
-        return;
+      if (sourceCollection === 'rehab_transactions') {
+        // Delete directly from rehab_transactions collection
+        await deleteDoc(doc(db, 'rehab_transactions', deletingPayment.id));
+      } else {
+        // 1. Find the fee doc id
+        const [feeDocId] = deletingPayment.id.split('_');
+        const feeRef = doc(db, 'rehab_fees', feeDocId);
+        const feeSnap = await getDoc(feeRef);
+
+        if (!feeSnap.exists()) {
+          toast.error("Original fee record not found");
+          return;
+        }
+
+        const feeData = feeSnap.data();
+        const currentPayments = feeData.payments || [];
+
+        // 2. Filter out the payment
+        const newPayments = currentPayments.filter((p: any) => {
+          // Match by date and amount exactly as they are in the database
+          const pDateStr = p.date;
+          const pAmount = Number(p.amount);
+
+          const isMatch = pAmount === Number(deletingPayment.amount) && pDateStr === deletingPayment.date;
+          return !isMatch;
+        });
+
+        if (newPayments.length === currentPayments.length) {
+          toast.error("Payment not found in the record");
+          return;
+        }
+
+        // 3. Update the fee record
+        const totalPaid = newPayments.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
+        await updateDoc(feeRef, {
+          payments: newPayments,
+          totalPaid: totalPaid,
+          remaining: Math.max(0, Number(feeData.package || 0) - totalPaid)
+        });
       }
-
-      const feeData = feeSnap.data();
-      const currentPayments = feeData.payments || [];
-
-      // 2. Filter out the payment
-      const newPayments = currentPayments.filter((p: any) => {
-        // Match by date and amount exactly as they are in the database
-        const pDateStr = p.date;
-        const pAmount = Number(p.amount);
-
-        const isMatch = pAmount === Number(deletingPayment.amount) && pDateStr === deletingPayment.date;
-        return !isMatch;
-      });
-
-      if (newPayments.length === currentPayments.length) {
-        toast.error("Payment not found in the record");
-        return;
-      }
-
-      // 3. Update the fee record
-      const totalPaid = newPayments.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
-      await updateDoc(feeRef, {
-        payments: newPayments,
-        totalPaid: totalPaid,
-        remaining: Math.max(0, Number(feeData.package || 0) - totalPaid)
-      });
 
       // 4. Log the deletion in a separate collection for audit
       await addDoc(collection(db, 'rehab_deletion_logs'), {

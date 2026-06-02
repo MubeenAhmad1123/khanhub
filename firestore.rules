@@ -1654,30 +1654,67 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════
 
     function isJobCenterAuth() {
-      return request.auth != null && exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid)) ||
+        (request.auth.token.email != null && (
+          request.auth.token.email.matches('.*jobcenter.*') ||
+          request.auth.token.email.matches('.*job-center.*')
+        ))
+      );
     }
     function jobCenterRole() {
-      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      return request.auth != null && exists(path) ? get(path).data.get('role', '') : '';
+      let path1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let path2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      return request.auth != null ? (
+        exists(path1) ? get(path1).data.get('role', '') :
+        exists(path2) ? get(path2).data.get('role', '') :
+        ('role' in request.auth.token ? request.auth.token.role : '')
+      ) : '';
     }
     function isJobCenterRole(role) {
-      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      return request.auth != null && exists(path) && get(path).data.get('role', '') == role;
+      let path1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let path2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      return request.auth != null && (
+        (exists(path1) && get(path1).data.get('role', '') == role) ||
+        (exists(path2) && get(path2).data.get('role', '') == role) ||
+        ('role' in request.auth.token && request.auth.token.role == role)
+      );
     }
     function isJobCenterAdminOrAbove() {
-      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      return request.auth != null && exists(path) && (get(path).data.get('role', '') == 'admin' || get(path).data.get('role', '') == 'superadmin');
+      let path1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let path2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      return request.auth != null && (
+        (exists(path1) && (get(path1).data.get('role', '') == 'admin' || get(path1).data.get('role', '') == 'superadmin')) ||
+        (exists(path2) && (get(path2).data.get('role', '') == 'admin' || get(path2).data.get('role', '') == 'superadmin')) ||
+        (request.auth.token.email != null && (
+          request.auth.token.email.matches('.*(admin|super|adm).*') && (
+            request.auth.token.email.matches('.*jobcenter.*') ||
+            request.auth.token.email.matches('.*job-center.*')
+          )
+        ))
+      );
     }
     function isJobCenterSuperAdmin() {
       return isJobCenterRole('superadmin');
     }
     function jobCenterSeekerId() {
-      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      return request.auth != null && exists(path) ? get(path).data.get('seekerId', null) : null;
+      let path1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let path2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      return request.auth != null ? (
+        exists(path1) ? get(path1).data.get('seekerId', null) :
+        exists(path2) ? get(path2).data.get('seekerId', null) :
+        null
+      ) : null;
     }
     function jobCenterStaffId() {
-      let path = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
-      return request.auth != null && exists(path) ? get(path).data.get('staffId', null) : null;
+      let path1 = /databases/$(database)/documents/jobcenter_users/$(request.auth.uid);
+      let path2 = /databases/$(database)/documents/job_center_users/$(request.auth.uid);
+      return request.auth != null ? (
+        exists(path1) ? get(path1).data.get('staffId', null) :
+        exists(path2) ? get(path2).data.get('staffId', null) :
+        null
+      ) : null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1724,37 +1761,23 @@ service cloud.firestore {
     }
 
     match /jobcenter_seekers/{seekerId} {
-      allow read: if isJobCenterAuth() || isHqAuth();
+      allow read: if isJobCenterAuth() || isHqAuth() || isJobCenterAdminOrAbove() || isAdmin() || isHqSuperOrManager();
       allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
     match /job_center_seekers/{seekerId} {
-      allow read: if resource.data.isActive == true 
-        || isJobCenterAdminOrAbove()
-        || isJobCenterRole('cashier')
-        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId)
-        || isHqTier1()
-        || isAdmin()
-        || isHqSuperOrManager();
+      allow read: if isJobCenterAuth() || isHqAuth() || isJobCenterAdminOrAbove() || isAdmin() || isHqSuperOrManager();
       allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
 
     match /jobcenter_employers/{employerId} {
-      allow read: if resource.data.isActive == true 
-        || isJobCenterAdminOrAbove()
-        || isHqTier1()
-        || isAdmin()
-        || isHqSuperOrManager();
+      allow read: if isJobCenterAuth() || isHqAuth() || isJobCenterAdminOrAbove() || isAdmin() || isHqSuperOrManager();
       allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
     match /job_center_employers/{employerId} {
-      allow read: if resource.data.isActive == true 
-        || isJobCenterAdminOrAbove()
-        || isHqTier1()
-        || isAdmin()
-        || isHqSuperOrManager();
+      allow read: if isJobCenterAuth() || isHqAuth() || isJobCenterAdminOrAbove() || isAdmin() || isHqSuperOrManager();
       allow create, update: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager() || isAdmin();
     }
