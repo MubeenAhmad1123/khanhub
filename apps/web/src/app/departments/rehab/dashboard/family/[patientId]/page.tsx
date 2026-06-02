@@ -103,7 +103,24 @@ export default function FamilyPatientViewPage() {
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const dailyRate = Math.round(monthlyPkg / 30);
-      const dueTillDate = daysSince * dailyRate;
+
+      const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+      let completedMonths = rawMonths;
+      let hasExtraDays = false;
+
+      if (endDate.getDate() < admissionDate.getDate()) {
+        completedMonths = rawMonths - 1;
+        hasExtraDays = true;
+      } else if (endDate.getDate() > admissionDate.getDate()) {
+        completedMonths = rawMonths;
+        hasExtraDays = true;
+      } else {
+        completedMonths = rawMonths;
+        hasExtraDays = false;
+      }
+
+      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const dueTillDate = billableMonths * monthlyPkg;
       const remainingTillDate = dueTillDate - totalReceived;
 
       let totalCanteenDeposited = 0, totalCanteenSpent = 0;
@@ -300,6 +317,7 @@ export default function FamilyPatientViewPage() {
         {activeTab === 'finance' && (
           <div className="space-y-6 sm:space-y-8 mt-6">
              <FinanceHistory 
+              totalPackage={patient.dueTillDate}
               payments={payments.map(p => ({
                 date: toDate(p.date).toLocaleDateString('en-PK', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, ' '),
                 amount: Number(p.amount),

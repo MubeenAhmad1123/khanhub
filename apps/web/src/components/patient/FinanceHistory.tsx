@@ -22,11 +22,12 @@ type MonthlyDetail = {
 interface FinanceHistoryProps {
   payments: Payment[];
   monthlyDetails: MonthlyDetail[];
+  totalPackage?: number;
 }
 
-export default function FinanceHistory({ payments, monthlyDetails }: FinanceHistoryProps) {
+export default function FinanceHistory({ payments, monthlyDetails, totalPackage }: FinanceHistoryProps) {
   // Overall totals
-  const overallBill = useMemo(() => monthlyDetails.reduce((acc, curr) => acc + curr.totalDue, 0), [monthlyDetails]);
+  const overallBill = useMemo(() => totalPackage !== undefined ? totalPackage : monthlyDetails.reduce((acc, curr) => acc + curr.totalDue, 0), [monthlyDetails, totalPackage]);
   const overallPaid = useMemo(() => monthlyDetails.reduce((acc, curr) => acc + curr.totalPaid, 0), [monthlyDetails]);
   const overallRemaining = useMemo(() => Math.max(0, overallBill - overallPaid), [overallBill, overallPaid]);
 

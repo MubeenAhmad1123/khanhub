@@ -25,13 +25,14 @@ export type FinanceHistoryProps = {
   patientName: string;
   records: MonthRecord[];
   onDeletePayments?: (paymentIds: string[]) => void;
+  totalPackage?: number;
 };
 
-const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records, onDeletePayments }) => {
+const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records, onDeletePayments, totalPackage }) => {
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
 
   // Overall totals
-  const totalPackageOverall = useMemo(() => records.reduce((acc, curr) => acc + curr.package, 0), [records]);
+  const totalPackageOverall = useMemo(() => totalPackage !== undefined ? totalPackage : records.reduce((acc, curr) => acc + curr.package, 0), [records, totalPackage]);
   const totalPaidOverall = useMemo(() => records.reduce((acc, curr) => acc + curr.totalPaid, 0), [records]);
   const totalRemainingOverall = useMemo(() => Math.max(0, totalPackageOverall - totalPaidOverall), [totalPackageOverall, totalPaidOverall]);
 

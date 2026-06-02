@@ -1026,6 +1026,34 @@ export default function HqApprovalsPage() {
     return () => unsub();
   }, [session, selectedEntity]);
 
+  // Helper to calculate total stay-based package due for rehab patients
+  const getRehabTotalPackage = (d: any) => {
+    if (!d.admissionDate) return Number(d.packageAmount || d.monthlyPackage || 0);
+    const admission = toDate(d.admissionDate);
+    const endDate = d.isActive === false && d.dischargeDate
+      ? toDate(d.dischargeDate)
+      : new Date();
+
+    const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
+    let completedMonths = rawMonths;
+    let hasExtraDays = false;
+
+    if (endDate.getDate() < admission.getDate()) {
+      completedMonths = rawMonths - 1;
+      hasExtraDays = true;
+    } else if (endDate.getDate() > admission.getDate()) {
+      completedMonths = rawMonths;
+      hasExtraDays = true;
+    } else {
+      completedMonths = rawMonths;
+      hasExtraDays = false;
+    }
+
+    const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+    const pkgAmt = Number(d.packageAmount || d.monthlyPackage || 0);
+    return billableMonths * pkgAmt;
+  };
+
   // Real-time listener for the currently selected entity's package progress info
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
@@ -1046,10 +1074,16 @@ export default function HqApprovalsPage() {
       if (snap.exists()) {
         const d = snap.data();
         const k = `${selectedEntity.dept}_${selectedEntity.id}`;
+        
+        let totalPkg = Number(d.totalPackageAmount || d.totalPackage || d.dueTillDate || d.packageAmount) || undefined;
+        if (selectedEntity.dept === 'rehab') {
+          totalPkg = getRehabTotalPackage(d);
+        }
+
         const next: EntityEnrich = {
           name: String(d.name || ''),
-          totalPackageAmount: Number(d.totalPackageAmount || d.totalPackage || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
-          totalPackage: Number(d.totalPackage || d.totalPackageAmount || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
+          totalPackageAmount: totalPkg,
+          totalPackage: totalPkg,
           totalReceived: Number(d.totalReceived || d.overallReceived || 0),
           remaining: Number(d.remaining ?? d.remainingBalance ?? d.overallRemaining ?? 0),
         };
@@ -1101,10 +1135,16 @@ export default function HqApprovalsPage() {
           const snap = await getDoc(ref);
           if (!snap.exists() || cancelled) continue;
           const d = snap.data() as Record<string, unknown>;
+
+          let totalPkg = Number(d.totalPackageAmount || d.totalPackage || d.dueTillDate || d.packageAmount) || undefined;
+          if (v.dept === 'rehab') {
+            totalPkg = getRehabTotalPackage(d);
+          }
+
           const next: EntityEnrich = {
             name: String(d.name || ''),
-            totalPackageAmount: Number(d.totalPackageAmount || d.totalPackage || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
-            totalPackage: Number(d.totalPackage || d.totalPackageAmount || d.dueTillDate || d.overallRemaining || d.packageAmount) || undefined,
+            totalPackageAmount: totalPkg,
+            totalPackage: totalPkg,
             totalReceived: Number(d.totalReceived || d.overallReceived || 0),
             remaining: Number(d.remaining ?? d.remainingBalance ?? d.overallRemaining ?? 0),
           };

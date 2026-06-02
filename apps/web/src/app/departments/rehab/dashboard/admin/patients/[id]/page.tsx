@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   doc, getDoc, collection, getDocs, query, where,
-  orderBy, updateDoc, Timestamp, deleteDoc, addDoc
+  orderBy, updateDoc, Timestamp, deleteDoc, addDoc, onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -595,8 +595,201 @@ export default function PatientDetailPage() {
 
   useEffect(() => {
     if (!session || !patientId) return;
-    fetchData();
-  }, [session, patientId, fetchData]);
+
+    setLoading(true);
+
+    // 1. Patient Real-time Listener
+    const patientRef = doc(db, 'rehab_patients', patientId);
+    
+    let currentPatientData: any = null;
+    let currentFeesDocs: any[] = [];
+    let currentTxDocs: any[] = [];
+
+    const computeAndSetStats = () => {
+      if (!currentPatientData) return;
+
+      const admission = toDate(currentPatientData.admissionDate);
+      const endDate = currentPatientData.isActive === false && currentPatientData.dischargeDate
+        ? toDate(currentPatientData.dischargeDate)
+        : new Date();
+
+      const diffTimeMs = endDate.getTime() - admission.getTime();
+      const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+
+      const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
+      let completedMonths = rawMonths;
+      let hasExtraDays = false;
+
+      if (endDate.getDate() < admission.getDate()) {
+        completedMonths = rawMonths - 1;
+        hasExtraDays = true;
+      } else if (endDate.getDate() > admission.getDate()) {
+        completedMonths = rawMonths;
+        hasExtraDays = true;
+      } else {
+        completedMonths = rawMonths;
+        hasExtraDays = false;
+      }
+
+      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const durationFormatted = formatStayDuration(daysAdmitted);
+
+      let overallReceived = 0;
+      let totalMedicineCharges = 0;
+      const aggregatedPayments: any[] = [];
+      const syncedTxIds = new Set<string>();
+
+      currentFeesDocs.forEach(d => {
+        const feeData = d.data();
+        const docPayments = feeData.payments || [];
+        docPayments.forEach((p: any) => {
+          const status = p.status || 'approved';
+          if (status === 'approved') overallReceived += Number(p.amount || 0);
+          if (p.transactionId) syncedTxIds.add(p.transactionId);
+          if (p.id) syncedTxIds.add(p.id);
+          aggregatedPayments.push({
+            id: `${d.id}_${p.date}`,
+            ...p,
+            status,
+            month: feeData.month
+          });
+        });
+      });
+
+      currentTxDocs.forEach(d => {
+        const txData = d.data();
+        const txId = d.id;
+        
+        const isApproved = txData.status === 'approved';
+        const isSynced = syncedTxIds.has(txId);
+        const isMedicineCharge = txData.category === 'medicine_charge';
+        
+        if (isMedicineCharge) {
+          if (isApproved) {
+            totalMedicineCharges += Number(txData.amount || 0);
+          }
+          aggregatedPayments.push({
+            id: txId,
+            amount: Number(txData.amount || 0),
+            date: txData.date || txData.createdAt,
+            cashierId: txData.cashierId || txData.createdByName || 'Office',
+            note: txData.description || txData.categoryName || 'Medicine / Treatment Charge',
+            status: txData.status || 'approved',
+            isMedicineCharge: true,
+            isPendingTransaction: txData.status !== 'approved' && txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
+            method: txData.paymentMethod || txData.method || 'Credit'
+          });
+        } else if (isApproved && !isSynced) {
+          overallReceived += Number(txData.amount || 0);
+          aggregatedPayments.push({
+            id: txId,
+            amount: Number(txData.amount || 0),
+            date: txData.date || txData.createdAt,
+            cashierId: txData.cashierId || txData.createdByName || 'Office',
+            note: txData.description || txData.categoryName || '',
+            status: 'approved',
+            method: txData.paymentMethod || txData.method || 'Cash'
+          });
+        } else if (!isApproved && !isSynced) {
+          aggregatedPayments.push({
+            id: txId,
+            amount: Number(txData.amount || 0),
+            date: txData.date || txData.createdAt,
+            cashierId: txData.cashierId || txData.createdByName || 'Office',
+            note: txData.description || txData.categoryName || '',
+            status: txData.status || 'pending',
+            isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
+            method: txData.paymentMethod || txData.method || 'Cash'
+          });
+        }
+      });
+
+      aggregatedPayments.sort((a, b) => {
+        const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date || 0);
+        const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      setAllPayments(aggregatedPayments);
+
+      const monthlyPkg = Number(currentPatientData.monthlyPackage || currentPatientData.packageAmount || 0);
+      const dailyRate = Math.floor(monthlyPkg / 30);
+      const dueTillDate = billableMonths * monthlyPkg;
+      const finalMedicineCharges = typeof currentPatientData.medicineCharges === 'number' ? currentPatientData.medicineCharges : totalMedicineCharges;
+      const overallRemaining = (dueTillDate + finalMedicineCharges) - overallReceived;
+
+      setPatient({
+        id: patientId,
+        ...currentPatientData,
+        daysAdmitted,
+        durationFormatted,
+        overallReceived,
+        medicineCharges: finalMedicineCharges,
+        overallRemaining,
+        dailyRate,
+        dueTillDate,
+        billableMonths,
+      });
+
+      setEditForm(prev => ({
+        ...prev,
+        name: currentPatientData.name || '',
+        patientId: currentPatientData.patientId || '',
+        diagnosis: currentPatientData.diagnosis || '',
+        packageAmount: currentPatientData.packageAmount || currentPatientData.monthlyPackage || 0,
+        photoUrl: currentPatientData.photoUrl || '',
+        admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
+        dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
+      }));
+      setPhotoPreview(currentPatientData.photoUrl || '');
+    };
+
+    const unsubPatient = onSnapshot(patientRef, (snap) => {
+      if (!snap.exists()) {
+        toast.error('Patient not found');
+        router.push('/departments/rehab/dashboard/admin/patients');
+        return;
+      }
+      currentPatientData = snap.data();
+      computeAndSetStats();
+      setLoading(false);
+    }, (err) => {
+      console.error("Patient stream error:", err);
+    });
+
+    // 2. Fees stream
+    const feesQ = query(collection(db, 'rehab_fees'), where('patientId', '==', patientId));
+    const unsubFees = onSnapshot(feesQ, (snap) => {
+      currentFeesDocs = snap.docs;
+      computeAndSetStats();
+    });
+
+    // 3. Transactions stream
+    const txQ = query(collection(db, 'rehab_transactions'), where('patientId', '==', patientId));
+    const unsubTx = onSnapshot(txQ, (snap) => {
+      currentTxDocs = snap.docs;
+      computeAndSetStats();
+    });
+
+    // 4. Videos stream
+    const videosQ = query(collection(db, 'rehab_videos'), where('patientId', '==', patientId), orderBy('createdAt', 'desc'));
+    const unsubVideos = onSnapshot(videosQ, (snap) => {
+      setVideos(snap.docs.map(v => ({ id: v.id, ...v.data() })));
+    }, (err) => console.warn("Videos stream err", err));
+
+    // 5. Visits stream
+    const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+    const unsubVisits = onSnapshot(visitsQ, (snap) => {
+      setVisits(snap.docs.map(v => ({ id: v.id, ...v.data() })));
+    }, (err) => console.warn("Visits stream err", err));
+
+    return () => {
+      unsubPatient();
+      unsubFees();
+      unsubTx();
+      unsubVideos();
+      unsubVisits();
+    };
+  }, [session, patientId, router]);
 
   useEffect(() => {
     if (!patientId || !session) return;
@@ -2247,6 +2440,7 @@ export default function PatientDetailPage() {
               {/* Premium Journey Section */}
               <FinanceHistory
                 patientName={patient?.name || "Patient"}
+                totalPackage={patient?.dueTillDate}
                 records={(() => {
                   const records: MonthRecord[] = [];
                   const monthlyPkg = Number(patient?.monthlyPackage || 40000);
