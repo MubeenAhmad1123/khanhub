@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createJobCenterUserServer } from '@/app/departments/job-center/actions/createJobCenterUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
   Users, UserPlus, User, Heart, UserCog, 
@@ -51,7 +51,24 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (!session) return;
-    fetchUsers();
+
+    // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.uid === session.uid) {
+        fetchUsers();
+      } else {
+        if (auth.currentUser && auth.currentUser.uid === session.uid) {
+          fetchUsers();
+        } else {
+          const t = setTimeout(() => {
+            fetchUsers();
+          }, 1500);
+          return () => clearTimeout(t);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, [session]);
 
   const fetchUsers = async () => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   collection, getDocs, addDoc, query, orderBy, limit, Timestamp, where 
 } from 'firebase/firestore';
@@ -45,7 +45,25 @@ export default function JobCenterFinancePage() {
       router.push('/departments/job-center/login');
       return;
     }
-    fetchFinanceData();
+    const parsed = JSON.parse(sessionData);
+
+    // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.uid === parsed.uid) {
+        fetchFinanceData();
+      } else {
+        if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+          fetchFinanceData();
+        } else {
+          const t = setTimeout(() => {
+            fetchFinanceData();
+          }, 1500);
+          return () => clearTimeout(t);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   const fetchFinanceData = async () => {

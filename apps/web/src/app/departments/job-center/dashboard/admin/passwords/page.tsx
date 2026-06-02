@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
 import { resetJobCenterPassword } from '@/app/departments/job-center/actions/createJobCenterUser';
 
@@ -69,7 +69,23 @@ export default function JobCenterAdminPasswordsPage() {
       }
     };
 
-    void fetchseekerCredentials();
+    // Wait for auth to resolve to avoid permission-denied race condition on direct page refresh
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.uid === session.uid) {
+        void fetchseekerCredentials();
+      } else {
+        if (auth.currentUser && auth.currentUser.uid === session.uid) {
+          void fetchseekerCredentials();
+        } else {
+          const t = setTimeout(() => {
+            void fetchseekerCredentials();
+          }, 1500);
+          return () => clearTimeout(t);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, [session]);
 
   const filtered = useMemo(() => {
