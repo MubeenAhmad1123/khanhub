@@ -49,7 +49,7 @@ export default function SeekersListPage() {
   const fetchSeekers = async () => {
     try {
       setLoading(true);
-      const snap = await getDocs(query(collection(db, 'jobcenter_seekers'), orderBy('createdAt', 'desc')));
+      const snap = await getDocs(collection(db, 'jobcenter_seekers'));
       
       const all = snap.docs.map(d => {
         const data = d.data();
@@ -75,6 +75,9 @@ export default function SeekersListPage() {
           createdAt: toDate(data.createdAt),
         };
       });
+
+      // Sort client-side by createdAt descending
+      all.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       setSeekers(all);
       setAllSeekers(all);

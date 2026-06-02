@@ -47,13 +47,19 @@ export default function EmployersListPage() {
   const fetchEmployers = async () => {
     try {
       setLoading(true);
-      const snap = await getDocs(query(collection(db, 'jobcenter_employers'), orderBy('createdAt', 'desc')));
+      const snap = await getDocs(collection(db, 'jobcenter_employers'));
       
-      const all = snap.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate() || new Date(),
-      })) as Employer[];
+      const all = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          createdAt: toDate(data.createdAt),
+        };
+      }) as Employer[];
+
+      // Sort client-side by createdAt descending
+      all.sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
 
       setEmployers(all);
       setAllEmployers(all);
