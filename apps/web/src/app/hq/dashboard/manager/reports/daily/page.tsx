@@ -601,13 +601,7 @@ export default function DailyReportPage() {
         updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint + contribPoint;
 
         if (field === 'attendance') {
-          if (value === 'absent') {
-            updatedRow.fines = 500;
-            updatedRow.fineReason = 'Absent without leave';
-          } else if (value === 'unmarked') {
-            updatedRow.fines = 0;
-            updatedRow.fineReason = '';
-          } else if (value === 'late') {
+          if (value === 'late') {
             const start = updatedRow.dutyStartTime || '09:00';
             setLatePicker({
               id: updatedRow.id,
@@ -615,11 +609,6 @@ export default function DailyReportPage() {
               arrivalTime: start,
               lateMinutes: 0
             });
-            updatedRow.fines = 0;
-            updatedRow.fineReason = '';
-          } else {
-            updatedRow.fines = 0;
-            updatedRow.fineReason = '';
           }
         }
 
