@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
   Building, Plus, Search, ChevronRight, User, Calendar, Loader2, 
@@ -41,7 +41,26 @@ export default function EmployersListPage() {
       router.push('/departments/job-center/login');
       return;
     }
-    fetchEmployers();
+
+    // Wait for auth to resolve to avoid permission-denied race condition
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.uid === parsed.uid) {
+        fetchEmployers();
+      } else {
+        // Fallback fetch if auth state does not change but user is already active
+        if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+          fetchEmployers();
+        } else {
+          // Give it a brief timeout then fetch anyway to be resilient
+          const t = setTimeout(() => {
+            fetchEmployers();
+          }, 1500);
+          return () => clearTimeout(t);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   const fetchEmployers = async () => {

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
   Briefcase, Plus, Search, ChevronRight, User, Calendar, Loader2, 
@@ -43,7 +43,26 @@ export default function SeekersListPage() {
       return;
     }
     setSession(parsed);
-    fetchSeekers();
+
+    // Wait for auth to resolve to avoid permission-denied race condition
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.uid === parsed.uid) {
+        fetchSeekers();
+      } else {
+        // Fallback fetch if auth state does not change but user is already active
+        if (auth.currentUser && auth.currentUser.uid === parsed.uid) {
+          fetchSeekers();
+        } else {
+          // Give it a brief timeout then fetch anyway to be resilient
+          const t = setTimeout(() => {
+            fetchSeekers();
+          }, 1500);
+          return () => clearTimeout(t);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   const fetchSeekers = async () => {
