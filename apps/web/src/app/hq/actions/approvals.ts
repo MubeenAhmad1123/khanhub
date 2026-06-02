@@ -37,6 +37,153 @@ function txCollection(dept: Dept) {
   return 'welfare_transactions';
 }
 
+function safeToDate(val: any): Date {
+  if (!val) return new Date();
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (typeof val.seconds === 'number') return new Date(val.seconds * 1000);
+  if (typeof val._seconds === 'number') return new Date(val._seconds * 1000);
+  const parsed = new Date(val);
+  if (!isNaN(parsed.getTime())) return parsed;
+  return new Date();
+}
+
+async function syncPatientFinance(
+  adminDb: FirebaseFirestore.Firestore,
+  patientId: string
+) {
+  const patientRef = adminDb.collection('rehab_patients').doc(patientId);
+  const patientSnap = await patientRef.get();
+  if (!patientSnap.exists) return;
+
+  const patientData = patientSnap.data() as any;
+
+  // 1. Fetch all approved transactions for this patient
+  const txSnap = await adminDb
+    .collection('rehab_transactions')
+    .where('patientId', '==', patientId)
+    .where('status', '==', 'approved')
+    .get();
+
+  let totalReceived = 0;
+  let totalMedicineCharges = 0;
+
+  txSnap.docs.forEach((doc) => {
+    const tx = doc.data();
+    const amount = Number(tx.amount) || 0;
+    if (tx.category === 'medicine_charge') {
+      totalMedicineCharges += amount;
+    } else {
+      totalReceived += amount;
+    }
+  });
+
+  // 2. Calculate stay package fee for current stay
+  const monthlyPkg = Number(patientData.monthlyPackage || patientData.packageAmount || 0);
+  
+  let admissionDate = new Date();
+  const ad = patientData.admissionDate;
+  if (ad) {
+    admissionDate = safeToDate(ad);
+  }
+
+  let endDate = new Date();
+  if (patientData.isActive === false && patientData.dischargeDate) {
+    endDate = safeToDate(patientData.dischargeDate);
+  }
+
+  // Calculate billable months for active stay
+  const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+  let completedMonths = rawMonths;
+  let hasExtraDays = false;
+
+  if (endDate.getDate() < admissionDate.getDate()) {
+    completedMonths = rawMonths - 1;
+    hasExtraDays = true;
+  } else if (endDate.getDate() > admissionDate.getDate()) {
+    completedMonths = rawMonths;
+    hasExtraDays = true;
+  } else {
+    completedMonths = rawMonths;
+    hasExtraDays = false;
+  }
+
+  const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+  const currentStayPackage = billableMonths * monthlyPkg;
+
+  // 3. Calculate stay package fee for historical stays in rejoinHistory
+  let historicalStayPackage = 0;
+  const history = patientData.rejoinHistory || [];
+  history.forEach((stay: any) => {
+    const sAdmission = safeToDate(stay.admissionDate);
+    const sDischarge = stay.dischargeDate ? safeToDate(stay.dischargeDate) : new Date();
+    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+    const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+    let sCompletedMonths = sRawMonths;
+    let sHasExtraDays = false;
+
+    if (sDischarge.getDate() < sAdmission.getDate()) {
+      sCompletedMonths = sRawMonths - 1;
+      sHasExtraDays = true;
+    } else if (sDischarge.getDate() > sAdmission.getDate()) {
+      sCompletedMonths = sRawMonths;
+      sHasExtraDays = true;
+    } else {
+      sCompletedMonths = sRawMonths;
+      sHasExtraDays = false;
+    }
+
+    const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+    historicalStayPackage += sBillableMonths * sMonthlyPkg;
+  });
+
+  const totalStayPackage = currentStayPackage + historicalStayPackage;
+  const finalMedicineCharges = typeof patientData.medicineCharges === 'number' ? patientData.medicineCharges : totalMedicineCharges;
+  const totalObligation = totalStayPackage + finalMedicineCharges;
+  const remaining = Math.max(0, totalObligation - totalReceived);
+
+  // Calculate daysAdmitted for active stay
+  const diffTimeMs = endDate.getTime() - admissionDate.getTime();
+  const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+
+  const formatStayDuration = (days: number) => {
+    if (days <= 0) return '0 Days';
+    const months = Math.floor(days / 30);
+    const remainingDays = days % 30;
+    if (months > 0) {
+      return `${months} ${months === 1 ? 'Month' : 'Months'}${remainingDays > 0 ? `, ${remainingDays} ${remainingDays === 1 ? 'Day' : 'Days'}` : ''}`;
+    }
+    return `${days} ${days === 1 ? 'Day' : 'Days'}`;
+  };
+
+  const durationFormatted = formatStayDuration(daysAdmitted);
+
+  await patientRef.update({
+    totalReceived,
+    overallReceived: totalReceived,
+    medicineCharges: finalMedicineCharges,
+    remaining,
+    remainingBalance: remaining,
+    overallRemaining: remaining,
+    dueTillDate: currentStayPackage,
+    totalStayPackage,
+    billableMonths,
+    daysAdmitted,
+    durationFormatted
+  });
+}
+
+export async function syncRehabPatientFinance(patientId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const app = getAdminApp();
+    const adminDb = getFirestore(app);
+    await syncPatientFinance(adminDb, patientId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 async function updateEntityTotals(
   adminDb: FirebaseFirestore.Firestore,
   dept: Dept,
@@ -44,10 +191,14 @@ async function updateEntityTotals(
 ) {
   const entityId = txData.patientId || txData.studentId || txData.seekerId || txData.donorId;
   if (!entityId) return;
+
+  if (dept === 'rehab') {
+    await syncPatientFinance(adminDb, entityId);
+    return;
+  }
   
   let col = '';
-  if (dept === 'rehab') col = 'rehab_patients';
-  else if (dept === 'spims') col = 'spims_students';
+  if (dept === 'spims') col = 'spims_students';
   else if (dept === 'job-center') col = 'job_center_seekers';
   else if (dept === 'hospital') col = 'hospital_patients';
   else if (dept === 'sukoon-center') col = 'sukoon_clients';
@@ -63,12 +214,7 @@ async function updateEntityTotals(
   const diff = isIncome ? amount : -amount;
 
   const update: Record<string, any> = {};
-
-  if (dept === 'rehab' && txData.category === 'medicine_charge') {
-    update.medicineCharges = FieldValue.increment(amount);
-  } else {
-    update.totalReceived = FieldValue.increment(diff);
-  }
+  update.totalReceived = FieldValue.increment(diff);
 
   if (dept === 'spims' && isIncome && txData.category !== 'medicine_charge') {
     const subtype = txData.spimsFeeSubtype;
@@ -85,53 +231,8 @@ async function updateEntityTotals(
   const medCharges = Number(updatedData?.medicineCharges) || 0;
   const received = Number(updatedData?.totalReceived) || 0;
   
-  let totalObligation = 0;
-  if (dept === 'rehab') {
-    const monthlyPkg = Number(updatedData?.monthlyPackage || updatedData?.packageAmount) || 0;
-    let admissionDate = new Date();
-    const ad = updatedData?.admissionDate;
-    if (ad) {
-      if (typeof ad.toDate === 'function') admissionDate = ad.toDate();
-      else if (typeof ad.seconds === 'number') admissionDate = new Date(ad.seconds * 1000);
-      else if (ad && typeof ad._seconds === 'number') admissionDate = new Date(ad._seconds * 1000);
-      else {
-        const parsed = new Date(ad);
-        if (!isNaN(parsed.getTime())) admissionDate = parsed;
-      }
-    }
-    
-    let endDate = new Date();
-    if (updatedData?.isActive === false && updatedData?.dischargeDate) {
-      const dd = updatedData.dischargeDate;
-      if (typeof dd.toDate === 'function') endDate = dd.toDate();
-      else if (typeof dd.seconds === 'number') endDate = new Date(dd.seconds * 1000);
-      else if (dd && typeof dd._seconds === 'number') endDate = new Date(dd._seconds * 1000);
-      else {
-        const parsed = new Date(dd);
-        if (!isNaN(parsed.getTime())) endDate = parsed;
-      }
-    }
-    
-    const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-    let completedMonths = rawMonths;
-    let hasExtraDays = false;
-
-    if (endDate.getDate() < admissionDate.getDate()) {
-      completedMonths = rawMonths - 1;
-      hasExtraDays = true;
-    } else if (endDate.getDate() > admissionDate.getDate()) {
-      completedMonths = rawMonths;
-      hasExtraDays = true;
-    } else {
-      completedMonths = rawMonths;
-      hasExtraDays = false;
-    }
-    const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-    totalObligation = (billableMonths * monthlyPkg) + medCharges;
-  } else {
-    const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
-    totalObligation = pkg + medCharges;
-  }
+  const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+  const totalObligation = pkg + medCharges;
   
   await ref.update({
     remaining: Math.max(0, totalObligation - received),
@@ -689,19 +790,7 @@ export async function editApprovedTransaction(params: {
             const entityUpdate: Record<string, any> = {};
 
             if (params.dept === 'rehab') {
-              if (oldCategory === 'medicine_charge' && newCategory !== 'medicine_charge') {
-                entityUpdate.medicineCharges = FieldValue.increment(-oldAmount);
-                entityUpdate.totalReceived = FieldValue.increment(isIncome ? newAmount : -newAmount);
-              } else if (oldCategory !== 'medicine_charge' && newCategory === 'medicine_charge') {
-                entityUpdate.totalReceived = FieldValue.increment(isIncome ? -oldAmount : oldAmount);
-                entityUpdate.medicineCharges = FieldValue.increment(newAmount);
-              } else {
-                if (newCategory === 'medicine_charge') {
-                  entityUpdate.medicineCharges = FieldValue.increment(amountDiff);
-                } else {
-                  entityUpdate.totalReceived = FieldValue.increment(isIncome ? amountDiff : -amountDiff);
-                }
-              }
+              await syncPatientFinance(adminDb, entityId);
             } else {
               const diffAdjustment = isIncome ? amountDiff : -amountDiff;
               entityUpdate.totalReceived = FieldValue.increment(diffAdjustment);
@@ -729,70 +818,25 @@ export async function editApprovedTransaction(params: {
                 if (oldSubtype === 'registration') entityUpdate.registrationPaid = FieldValue.increment(-oldAmount);
                 if (oldSubtype === 'examination') entityUpdate.examinationPaid = FieldValue.increment(-oldAmount);
               }
-            }
 
-            if (Object.keys(entityUpdate).length > 0) {
-              await entityRef.update(entityUpdate);
-            }
-
-            // Re-read and recalculate remaining balance
-            const updatedSnap = await entityRef.get();
-            const updatedData = updatedSnap.data() as any;
-            const medCharges = Number(updatedData?.medicineCharges) || 0;
-            const received = Number(updatedData?.totalReceived) || 0;
-
-            let totalObligation = 0;
-            if (params.dept === 'rehab') {
-              const monthlyPkg = Number(updatedData?.monthlyPackage || updatedData?.packageAmount) || 0;
-              let admissionDate = new Date();
-              const ad = updatedData?.admissionDate;
-              if (ad) {
-                if (typeof ad.toDate === 'function') admissionDate = ad.toDate();
-                else if (typeof ad.seconds === 'number') admissionDate = new Date(ad.seconds * 1000);
-                else if (ad && typeof ad._seconds === 'number') admissionDate = new Date(ad._seconds * 1000);
-                else {
-                  const parsed = new Date(ad);
-                  if (!isNaN(parsed.getTime())) admissionDate = parsed;
-                }
+              if (Object.keys(entityUpdate).length > 0) {
+                await entityRef.update(entityUpdate);
               }
 
-              let endDate = new Date();
-              if (updatedData?.isActive === false && updatedData?.dischargeDate) {
-                const dd = updatedData.dischargeDate;
-                if (typeof dd.toDate === 'function') endDate = dd.toDate();
-                else if (typeof dd.seconds === 'number') endDate = new Date(dd.seconds * 1000);
-                else if (dd && typeof dd._seconds === 'number') endDate = new Date(dd._seconds * 1000);
-                else {
-                  const parsed = new Date(dd);
-                  if (!isNaN(parsed.getTime())) endDate = parsed;
-                }
-              }
+              // Re-read and recalculate remaining balance
+              const updatedSnap = await entityRef.get();
+              const updatedData = updatedSnap.data() as any;
+              const medCharges = Number(updatedData?.medicineCharges) || 0;
+              const received = Number(updatedData?.totalReceived) || 0;
 
-              const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-              let completedMonths = rawMonths;
-              let hasExtraDays = false;
-
-              if (endDate.getDate() < admissionDate.getDate()) {
-                completedMonths = rawMonths - 1;
-                hasExtraDays = true;
-              } else if (endDate.getDate() > admissionDate.getDate()) {
-                completedMonths = rawMonths;
-                hasExtraDays = true;
-              } else {
-                completedMonths = rawMonths;
-                hasExtraDays = false;
-              }
-              const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-              totalObligation = (billableMonths * monthlyPkg) + medCharges;
-            } else {
               const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
-              totalObligation = pkg + medCharges;
-            }
+              const totalObligation = pkg + medCharges;
 
-            await entityRef.update({
-              remaining: Math.max(0, totalObligation - received),
-              remainingBalance: Math.max(0, totalObligation - received),
-            });
+              await entityRef.update({
+                remaining: Math.max(0, totalObligation - received),
+                remainingBalance: Math.max(0, totalObligation - received),
+              });
+            }
           }
         }
       }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
+import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
 import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
 import { toPng } from 'html-to-image';
@@ -363,6 +364,10 @@ export default function PatientDetailPage() {
     try {
       setLoading(true);
 
+      await syncRehabPatientFinance(patientId).catch((err) => {
+        console.warn("Failed to sync patient finance on load:", err);
+      });
+
       // 1. Patient Profile
       const pDoc = await getDoc(doc(db, 'rehab_patients', patientId));
       if (!pDoc.exists()) {
@@ -496,8 +501,60 @@ export default function PatientDetailPage() {
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const dailyRate = Math.floor(monthlyPkg / 30);
       const dueTillDate = billableMonths * monthlyPkg;
+
+      let historicalStayPackage = 0;
+      const history = data.rejoinHistory || [];
+      history.forEach((stay: any) => {
+        let sAdmission = new Date();
+        const sa = stay.admissionDate;
+        if (sa) {
+          if (typeof sa.toDate === 'function') sAdmission = sa.toDate();
+          else if (typeof sa.seconds === 'number') sAdmission = new Date(sa.seconds * 1000);
+          else if (typeof sa._seconds === 'number') sAdmission = new Date(sa._seconds * 1000);
+          else {
+            const parsed = new Date(sa);
+            if (!isNaN(parsed.getTime())) sAdmission = parsed;
+          }
+        }
+
+        let sDischarge = new Date();
+        const sd = stay.dischargeDate;
+        if (sd) {
+          if (typeof sd.toDate === 'function') sDischarge = sd.toDate();
+          else if (typeof sd.seconds === 'number') sDischarge = new Date(sd.seconds * 1000);
+          else if (typeof sd._seconds === 'number') sDischarge = new Date(sd._seconds * 1000);
+          else {
+            const parsed = new Date(sd);
+            if (!isNaN(parsed.getTime())) sDischarge = parsed;
+          }
+        } else {
+          sDischarge = new Date();
+        }
+
+        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+        const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+        let sCompletedMonths = sRawMonths;
+        let sHasExtraDays = false;
+
+        if (sDischarge.getDate() < sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths - 1;
+          sHasExtraDays = true;
+        } else if (sDischarge.getDate() > sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = true;
+        } else {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = false;
+        }
+
+        const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+        historicalStayPackage += sBillableMonths * sMonthlyPkg;
+      });
+
+      const totalStayPackage = dueTillDate + historicalStayPackage;
       const finalMedicineCharges = typeof data.medicineCharges === 'number' ? data.medicineCharges : totalMedicineCharges;
-      const overallRemaining = (dueTillDate + finalMedicineCharges) - overallReceived;
+      const overallRemaining = (totalStayPackage + finalMedicineCharges) - overallReceived;
 
       setPatient({
         id: pDoc.id,
@@ -714,8 +771,60 @@ export default function PatientDetailPage() {
       const monthlyPkg = Number(currentPatientData.monthlyPackage || currentPatientData.packageAmount || 0);
       const dailyRate = Math.floor(monthlyPkg / 30);
       const dueTillDate = billableMonths * monthlyPkg;
+
+      let historicalStayPackage = 0;
+      const history = currentPatientData.rejoinHistory || [];
+      history.forEach((stay: any) => {
+        let sAdmission = new Date();
+        const sa = stay.admissionDate;
+        if (sa) {
+          if (typeof sa.toDate === 'function') sAdmission = sa.toDate();
+          else if (typeof sa.seconds === 'number') sAdmission = new Date(sa.seconds * 1000);
+          else if (typeof sa._seconds === 'number') sAdmission = new Date(sa._seconds * 1000);
+          else {
+            const parsed = new Date(sa);
+            if (!isNaN(parsed.getTime())) sAdmission = parsed;
+          }
+        }
+
+        let sDischarge = new Date();
+        const sd = stay.dischargeDate;
+        if (sd) {
+          if (typeof sd.toDate === 'function') sDischarge = sd.toDate();
+          else if (typeof sd.seconds === 'number') sDischarge = new Date(sd.seconds * 1000);
+          else if (typeof sd._seconds === 'number') sDischarge = new Date(sd._seconds * 1000);
+          else {
+            const parsed = new Date(sd);
+            if (!isNaN(parsed.getTime())) sDischarge = parsed;
+          }
+        } else {
+          sDischarge = new Date();
+        }
+
+        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+        const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+        let sCompletedMonths = sRawMonths;
+        let sHasExtraDays = false;
+
+        if (sDischarge.getDate() < sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths - 1;
+          sHasExtraDays = true;
+        } else if (sDischarge.getDate() > sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = true;
+        } else {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = false;
+        }
+
+        const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+        historicalStayPackage += sBillableMonths * sMonthlyPkg;
+      });
+
+      const totalStayPackage = dueTillDate + historicalStayPackage;
       const finalMedicineCharges = typeof currentPatientData.medicineCharges === 'number' ? currentPatientData.medicineCharges : totalMedicineCharges;
-      const overallRemaining = (dueTillDate + finalMedicineCharges) - overallReceived;
+      const overallRemaining = (totalStayPackage + finalMedicineCharges) - overallReceived;
 
       setPatient({
         id: patientId,

@@ -303,18 +303,75 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
     const pFees = feesByPatient[p.id] || [];
     const pCanteen = canteenByPatient[p.id] || [];
     
+    const safeToDate = (val: any): Date => {
+      if (!val) return new Date();
+      if (typeof val.toDate === 'function') return val.toDate();
+      if (typeof val.seconds === 'number') return new Date(val.seconds * 1000);
+      if (typeof val._seconds === 'number') return new Date(val._seconds * 1000);
+      const parsed = new Date(val);
+      if (!isNaN(parsed.getTime())) return parsed;
+      return new Date();
+    };
+
     const admission = toDate(p.admissionDate);
-    const diffMs = new Date().getTime() - admission.getTime();
+    const endDate = p.isActive === false && p.dischargeDate
+      ? toDate(p.dischargeDate)
+      : new Date();
+    
+    const diffMs = endDate.getTime() - admission.getTime();
     const daysStayed = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
     const dailyRate = Math.round((p.packageAmount || 0) / 30);
-    const totalFees = dailyRate * daysStayed;
+
+    // Calculate billable months for active stay
+    const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
+    let completedMonths = rawMonths;
+    let hasExtraDays = false;
+
+    if (endDate.getDate() < admission.getDate()) {
+      completedMonths = rawMonths - 1;
+      hasExtraDays = true;
+    } else if (endDate.getDate() > admission.getDate()) {
+      completedMonths = rawMonths;
+      hasExtraDays = true;
+    } else {
+      completedMonths = rawMonths;
+      hasExtraDays = false;
+    }
+
+    const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+    const currentStayPackage = billableMonths * (p.packageAmount || p.monthlyPackage || 0);
+
+    let historicalStayPackage = 0;
+    const history = (p as any).rejoinHistory || [];
+    history.forEach((stay: any) => {
+      const sAdmission = safeToDate(stay.admissionDate);
+      const sDischarge = stay.dischargeDate ? safeToDate(stay.dischargeDate) : new Date();
+      const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+      const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+      let sCompletedMonths = sRawMonths;
+      let sHasExtraDays = false;
+
+      if (sDischarge.getDate() < sAdmission.getDate()) {
+        sCompletedMonths = sRawMonths - 1;
+        sHasExtraDays = true;
+      } else if (sDischarge.getDate() > sAdmission.getDate()) {
+        sCompletedMonths = sRawMonths;
+        sHasExtraDays = true;
+      } else {
+        sCompletedMonths = sRawMonths;
+        sHasExtraDays = false;
+      }
+
+      const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+      historicalStayPackage += sBillableMonths * sMonthlyPkg;
+    });
+
+    const totalFees = currentStayPackage + historicalStayPackage;
     const otherExpenses = p.otherExpenses || 0;
     const totalDues = totalFees + otherExpenses;
     
-    const totalReceived = pFees.reduce((acc, f) => {
-      const approvedPayments = (f.payments || []).filter((pay: any) => pay.status === 'approved');
-      return acc + approvedPayments.reduce((pacc: any, pay: any) => pacc + pay.amount, 0);
-    }, 0);
+    const totalReceived = Number((p as any).totalReceived || (p as any).overallReceived || 0);
     
     const totalCanteenDeposited = pCanteen.reduce((acc, c) => acc + (c.totalDeposited || 0), 0);
     const totalCanteenSpent = pCanteen.reduce((acc, c) => acc + (c.totalSpent || 0), 0);

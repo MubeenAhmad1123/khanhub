@@ -508,6 +508,18 @@ export default function CashierStationPage() {
       const { deleteDoc, doc } = await import('firebase/firestore');
       await deleteDoc(doc(db, dept.txCollection, tx.id));
       
+      if (tx.departmentCode === 'rehab') {
+        const patientId = tx.patientId || tx.studentId || tx.seekerId;
+        if (patientId) {
+          try {
+            const { syncRehabPatientFinance } = await import('@/app/hq/actions/approvals');
+            await syncRehabPatientFinance(patientId);
+          } catch (syncErr) {
+            console.error('[HQ Cashier] Failed to sync patient finance after delete:', syncErr);
+          }
+        }
+      }
+      
       if (tx.departmentCode === 'spims' && tx.feePaymentId) {
         await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
       }

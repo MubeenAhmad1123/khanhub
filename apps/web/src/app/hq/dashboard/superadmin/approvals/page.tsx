@@ -1031,9 +1031,20 @@ export default function HqApprovalsPage() {
     const pkgAmt = Number(d.packageAmount || d.monthlyPackage || 0);
     const medCharges = Number(d.medicineCharges || 0);
     if (!d.admissionDate) return pkgAmt + medCharges;
-    const admission = toDate(d.admissionDate);
+    
+    const safeToDate = (val: any): Date => {
+      if (!val) return new Date();
+      if (typeof val.toDate === 'function') return val.toDate();
+      if (typeof val.seconds === 'number') return new Date(val.seconds * 1000);
+      if (typeof val._seconds === 'number') return new Date(val._seconds * 1000);
+      const parsed = new Date(val);
+      if (!isNaN(parsed.getTime())) return parsed;
+      return new Date();
+    };
+
+    const admission = safeToDate(d.admissionDate);
     const endDate = d.isActive === false && d.dischargeDate
-      ? toDate(d.dischargeDate)
+      ? safeToDate(d.dischargeDate)
       : new Date();
 
     const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
@@ -1052,7 +1063,35 @@ export default function HqApprovalsPage() {
     }
 
     const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-    return (billableMonths * pkgAmt) + medCharges;
+    const currentStayPackage = billableMonths * pkgAmt;
+
+    let historicalStayPackage = 0;
+    const history = d.rejoinHistory || [];
+    history.forEach((stay: any) => {
+      const sAdmission = safeToDate(stay.admissionDate);
+      const sDischarge = stay.dischargeDate ? safeToDate(stay.dischargeDate) : new Date();
+      const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+      const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+      let sCompletedMonths = sRawMonths;
+      let sHasExtraDays = false;
+
+      if (sDischarge.getDate() < sAdmission.getDate()) {
+        sCompletedMonths = sRawMonths - 1;
+        sHasExtraDays = true;
+      } else if (sDischarge.getDate() > sAdmission.getDate()) {
+        sCompletedMonths = sRawMonths;
+        sHasExtraDays = true;
+      } else {
+        sCompletedMonths = sRawMonths;
+        sHasExtraDays = false;
+      }
+
+      const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+      historicalStayPackage += sBillableMonths * sMonthlyPkg;
+    });
+
+    return currentStayPackage + historicalStayPackage + medCharges;
   };
 
   // Real-time listener for the currently selected entity's package progress info
