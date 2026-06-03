@@ -47,6 +47,7 @@ export interface PatientFinanceSummary {
   canteenBalance: number;
   guardianNumber: string;
   isActive: boolean;
+  rejoinHistory?: any[];
 }
 
 // ─── PATIENT BASIC ───────────────────────────────────────────────────────────
@@ -395,7 +396,8 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
       canteenSpent: totalCanteenSpent,
       canteenBalance,
       guardianNumber: p.contactNumber,
-      isActive: p.isActive
+      isActive: p.isActive,
+      rejoinHistory: (p as any).rejoinHistory || []
     };
   });
 

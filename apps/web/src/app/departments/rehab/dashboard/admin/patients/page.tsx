@@ -194,6 +194,8 @@ export default function PatientsListPage() {
           admissionDate,
           monthlyPackage: pkgAmount,
           inpatientNumber: data.inpatientNumber || '',
+          patientId: (data as any).patientId || '',
+          rejoinHistory: (data as any).rejoinHistory || [],
           serialNumber: Number(data.serialNumber) || 0,
           substanceOfAddiction: data.substanceOfAddiction || '',
           isActive: data.isActive !== false,
@@ -244,12 +246,26 @@ export default function PatientsListPage() {
       setSearchOpen(false);
       return;
     }
-    const matches = allPatients.filter((p) =>
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q) ||
-      (p.fatherName || '').toLowerCase().includes(q) ||
-      String(p.serialNumber || '').toLowerCase().includes(q)
-    );
+    const matches = allPatients.filter((p) => {
+      const ids: string[] = [];
+      if (p.inpatientNumber) ids.push(String(p.inpatientNumber));
+      if (p.patientId) ids.push(String(p.patientId));
+      if (p.id) ids.push(String(p.id));
+
+      if (p.rejoinHistory && Array.isArray(p.rejoinHistory)) {
+        p.rejoinHistory.forEach((stay: any) => {
+          if (stay.patientId) ids.push(String(stay.patientId));
+          if (stay.inpatientNumber) ids.push(String(stay.inpatientNumber));
+          if (stay.rejoinDetails?.patientId) ids.push(String(stay.rejoinDetails.patientId));
+          if (stay.rejoinDetails?.inpatientNumber) ids.push(String(stay.rejoinDetails.inpatientNumber));
+        });
+      }
+
+      return (p.name || '').toLowerCase().includes(q) ||
+        ids.some(id => id.toLowerCase().includes(q)) ||
+        (p.fatherName || '').toLowerCase().includes(q) ||
+        String(p.serialNumber || '').toLowerCase().includes(q);
+    });
     setSearchResults(matches.slice(0, 10));
     setSearchOpen(true);
   }, [searchQuery, allPatients]);
@@ -271,10 +287,23 @@ export default function PatientsListPage() {
     
     if (searchQuery) {
       const s = searchQuery.toLowerCase();
+      const ids: string[] = [];
+      if (p.inpatientNumber) ids.push(String(p.inpatientNumber));
+      if (p.patientId) ids.push(String(p.patientId));
+      if (p.id) ids.push(String(p.id));
+
+      if (p.rejoinHistory && Array.isArray(p.rejoinHistory)) {
+        p.rejoinHistory.forEach((stay: any) => {
+          if (stay.patientId) ids.push(String(stay.patientId));
+          if (stay.inpatientNumber) ids.push(String(stay.inpatientNumber));
+          if (stay.rejoinDetails?.patientId) ids.push(String(stay.rejoinDetails.patientId));
+          if (stay.rejoinDetails?.inpatientNumber) ids.push(String(stay.rejoinDetails.inpatientNumber));
+        });
+      }
+
       return (
         (p.name || '').toLowerCase().includes(s) ||
-        (p.inpatientNumber || '').toLowerCase().includes(s) ||
-        (p.patientId || p.id || '').toLowerCase().includes(s) ||
+        ids.some(id => id.toLowerCase().includes(s)) ||
         (p.substanceOfAddiction || '').toLowerCase().includes(s) ||
         (p.fatherName || '').toLowerCase().includes(s) ||
         String(p.serialNumber || '').toLowerCase().includes(s)

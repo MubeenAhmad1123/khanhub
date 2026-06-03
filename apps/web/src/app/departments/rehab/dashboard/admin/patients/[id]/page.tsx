@@ -1455,6 +1455,8 @@ export default function PatientDetailPage() {
 
       const currentHistory = patient?.rejoinHistory || [];
       const previousStay = {
+        patientId: patient.patientId || null,
+        inpatientNumber: patient.inpatientNumber || null,
         admissionDate: patient.admissionDate,
         dischargeDate: patient.dischargeDate,
         duration: patient.durationFormatted,
@@ -1478,6 +1480,8 @@ export default function PatientDetailPage() {
 
         const targetHistory = targetData.rejoinHistory || [];
         const targetCurrentStay = {
+          patientId: targetData.patientId || null,
+          inpatientNumber: targetData.inpatientNumber || null,
           admissionDate: targetData.admissionDate || null,
           dischargeDate: targetData.dischargeDate || null,
           duration: targetData.durationFormatted || null,

@@ -883,8 +883,27 @@ export default function CashierStationPage() {
       return;
     }
     const matches = allEntities.filter((p) => {
+      const ids: string[] = [];
+      if (p.patientId) ids.push(String(p.patientId));
+      if (p.studentId) ids.push(String(p.studentId));
+      if (p.customId) ids.push(String(p.customId));
+      if (p.employeeId) ids.push(String(p.employeeId));
+      if (p.rollNumber) ids.push(String(p.rollNumber));
+      if (p.rollNo) ids.push(String(p.rollNo));
+      if (p.inpatientNumber) ids.push(String(p.inpatientNumber));
+      if (p.id) ids.push(String(p.id));
+
+      if (p.rejoinHistory && Array.isArray(p.rejoinHistory)) {
+        p.rejoinHistory.forEach((stay: any) => {
+          if (stay.patientId) ids.push(String(stay.patientId));
+          if (stay.inpatientNumber) ids.push(String(stay.inpatientNumber));
+          if (stay.rejoinDetails?.patientId) ids.push(String(stay.rejoinDetails.patientId));
+          if (stay.rejoinDetails?.inpatientNumber) ids.push(String(stay.rejoinDetails.inpatientNumber));
+        });
+      }
+
       const queryMatch = (p.name || p.fullName || p.fatherName || '').toLowerCase().includes(q) ||
-        (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.rollNo || p.inpatientNumber || p.id || '').toLowerCase().includes(q) ||
+        ids.some(id => id.toLowerCase().includes(q)) ||
         String(p.serialNumber || '').toLowerCase().includes(q);
       
       if (!queryMatch) return false;
@@ -1291,9 +1310,33 @@ export default function CashierStationPage() {
                         </div>
                         <div>
                           <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[180px]">{p.name || p.fullName || 'Unknown'}</h4>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest">{p._deptLabel}</span>
-                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">ID: {p.patientId || p.studentId || p.customId || p.id.slice(0, 8)}</span>
+                          <div className="flex flex-col gap-1 mt-2">
+                            <div className="flex items-center gap-3">
+                              <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest">{p._deptLabel}</span>
+                              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                ID: {p.patientId || p.studentId || p.customId || p.id.slice(0, 8)}
+                                {p.inpatientNumber && p.inpatientNumber !== p.patientId && ` / ${p.inpatientNumber}`}
+                              </span>
+                            </div>
+                            {(() => {
+                              const histIds: string[] = [];
+                              if (p.rejoinHistory && Array.isArray(p.rejoinHistory)) {
+                                p.rejoinHistory.forEach((stay: any) => {
+                                  const sid = stay.patientId || stay.inpatientNumber || stay.rejoinDetails?.patientId || stay.rejoinDetails?.inpatientNumber;
+                                  if (sid && sid !== p.patientId && sid !== p.inpatientNumber && !histIds.includes(String(sid))) {
+                                    histIds.push(String(sid));
+                                  }
+                                });
+                              }
+                              if (histIds.length > 0) {
+                                return (
+                                  <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-wider">
+                                    Prev IDs: {histIds.join(', ')}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         </div>
                       </div>

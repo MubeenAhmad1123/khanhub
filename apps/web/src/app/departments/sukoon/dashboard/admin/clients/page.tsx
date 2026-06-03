@@ -129,10 +129,15 @@ export default function ClientsListPage() {
       setSearchOpen(false);
       return;
     }
-    const matches = allClients.filter((p) =>
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q)
-    );
+    const matches = allClients.filter((p) => {
+      const ids: string[] = [];
+      if (p.inpatientNumber) ids.push(String(p.inpatientNumber));
+      if (p.patientId) ids.push(String(p.patientId));
+      if (p.id) ids.push(String(p.id));
+
+      return (p.name || '').toLowerCase().includes(q) ||
+        ids.some(id => id.toLowerCase().includes(q));
+    });
     setSearchResults(matches.slice(0, 10));
     setSearchOpen(true);
   }, [searchQuery, allClients]);
@@ -149,9 +154,14 @@ export default function ClientsListPage() {
     if (statusFilter === 'active' && !p.isActive) return false;
     if (statusFilter === 'discharged' && p.isActive) return false;
     const s = searchQuery.toLowerCase();
+    const ids: string[] = [];
+    if (p.inpatientNumber) ids.push(String(p.inpatientNumber));
+    if (p.patientId) ids.push(String(p.patientId));
+    if (p.id) ids.push(String(p.id));
+
     return (
       p.name.toLowerCase().includes(s) ||
-      p.inpatientNumber.toLowerCase().includes(s) ||
+      ids.some(id => id.toLowerCase().includes(s)) ||
       p.substanceOfAddiction.toLowerCase().includes(s) ||
       p.fatherName.toLowerCase().includes(s)
     );
