@@ -18,7 +18,10 @@ export async function recalculateGrowthPoints(
   month: string,  // "2025-04"
   prefix: string = 'rehab'
 ): Promise<MonthlyGrowthPoints> {
-  const p = prefix ? `${prefix}_` : 'rehab_';
+  let cleanPrefix = prefix;
+  if (cleanPrefix === 'job-center') cleanPrefix = 'jobcenter';
+  if (cleanPrefix === 'social-media') cleanPrefix = 'media';
+  const p = cleanPrefix ? `${cleanPrefix.replace('-', '_')}_` : 'rehab_';
 
   // 1. Fetch Attendance
   const attendanceQuery = query(
@@ -35,7 +38,7 @@ export async function recalculateGrowthPoints(
     const data = d.data();
     if (data.status === 'present') {
       attendancePoints += 1;
-      if (data.arrivedOnTime === true) punctualityPoints += 1;
+      if (data.isLate === false || data.arrivedOnTime === true) punctualityPoints += 1;
       if (data.departedOnTime === true) punctualityPoints += 1;
     }
   });
@@ -59,7 +62,7 @@ export async function recalculateGrowthPoints(
   dutyDocs.forEach(d => {
     const data = d.data();
     // Support both single status and array of duties
-    if (data.status === 'completed') {
+    if (data.status === 'completed' || data.status === 'yes') {
       dutyPoints += 1;
     } else if (Array.isArray(data.duties)) {
       const allDone = data.duties.every((duty: any) => duty.status === 'done');
@@ -78,10 +81,10 @@ export async function recalculateGrowthPoints(
   let dressCodePoints = 0;
   dressDocs.forEach(d => {
     const data = d.data();
-    if (data.isCompliant === true) {
+    if (data.isCompliant === true || data.status === 'yes') {
       dressCodePoints++;
     } else if (Array.isArray(data.items)) {
-      const allWearing = data.items.every((item: any) => item.wearing === true);
+      const allWearing = data.items.every((item: any) => item.wearing === true || item.status === 'yes');
       if (allWearing) dressCodePoints++;
     }
   });
@@ -97,8 +100,8 @@ export async function recalculateGrowthPoints(
   let contributionPoints = 0;
   contribDocs.forEach(d => {
     const data = d.data();
-    if (data.isApproved === true) {
-      contributionPoints += (data.points || 0); // Sum of points, not count
+    if (data.isApproved === true || data.status === 'yes') {
+      contributionPoints += (data.points || 0) || 1;
     }
   });
 
@@ -140,7 +143,11 @@ export async function getGrowthPoints(
   month: string,
   prefix: string = 'rehab'
 ): Promise<MonthlyGrowthPoints | null> {
-  const p = prefix ? `${prefix}_` : 'rehab_';
+  let cleanPrefix = prefix;
+  if (cleanPrefix === 'job-center') cleanPrefix = 'jobcenter';
+  if (cleanPrefix === 'social-media') cleanPrefix = 'media';
+  const p = cleanPrefix ? `${cleanPrefix.replace('-', '_')}_` : 'rehab_';
+
   const q = query(
     collection(db, `${p}growth_points`),
     where('staffId', '==', staffId),

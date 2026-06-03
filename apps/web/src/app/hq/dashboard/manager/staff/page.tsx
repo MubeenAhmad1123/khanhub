@@ -570,16 +570,26 @@ export default function ManagerStaffPage() {
                 {/* Stats Footer */}
                 <div className="grid grid-cols-2 gap-4 mt-auto pt-8 border-t border-gray-100 transition-colors">
                   <div className="rounded-2xl p-4 flex flex-col items-center transition-all bg-gray-50/50 group-hover:bg-white group-hover:shadow-xl group-hover:shadow-gray-200/40 border border-transparent group-hover:border-gray-100">
-                    <p className="text-[8px] font-black uppercase tracking-widest mb-2 text-gray-400">Efficiency</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest mb-2 text-gray-400">Score</p>
                     <p className="text-sm font-black text-gray-900 flex items-baseline gap-1">
                       {s.growthPointsTotal || 0}
-                      <span className="text-[8px] opacity-30">XP</span>
+                      <span className="text-[8px] opacity-30">pts</span>
                     </p>
                   </div>
                   <div className="rounded-2xl p-4 flex flex-col items-center transition-all bg-gray-50/50 group-hover:bg-white group-hover:shadow-xl group-hover:shadow-gray-200/40 border border-transparent group-hover:border-gray-100">
                     <p className="text-[8px] font-black uppercase tracking-widest mb-2 text-gray-400">Availability</p>
-                    <p className={cn("text-sm font-black", (s.presentCount || 0) > 20 ? 'text-emerald-500' : 'text-rose-500')}>
-                      {((s.presentCount || 0) / 30 * 100).toFixed(0)}%
+                    <p className={cn(
+                      "text-sm font-black",
+                      (() => {
+                        const totalDays = (s.presentCount || 0) + (s.absentCount || 0);
+                        const pct = totalDays > 0 ? Math.round(((s.presentCount || 0) / totalDays) * 100) : 0;
+                        return pct >= 80 ? 'text-emerald-500' : pct >= 50 ? 'text-amber-500' : 'text-rose-500';
+                      })()
+                    )}>
+                      {(() => {
+                        const totalDays = (s.presentCount || 0) + (s.absentCount || 0);
+                        return totalDays > 0 ? `${Math.round(((s.presentCount || 0) / totalDays) * 100)}%` : '0%';
+                      })()}
                     </p>
                   </div>
                 </div>
