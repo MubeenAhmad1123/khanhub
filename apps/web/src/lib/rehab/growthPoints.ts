@@ -30,19 +30,6 @@ export async function recalculateGrowthPoints(
   );
   const attendanceSnap = await getDocs(attendanceQuery);
   const attendanceDocs = attendanceSnap.docs.filter(d => d.data().date?.startsWith(month));
-  
-  let attendancePoints = 0;
-  let punctualityPoints = 0;
-  
-  attendanceDocs.forEach(d => {
-    const data = d.data();
-    if (data.status === 'present') {
-      attendancePoints += 1;
-      if (data.isLate === false || data.arrivedOnTime === true) punctualityPoints += 1;
-      if (data.departedOnTime === true) punctualityPoints += 1;
-    }
-  });
-  
   // 2. Fetch Duty Logs
   const dutyQuery = query(
     collection(db, `${p}duty_logs`),
@@ -57,18 +44,6 @@ export async function recalculateGrowthPoints(
     else dateStr = String(rawDate);
     return dateStr.startsWith(month);
   });
-  
-  let dutyPoints = 0;
-  dutyDocs.forEach(d => {
-    const data = d.data();
-    // Support both single status and array of duties
-    if (data.status === 'completed' || data.status === 'yes') {
-      dutyPoints += 1;
-    } else if (Array.isArray(data.duties)) {
-      const allDone = data.duties.every((duty: any) => duty.status === 'done');
-      if (allDone) dutyPoints++;
-    }
-  });
 
   // 3. Fetch Dress Logs
   const dressQuery = query(
@@ -77,17 +52,6 @@ export async function recalculateGrowthPoints(
   );
   const dressSnap = await getDocs(dressQuery);
   const dressDocs = dressSnap.docs.filter(d => d.data().date?.startsWith(month));
-  
-  let dressCodePoints = 0;
-  dressDocs.forEach(d => {
-    const data = d.data();
-    if (data.isCompliant === true || data.status === 'yes') {
-      dressCodePoints++;
-    } else if (Array.isArray(data.items)) {
-      const allWearing = data.items.every((item: any) => item.wearing === true || item.status === 'yes');
-      if (allWearing) dressCodePoints++;
-    }
-  });
 
   // 4. Fetch Contributions
   const contribQuery = query(
@@ -96,25 +60,77 @@ export async function recalculateGrowthPoints(
   );
   const contribSnap = await getDocs(contribQuery);
   const contribDocs = contribSnap.docs.filter(d => d.data().date?.startsWith(month));
-  
+
+  const [year, monthNum] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+  let attendancePoints = 0;
+  let dutyPoints = 0;
+  let dressCodePoints = 0;
   let contributionPoints = 0;
-  contribDocs.forEach(d => {
-    const data = d.data();
-    if (data.isApproved === true || data.status === 'yes') {
-      contributionPoints += (data.points || 0) || 1;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayStr = `${month}-${String(day).padStart(2, '0')}`;
+
+    // Attendance
+    const attDoc = attendanceDocs.find(d => d.data().date === dayStr);
+    if (attDoc) {
+      const data = attDoc.data();
+      const status = String(data.status || '').toLowerCase();
+      const isLate = data.isLate === true || status === 'late';
+      if (status === 'present' && !isLate) {
+        attendancePoints += 1;
+      }
     }
-  });
+
+    // Duty
+    const dutyDoc = dutyDocs.find(d => {
+      const data = d.data();
+      const rawDate = data.date || data.createdAt;
+      let dateStr = "";
+      if (rawDate instanceof Timestamp) dateStr = rawDate.toDate().toISOString().split('T')[0];
+      else if (rawDate?.seconds) dateStr = new Date(rawDate.seconds * 1000).toISOString().split('T')[0];
+      else dateStr = String(rawDate).split('T')[0];
+      return dateStr === dayStr;
+    });
+    if (dutyDoc) {
+      const data = dutyDoc.data();
+      if (data.status === 'completed' || data.status === 'yes') {
+        dutyPoints += 1;
+      } else if (Array.isArray(data.duties)) {
+        const allDone = data.duties.every((duty: any) => duty.status === 'done');
+        if (allDone) dutyPoints++;
+      }
+    }
+
+    // Dress
+    const dressDoc = dressDocs.find(d => d.data().date === dayStr);
+    if (dressDoc) {
+      const data = dressDoc.data();
+      if (data.isCompliant === true || data.status === 'yes') {
+        dressCodePoints++;
+      } else if (Array.isArray(data.items)) {
+        const allWearing = data.items.every((item: any) => item.wearing === true || item.status === 'yes');
+        if (allWearing) dressCodePoints++;
+      }
+    }
+
+    // Contribution
+    const contribDoc = contribDocs.find(d => d.data().date === dayStr);
+    if (contribDoc) {
+      const data = contribDoc.data();
+      if (data.isApproved === true || data.status === 'yes') {
+        contributionPoints += 1;
+      }
+    }
+  }
 
   // 5. Existing Doc (to keep 'extra' points)
   const existingDoc = await getDocs(query(collection(db, `${p}growth_points`), where('id', '==', `${staffId}_${month}`)));
   const extra = !existingDoc.empty ? (existingDoc.docs[0].data().extra || 0) : 0;
 
-  // 6. Calculate Possible Points
-  const [year, monthNum] = month.split('-').map(Number);
-  const daysInMonth = new Date(year, monthNum, 0).getDate();
-  const totalPossible = daysInMonth * 5; 
-
-  const total = attendancePoints + punctualityPoints + dutyPoints + dressCodePoints + contributionPoints + extra;
+  const totalPossible = daysInMonth * 4; 
+  const total = attendancePoints + dutyPoints + dressCodePoints + contributionPoints + extra;
   const percentage = Math.round((total / totalPossible) * 100);
 
   const growthPoints: MonthlyGrowthPoints = {
@@ -122,7 +138,7 @@ export async function recalculateGrowthPoints(
     staffId,
     month,
     attendance: attendancePoints,
-    punctuality: punctualityPoints,
+    punctuality: 0,
     duties: dutyPoints,
     dressCode: dressCodePoints,
     contributions: contributionPoints,

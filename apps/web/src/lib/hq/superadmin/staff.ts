@@ -578,50 +578,60 @@ export async function listStaffCards({
         else if (status.includes('absent')) absentCount++;
       });
 
-      // Calculate in-memory monthly growth points/scores
-      let attendancePoints = 0;
-      let punctualityPoints = 0;
-      rawAtt.forEach((r: any) => {
-        const status = String(r.status || r.state || '').toLowerCase();
-        if (status.includes('present') || status.includes('late')) {
-          attendancePoints += 1;
-          if (r.isLate === false || r.arrivedOnTime === true) {
-            punctualityPoints += 1;
+      // Calculate daily scores in-memory
+      const [yearStr, monthStr] = monthKey.split('-');
+      const year = parseInt(yearStr);
+      const monthNum = parseInt(monthStr);
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+      let growthPointsTotal = 0;
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayStr = `${monthKey}-${String(day).padStart(2, '0')}`;
+        
+        // Find attendance for this day
+        const att = rawAtt.find((r: any) => r.date === dayStr);
+        let attPoint = 0;
+        if (att) {
+          const status = String(att.status || '').toLowerCase();
+          const isLate = att.isLate === true || status === 'late';
+          if (status === 'present' && !isLate) {
+            attPoint = 1;
           }
-          if (r.departedOnTime === true) {
-            punctualityPoints += 1;
+        }
+
+        // Find dress for this day
+        const dress = rawDress.find((r: any) => r.date === dayStr);
+        let uniformPoint = 0;
+        if (dress) {
+          const status = String(dress.status || '').toLowerCase();
+          if (status === 'yes') {
+            uniformPoint = 1;
           }
         }
-      });
 
-      let dutyPoints = 0;
-      rawDuty.forEach((r: any) => {
-        if (r.status === 'completed' || r.status === 'yes') {
-          dutyPoints += 1;
-        } else if (Array.isArray(r.duties)) {
-          const allDone = r.duties.every((duty: any) => duty.status === 'done');
-          if (allDone) dutyPoints++;
+        // Find duty for this day
+        const duty = rawDuty.find((r: any) => r.date === dayStr);
+        let dutyPoint = 0;
+        if (duty) {
+          const status = String(duty.status || '').toLowerCase();
+          if (status === 'yes') {
+            dutyPoint = 1;
+          }
         }
-      });
 
-      let dressCodePoints = 0;
-      rawDress.forEach((r: any) => {
-        if (r.isCompliant === true || r.status === 'yes') {
-          dressCodePoints++;
-        } else if (Array.isArray(r.items)) {
-          const allWearing = r.items.every((item: any) => item.wearing === true || item.status === 'yes');
-          if (allWearing) dressCodePoints++;
+        // Find contribution for this day
+        const contrib = rawContrib.find((r: any) => r.date === dayStr);
+        let contribPoint = 0;
+        if (contrib) {
+          const status = String(contrib.status || '').toLowerCase();
+          if (status === 'yes' || contrib.isApproved === true) {
+            contribPoint = 1;
+          }
         }
-      });
 
-      let contributionPoints = 0;
-      rawContrib.forEach((r: any) => {
-        if (r.isApproved === true || r.status === 'yes') {
-          contributionPoints += (r.points || 0) || 1;
-        }
-      });
-
-      const growthPointsTotal = attendancePoints + punctualityPoints + dutyPoints + dressCodePoints + contributionPoints + extra;
+        growthPointsTotal += (attPoint + uniformPoint + dutyPoint + contribPoint);
+      }
+      growthPointsTotal += extra;
 
       // Only fetch expensive individual logs if fullEnrichment is enabled (like lastDuty)
       const lastDuty = fullEnrichment ? await loadLastDuty(d, staffId) : undefined;

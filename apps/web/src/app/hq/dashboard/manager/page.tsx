@@ -195,14 +195,21 @@ export default function ManagerOverviewPage() {
           const dept = (s.dept as string) || 'hq';
           if (dStats[dept]) dStats[dept].total++;
           
-          if (s.isPresentToday) {
+          const attStatus = s.todayAttendanceStatus || 'unmarked';
+          if (s.isPresentToday || attStatus === 'present' || attStatus === 'late') {
             presentCount++;
             if (dStats[dept]) dStats[dept].present++;
             attendanceMap.set(s.id, 'present');
-          } else if (s.status === 'inactive') {
+          } else if (attStatus === 'leave') {
+            leaveCount++;
+            if (dStats[dept]) dStats[dept].leave++;
+            attendanceMap.set(s.id, 'leave');
+          } else if (attStatus === 'absent') {
             absentCount++;
             if (dStats[dept]) dStats[dept].absent++;
             attendanceMap.set(s.id, 'absent');
+          } else {
+            attendanceMap.set(s.id, 'unmarked');
           }
         });
 

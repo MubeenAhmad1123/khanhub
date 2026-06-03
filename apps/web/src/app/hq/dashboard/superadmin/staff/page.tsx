@@ -960,7 +960,7 @@ function StaffInteractiveCard({ row: r, onStatusChange }: { row: StaffCardRow; o
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-gray-400 uppercase">Score</span>
             <div className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[11px] font-extrabold">
-              {r.todayDailyScore || 0}/5
+              {r.todayDailyScore || 0}/4
             </div>
           </div>
           {Number(r.totalFines || 0) > 0 && (
