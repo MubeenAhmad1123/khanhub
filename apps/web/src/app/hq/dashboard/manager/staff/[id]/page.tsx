@@ -196,6 +196,8 @@ export default function StaffProfilePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [loadingScore, setLoadingScore] = useState(false);
   const [openRule, setOpenRule] = useState<string | null>(null);
+  const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
+  const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
 
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
@@ -270,6 +272,24 @@ export default function StaffProfilePage() {
     return days;
   }, []);
 
+  const daysInMonth = useCallback(() => {
+    if (!selectedMonth || !selectedMonth.includes('-')) return [];
+    const [year, month] = selectedMonth.split('-').map(Number);
+    if (isNaN(year) || isNaN(month)) return [];
+    const date = new Date(year, month - 1, 1);
+    if (isNaN(date.getTime())) return [];
+
+    const days = [];
+    while (date.getMonth() === month - 1) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${d}`);
+      date.setDate(date.getDate() + 1);
+    }
+    return days;
+  }, [selectedMonth]);
+
   const [attendanceMap, setAttendanceMap] = useState<Record<string, HqDailyAttendanceRecord>>({});
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
   const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
@@ -288,48 +308,59 @@ export default function StaffProfilePage() {
         earnings: 0,
         absentDeduction: 0,
         estimatedSalary: 0,
-        fines: 0
+        fines: 0,
+        payableDatesList: [] as { date: string; status: string }[],
+        deductedDatesList: [] as { date: string; status: string; deduction: number }[]
       };
     }
 
     const monthlySalary = Number(staff.monthlySalary) || 0;
-    const dailyWage = monthlySalary / 30;
+    const days = daysInMonth();
+    const totalDaysCount = days.length || 30;
+    const dailyWage = monthlySalary / totalDaysCount;
 
     let presentDays = 0;
     let lateDays = 0;
-    let leavesCount = 0;
     let paidLeaves = 0;
     let unpaidLeaves = 0;
     let absentDays = 0;
     let unmarkedDays = 0;
 
-    attendance.forEach(a => {
-      const status = a.status;
+    const payableDatesList: { date: string; status: string }[] = [];
+    const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    days.forEach(dayStr => {
+      const att = attendanceMap[dayStr];
+      const status = att ? att.status : 'unmarked';
+      const isPast = dayStr < todayStr;
+
       if (status === 'present') {
         presentDays++;
+        payableDatesList.push({ date: dayStr, status: 'Present' });
       } else if (status === 'late') {
         lateDays++;
-      } else if (status === 'leave' || status === 'paid_leave') {
-        leavesCount++;
-        if (leavesCount <= 2) {
-          paidLeaves++;
-        } else {
-          unpaidLeaves++;
-        }
-      } else if (status === 'unpaid_leave') {
-        unpaidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Late' });
+      } else if (status === 'leave' || status === 'paid_leave' || status === 'unpaid_leave') {
+        paidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
       } else if (status === 'absent') {
         absentDays++;
+        deductedDatesList.push({ date: dayStr, status: 'Absent', deduction: dailyWage });
       } else {
-        unmarkedDays++;
+        if (isPast) {
+          unmarkedDays++;
+          deductedDatesList.push({ date: dayStr, status: 'Unmarked (Past)', deduction: dailyWage });
+        }
       }
     });
 
     const payableDays = presentDays + lateDays + paidLeaves;
-    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+    const unpaidDaysTotal = absentDays + unpaidLeaves + unmarkedDays;
 
     const earnings = payableDays * dailyWage;
-    const absentDeduction = unpaidDays * dailyWage;
+    const absentDeduction = unpaidDaysTotal * dailyWage;
     const fines = staff.totalFines || 0;
     const estimatedSalary = Math.floor(Math.max(0, earnings - fines));
 
@@ -341,13 +372,15 @@ export default function StaffProfilePage() {
       unpaidLeaves,
       absentDays,
       payableDays,
-      unpaidDays,
+      unpaidDays: unpaidDaysTotal,
       earnings,
       absentDeduction,
       estimatedSalary,
-      fines
+      fines,
+      payableDatesList,
+      deductedDatesList
     };
-  }, [staff, attendance]);
+  }, [staff, attendanceMap, daysInMonth]);
 
   const tillDateSalary = useMemo(() => {
     return salaryDetails.estimatedSalary;
@@ -371,23 +404,7 @@ export default function StaffProfilePage() {
   const [isVacating, setIsVacating] = useState(false);
   const [vacateReason, setVacateReason] = useState<'resigned' | 'terminated'>('resigned');
 
-  const daysInMonth = useCallback(() => {
-    if (!selectedMonth || !selectedMonth.includes('-')) return [];
-    const [year, month] = selectedMonth.split('-').map(Number);
-    if (isNaN(year) || isNaN(month)) return [];
-    const date = new Date(year, month - 1, 1);
-    if (isNaN(date.getTime())) return [];
 
-    const days = [];
-    while (date.getMonth() === month - 1) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      days.push(`${y}-${m}-${d}`);
-      date.setDate(date.getDate() + 1);
-    }
-    return days;
-  }, [selectedMonth]);
 
   const computedScores = useMemo(() => {
     if (!staff) return { attendance: 0, punctuality: 0, uniform: 0, working: 0, growthPoint: 0, workingDays: 0 };
@@ -432,10 +449,22 @@ export default function StaffProfilePage() {
       }
     });
 
-    // 5. Growth Points: Total points from history filtered by selected month
-    const gpScore = growthHistory
-      .filter(item => item.month === selectedMonth)
+    // 5. Growth Points: Total points from daily contributions maps
+    let gpScore = 0;
+    days.forEach(day => {
+      const contrib = contributionsMap[day];
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
+      }
+    });
+    // Add extra monthly bonus/extra points
+    const extraPoints = growthHistory
+      .filter(item => item.month === selectedMonth && item.category === 'Growth Point Bonus')
       .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+    gpScore += extraPoints;
 
     return {
       attendance: attScore,
@@ -445,7 +474,7 @@ export default function StaffProfilePage() {
       growthPoint: gpScore,
       workingDays: days.length
     };
-  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth, selectedMonth]);
+  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, contributionsMap, daysInMonth, selectedMonth]);
 
   const fetchData = useCallback(async () => {
     if (!staffId) return;
@@ -511,22 +540,51 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix} | Range: ${start} to ${end}`);
+      // Collect all potential variant IDs to retrieve all logged records
+      const candidateIds = new Set<string>();
+      if (uid) {
+        candidateIds.add(uid);
+        candidateIds.add(uid.startsWith(`${prefix}_`) ? uid.replace(`${prefix}_`, '') : uid);
+        candidateIds.add(uid.startsWith(`${prefix}_`) ? uid : `${prefix}_${uid}`);
+      }
+      if (profile.loginUserId) {
+        candidateIds.add(profile.loginUserId);
+        candidateIds.add(profile.loginUserId.startsWith(`${prefix}_`) ? profile.loginUserId.replace(`${prefix}_`, '') : profile.loginUserId);
+        candidateIds.add(profile.loginUserId.startsWith(`${prefix}_`) ? profile.loginUserId : `${prefix}_${profile.loginUserId}`);
+      }
+      if (profile.customId) candidateIds.add(profile.customId);
+      if (profile.employeeId) candidateIds.add(profile.employeeId);
+
+      const uniqueIds = Array.from(candidateIds).filter(Boolean);
+
+      console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix} | Candidates:`, uniqueIds, `| Range: ${start} to ${end}`);
       const t1 = Date.now();
+
+      const fetchParallel = async (colName: string) => {
+        const snaps = await Promise.all(
+          uniqueIds.map(id => 
+            getDocs(query(collection(db, colName), where('staffId', '==', id)))
+              .catch(() => ({ docs: [] } as any))
+          )
+        );
+        return snaps.flatMap(snap => snap.docs);
+      };
+
       const [
-        attSnap1, attSnap2,
-        dressSnap1, dressSnap2,
-        dutySnap1, dutySnap2,
-        salarySnap, tasksSnap, metaDoc
+        attDocs,
+        dressDocs,
+        dutyDocs,
+        contribDocs,
+        salarySnap,
+        tasksDocs,
+        metaDoc
       ] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', `${prefix}_${uid}`))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', `${prefix}_${uid}`))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', `${prefix}_${uid}`))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(() => ({ docs: [] } as any)),
+        fetchParallel(`${prefix}_attendance`),
+        fetchParallel(`${prefix}_dress_logs`),
+        fetchParallel(`${prefix}_duty_logs`),
+        fetchParallel(`${prefix}_contributions`),
+        fetchParallel(`${prefix}_salary_records`),
+        fetchParallel(`${prefix}_special_tasks`),
         getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any))
       ]);
       console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
@@ -542,7 +600,7 @@ export default function StaffProfilePage() {
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
-      [...attSnap1.docs, ...attSnap2.docs].forEach((d: any) => { 
+      attDocs.forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
           aMap[data.date] = data as HqDailyAttendanceRecord; 
@@ -551,7 +609,7 @@ export default function StaffProfilePage() {
       setAttendanceMap(aMap);
 
       const drMap: Record<string, HqDailyDressCodeRecord> = {};
-      [...dressSnap1.docs, ...dressSnap2.docs].forEach((d: any) => { 
+      dressDocs.forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
           drMap[data.date] = data as HqDailyDressCodeRecord; 
@@ -560,7 +618,7 @@ export default function StaffProfilePage() {
       setDressMap(drMap);
 
       const duMap: Record<string, HqDailyDutyRecord> = {};
-      [...dutySnap1.docs, ...dutySnap2.docs].forEach((d: any) => { 
+      dutyDocs.forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
           if (!duMap[data.date] || (data.duties && !duMap[data.date].duties)) {
@@ -570,25 +628,55 @@ export default function StaffProfilePage() {
       });
       setDutyMap(duMap);
 
+      const cMap: Record<string, any> = {};
+      contribDocs.forEach((d: any) => {
+        const data = d.data();
+        if (data.date >= start && data.date <= end) {
+          cMap[data.date] = data;
+        }
+      });
+      setContributionsMap(cMap);
+
       // Populate array states for calculations and lists
-      setAttendance([...attSnap1.docs, ...attSnap2.docs].map((d: any) => d.data()));
-      setDressLogs([...dressSnap1.docs, ...dressSnap2.docs].map((d: any) => d.data()));
-      setDutyLogs([...dutySnap1.docs, ...dutySnap2.docs].map((d: any) => d.data()));
-      setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
-      setSpecialTasks(tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
+      setAttendance(attDocs.map((d: any) => d.data()));
+      setDressLogs(dressDocs.map((d: any) => d.data()));
+      setDutyLogs(dutyDocs.map((d: any) => d.data()));
+      setSalaryRecords(salarySnap.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
+      setSpecialTasks(tasksDocs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
 
       // Fetch growth history (all records)
-      const [historySnap1, historySnap2] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid))),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', `${prefix}_${uid}`)))
-      ]);
-      const historyRows = [...historySnap1.docs, ...historySnap2.docs].map((d: any) => ({ id: d.id, ...d.data() }));
-      historyRows.sort((a, b) => {
-        const d1 = a.date || '';
-        const d2 = b.date || '';
-        return d2.localeCompare(d1);
+      const monthlyGpDocs = (await fetchParallel(`${prefix}_growth_points`)).map((d: any) => d.data());
+
+      const contribRows = contribDocs
+        .map((d: any) => d.data())
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.date,
+          points: 1,
+          note: item.link ? `Contribution Link: ${item.link}` : 'Daily Growth Contribution',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.slice(0, 7) : '',
+          category: 'Growth Point'
+        }));
+
+      monthlyGpDocs.forEach((gpDoc: any) => {
+        const extraPoints = Number(gpDoc.extra || 0);
+        if (extraPoints > 0) {
+          contribRows.push({
+            id: `${gpDoc.month}_extra`,
+            points: extraPoints,
+            note: `Monthly Bonus/Extra Points`,
+            date: `${gpDoc.month}-28`,
+            month: gpDoc.month,
+            category: 'Growth Point Bonus'
+          });
+        }
       });
-      setGrowthHistory(historyRows);
+
+      // Deduplicate contribRows
+      const uniqueContribRows = Array.from(new Map(contribRows.map(item => [item.id + '_' + item.category, item])).values());
+      uniqueContribRows.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      setGrowthHistory(uniqueContribRows);
 
     } catch (err) {
       console.error("[StaffProfile] fetchData ERROR:", err);
@@ -598,7 +686,7 @@ export default function StaffProfilePage() {
       setLoading(false);
       fetchLock.current = false;
     }
-  }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable
+  }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable // Removed router as it's not needed for fetch and can be unstable
 
   const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy') => {
     if (!staff) return;
@@ -1138,10 +1226,10 @@ export default function StaffProfilePage() {
       const [y, m] = payrollForm.month.split('-');
       const workingDays = new Date(Number(y), Number(m), 0).getDate();
       
-      const proRatedBase = Math.round((payrollForm.basicSalary / workingDays) * payrollForm.presentDays);
+      const proRatedBase = payrollForm.basicSalary;
       const totalAdditions = (payrollForm.incentive || 0) + (payrollForm.otherEarnings || 0);
       const totalDeductions = (payrollForm.fine || 0) + (payrollForm.advance || 0) + (payrollForm.absentDeduction || 0) + (payrollForm.otherDeductions || 0);
-      const netSalary = proRatedBase + totalAdditions - totalDeductions;
+      const netSalary = Math.round(proRatedBase + totalAdditions - totalDeductions);
 
       const slip: Partial<SalarySlip> = {
         staffId: staff.staffId,
@@ -1657,7 +1745,10 @@ export default function StaffProfilePage() {
                 </div>
               </div>
 
-              <div className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] ${theme.light} ${theme.border} ${theme.shadow}`}>
+              <div 
+                onClick={() => setShowSalaryBreakdownModal(true)}
+                className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] cursor-pointer ${theme.light} ${theme.border} ${theme.shadow}`}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Till Date Salary</p>
                   <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>{presentDaysCount} Present</span>
@@ -1666,15 +1757,15 @@ export default function StaffProfilePage() {
                 
                 <div className="border-t border-dashed border-gray-200 pt-2.5 mt-2.5 space-y-1.5 text-[10px] uppercase font-bold text-gray-700">
                   <div className="flex justify-between items-center">
-                    <span>Daily Wage (Base / 30):</span>
+                    <span>Daily Wage:</span>
                     <span className="font-black text-gray-900">₨{Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Payable Days (Incl. Leaves):</span>
+                    <span>Payable Days:</span>
                     <span className="font-black text-emerald-600">{salaryDetails.payableDays} Days</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Unpaid Days Deductions:</span>
+                    <span>Deducted Days:</span>
                     <span className="font-black text-rose-500">{salaryDetails.unpaidDays} Days (-₨{Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -1682,7 +1773,7 @@ export default function StaffProfilePage() {
                     <span className="font-black text-rose-500">-₨{salaryDetails.fines.toLocaleString()}</span>
                   </div>
                 </div>
-                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Calculated dynamically for current marked attendance (2 paid leaves limit)</p>
+                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Click for detailed daily salary breakdown & leaves</p>
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-4 text-left border bg-amber-50/50 border-amber-100`}>
@@ -3446,7 +3537,19 @@ export default function StaffProfilePage() {
                     </div>
                     <button
                       onClick={() => {
-                        setPayrollForm(p => ({ ...p, basicSalary: staff?.monthlySalary || 0 }));
+                        setPayrollForm({
+                          month: selectedMonth || new Date().toISOString().slice(0, 7),
+                          basicSalary: staff?.monthlySalary || 0,
+                          presentDays: salaryDetails.payableDays,
+                          incentive: 0,
+                          otherEarnings: 0,
+                          otherEarningsReason: '',
+                          fine: salaryDetails.fines,
+                          advance: 0,
+                          absentDeduction: Math.round(salaryDetails.absentDeduction),
+                          otherDeductions: 0,
+                          deductionReason: '',
+                        });
                         setShowPayrollModal(!showPayrollModal);
                       }}
                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : ('bg-amber-50 text-amber-600')}`}
@@ -4072,6 +4175,122 @@ export default function StaffProfilePage() {
           onClose={() => setShowReset(false)}
           isPasswordSet={!!staff?.defaultPassword}
         />
+      )}
+
+      {/* Salary Calculation Breakdown Modal */}
+      {showSalaryBreakdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Salary Breakdown</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSalaryBreakdownModal(false)}
+                className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-8 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Top Overview Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50">
+                  <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">Monthly Base Salary</p>
+                  <p className="text-lg font-black text-gray-900">₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-teal-50/30 rounded-2xl border border-teal-100/50">
+                  <p className="text-[9px] font-black text-teal-500 uppercase tracking-widest mb-1">Net Till Date Earned</p>
+                  <p className="text-lg font-black text-teal-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Calculations Formula */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
+                <p className="text-[9px] font-black text-black uppercase tracking-widest">Calculation Formula</p>
+                <div className="space-y-1 font-mono text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Base Daily Rate:</span>
+                    <span>₨{Number(staff?.monthlySalary || 0).toLocaleString()} / {daysInMonth().length} = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600">
+                    <span>Payable Days Earned ({salaryDetails.payableDays} Days):</span>
+                    <span>+ ₨{Math.round(salaryDetails.earnings).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
+                    <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Fines:</span>
+                    <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-black text-gray-900">
+                    <span>Till Date Net:</span>
+                    <span>₨{salaryDetails.estimatedSalary.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid lists for Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Payable Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Payable Dates ({salaryDetails.payableDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.payableDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No payable dates recorded</p>
+                    ) : (
+                      salaryDetails.payableDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 font-bold text-[9px] uppercase">{item.status}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Deductible/Unpaid Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Deductions / Absent ({salaryDetails.deductedDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.deductedDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No deducted dates recorded</p>
+                    ) : (
+                      salaryDetails.deductedDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                            <span className="text-[8px] text-rose-400 uppercase font-black">{item.status}</span>
+                          </div>
+                          <span className="font-black text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-[10px] text-gray-400 italic">
+              All marked leaves are fully paid. Deductions only apply to absences and past unmarked days.
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

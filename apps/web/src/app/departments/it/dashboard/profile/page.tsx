@@ -138,6 +138,11 @@ export default function ProfilePage() {
   const [fines, setFines] = useState<FineRecord[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
   const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
+  const [growthHistory, setGrowthHistory] = useState<any[]>([]);
+
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
+  const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
 
   // Premium Luxury Cyber Obsidian Glass Styles
   const glassStyle = "bg-white/[0.02] border border-white/[0.06] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] hover:border-indigo-500/20 hover:shadow-indigo-500/5 duration-300 transition-all";
@@ -186,7 +191,8 @@ export default function ProfilePage() {
         taskSnap,
         fineSnap,
         salarySnap,
-        pointsSnap
+        pointsSnap,
+        contribSnap
       ] = await Promise.all([
         fetchForCandidates(`${prefix}_attendance`),
         fetchForCandidates(`${prefix}_duty_logs`),
@@ -194,7 +200,8 @@ export default function ProfilePage() {
         fetchForCandidates(`${prefix}_special_tasks`),
         fetchForCandidates(`${prefix}_fines`),
         fetchForCandidates(`${prefix}_salary_records`),
-        fetchForCandidates(`${prefix}_growth_points`)
+        fetchForCandidates(`${prefix}_growth_points`),
+        fetchForCandidates(`${prefix}_contributions`)
       ]);
 
       const mergeAndSort = (snap: any, dateField: string = 'date') => {
@@ -213,14 +220,58 @@ export default function ProfilePage() {
       setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
       setFines(mergeAndSort(fineSnap, 'date') as any);
 
-      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
-      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
-        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
-      setSalaryRecords(uniqueSalaries);
+      // Extract contributions map
+      const cMap: Record<string, any> = {};
+      contribSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (data.date) {
+          cMap[data.date] = data;
+        }
+      });
+      setContributionsMap(cMap);
+
+      // Process growth points / extra monthly bonus points
+      const rawGrowth = mergeAndSort(pointsSnap, 'date') as any;
+      const extraRows: any[] = [];
+      pointsSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (Number(data.extra) > 0) {
+          extraRows.push({
+            id: `${d.id}_extra`,
+            points: data.extra,
+            reason: 'Monthly Bonus/Extra Points',
+            category: 'Growth Point Bonus',
+            date: `${data.month || '2026-06'}-28`,
+            month: data.month || '2026-06'
+          });
+        }
+      });
+      
+      const contribRows = contribSnap.docs
+        .map((d: any) => d.data())
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.date,
+          points: 1,
+          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
+          category: 'Growth Point',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
+        }));
+
+      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
+      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
+        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+      setGrowthHistory(uniqueGrowth);
 
       if (pointsSnap.docs.length > 0) {
         setGrowthPoints(pointsSnap.docs[0].data());
       }
+
+      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
+      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
+        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
+      setSalaryRecords(uniqueSalaries);
     } catch (error) {
       console.error("Critical sync failure in fetchMetrics:", error);
       toast.error("Some system synchronization logs were unavailable.");
@@ -287,29 +338,110 @@ export default function ProfilePage() {
     loadProfile();
   }, [router, fetchMetrics]);
 
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const handleUploadPhoto = async (file: File) => {
-    try {
-      setUploadingPhoto(true);
-      const url = await uploadToCloudinary(file, 'Khan Hub/it/profile');
-      const targetCol = (session.role === 'superadmin' || session.role === 'manager') ? 'hq_users' : 'it_users';
-      await updateDoc(doc(db, targetCol, session.uid), { photoUrl: url }).catch(() => {});
-      setProfile((p: any) => ({ ...p, photoUrl: url }));
-      toast.success('Photo updated successfully');
-    } catch (e) {
-      toast.error('Upload failed');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('it_session');
     localStorage.removeItem('hq_session');
     router.push('/departments/it/login');
   };
 
-    // Standardized Dynamic Finance Calculations
+  const daysInMonth = useCallback(() => {
+    if (!selectedMonth || !selectedMonth.includes('-')) return [];
+    const [year, month] = selectedMonth.split('-').map(Number);
+    if (isNaN(year) || isNaN(month)) return [];
+    const date = new Date(year, month - 1, 1);
+    if (isNaN(date.getTime())) return [];
+
+    const days = [];
+    while (date.getMonth() === month - 1) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${d}`);
+      date.setDate(date.getDate() + 1);
+    }
+    return days;
+  }, [selectedMonth]);
+
+  const computedScores = useMemo(() => {
+    const days = daysInMonth();
+    let attScore = 0;
+    let punctScore = 0;
+    let uniScore = 0;
+    let workScore = 0;
+
+    const attMap: Record<string, any> = {};
+    attendance.forEach(a => { attMap[a.date] = a; });
+
+    const dressMap: Record<string, any> = {};
+    dressLogs.forEach(d => { dressMap[d.date] = d; });
+
+    const dutyMap: Record<string, any> = {};
+    duties.forEach(d => { dutyMap[d.date] = d; });
+
+    days.forEach(day => {
+      // 1. Attendance: 1 point if present or late
+      const att = attMap[day];
+      if (att?.status === 'present' || att?.status === 'late') {
+        attScore++;
+        // 2. Punctuality: 1 point if arrived on time
+        if (att.arrivedOnTime !== false) punctScore++;
+      }
+
+      // 3. Uniform: 1 point if all items are compliant
+      const dress = dressMap[day];
+      if (dress) {
+        const config = profile?.dressCodeConfig || [];
+        const items = dress.items || [];
+        const missing = config.filter((c: any) => {
+          const item = items.find((i: any) => i.key === c.key);
+          return !item || item.status === 'no';
+        });
+        if (config.length > 0 && missing.length === 0) uniScore++;
+      }
+
+      // 4. Working (Duties): 1 point if all duties are done
+      const duty = dutyMap[day];
+      if (duty) {
+        const config = profile?.dutyConfig || [];
+        const items = duty.duties || [];
+        const pending = config.filter((c: any) => {
+          const item = items.find((i: any) => i.key === c.key);
+          return !item || item.status === 'not_done';
+        });
+        if (config.length > 0 && pending.length === 0) workScore++;
+      }
+    });
+
+    let gpScore = 0;
+    days.forEach(day => {
+      const contrib = contributionsMap[day];
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
+      }
+    });
+
+    const extraPoints = growthHistory
+      .filter(item => {
+        const itemMonth = item.month || (item.date ? item.date.substring(0, 7) : '');
+        return itemMonth === selectedMonth && item.category === 'Growth Point Bonus';
+      })
+      .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+    gpScore += extraPoints;
+
+    return {
+      attendance: attScore,
+      punctuality: punctScore,
+      uniform: uniScore,
+      working: workScore,
+      growthPoint: gpScore,
+      workingDays: days.length
+    };
+  }, [profile, attendance, dressLogs, duties, contributionsMap, growthHistory, selectedMonth, daysInMonth]);
+
+  // Standardized Dynamic Finance Calculations
   const salaryDetails = useMemo(() => {
     if (!profile) {
       return {
@@ -324,48 +456,61 @@ export default function ProfilePage() {
         earnings: 0,
         absentDeduction: 0,
         estimatedSalary: 0,
-        fines: 0
+        fines: 0,
+        payableDatesList: [] as { date: string; status: string }[],
+        deductedDatesList: [] as { date: string; status: string; deduction: number }[]
       };
     }
 
     const monthlySalary = Number(profile.monthlySalary || profile.salary || 0);
-    const dailyWage = monthlySalary / 30;
+    const days = daysInMonth();
+    const totalDaysCount = days.length || 30;
+    const dailyWage = monthlySalary / totalDaysCount;
 
     let presentDays = 0;
     let lateDays = 0;
-    let leavesCount = 0;
     let paidLeaves = 0;
-    let unpaidLeaves = 0;
     let absentDays = 0;
     let unmarkedDays = 0;
 
-    attendance.forEach(a => {
-      const status = a.status;
+    const payableDatesList: { date: string; status: string }[] = [];
+    const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const attMap: Record<string, any> = {};
+    attendance.forEach(a => { attMap[a.date] = a; });
+
+    days.forEach(dayStr => {
+      const att = attMap[dayStr];
+      const status = att ? att.status : 'unmarked';
+      const isPast = dayStr < todayStr;
+
       if (status === 'present') {
         presentDays++;
+        payableDatesList.push({ date: dayStr, status: 'Present' });
       } else if (status === 'late') {
         lateDays++;
-      } else if (status === 'leave' || status === 'paid_leave') {
-        leavesCount++;
-        if (leavesCount <= 2) {
-          paidLeaves++;
-        } else {
-          unpaidLeaves++;
-        }
-      } else if (status === 'unpaid_leave') {
-        unpaidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Late' });
+      } else if (status === 'leave' || status === 'paid_leave' || status === 'unpaid_leave') {
+        paidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
       } else if (status === 'absent') {
         absentDays++;
+        deductedDatesList.push({ date: dayStr, status: 'Absent', deduction: dailyWage });
       } else {
-        unmarkedDays++;
+        if (isPast) {
+          unmarkedDays++;
+          deductedDatesList.push({ date: dayStr, status: 'Unmarked (Past)', deduction: dailyWage });
+        }
       }
     });
 
     const payableDays = presentDays + lateDays + paidLeaves;
-    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+    const unpaidDaysTotal = absentDays + unmarkedDays;
 
     const earnings = payableDays * dailyWage;
-    const absentDeduction = unpaidDays * dailyWage;
+    const absentDeduction = unpaidDaysTotal * dailyWage;
     const totalFines = fines.reduce((a, c) => a + (Number(c.amount) || 0), 0);
     const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
 
@@ -374,35 +519,18 @@ export default function ProfilePage() {
       presentDays,
       lateDays,
       paidLeaves,
-      unpaidLeaves,
+      unpaidLeaves: 0,
       absentDays,
       payableDays,
-      unpaidDays,
+      unpaidDays: unpaidDaysTotal,
       earnings,
       absentDeduction,
       estimatedSalary,
-      fines: totalFines
+      fines: totalFines,
+      payableDatesList,
+      deductedDatesList
     };
-  }, [profile, attendance, fines]);
-
-  const currentMonthTotalPayable = useMemo(() => {
-    return salaryDetails.estimatedSalary;
-  }, [salaryDetails]);
-
-  const totalEarnings = useMemo(() => {
-    return salaryDetails.estimatedSalary;
-  }, [salaryDetails]);
-
-  const totalFines = useMemo(() => {
-    return salaryDetails.fines;
-  }, [salaryDetails]);
-
-  const attendancePerformance = useMemo(() => {
-    if (!attendance.length) return 0;
-    const recent30 = attendance.slice(0, 30);
-    const present = recent30.filter(a => ['present', 'late'].includes(a.status)).length;
-    return Math.round((present / recent30.length) * 100);
-  }, [attendance]);
+  }, [profile, attendance, fines, daysInMonth]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#070913] flex flex-col items-center justify-center text-white">
@@ -438,7 +566,7 @@ export default function ProfilePage() {
               <Award className="text-amber-500" size={18} />
               <div>
                 <p className="text-[9px] font-bold uppercase text-slate-400 leading-none">Growth Level</p>
-                <p className="text-sm font-black text-white mt-0.5">{growthPoints?.total || profile?.totalGrowthPoints || 0} PTS</p>
+                <p className="text-sm font-black text-white mt-0.5">{computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} PTS</p>
               </div>
             </div>
             <button 
@@ -498,72 +626,41 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-
-          {/* Performance Analytics metrics */}
-          <div className={`p-6 rounded-[2.5rem] ${glassStyle} border-white/[0.05]`}>
-            <h3 className="text-xs font-black text-white flex items-center gap-2 mb-4 uppercase tracking-wider">
-              <TrendingUp size={15} className="text-indigo-400" />
-              Efficiency Ledger
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-[11px] mb-2 font-medium">
-                  <span className="text-slate-400">Punctuality Timeline (30d)</span>
-                  <span className="font-bold text-indigo-400">{attendancePerformance}%</span>
-                </div>
-                <div className="w-full bg-white/[0.04] h-2 rounded-full overflow-hidden border border-white/[0.02]">
-                  <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-1000" style={{ width: `${attendancePerformance}%` }} />
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-3.5 border-t border-white/[0.04] text-xs">
-                <span className="text-slate-400 font-medium">Resolution Success</span>
-                <span className="font-bold text-slate-200">
-                  {specialTasks.filter(t => t.status === 'completed').length} / {specialTasks.length} Assignments
-                </span>
-              </div>
-            </div>
-          </div>
         </aside>
 
-        {/* Content Tabs & Main Panel */}
+        {/* Right Content */}
         <div className="lg:col-span-8 space-y-6">
-          
-          {/* Glassmorphic Tab Navigator */}
-          <nav className="flex gap-1 overflow-x-auto no-scrollbar bg-white/[0.01] border border-white/[0.04] p-1.5 rounded-[2rem] backdrop-blur-2xl">
+          <nav className="flex gap-2 overflow-x-auto no-scrollbar bg-white/[0.02] border border-white/[0.06] p-2 rounded-3xl backdrop-blur-2xl">
             {[
-              { id: 'special_tasks', label: 'Tasks', icon: Target },
-              { id: 'attendance', label: 'Timeline', icon: Calendar },
-              { id: 'duty', label: 'Duties', icon: Activity },
-              { id: 'dress', label: 'Apparel', icon: Shirt },
-              { id: 'score', label: 'Score', icon: TrendingUp },
-              { id: 'finance', label: 'Ledger', icon: DollarSign },
-              { id: 'profile', label: 'Security', icon: Info },
+              { id: 'special_tasks' as const, label: 'Protocols Assigned', icon: Target },
+              { id: 'attendance' as const, label: 'Access Log', icon: Calendar },
+              { id: 'duty' as const, label: 'Duty Matrix', icon: Briefcase },
+              { id: 'dress' as const, label: 'Uniform Node', icon: Shirt },
+              { id: 'score' as const, label: 'Growth Ledger', icon: TrendingUp },
+              { id: 'finance' as const, label: 'Financial Vault', icon: DollarSign },
+              { id: 'profile' as const, label: 'Clearance Data', icon: User },
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2.5 px-6 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative whitespace-nowrap
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300
                     ${isActive 
-                      ? `bg-white/[0.04] text-white shadow-xl shadow-black/20 border border-white/[0.05] scale-105` 
-                      : `text-slate-500 hover:text-slate-300 hover:bg-white/[0.01]`}`}
+                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+                    }`}
                 >
-                  <Icon size={14} className={isActive ? 'text-indigo-400' : 'text-slate-500'} />
+                  <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
                   {tab.label}
-                  {isActive && (
-                    <span className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-                  )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Tab Display Panel */}
-          <div className={`p-8 md:p-10 rounded-[3rem] min-h-[500px] relative overflow-hidden border-white/[0.05] ${glassStyle}`}>
-            
-            {/* --- SPECIAL TASKS TAB --- */}
+          <div className={`p-8 rounded-[2.5rem] ${glassStyle} min-h-[520px] border-white/[0.05]`}>
+            {/* --- PROTOCOLS / TASKS TAB --- */}
             {activeTab === 'special_tasks' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
@@ -572,48 +669,55 @@ export default function ProfilePage() {
                       <Target size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Mission Critical Tasks</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Special directives issued by operations administration</p>
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Infrastructure Directives</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Direct admin instructions assigned to your terminal</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {specialTasks.length > 0 ? specialTasks.map(task => {
                     const isDone = task.status === 'completed';
                     return (
-                      <div key={task.id} className="p-6 rounded-[2rem] bg-white/[0.01] border border-white/[0.04] flex items-center justify-between hover:border-white/[0.08] transition-all duration-300 group">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-3 rounded-2xl ${isDone ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                            {isDone ? <CheckCircle size={20} /> : <Clock size={20} />}
+                      <div key={task.id} className="p-5 rounded-[1.5rem] bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-2xl ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                            {isDone ? <CheckCircle2 size={16} /> : <Clock size={16} />}
                           </div>
                           <div>
-                            <p className={`text-sm font-bold tracking-tight ${isDone ? 'text-slate-500 line-through opacity-70' : 'text-slate-200'}`}>
-                              {task.task || task.description || 'System Operations Duty'}
+                            <p className={`text-sm font-bold text-slate-100 ${isDone ? 'line-through text-slate-500' : ''}`}>
+                              {task.description || task.task}
                             </p>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mt-1.5 flex items-center gap-2">
-                              <span>Assigned {formatDateDMY(task.date || task.createdAt)}</span>
-                              <span className="w-1 h-1 bg-slate-600 rounded-full" />
-                              <span className="text-indigo-400">{task.status}</span>
-                            </p>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider mt-1">{formatDateDMY(task.createdAt || task.date)}</p>
                           </div>
                         </div>
-                        <div className="px-4 py-2 rounded-xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black text-indigo-400 shadow-sm flex-shrink-0">
-                          +{task.points || 0} PTS
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
+                            isDone 
+                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                          }`}>
+                            {task.status}
+                          </span>
+                          {task.points && (
+                            <span className="px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                              +{task.points} PTS
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
                   }) : (
-                    <div className="py-20 flex flex-col items-center opacity-30">
-                      <Sparkles size={48} className="text-slate-500 mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clear Assignment Board</p>
+                    <div className="py-16 text-center bg-white/[0.01] border border-dashed border-white/[0.04] rounded-3xl">
+                      <Sparkles className="mx-auto text-slate-600 mb-3 animate-pulse" size={32} />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Terminal clear. No pending protocols.</p>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* --- ATTENDANCE TAB --- */}
+            {/* --- ACCESS LOG / ATTENDANCE TAB --- */}
             {activeTab === 'attendance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
@@ -622,8 +726,8 @@ export default function ProfilePage() {
                       <Calendar size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Punctuality Timeline</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Timeline logs of professional presence & clock-ins</p>
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Access Log Audit</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Official time-stamp logs detailing active sessions</p>
                     </div>
                   </div>
                 </div>
@@ -632,38 +736,40 @@ export default function ProfilePage() {
                   {attendance.length > 0 ? attendance.map(log => {
                     const isLate = log.status === 'late' || !log.arrivedOnTime;
                     return (
-                      <div key={log.id} className="p-5 rounded-[2rem] bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] transition-all flex items-center justify-between">
+                      <div key={log.id} className="p-5 rounded-[1.5rem] bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] transition-all flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-slate-200">{formatDateDMY(log.date)}</span>
+                            <span className="text-sm font-bold text-slate-200">{formatDateDMY(log.date)}</span>
                             {isLate && log.status !== 'absent' && (
-                              <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">Late</span>
+                              <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Late Entry</span>
                             )}
                           </div>
-                          <p className="text-[10px] font-black text-slate-500 uppercase mt-1.5 tracking-wider">
-                            Clock: {log.arrivalTime || '--:--'} - {log.departureTime || '--:--'}
+                          <p className="text-[10px] text-slate-500 font-bold mt-1">
+                            Check-in: {log.arrivalTime || '--:--'} | Check-out: {log.departureTime || '--:--'}
                           </p>
                         </div>
-                        <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
+                        <span className={`px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
                           log.status === 'present' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                            : log.status === 'absent'
+                              ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                         }`}>
-                          {log.status}
-                        </div>
+                          {log.status.replace('_', ' ')}
+                        </span>
                       </div>
                     );
                   }) : (
-                    <div className="col-span-2 py-20 text-center bg-white/[0.01] border border-white/[0.04] border-dashed rounded-[2rem] opacity-40">
-                      <Calendar size={36} className="mx-auto text-slate-600 mb-3" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">No active attendance logs parsed</p>
+                    <div className="col-span-full py-16 text-center bg-white/[0.01] border border-dashed border-white/[0.04] rounded-3xl">
+                      <Calendar className="mx-auto text-slate-600 mb-3" size={32} />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Access logs not found in storage.</p>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* --- DUTY LOGS TAB --- */}
+            {/* --- DUTY MATRIX TAB --- */}
             {activeTab === 'duty' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
@@ -672,127 +778,101 @@ export default function ProfilePage() {
                       <Briefcase size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Deployment & Duty Checklist</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Daily task diagnostics logged by operations manager</p>
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Routine Matrix Audit</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Infrastructure maintenance routine checklists</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {duties.length > 0 ? duties.map(duty => (
-                    <div key={duty.id} className="p-6 rounded-[2rem] bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] transition-all">
-                      <div className="flex items-center justify-between border-b border-white/[0.04] pb-4 mb-4">
-                        <span className="font-bold text-sm text-slate-200 flex items-center gap-2">
-                          <Calendar size={14} className="text-slate-500"/>
-                          {formatDateDMY(duty.date)}
-                        </span>
-                        <div className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20 shadow-sm flex-shrink-0">
-                          +{duty.points || 0} PTS
-                        </div>
-                      </div>
-                      
+                  {duties.length > 0 ? duties.map(rec => (
+                    <div key={rec.id} className="p-5 rounded-[1.5rem] bg-white/[0.01] border border-white/[0.04]">
+                      <span className="text-xs font-black text-slate-300 flex items-center gap-2 mb-4 border-b border-white/[0.03] pb-3">
+                        <Calendar size={13} className="text-indigo-400" />
+                        {formatDateDMY(rec.date)}
+                      </span>
                       <div className="flex flex-wrap gap-2">
-                        {duty.duties && duty.duties.length > 0 ? (
-                          duty.duties.map((sub: any, idx: number) => (
-                            <div 
-                              key={idx}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-colors
-                                ${sub.status === 'done' 
-                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                                  : sub.status === 'na'
-                                    ? 'bg-white/5 border-white/10 text-slate-500'
-                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                                  }`}
-                            >
-                              {sub.status === 'done' ? <CheckCircle size={11} /> : sub.status === 'na' ? <MinusCircle size={11} /> : <XCircle size={11} />}
-                              {getDutyLabel(sub, profile)}
-                            </div>
-                          ))
-                        ) : (
-                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider ${
-                            duty.status === 'completed' 
-                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                          }`}>
-                            {duty.status === 'completed' ? <CheckCircle size={11} /> : <XCircle size={11} />}
-                            {getDutyLabel({ key: duty.dutyType }, profile)}: {duty.status === 'completed' ? 'Completed' : 'Not Completed'}
+                        {rec.duties && rec.duties.length > 0 ? rec.duties.map((sub, idx) => (
+                          <div 
+                            key={idx}
+                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[10px] font-bold border transition-colors
+                              ${sub.status === 'done' 
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                                : sub.status === 'na'
+                                  ? 'bg-white/[0.02] border-white/[0.06] text-slate-500'
+                                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                }`}
+                          >
+                            {sub.status === 'done' ? <CheckCircle size={11} /> : sub.status === 'na' ? <MinusCircle size={11} /> : <XCircle size={11} />}
+                            {getDutyLabel(sub, profile)}
+                          </div>
+                        )) : (
+                          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[10px] font-bold bg-white/[0.02] border border-white/[0.06] text-slate-300">
+                            {rec.status === 'completed' ? <CheckCircle size={11} className="text-emerald-400" /> : <AlertCircle size={11} className="text-amber-400" />}
+                            <span className="capitalize">{(rec.dutyType || 'General routine').replace(/_/g, ' ')}</span>
                           </div>
                         )}
                       </div>
                     </div>
                   )) : (
-                    <div className="py-20 text-center bg-white/[0.01] border border-white/[0.04] border-dashed rounded-[2rem] opacity-40">
-                      <Briefcase size={36} className="mx-auto text-slate-600 mb-3" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">No active work logs documented</p>
+                    <div className="py-16 text-center bg-white/[0.01] border border-dashed border-white/[0.04] rounded-3xl">
+                      <Briefcase className="mx-auto text-slate-600 mb-3" size={32} />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Operation checklist empty.</p>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* --- DRESS CODE TAB --- */}
+            {/* --- UNIFORM TAB --- */}
             {activeTab === 'dress' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
+                <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-2xl text-indigo-400">
                       <Shirt size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Appearance Compliance</h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Evaluations of professional office dress code compliance</p>
+                      <h3 className="text-lg font-black text-white uppercase tracking-wider">Hardware Protocol Compliance</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Professional dress code compliance audit</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {dressLogs.length > 0 ? dressLogs.map(log => (
-                    <div key={log.id} className="p-6 rounded-[2rem] bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] transition-all">
-                      <div className="flex items-center justify-between border-b border-white/[0.04] pb-4 mb-4">
-                        <span className="font-bold text-sm text-slate-200 flex items-center gap-2">
-                          <Calendar size={14} className="text-slate-500"/>
-                          {formatDateDMY(log.date)}
-                        </span>
-                        {log.points && (
-                          <div className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20 shadow-sm flex-shrink-0">
-                            +{log.points} PTS
-                          </div>
-                        )}
-                      </div>
-                      
+                  {dressLogs.length > 0 ? dressLogs.map(rec => (
+                    <div key={rec.id} className="p-5 rounded-[1.5rem] bg-white/[0.01] border border-white/[0.04]">
+                      <span className="text-xs font-black text-slate-300 flex items-center gap-2 mb-4 border-b border-white/[0.03] pb-3">
+                        <Calendar size={13} className="text-indigo-400" />
+                        {formatDateDMY(rec.date)}
+                      </span>
                       <div className="flex flex-wrap gap-2">
-                        {log.items && log.items.length > 0 ? (
-                          log.items.map((item: any, idx: number) => (
-                            <div 
-                              key={idx}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider
-                                ${item.status === 'yes' 
-                                  ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' 
-                                  : item.status === 'na'
-                                    ? 'bg-white/5 border-white/10 text-slate-500'
-                                    : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                                  }`}
-                            >
-                              {item.status === 'yes' ? <CheckCircle2 size={11} /> : item.status === 'na' ? <MinusCircle size={11} /> : <AlertTriangle size={11} />}
-                              {getDressLabel(item, profile)}
-                            </div>
-                          ))
-                        ) : (
-                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider ${
-                            (log.isCompliant !== undefined ? log.isCompliant : log.status === 'yes') 
-                              ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' 
-                              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                          }`}>
-                            {(log.isCompliant !== undefined ? log.isCompliant : log.status === 'yes') ? <CheckCircle size={11} /> : <XCircle size={11} />}
-                            {(log.isCompliant !== undefined ? log.isCompliant : log.status === 'yes') ? 'Compliant' : 'Non-Compliant'}
+                        {rec.items && rec.items.length > 0 ? rec.items.map((item, idx) => (
+                          <div 
+                            key={idx}
+                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[10px] font-bold border
+                              ${item.status === 'yes' 
+                                ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' 
+                                : item.status === 'na'
+                                  ? 'bg-white/[0.02] border-white/[0.06] text-slate-500'
+                                  : 'bg-orange-500/10 border-orange-500/20 text-orange-400'
+                                }`}
+                          >
+                            {item.status === 'yes' ? <CheckCircle2 size={11} /> : item.status === 'na' ? <MinusCircle size={11} /> : <AlertTriangle size={11} />}
+                            {getDressLabel(item, profile)}
+                          </div>
+                        )) : (
+                          <div className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[10px] font-bold border ${rec.status === 'yes' ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+                            {rec.status === 'yes' ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                            {rec.status === 'yes' ? 'Compliant' : 'Non-Compliant'}
                           </div>
                         )}
                       </div>
                     </div>
                   )) : (
-                    <div className="py-20 text-center bg-white/[0.01] border border-white/[0.04] border-dashed rounded-[2rem] opacity-40">
-                      <Shirt size={36} className="mx-auto text-slate-600 mb-3" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">No active dress logs evaluations saved</p>
+                    <div className="py-16 text-center bg-white/[0.01] border border-dashed border-white/[0.04] rounded-3xl">
+                      <Shirt className="mx-auto text-slate-600 mb-3" size={32} />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Dress logs not found.</p>
                     </div>
                   )}
                 </div>
@@ -802,7 +882,7 @@ export default function ProfilePage() {
             {/* --- SCORING TAB --- */}
             {activeTab === 'score' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-white/[0.04]">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-2xl text-indigo-400">
                       <TrendingUp size={20} />
@@ -812,25 +892,60 @@ export default function ProfilePage() {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Aggregated scoring logs reflecting professional growth</p>
                     </div>
                   </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-2 text-sm font-bold text-white outline-none focus:border-indigo-500/40 w-full sm:w-auto"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                   <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-900/30 to-purple-950/20 border border-white/[0.05] text-center relative overflow-hidden group">
                     <Sparkles className="absolute right-[-10px] bottom-[-10px] text-indigo-500 opacity-[0.03] w-24 h-24 -rotate-12 transition-transform duration-500 group-hover:rotate-0" />
                     <Award className="mx-auto text-amber-500 mb-2 animate-bounce" size={32} />
                     <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Total Growth Point Vault</p>
-                    <h4 className="text-3xl font-black mt-2 text-white">{growthPoints?.total || profile?.totalGrowthPoints || 0} PTS</h4>
+                    <h4 className="text-3xl font-black mt-2 text-white">{computedScores.growthPoint} PTS</h4>
                   </div>
                   <div className="p-8 rounded-[2.5rem] bg-white/[0.01] border border-white/[0.04] text-center flex flex-col justify-center">
                     <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Punctuality Score</p>
-                    <h4 className="text-3xl font-black mt-2 text-indigo-400">{attendancePerformance}%</h4>
-                  </div>
-                  <div className="p-8 rounded-[2.5rem] bg-white/[0.01] border border-white/[0.04] text-center flex flex-col justify-center">
-                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Completed Assignments</p>
-                    <h4 className="text-3xl font-black mt-2 text-slate-200">
-                      {specialTasks.filter(t => t.status === 'completed').length}
+                    <h4 className="text-3xl font-black mt-2 text-indigo-400">
+                      {computedScores.workingDays > 0 
+                        ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
+                        : 0}%
                     </h4>
                   </div>
+                  <div className="p-8 rounded-[2.5rem] bg-white/[0.01] border border-white/[0.04] text-center flex flex-col justify-center">
+                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Total Score</p>
+                    <h4 className="text-3xl font-black mt-2 text-slate-200">
+                      {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                    </h4>
+                  </div>
+                </div>
+
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Award size={13} className="text-indigo-400" />
+                  Acquisition History ({selectedMonth})
+                </h4>
+                <div className="space-y-3">
+                  {growthHistory.filter(r => (r.month || (r.date ? r.date.substring(0, 7) : '')) === selectedMonth).length > 0 ? (
+                    growthHistory.filter(r => (r.month || (r.date ? r.date.substring(0, 7) : '')) === selectedMonth).map(record => (
+                      <div key={record.id} className="p-5 rounded-[1.5rem] bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] transition-all flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-500"><Award size={16} /></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-200">{record.reason || 'Performance Recognition'}</p>
+                            <p className="text-[9px] font-black text-slate-500 uppercase mt-1.5">{record.date ? formatDateDMY(record.date) : 'Date Unspecified'}</p>
+                          </div>
+                        </div>
+                        <p className="font-black text-sm text-amber-500">+{record.points} PTS</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center bg-white/[0.01] border border-dashed border-white/[0.04] rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      No points logged in ledger for {selectedMonth}.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -838,7 +953,7 @@ export default function ProfilePage() {
             {/* --- FINANCE TAB --- */}
             {activeTab === 'finance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.04]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-white/[0.04]">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-2xl text-indigo-400">
                       <DollarSign size={20} />
@@ -848,12 +963,18 @@ export default function ProfilePage() {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Live financial audits adjusted for enforced system fines</p>
                     </div>
                   </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-2 text-sm font-bold text-white outline-none focus:border-indigo-500/40 w-full sm:w-auto"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                   <div className="p-8 rounded-[2.5rem] bg-white/[0.01] border border-white/[0.04] text-white relative overflow-hidden">
                      <p className="text-xs font-medium text-slate-400">Total Monthly Salary</p>
-                     <h4 className="text-2xl font-black text-white">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
+                     <h4 className="text-2xl font-black text-white">Rs. {Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</h4>
                      
                      <div className="border-t border-white/[0.06] mt-4 pt-4 space-y-1.5 text-[10px] font-bold text-slate-300 uppercase">
                         <div className="flex justify-between items-center">
@@ -870,21 +991,24 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-slate-400">Total Fines:</span>
-                          <span className="font-black text-rose-400">-Rs. {totalFines.toLocaleString()}</span>
+                          <span className="font-black text-rose-400">-Rs. {salaryDetails.fines.toLocaleString()}</span>
                         </div>
                      </div>
                   </div>
                   
-                  <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-900 to-indigo-950 text-white relative overflow-hidden border border-indigo-400/20 shadow-xl shadow-indigo-500/[0.03] flex flex-col justify-between">
+                  <div 
+                    onClick={() => setShowSalaryBreakdownModal(true)}
+                    className="p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-900 to-indigo-950 text-white relative overflow-hidden border border-indigo-400/20 shadow-xl shadow-indigo-500/[0.03] flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-all"
+                  >
                      <div className="absolute right-[-10px] bottom-[-10px] text-white opacity-[0.03] w-28 h-28 rotate-12">
                         <DollarSign size={110} />
                      </div>
                      <div>
-                       <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Estimated Retainable Net</p>
-                       <h4 className="text-3xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
+                       <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Estimated Retainable Net (Click for breakdown)</p>
+                       <h4 className="text-3xl font-black mt-2">Rs. {salaryDetails.estimatedSalary.toLocaleString()}</h4>
                      </div>
                      <p className="text-[9px] opacity-50 mt-2 font-bold border-t border-indigo-500/20 pt-2">
-                       Calculated dynamically for current marked attendance (2 paid leaves limit).
+                       Calculated dynamically for current month's marked logs. All leaves are paid.
                      </p>
                   </div>
                 </div>
@@ -997,13 +1121,130 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+
+      {/* Salary Calculation Breakdown Modal */}
+      {showSalaryBreakdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-gray-900">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Salary Breakdown</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSalaryBreakdownModal(false)}
+                className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+              >
+                <XCircle size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-8 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Top Overview Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50">
+                  <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">Monthly Base Salary</p>
+                  <p className="text-lg font-black text-gray-900">₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-teal-50/30 rounded-2xl border border-teal-100/50">
+                  <p className="text-[9px] font-black text-teal-500 uppercase tracking-widest mb-1">Net Till Date Earned</p>
+                  <p className="text-lg font-black text-teal-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Calculations Formula */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
+                <p className="text-[9px] font-black text-black uppercase tracking-widest">Calculation Formula</p>
+                <div className="space-y-1 font-mono text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Base Daily Rate:</span>
+                    <span>₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()} / {daysInMonth().length} = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600">
+                    <span>Payable Days Earned ({salaryDetails.payableDays} Days):</span>
+                    <span>+ ₨{Math.round(salaryDetails.earnings).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
+                    <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Fines:</span>
+                    <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-black text-gray-900">
+                    <span>Till Date Net:</span>
+                    <span>₨{salaryDetails.estimatedSalary.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid lists for Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Payable Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Payable Dates ({salaryDetails.payableDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.payableDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No payable dates recorded</p>
+                    ) : (
+                      salaryDetails.payableDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 font-bold text-[9px] uppercase">{item.status}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Deductible/Unpaid Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Deductions / Absent ({salaryDetails.deductedDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.deductedDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No deducted dates recorded</p>
+                    ) : (
+                      salaryDetails.deductedDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                            <span className="text-[8px] text-rose-400 uppercase font-black">{item.status}</span>
+                          </div>
+                          <span className="font-black text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-[10px] text-gray-400 italic">
+              All marked leaves are fully paid. Deductions only apply to absences and past unmarked days.
+            </div>
+          </div>
+        </div>
+      )}
       
+      {/* Add generic custom styles for the transitions if needed */}
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slide-in-from-bottom-4 { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-in { animation: fade-in 0.4s ease-out, slide-in-from-bottom-4 0.4s ease-out; }
+        @keyframes slide-in-from-bottom-2 { from { transform: translateY(0.5rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation: fade-in 0.3s ease-out, slide-in-from-bottom-2 0.3s ease-out; }
       `}</style>
     </div>
   );

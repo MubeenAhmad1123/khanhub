@@ -13,7 +13,7 @@ import {
   CheckCircle, Phone, Calendar, 
   Shirt, Award, Clock, Target, DollarSign,
   TrendingUp, Activity, MapPin, Mail, Briefcase,
-  AlertCircle, ChevronRight, Download, Info, Share2, Sparkles, FileText, CreditCard
+  AlertCircle, ChevronRight, Download, Info, Share2, Sparkles, FileText, CreditCard, XCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
@@ -62,6 +62,16 @@ interface FineRecord {
   date: string;
 }
 
+interface GrowthRecord {
+  id: string;
+  points: number;
+  reason: string;
+  category: string;
+  date?: string;
+  createdAt?: any;
+  month?: string;
+}
+
 interface SalarySlip {
   id: string;
   month: string;
@@ -72,6 +82,47 @@ interface SalarySlip {
   boldBonus?: number;
   otherDeductions: number;
   presentDays: number;
+}
+
+// Helper to translate raw duty item keys to beautiful labels
+function getDutyLabel(item: any, profile: any) {
+  if (!item) return 'General Duty';
+  if (item.label) return item.label;
+  if (!item.key) return 'General Duty';
+  
+  const configItem = profile?.dutyConfig?.find((c: any) => c.key === item.key);
+  if (configItem?.label) return configItem.label;
+  
+  const keyMap: Record<string, string> = {
+    'morning': 'Morning Duty',
+    'afternoon': 'Afternoon Duty',
+    'evening': 'Evening Duty',
+    'attendance': 'Attendance Entry',
+    'cleanliness': 'Area Cleanliness'
+  };
+
+  if (keyMap[item.key]) return keyMap[item.key];
+  return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Helper to translate raw dress item keys to beautiful labels
+function getDressLabel(item: any, profile: any) {
+  if (!item) return 'Uniform Item';
+  if (item.label) return item.label;
+  if (!item.key) return 'Uniform Item';
+  
+  const configItem = profile?.dressCodeConfig?.find((c: any) => c.key === item.key);
+  if (configItem?.label) return configItem.label;
+
+  const keyMap: Record<string, string> = {
+    'uniform': 'Uniform Shirt',
+    'shoes': 'Polished Shoes',
+    'id_card': 'Employee Card',
+    'card': 'Employee Card'
+  };
+
+  if (keyMap[item.key]) return keyMap[item.key];
+  return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 export default function ProfilePage() {
@@ -87,13 +138,110 @@ export default function ProfilePage() {
   const [dressLogs, setDressLogs] = useState<DressRecord[]>([]);
   const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
   const [fines, setFines] = useState<FineRecord[]>([]);
-  const [growthPoints, setGrowthPoints] = useState<any>(null);
+  const [growthHistory, setGrowthHistory] = useState<GrowthRecord[]>([]);
   const [salaryRecords, setSalaryRecords] = useState<any[]>([]);
+  
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
+  const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
 
   // Styles
   const glassStyle = "bg-white/70 backdrop-blur-xl border border-white shadow-[20px_20px_60px_#d1d9e6,-20px_-20px_60px_#ffffff]";
   const neumorphicOutset = "shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]";
   const neumorphicInset = "shadow-[inset_4px_4px_8px_#d1d9e6,inset_-4px_-4px_8px_#ffffff]";
+
+  const daysInMonth = useCallback(() => {
+    if (!selectedMonth || !selectedMonth.includes('-')) return [];
+    const [year, month] = selectedMonth.split('-').map(Number);
+    if (isNaN(year) || isNaN(month)) return [];
+    const date = new Date(year, month - 1, 1);
+    if (isNaN(date.getTime())) return [];
+
+    const days = [];
+    while (date.getMonth() === month - 1) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${d}`);
+      date.setDate(date.getDate() + 1);
+    }
+    return days;
+  }, [selectedMonth]);
+
+  const computedScores = useMemo(() => {
+    const days = daysInMonth();
+    let attScore = 0;
+    let punctScore = 0;
+    let uniScore = 0;
+    let workScore = 0;
+
+    const attMap: Record<string, any> = {};
+    attendance.forEach(a => { attMap[a.date] = a; });
+
+    const dressMap: Record<string, any> = {};
+    dressLogs.forEach(d => { dressMap[d.date] = d; });
+
+    const dutyMap: Record<string, any> = {};
+    duties.forEach(d => { dutyMap[d.date] = d; });
+
+    days.forEach(day => {
+      const att = attMap[day];
+      if (att?.status === 'present' || att?.status === 'late') {
+        attScore++;
+        if (att.arrivedOnTime !== false) punctScore++;
+      }
+
+      const dress = dressMap[day];
+      if (dress) {
+        const config = profile?.dressCodeConfig || [];
+        const items = dress.items || [];
+        const missing = config.filter((c: any) => {
+          const item = items.find((i: any) => i.key === c.key);
+          return !item || item.status === 'no';
+        });
+        if (config.length > 0 && missing.length === 0) uniScore++;
+      }
+
+      const duty = dutyMap[day];
+      if (duty) {
+        const config = profile?.dutyConfig || [];
+        const items = duty.duties || [];
+        const pending = config.filter((c: any) => {
+          const item = items.find((i: any) => i.key === c.key);
+          return !item || item.status === 'not_done';
+        });
+        if (config.length > 0 && pending.length === 0) workScore++;
+      }
+    });
+
+    let gpScore = 0;
+    days.forEach(day => {
+      const contrib = contributionsMap[day];
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
+      }
+    });
+
+    const extraPoints = growthHistory
+      .filter(item => {
+        const itemMonth = item.month || (item.date ? item.date.substring(0, 7) : '');
+        return itemMonth === selectedMonth && item.category === 'Growth Point Bonus';
+      })
+      .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+    gpScore += extraPoints;
+
+    return {
+      attendance: attScore,
+      punctuality: punctScore,
+      uniform: uniScore,
+      working: workScore,
+      growthPoint: gpScore,
+      workingDays: days.length
+    };
+  }, [profile, attendance, dressLogs, duties, contributionsMap, growthHistory, selectedMonth, daysInMonth]);
 
   const fetchMetrics = useCallback(async (sId: string) => {
     try {
@@ -120,14 +268,15 @@ export default function ProfilePage() {
         }
       };
 
-      const [att, duty, dress, tasks, fns, salaries, pointsSnap] = await Promise.all([
+      const [att, duty, dress, tasks, fns, salaries, pointsSnap, contribSnap] = await Promise.all([
         fetchParallel(`${prefix}_attendance`, 'date'),
         fetchParallel(`${prefix}_duty_logs`, 'date'),
         fetchParallel(`${prefix}_dress_logs`, 'date'),
         fetchParallel(`${prefix}_special_tasks`, 'createdAt'),
         fetchParallel(`${prefix}_fines`, 'date'),
         fetchParallel(`${prefix}_salary_records`, 'month'),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any))
+        fetchParallel(`${prefix}_growth_points`, 'date'),
+        fetchParallel(`${prefix}_contributions`, 'date')
       ]);
 
       setAttendance(att as AttendanceRecord[]);
@@ -137,14 +286,45 @@ export default function ProfilePage() {
       setFines(fns as FineRecord[]);
       setSalaryRecords(salaries as any[]);
 
-      if (pointsSnap && !pointsSnap.empty) {
-        setGrowthPoints(pointsSnap.docs[0].data());
-      } else {
-        const pointsSnapPref = await getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', prefixedId))).catch(() => null);
-        if (pointsSnapPref && !pointsSnapPref.empty) {
-          setGrowthPoints(pointsSnapPref.docs[0].data());
+      const cMap: Record<string, any> = {};
+      contribSnap.forEach((d: any) => {
+        if (d.date) {
+          cMap[d.date] = d;
         }
-      }
+      });
+      setContributionsMap(cMap);
+
+      const rawGrowth = pointsSnap as any[];
+      const extraRows: any[] = [];
+      pointsSnap.forEach((d: any) => {
+        if (Number(d.extra) > 0) {
+          extraRows.push({
+            id: `${d.id}_extra`,
+            points: d.extra,
+            reason: 'Monthly Bonus/Extra Points',
+            category: 'Growth Point Bonus',
+            date: `${d.month || '2026-06'}-28`,
+            month: d.month || '2026-06'
+          });
+        }
+      });
+
+      const contribRows = (contribSnap as any[])
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.id,
+          points: 1,
+          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
+          category: 'Growth Point',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
+        }));
+
+      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
+      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
+        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+      setGrowthHistory(uniqueGrowth as GrowthRecord[]);
+
     } catch (error) {
       console.error("Error fetching metrics:", error);
     }
@@ -174,7 +354,6 @@ export default function ProfilePage() {
           });
           finalId = userSnap.id;
         } else if (parsed.role === 'superadmin' || parsed.role === 'manager') {
-          // Sync check with hq_users fallback
           const hqRef = doc(db, 'hq_users', parsed.uid);
           const hqSnap = await getDoc(hqRef);
           if (hqSnap.exists()) {
@@ -221,7 +400,7 @@ export default function ProfilePage() {
     }
   };
 
-    // Standardized Dynamic Finance Calculations
+  // Standardized Dynamic Finance Calculations (Leaves are Paid)
   const salaryDetails = useMemo(() => {
     if (!profile) {
       return {
@@ -236,48 +415,60 @@ export default function ProfilePage() {
         earnings: 0,
         absentDeduction: 0,
         estimatedSalary: 0,
-        fines: 0
+        fines: 0,
+        payableDatesList: [] as { date: string; status: string }[],
+        deductedDatesList: [] as { date: string; status: string; deduction: number }[]
       };
     }
 
     const monthlySalary = Number(profile.monthlySalary || profile.salary || 0);
-    const dailyWage = monthlySalary / 30;
+    const days = daysInMonth();
+    const totalDaysCount = days.length || 30;
+    const dailyWage = monthlySalary / totalDaysCount;
 
     let presentDays = 0;
     let lateDays = 0;
-    let leavesCount = 0;
     let paidLeaves = 0;
-    let unpaidLeaves = 0;
     let absentDays = 0;
     let unmarkedDays = 0;
 
-    attendance.forEach(a => {
-      const status = a.status;
+    const payableDatesList: { date: string; status: string }[] = [];
+    const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const attMap: Record<string, any> = {};
+    attendance.forEach(a => { attMap[a.date] = a; });
+
+    days.forEach(dayStr => {
+      const att = attMap[dayStr];
+      const status = att ? att.status : 'unmarked';
+      const isPast = dayStr < todayStr;
+
       if (status === 'present') {
         presentDays++;
+        payableDatesList.push({ date: dayStr, status: 'Present' });
       } else if (status === 'late') {
         lateDays++;
-      } else if (status === 'leave' || status === 'paid_leave') {
-        leavesCount++;
-        if (leavesCount <= 2) {
-          paidLeaves++;
-        } else {
-          unpaidLeaves++;
-        }
-      } else if (status === 'unpaid_leave') {
-        unpaidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Late' });
+      } else if (status === 'leave' || status === 'paid_leave' || status === 'unpaid_leave') {
+        paidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
       } else if (status === 'absent') {
         absentDays++;
+        deductedDatesList.push({ date: dayStr, status: 'Absent', deduction: dailyWage });
       } else {
-        unmarkedDays++;
+        if (isPast) {
+          unmarkedDays++;
+          deductedDatesList.push({ date: dayStr, status: 'Unmarked (Past)', deduction: dailyWage });
+        }
       }
     });
 
     const payableDays = presentDays + lateDays + paidLeaves;
-    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+    const unpaidDaysTotal = absentDays + unmarkedDays;
 
     const earnings = payableDays * dailyWage;
-    const absentDeduction = unpaidDays * dailyWage;
+    const absentDeduction = unpaidDaysTotal * dailyWage;
     const totalFines = fines.reduce((a, c) => a + (Number(c.amount) || 0), 0);
     const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
 
@@ -286,20 +477,18 @@ export default function ProfilePage() {
       presentDays,
       lateDays,
       paidLeaves,
-      unpaidLeaves,
+      unpaidLeaves: 0,
       absentDays,
       payableDays,
-      unpaidDays,
+      unpaidDays: unpaidDaysTotal,
       earnings,
       absentDeduction,
       estimatedSalary,
-      fines: totalFines
+      fines: totalFines,
+      payableDatesList,
+      deductedDatesList
     };
-  }, [profile, attendance, fines]);
-
-  const currentMonthTotalPayable = useMemo(() => {
-    return salaryDetails.estimatedSalary;
-  }, [salaryDetails]);
+  }, [profile, attendance, fines, daysInMonth]);
 
   const totalEarnings = useMemo(() => {
     return salaryDetails.estimatedSalary;
@@ -333,8 +522,10 @@ export default function ProfilePage() {
             <div className={`px-6 py-3 rounded-2xl ${glassStyle} flex items-center gap-3`}>
               <Award className="text-amber-500" size={20} />
               <div>
-                <p className="text-[10px] font-black uppercase text-slate-400">Growth Points</p>
-                <p className="text-lg font-black">{growthPoints?.total || profile?.totalGrowthPoints || 0}</p>
+                <p className="text-[10px] font-black uppercase text-slate-400">Total Score</p>
+                <p className="text-lg font-black">
+                  {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} Points
+                </p>
               </div>
             </div>
           </div>
@@ -523,31 +714,112 @@ export default function ProfilePage() {
 
             {activeTab === 'score' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600"><TrendingUp size={20} /></div>
-                  <h3 className="text-xl font-black">Growth Analysis</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600"><TrendingUp size={20} /></div>
+                    <h3 className="text-xl font-black">Growth Analysis</h3>
+                  </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 w-full sm:w-auto"
+                  />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                    <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#FCFBF8] text-center`}>
                       <Award className="mx-auto text-amber-500 mb-2" size={32} />
-                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Total Growth Points</p>
-                      <h4 className="text-3xl font-black mt-2">{growthPoints?.total || profile?.totalGrowthPoints || 0}</h4>
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Growth Points Vault</p>
+                      <h4 className="text-3xl font-black mt-2">{computedScores.growthPoint}</h4>
                    </div>
+                   <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-[#FCFBF8] text-center`}>
+                      <TrendingUp className="mx-auto text-indigo-500 mb-2" size={32} />
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Total Monthly Score</p>
+                      <h4 className="text-3xl font-black mt-2">
+                        {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                      </h4>
+                   </div>
+                </div>
+
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Acquisition History ({selectedMonth})</h4>
+                <div className="space-y-3">
+                  {growthHistory.filter(r => (r.month || (r.date ? r.date.substring(0, 7) : '')) === selectedMonth).length > 0 ? (
+                    growthHistory.filter(r => (r.month || (r.date ? r.date.substring(0, 7) : '')) === selectedMonth).map(record => (
+                      <div key={record.id} className={`p-5 rounded-3xl ${neumorphicOutset} bg-[#FCFBF8] flex items-center justify-between`}>
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600"><Award size={20} /></div>
+                          <div>
+                            <p className="font-bold text-slate-900">{record.reason || 'Performance Recognition'}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase mt-1">{record.date ? formatDateDMY(record.date) : 'Date Unspecified'}</p>
+                          </div>
+                        </div>
+                        <div className="px-3 py-1 rounded-xl bg-white border border-slate-100 text-[10px] font-black text-indigo-600">+{record.points} PTS</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                      <span className="text-xs font-medium text-gray-400">No detailed points ledger yet for {selectedMonth}.</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {activeTab === 'finance' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-indigo-600 text-white relative overflow-hidden`}>
-                     <DollarSign size={80} className="absolute -right-4 -bottom-4 opacity-10" />
-                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Estimated Payable</p>
-                     <h4 className="text-3xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
+                  <div>
+                    <h3 className="text-xl font-black">Financial Details</h3>
+                    <p className="text-xs text-slate-400 mt-1">Estimations and deductions logs</p>
                   </div>
-                  <div className={`p-8 rounded-[3rem] ${glassStyle} text-slate-900`}>
-                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Deductions</p>
-                     <h4 className="text-3xl font-black mt-2 text-rose-500">Rs. {totalFines.toLocaleString()}</h4>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 w-full sm:w-auto"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                  <div className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-white border border-slate-100`}>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-3 bg-slate-950 text-white rounded-2xl"><CreditCard size={20} /></div>
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Base Rate</span>
+                    </div>
+                    <p className="text-xs font-medium text-slate-500">Total Monthly Salary</p>
+                    <h4 className="text-2xl font-black mt-1">Rs. {(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</h4>
+                    <div className="border-t border-slate-100 mt-6 pt-4 space-y-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <div className="flex justify-between">
+                        <span>Daily Wage Rate:</span>
+                        <span className="text-slate-800">Rs. {Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Payable Days Count:</span>
+                        <span className="text-emerald-600">{salaryDetails.payableDays} Days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Absent Deductible:</span>
+                        <span className="text-rose-500">{salaryDetails.unpaidDays} Days (-Rs. {Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Fines:</span>
+                        <span className="text-rose-500">-Rs. {totalFines.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setShowSalaryBreakdownModal(true)}
+                    className={`p-8 rounded-[3rem] ${neumorphicOutset} bg-indigo-600 text-white relative overflow-hidden flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-all`}
+                  >
+                     <DollarSign size={80} className="absolute -right-4 -bottom-4 opacity-10" />
+                     <div>
+                       <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Est. Net Salary (Click for breakdown)</p>
+                       <h4 className="text-3xl font-black mt-2">Rs. {totalEarnings.toLocaleString()}</h4>
+                     </div>
+                     <p className="text-xs mt-4 font-medium opacity-70 border-t border-indigo-500 pt-2">
+                       Calculated dynamically. All leaves are paid.
+                     </p>
                   </div>
                 </div>
 
@@ -630,6 +902,122 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Salary Calculation Breakdown Modal */}
+      {showSalaryBreakdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-gray-900">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-indigo-650">Salary Breakdown</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSalaryBreakdownModal(false)}
+                className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+              >
+                <XCircle size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-8 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Top Overview Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50">
+                  <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1">Monthly Base Salary</p>
+                  <p className="text-lg font-black text-gray-900">₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-teal-50/30 rounded-2xl border border-teal-100/50">
+                  <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mb-1">Net Till Date Earned</p>
+                  <p className="text-lg font-black text-teal-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Calculations Formula */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
+                <p className="text-[9px] font-black text-black uppercase tracking-widest">Calculation Formula</p>
+                <div className="space-y-1 font-mono text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Base Daily Rate:</span>
+                    <span>₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()} / {daysInMonth().length} = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600">
+                    <span>Payable Days Earned ({salaryDetails.payableDays} Days):</span>
+                    <span>+ ₨{Math.round(salaryDetails.earnings).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
+                    <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Fines:</span>
+                    <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-black text-gray-900">
+                    <span>Till Date Net:</span>
+                    <span>₨{salaryDetails.estimatedSalary.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid lists for Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Payable Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Payable Dates ({salaryDetails.payableDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.payableDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No payable dates recorded</p>
+                    ) : (
+                      salaryDetails.payableDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 font-bold text-[9px] uppercase">{item.status}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Deductible/Unpaid Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Deductions / Absent ({salaryDetails.deductedDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.deductedDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No deducted dates recorded</p>
+                    ) : (
+                      salaryDetails.deductedDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                            <span className="text-[8px] text-rose-400 uppercase font-black">{item.status}</span>
+                          </div>
+                          <span className="font-black text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-[10px] text-gray-400 italic">
+              All marked leaves are fully paid. Deductions only apply to absences and past unmarked days.
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

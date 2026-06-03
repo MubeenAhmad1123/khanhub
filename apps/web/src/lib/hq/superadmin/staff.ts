@@ -125,61 +125,77 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
 
 async function loadGrowthPoints(dept: StaffDept, staffId: string, monthKey?: string) {
   const prefix = getDeptPrefix(dept);
-  const col = `${prefix}_growth_points`;
   const simpleId = getSimpleId(staffId);
+  const candidateIds = [staffId, simpleId].filter(Boolean);
 
-  if (monthKey) {
-    const ids = [`${simpleId}_${monthKey}`];
-    if (staffId !== simpleId) {
-      ids.push(`${staffId}_${monthKey}`);
+  // 1. Fetch contributions from ${prefix}_contributions
+  const contribCol = `${prefix}_contributions`;
+  const contribSnaps = await Promise.all(
+    candidateIds.map(id =>
+      getDocs(query(collection(db, contribCol), where('staffId', '==', id))).catch(() => ({ docs: [] } as any))
+    )
+  );
+  
+  const contribDocs = contribSnaps.flatMap(snap => snap.docs);
+  const seenContribIds = new Set<string>();
+  let contribPoints = 0;
+
+  contribDocs.forEach((d: any) => {
+    if (seenContribIds.has(d.id)) return;
+    seenContribIds.add(d.id);
+    const data = d.data();
+    if (monthKey) {
+      const itemMonth = data.date ? data.date.substring(0, 7) : '';
+      if (itemMonth !== monthKey) return;
     }
-    
-    let monthlyTotal = 0;
-    let found = false;
+    const status = String(data.status || '').toLowerCase();
+    if (status === 'yes' || data.isApproved === true) {
+      contribPoints++;
+    }
+  });
+
+  // 2. Fetch extra/bonus points from ${prefix}_growth_points
+  const gpCol = `${prefix}_growth_points`;
+  const gpSnaps = await Promise.all(
+    candidateIds.map(id =>
+      getDocs(query(collection(db, gpCol), where('staffId', '==', id))).catch(() => ({ docs: [] } as any))
+    )
+  );
+
+  const gpDocs = gpSnaps.flatMap(snap => snap.docs);
+  const seenGpIds = new Set<string>();
+  let extraPoints = 0;
+
+  gpDocs.forEach((d: any) => {
+    if (seenGpIds.has(d.id)) return;
+    seenGpIds.add(d.id);
+    const data = d.data();
+    if (monthKey) {
+      const itemMonth = data.month || (data.date ? data.date.substring(0, 7) : '');
+      if (itemMonth === monthKey) {
+        extraPoints += (Number(data.extra || data.points || 0));
+      }
+    } else {
+      extraPoints += (Number(data.extra || data.points || 0));
+    }
+  });
+
+  // Also check direct document read fallback for total/extra
+  if (monthKey) {
+    const ids = [`${simpleId}_${monthKey}`, `${staffId}_${monthKey}`];
     for (const docId of ids) {
-      const docRef = doc(db, col, docId);
+      const docRef = doc(db, gpCol, docId);
       const snap = await getDoc(docRef).catch(() => null);
       if (snap && snap.exists()) {
         const data = snap.data();
-        if (data && typeof data.total === 'number') {
-          monthlyTotal = Math.max(monthlyTotal, data.total);
-          found = true;
+        if (data && typeof data.extra === 'number') {
+          extraPoints = Math.max(extraPoints, data.extra);
         }
       }
     }
-    if (found) return monthlyTotal;
   }
 
-  const q1 = getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(
-    () => ({ docs: [] } as any)
-  );
-  const promises = [q1];
-  if (simpleId && simpleId !== staffId) {
-    const q2 = getDocs(query(collection(db, col), where('staffId', '==', simpleId))).catch(
-      () => ({ docs: [] } as any)
-    );
-    promises.push(q2);
-  }
-  const snaps = await Promise.all(promises);
-  const seenDocIds = new Set<string>();
-  let total = 0;
-  snaps.forEach(snap => {
-    snap.docs.forEach((docSnap: any) => {
-      if (!seenDocIds.has(docSnap.id)) {
-        seenDocIds.add(docSnap.id);
-        const data = docSnap.data();
-        if (monthKey) {
-          const itemMonth = data.month || (data.date ? data.date.substring(0, 7) : '');
-          if (itemMonth === monthKey) {
-            total += (Number(data.points) || 0);
-          }
-        } else {
-          total += (Number(data.points) || 0);
-        }
-      }
-    });
-  });
-  return total;
+  return contribPoints + extraPoints;
 }
 
 async function loadFinesTotal(dept: StaffDept, staffId: string) {
@@ -738,11 +754,13 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     basicInfoExtras: data.basicInfoExtras || {},
     seniority: data.seniority,
     visibleSections: data.visibleSections || undefined,
+    loginUserId: data.loginUserId || undefined,
     documents: data.documents || [],
   };
 }
 
 export type StaffProfile = StaffCardRow & {
+  loginUserId?: string;
   email?: string;
   phone?: string;
   customId?: string; // This is the Login ID

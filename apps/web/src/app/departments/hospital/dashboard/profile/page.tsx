@@ -72,6 +72,7 @@ interface GrowthRecord {
   category: string;
   date?: string;
   createdAt?: any;
+  month?: string;
 }
 
 interface SalarySlip {
@@ -176,6 +177,10 @@ export default function ProfilePage() {
   const [fines, setFines] = useState<FineRecord[]>([]);
   const [growthHistory, setGrowthHistory] = useState<GrowthRecord[]>([]);
   const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
+  
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
+  const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
 
   // Fetch visibility settings using standard hook
   const { sections, loading: visibilityLoading } = useVisibleSections('hospital', 'staff', session?.uid || '');
@@ -209,42 +214,64 @@ export default function ProfilePage() {
   }, [visibleTabs, activeTab, visibilityLoading]);
 
   // Robust Dual Fetcher matching HQ dashboard patterns
-  const fetchMetrics = useCallback(async (sId: string) => {
+  const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
     try {
       const prefix = 'hospital';
-      const rawId = sId.startsWith('hospital_') ? sId.replace('hospital_', '') : sId;
-      const prefixedId = sId.startsWith('hospital_') ? sId : `hospital_${sId}`;
+      
+      const candidateIds = new Set<string>();
+      if (sId) {
+        candidateIds.add(sId);
+        candidateIds.add(sId.startsWith('hospital_') ? sId.replace('hospital_', '') : sId);
+        candidateIds.add(sId.startsWith('hospital_') ? sId : `hospital_${sId}`);
+      }
+      if (authUid) {
+        candidateIds.add(authUid);
+        candidateIds.add(authUid.startsWith('hospital_') ? authUid.replace('hospital_', '') : authUid);
+        candidateIds.add(authUid.startsWith('hospital_') ? authUid : `hospital_${authUid}`);
+      }
+      if (customId) {
+        candidateIds.add(customId);
+      }
+      if (employeeId) {
+        candidateIds.add(employeeId);
+      }
 
-      // Parallel resolution covering both traditional staff ID and prefixed staff ID formats from HQ
+      const uniqueIds = Array.from(candidateIds).filter(Boolean);
+
+      const fetchForCandidates = async (colName: string) => {
+        const snaps = await Promise.all(
+          uniqueIds.map(id => 
+            getDocs(query(collection(db, colName), where('staffId', '==', id)))
+              .catch(() => ({ docs: [] } as any))
+          )
+        );
+        const allDocs = snaps.flatMap(snap => snap.docs);
+        return { docs: allDocs };
+      };
+
       const [
-        attSnap1, attSnap2,
-        dutySnap1, dutySnap2,
-        dressSnap1, dressSnap2,
-        taskSnap1, taskSnap2,
-        fineSnap1, fineSnap2,
-        growthSnap1, growthSnap2,
-        salarySnap1, salarySnap2
+        attSnap,
+        dutySnap,
+        dressSnap,
+        taskSnap,
+        fineSnap,
+        growthSnap,
+        salarySnap,
+        contribSnap
       ] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_fines`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', rawId))).catch(() => ({ docs: [] } as any)),
-        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', prefixedId))).catch(() => ({ docs: [] } as any)),
+        fetchForCandidates(`${prefix}_attendance`),
+        fetchForCandidates(`${prefix}_duty_logs`),
+        fetchForCandidates(`${prefix}_dress_logs`),
+        fetchForCandidates(`${prefix}_special_tasks`),
+        fetchForCandidates(`${prefix}_fines`),
+        fetchForCandidates(`${prefix}_growth_points`),
+        fetchForCandidates(`${prefix}_salary_records`),
+        fetchForCandidates(`${prefix}_contributions`)
       ]);
 
-      // Helper to properly merge, deduplicate, and sort data from both lookup streams
-      const mergeAndSort = (snap1: any, snap2: any, dateField: string = 'date') => {
-        const combined = [...snap1.docs, ...snap2.docs].map((d: any) => ({ id: d.id, ...d.data() }));
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      const mergeAndSort = (snap: any, dateField: string = 'date') => {
+        const combined = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        const unique = Array.from(new Map(combined.map((item: any) => [item.id, item])).values());
         return unique.sort((a: any, b: any) => {
           const da = a[dateField] || '';
           const db = b[dateField] || '';
@@ -252,14 +279,57 @@ export default function ProfilePage() {
         });
       };
 
-      setAttendance(mergeAndSort(attSnap1, attSnap2, 'date') as any);
-      setDuties(mergeAndSort(dutySnap1, dutySnap2, 'date') as any);
-      setDressLogs(mergeAndSort(dressSnap1, dressSnap2, 'date') as any);
-      setSpecialTasks(mergeAndSort(taskSnap1, taskSnap2, 'createdAt') as any);
-      setFines(mergeAndSort(fineSnap1, fineSnap2, 'date') as any);
-      setGrowthHistory(mergeAndSort(growthSnap1, growthSnap2, 'date') as any);
+      setAttendance(mergeAndSort(attSnap, 'date') as any);
+      setDuties(mergeAndSort(dutySnap, 'date') as any);
+      setDressLogs(mergeAndSort(dressSnap, 'date') as any);
+      setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
+      setFines(mergeAndSort(fineSnap, 'date') as any);
 
-      const salaryCombined = [...salarySnap1.docs, ...salarySnap2.docs].map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
+      // Extract contributions map
+      const cMap: Record<string, any> = {};
+      contribSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (data.date) {
+          cMap[data.date] = data;
+        }
+      });
+      setContributionsMap(cMap);
+
+      // Process growth points / extra monthly bonus points
+      const rawGrowth = mergeAndSort(growthSnap, 'date') as any;
+      const extraRows: any[] = [];
+      growthSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (Number(data.extra) > 0) {
+          extraRows.push({
+            id: `${d.id}_extra`,
+            points: data.extra,
+            reason: 'Monthly Bonus/Extra Points',
+            category: 'Growth Point Bonus',
+            date: `${data.month || '2026-06'}-28`,
+            month: data.month || '2026-06'
+          });
+        }
+      });
+      
+      const contribRows = contribSnap.docs
+        .map((d: any) => d.data())
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.date,
+          points: 1,
+          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
+          category: 'Growth Point',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
+        }));
+
+      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
+      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
+        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+      setGrowthHistory(uniqueGrowth);
+
+      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
       const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
         .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
       setSalaryRecords(uniqueSalaries);
@@ -309,7 +379,7 @@ export default function ProfilePage() {
         });
 
         // Execute comprehensive data synchronization
-        await fetchMetrics(finalId);
+        await fetchMetrics(finalId, uData.loginUserId || parsed.uid, uData.customId || parsed.customId, uData.employeeId);
       } catch (err) {
         console.error(err);
         toast.error("Secure synchronization failed.");
@@ -339,6 +409,103 @@ export default function ProfilePage() {
     router.push('/departments/hospital/login');
   };
 
+  const daysInMonth = useCallback(() => {
+    if (!selectedMonth || !selectedMonth.includes('-')) return [];
+    const [year, month] = selectedMonth.split('-').map(Number);
+    if (isNaN(year) || isNaN(month)) return [];
+    const date = new Date(year, month - 1, 1);
+    if (isNaN(date.getTime())) return [];
+
+    const days = [];
+    while (date.getMonth() === month - 1) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${d}`);
+      date.setDate(date.getDate() + 1);
+    }
+    return days;
+  }, [selectedMonth]);
+
+  const computedScores = useMemo(() => {
+    const days = daysInMonth();
+    let attScore = 0;
+    let punctScore = 0;
+    let uniScore = 0;
+    let workScore = 0;
+
+    const attMap: Record<string, any> = {};
+    attendance.forEach(a => { attMap[a.date] = a; });
+
+    const dressMap: Record<string, any> = {};
+    dressLogs.forEach(d => { dressMap[d.date] = d; });
+
+    const dutyMap: Record<string, any> = {};
+    duties.forEach(d => { dutyMap[d.date] = d; });
+
+    days.forEach(day => {
+      // 1. Attendance: 1 point if present or late
+      const att = attMap[day];
+      if (att?.status === 'present' || att?.status === 'late') {
+        attScore++;
+        // 2. Punctuality: 1 point if arrived on time
+        if (att.arrivedOnTime !== false) punctScore++;
+      }
+
+      // 3. Uniform: 1 point if all items are compliant
+      const dress = dressMap[day];
+      if (dress) {
+        const config = profile?.dressCodeConfig || [];
+        const items = dress.items || [];
+        const missing = config.filter((c: any) => {
+          const item = items.find((i: any) => i.key === c.key);
+          return !item || item.status === 'no';
+        });
+        if (config.length > 0 && missing.length === 0) uniScore++;
+      }
+
+      // 4. Working (Duties): 1 point if all duties are done
+      const duty = dutyMap[day];
+      if (duty) {
+        const config = profile?.dutyConfig || [];
+        const items = duty.duties || [];
+        const pending = config.filter((c: any) => {
+          const item = items.find((i: any) => i.key === c.key);
+          return !item || item.status === 'not_done';
+        });
+        if (config.length > 0 && pending.length === 0) workScore++;
+      }
+    });
+
+    let gpScore = 0;
+    days.forEach(day => {
+      const contrib = contributionsMap[day];
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
+      }
+    });
+
+    const extraPoints = growthHistory
+      .filter(item => {
+        const itemMonth = item.month || (item.date ? item.date.substring(0, 7) : '');
+        return itemMonth === selectedMonth && item.category === 'Growth Point Bonus';
+      })
+      .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+    gpScore += extraPoints;
+
+    return {
+      attendance: attScore,
+      punctuality: punctScore,
+      uniform: uniScore,
+      working: workScore,
+      growthPoint: gpScore,
+      workingDays: days.length
+    };
+  }, [profile, attendance, dressLogs, duties, contributionsMap, growthHistory, selectedMonth, daysInMonth]);
+
   // Standardized Dynamic Finance Calculations
   const salaryDetails = useMemo(() => {
     if (!profile) {
@@ -354,48 +521,61 @@ export default function ProfilePage() {
         earnings: 0,
         absentDeduction: 0,
         estimatedSalary: 0,
-        fines: 0
+        fines: 0,
+        payableDatesList: [] as { date: string; status: string }[],
+        deductedDatesList: [] as { date: string; status: string; deduction: number }[]
       };
     }
 
     const monthlySalary = Number(profile.monthlySalary || profile.salary || 0);
-    const dailyWage = monthlySalary / 30;
+    const days = daysInMonth();
+    const totalDaysCount = days.length || 30;
+    const dailyWage = monthlySalary / totalDaysCount;
 
     let presentDays = 0;
     let lateDays = 0;
-    let leavesCount = 0;
     let paidLeaves = 0;
-    let unpaidLeaves = 0;
     let absentDays = 0;
     let unmarkedDays = 0;
 
-    attendance.forEach(a => {
-      const status = a.status;
+    const payableDatesList: { date: string; status: string }[] = [];
+    const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const attMap: Record<string, any> = {};
+    attendance.forEach(a => { attMap[a.date] = a; });
+
+    days.forEach(dayStr => {
+      const att = attMap[dayStr];
+      const status = att ? att.status : 'unmarked';
+      const isPast = dayStr < todayStr;
+
       if (status === 'present') {
         presentDays++;
+        payableDatesList.push({ date: dayStr, status: 'Present' });
       } else if (status === 'late') {
         lateDays++;
-      } else if (status === 'leave' || status === 'paid_leave') {
-        leavesCount++;
-        if (leavesCount <= 2) {
-          paidLeaves++;
-        } else {
-          unpaidLeaves++;
-        }
-      } else if (status === 'unpaid_leave') {
-        unpaidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Late' });
+      } else if (status === 'leave' || status === 'paid_leave' || status === 'unpaid_leave') {
+        paidLeaves++;
+        payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
       } else if (status === 'absent') {
         absentDays++;
+        deductedDatesList.push({ date: dayStr, status: 'Absent', deduction: dailyWage });
       } else {
-        unmarkedDays++;
+        if (isPast) {
+          unmarkedDays++;
+          deductedDatesList.push({ date: dayStr, status: 'Unmarked (Past)', deduction: dailyWage });
+        }
       }
     });
 
     const payableDays = presentDays + lateDays + paidLeaves;
-    const unpaidDays = absentDays + unpaidLeaves + unmarkedDays;
+    const unpaidDaysTotal = absentDays + unmarkedDays;
 
     const earnings = payableDays * dailyWage;
-    const absentDeduction = unpaidDays * dailyWage;
+    const absentDeduction = unpaidDaysTotal * dailyWage;
     const totalFines = fines.reduce((a, c) => a + (Number(c.amount) || 0), 0);
     const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
 
@@ -404,20 +584,18 @@ export default function ProfilePage() {
       presentDays,
       lateDays,
       paidLeaves,
-      unpaidLeaves,
+      unpaidLeaves: 0,
       absentDays,
       payableDays,
-      unpaidDays,
+      unpaidDays: unpaidDaysTotal,
       earnings,
       absentDeduction,
       estimatedSalary,
-      fines: totalFines
+      fines: totalFines,
+      payableDatesList,
+      deductedDatesList
     };
-  }, [profile, attendance, fines]);
-
-  const currentMonthTotalPayable = useMemo(() => {
-    return salaryDetails.estimatedSalary;
-  }, [salaryDetails]);
+  }, [profile, attendance, fines, daysInMonth]);
 
   const totalEarnings = useMemo(() => {
     return salaryDetails.estimatedSalary;
@@ -465,7 +643,7 @@ export default function ProfilePage() {
              {sections.growthPoints !== false && (
                <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
                   <Award className="text-amber-500" size={16} />
-                  <span className="text-xs font-bold text-gray-700">{profile?.totalGrowthPoints || 0} Points</span>
+                  <span className="text-xs font-bold text-gray-700">{computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} Points</span>
                </div>
              )}
              <button 
@@ -689,7 +867,7 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider border ${
-                          log.status === 'present' 
+                           log.status === 'present' 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : log.status === 'absent'
                               ? 'bg-red-50 text-red-700 border-red-100'
@@ -830,7 +1008,7 @@ export default function ProfilePage() {
             {/* --- SCORING TAB --- */}
             {activeTab === 'score' && sections.growthPoints !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
+                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
                       <Award size={20} />
@@ -840,48 +1018,58 @@ export default function ProfilePage() {
                       <p className="text-xs text-gray-500 font-medium">Performance points assigned for excellence</p>
                     </div>
                   </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-rose-500/20 w-full sm:w-auto"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-xl relative overflow-hidden">
                      <Sparkles className="absolute right-2 top-2 text-white opacity-10 w-20 h-20 -rotate-12" />
                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total Growth Vault</p>
-                     <div className="text-3xl font-black text-amber-400">{profile?.totalGrowthPoints || 0}</div>
+                     <div className="text-3xl font-black text-amber-400">{computedScores.growthPoint}</div>
                   </div>
                   <div className="border border-gray-100 p-6 rounded-xl">
                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Punctuality Ratio</p>
                      <div className="text-2xl font-black text-gray-900">
-                        {attendance.length > 0 
-                          ? Math.round((attendance.filter(a => a.arrivedOnTime !== false && ['present','late'].includes(a.status)).length / attendance.length) * 100) 
+                        {computedScores.workingDays > 0 
+                          ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
                           : 0}%
                      </div>
                   </div>
                   <div className="border border-gray-100 p-6 rounded-xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Distinct Events</p>
-                     <div className="text-2xl font-black text-gray-900">{growthHistory.length}</div>
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Score</p>
+                     <div className="text-2xl font-black text-gray-900">
+                       {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                     </div>
                   </div>
                 </div>
 
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Acquisition History</h4>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Acquisition History ({selectedMonth})</h4>
                 <div className="space-y-3">
-                  {growthHistory.length > 0 ? growthHistory.map(record => (
-                    <div key={record.id} className="p-4 bg-white border border-gray-100 rounded-xl flex items-center justify-between shadow-sm hover:border-gray-200 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 flex-shrink-0">
-                          <Award size={14} />
+                  {growthHistory.filter(r => (r.month || (r.date ? r.date.substring(0, 7) : '')) === selectedMonth).length > 0 ? (
+                    growthHistory.filter(r => (r.month || (r.date ? r.date.substring(0, 7) : '')) === selectedMonth).map(record => (
+                      <div key={record.id} className="p-4 bg-white border border-gray-100 rounded-xl flex items-center justify-between shadow-sm hover:border-gray-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 flex-shrink-0">
+                            <Award size={14} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-gray-800">{record.reason || 'Performance Recognition'}</p>
+                            <p className="text-xs text-gray-400 font-medium">{record.date ? formatDateDMY(record.date) : 'Date Unspecified'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-sm text-gray-800">{record.reason || 'Performance Recognition'}</p>
-                          <p className="text-xs text-gray-400 font-medium">{record.date ? formatDateDMY(record.date) : 'Date Unspecified'}</p>
+                        <div className="text-sm font-bold text-amber-600">
+                           +{record.points} PTS
                         </div>
                       </div>
-                      <div className="text-sm font-bold text-amber-600">
-                         +{record.points} PTS
-                      </div>
-                    </div>
-                  )) : (
+                    ))
+                  ) : (
                     <div className="py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                      <span className="text-xs font-medium text-gray-400">No detailed points ledger yet.</span>
+                      <span className="text-xs font-medium text-gray-400">No detailed points ledger yet for {selectedMonth}.</span>
                     </div>
                   )}
                 </div>
@@ -891,6 +1079,19 @@ export default function ProfilePage() {
             {/* --- FINANCE TAB --- */}
             {activeTab === 'finance' && (
               <div className="animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Financial Overview</h3>
+                    <p className="text-xs text-gray-500 font-medium">Dynamic wage calculations and ledger</p>
+                  </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-rose-500/20 w-full sm:w-auto"
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                   <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
                      <div className="flex justify-between items-start mb-4">
@@ -922,16 +1123,19 @@ export default function ProfilePage() {
                      </div>
                   </div>
                   
-                  <div className="bg-teal-600 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden shadow-teal-100 flex flex-col justify-between">
+                  <div 
+                    onClick={() => setShowSalaryBreakdownModal(true)}
+                    className="bg-teal-600 hover:bg-teal-700 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden shadow-teal-100 flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-all"
+                  >
                      <div className="absolute -right-4 -bottom-4 text-white opacity-10 w-24 h-24 rotate-12">
                         <DollarSign size={96} />
                      </div>
                      <div>
-                       <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Est. Retainable Net</p>
+                       <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Est. Retainable Net (Click for breakdown)</p>
                        <h4 className="text-3xl font-black">Rs. {totalEarnings.toLocaleString()}</h4>
                      </div>
                      <p className="text-xs mt-2 font-medium opacity-70 border-t border-teal-500 pt-2">
-                       Calculated dynamically for current marked attendance (2 paid leaves limit).
+                       Calculated dynamically for current month's marked logs. All leaves are paid.
                      </p>
                   </div>
                 </div>
@@ -967,7 +1171,7 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   {fines.length > 0 ? fines.map(fine => (
                     <div key={fine.id} className="p-4 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-between">
-                      <div>
+                       <div>
                         <p className="font-bold text-sm text-gray-800">{fine.reason}</p>
                         <p className="text-[10px] font-bold text-gray-400 uppercase mt-0.5">{formatDateDMY(fine.date)}</p>
                       </div>
@@ -1052,6 +1256,122 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+      
+      {/* Salary Calculation Breakdown Modal */}
+      {showSalaryBreakdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-gray-900">
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-rose-500">Salary Breakdown</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSalaryBreakdownModal(false)}
+                className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+              >
+                <XCircle size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-8 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Top Overview Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-rose-50/30 rounded-2xl border border-rose-100/50">
+                  <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Monthly Base Salary</p>
+                  <p className="text-lg font-black text-gray-900">₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-teal-50/30 rounded-2xl border border-teal-100/50">
+                  <p className="text-[9px] font-black text-teal-500 uppercase tracking-widest mb-1">Net Till Date Earned</p>
+                  <p className="text-lg font-black text-teal-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Calculations Formula */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
+                <p className="text-[9px] font-black text-black uppercase tracking-widest">Calculation Formula</p>
+                <div className="space-y-1 font-mono text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Base Daily Rate:</span>
+                    <span>₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()} / {daysInMonth().length} = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600">
+                    <span>Payable Days Earned ({salaryDetails.payableDays} Days):</span>
+                    <span>+ ₨{Math.round(salaryDetails.earnings).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
+                    <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-500">
+                    <span>Fines:</span>
+                    <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-black text-gray-900">
+                    <span>Till Date Net:</span>
+                    <span>₨{salaryDetails.estimatedSalary.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid lists for Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Payable Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Payable Dates ({salaryDetails.payableDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.payableDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No payable dates recorded</p>
+                    ) : (
+                      salaryDetails.payableDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 font-bold text-[9px] uppercase">{item.status}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Deductible/Unpaid Dates List */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Deductions / Absent ({salaryDetails.deductedDatesList.length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {salaryDetails.deductedDatesList.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No deducted dates recorded</p>
+                    ) : (
+                      salaryDetails.deductedDatesList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
+                            <span className="text-[8px] text-rose-400 uppercase font-black">{item.status}</span>
+                          </div>
+                          <span className="font-black text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-[10px] text-gray-400 italic">
+              All marked leaves are fully paid. Deductions only apply to absences and past unmarked days.
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Add generic custom styles for the transitions if needed */}
       <style jsx global>{`
