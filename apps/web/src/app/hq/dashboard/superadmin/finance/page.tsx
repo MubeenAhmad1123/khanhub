@@ -37,6 +37,7 @@ import { FinanceHub } from "@/components/hq/finance/FinanceHub";
 import { RemainingFlowModal } from "@/components/hq/superadmin/RemainingFlowModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import AmountBreakdownModal from "@/components/hq/finance/AmountBreakdownModal";
 import { cn, formatDateDMY, parseDateDMY } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import LogoLoader from "@/components/ui/LogoLoader";
@@ -284,6 +285,7 @@ export default function SuperadminFinancePage() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [dailyResult, setDailyResult] = useState<DailyBreakdownResult | null>(null);
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [remainingsOpen, setRemainingsOpen] = useState(false);
 
   const todayStr = todayLocalDateString();
@@ -457,7 +459,7 @@ export default function SuperadminFinancePage() {
       {/* ── Today's Summary Cards ────────────────────────────────────────────── */}
       <div className="px-2 lg:px-4 mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
         {/* 1. Today's Collection */}
-        <div className="p-10 rounded-[3rem] bg-white border border-gray-100 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 shadow-2xl shadow-gray-200/50">
+        <div className="p-10 rounded-[3rem] bg-white border border-gray-100 relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-500 shadow-2xl shadow-gray-200/50" onClick={() => setBreakdownOpen(true)}>
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl" />
           <div className="flex items-center justify-between mb-8">
              <div className="p-4 rounded-2xl bg-emerald-500 text-white shadow-xl shadow-emerald-500/20">
@@ -652,17 +654,17 @@ export default function SuperadminFinancePage() {
                   <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                   {isFilteringToday ? "OPERATIONAL PERIOD: TODAY" : `ARCHIVE: ${formatDateDisplay(dailyResult.date)}`}
                 </p>
-                <p className="text-6xl font-black text-white tracking-tighter leading-none mb-3">
+                <button className="text-6xl font-black text-white tracking-tighter leading-none mb-3 hover:underline" onClick={() => setBreakdownOpen(true)}>
                   Rs. {dailyResult.grandIncome.toLocaleString()}
-                </p>
+                </button>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
-                  Aggregate Liquidity Influx (Cross-Matrix)
+                  Total Income
                 </p>
               </div>
               
               {dailyResult.grandExpense > 0 && (
                 <div className="p-8 rounded-[3rem] bg-white/5 border border-white/10">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">Total Matrix Expense</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">Total Expense</p>
                   <p className="text-3xl font-black text-rose-500 tracking-tighter leading-none">
                     Rs. {dailyResult.grandExpense.toLocaleString()}
                   </p>
@@ -776,7 +778,7 @@ export default function SuperadminFinancePage() {
                   <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-4 relative z-10">Operational Integrity Active</h3>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-10 relative z-10">Verification Protocol Synchronized</p>
                   <p className="text-sm font-bold text-gray-500 max-w-sm leading-relaxed relative z-10">
-                    All departmental reconciliations are cryptographically verified and synchronized with the central governance audit ledger in real-time.
+                    All departmental reconciliations are cryptographically verified and synchronized with the central governance audit records in real-time.
                   </p>
                 </div>
               </div>
@@ -808,7 +810,14 @@ export default function SuperadminFinancePage() {
         />
       )}
 
-      {/* Decorative glows */}
+      {breakdownOpen && (
+  <AmountBreakdownModal
+    isOpen={breakdownOpen}
+    onClose={() => setBreakdownOpen(false)}
+    departments={dailyResult?.departments ?? []}
+  />
+)}
+{/* Decorative glows */}
       <div className="fixed -top-96 -left-96 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[200px] -z-10 pointer-events-none" />
       <div className="fixed -bottom-96 -right-96 w-[1000px] h-[1000px] bg-primary/10 rounded-full blur-[200px] -z-10 pointer-events-none" />
     </div>

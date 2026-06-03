@@ -3,100 +3,47 @@
 'use client';
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogOverlay, DialogContent } from '@radix-ui/react-dialog';
+import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Transaction {
-  id: string;
-  source: string;
-  amount: number;
-  category: string;
-  status: string;
-  type: string;
-}
+import { DailyDeptBreakdown } from '@/lib/hq/superadmin/finance';
 
 interface AmountBreakdownModalProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
-  title: string;
-  transactions: Transaction[];
+  departments: DailyDeptBreakdown[];
 }
 
-export default function AmountBreakdownModal({
-  open,
-  onClose,
-  title,
-  transactions,
-}: AmountBreakdownModalProps) {
+export default function AmountBreakdownModal({ isOpen, onClose, departments }: AmountBreakdownModalProps) {
   return (
-    <AnimatePresence>
-      {open && (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogOverlay className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+      <DialogContent asChild>
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="fixed inset-10 md:inset-20 lg:inset-32 bg-white rounded-2xl shadow-xl p-8 overflow-auto"
         >
-          <motion.div
-            className="bg-white rounded-[2rem] shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-8 relative"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition"
-              aria-label="Close modal"
-            >
-              <X className="w-5 h-5 text-gray-600" />
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-black">Amount Breakdown</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+              <X className="w-5 h-5" />
             </button>
-
-            <h2 className="text-2xl font-black text-gray-900 mb-6">{title}</h2>
-
-            {transactions.length === 0 ? (
-              <p className="text-center text-gray-500">No transactions found.</p>
-            ) : (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="p-3 text-xs font-black uppercase text-gray-600">
-                      Source
-                    </th>
-                    <th className="p-3 text-xs font-black uppercase text-gray-600">
-                      Amount (Rs.)
-                    </th>
-                    <th className="p-3 text-xs font-black uppercase text-gray-600">
-                      Category
-                    </th>
-                    <th className="p-3 text-xs font-black uppercase text-gray-600">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="border-t border-gray-100">
-                      <td className="p-3 text-sm font-medium text-gray-800">
-                        {tx.source}
-                      </td>
-                      <td className="p-3 text-sm font-black text-gray-900">
-                        {tx.amount.toLocaleString()}
-                      </td>
-                      <td className="p-3 text-sm text-gray-600">{tx.category}</td>
-                      <td className="p-3 text-sm font-black text-gray-700">
-                        {tx.status}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </motion.div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {departments.map((dept) => (
+              <div key={dept.deptId} className="p-6 border rounded-xl shadow-sm">
+                <h3 className="font-black text-lg mb-2">{dept.deptName}</h3>
+                <p className="text-sm">Income: Rs. {dept.income.toLocaleString()}</p>
+                <p className="text-sm">Expense: Rs. {dept.expense.toLocaleString()}</p>
+                <p className="text-sm">Transfers: {dept.txCount}</p>
+              </div>
+            ))}
+          </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </DialogContent>
+    </Dialog>
   );
 }
