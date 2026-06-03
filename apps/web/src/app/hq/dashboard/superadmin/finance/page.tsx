@@ -217,7 +217,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                     <div className="flex items-center gap-3 mb-6">
                       <Database size={16} className="text-gray-400" />
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                        Operational Ledger Stream ({dept.txCount})
+                        Operational Records Stream ({dept.txCount})
                       </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
@@ -695,7 +695,7 @@ export default function SuperadminFinancePage() {
             {/* Per-department cards */}
             <div className="flex items-center gap-4 mb-8 px-6">
                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-100 to-transparent" />
-               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400">Departmental Ledger Nodes</p>
+               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400">Departmental Records Nodes</p>
                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-100 to-transparent" />
             </div>
             
