@@ -81,7 +81,6 @@ function getSimpleId(id: string) {
 }
 
 async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: string) {
-  if (dept === 'hq') return { present: 0, absent: 0, late: 0 };
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_attendance`;
   const simpleId = getSimpleId(staffId);
@@ -125,7 +124,6 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
 }
 
 async function loadGrowthPoints(dept: StaffDept, staffId: string, monthKey?: string) {
-  if (dept === 'hq') return 0;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_growth_points`;
   const simpleId = getSimpleId(staffId);
@@ -185,7 +183,6 @@ async function loadGrowthPoints(dept: StaffDept, staffId: string, monthKey?: str
 }
 
 async function loadFinesTotal(dept: StaffDept, staffId: string) {
-  if (dept === 'hq') return 0;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_fines`;
   const simpleId = getSimpleId(staffId);
@@ -211,7 +208,6 @@ async function loadFinesTotal(dept: StaffDept, staffId: string) {
 }
 
 async function loadLastDuty(dept: StaffDept, staffId: string) {
-  if (dept === 'hq') return undefined;
   const prefix = getDeptPrefix(dept);
   const col = `${prefix}_duty_logs`;
   const simpleId = getSimpleId(staffId);
@@ -245,7 +241,6 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
 }
 
 async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: Record<string, any>) {
-  if (dept === 'hq') return {};
   const prefix = getDeptPrefix(dept);
   
   const [attSnap, dressSnap, dutySnap, contribSnap] = await Promise.all([
@@ -423,13 +418,15 @@ export async function listStaffCards({
   }
 
   // 3. Batch Fetch Monthly Stats per Department
-  const deptMonthlyAttendance: Record<string, Record<string, { present: number, absent: number, late: number }>> = {};
-  const deptMonthlyGrowthPoints: Record<string, Record<string, number>> = {};
+  const deptMonthlyAttendance: Record<string, Record<string, any[]>> = {};
+  const deptMonthlyDressLogs: Record<string, Record<string, any[]>> = {};
+  const deptMonthlyDutyLogs: Record<string, Record<string, any[]>> = {};
+  const deptMonthlyContributions: Record<string, Record<string, any[]>> = {};
   const deptMonthlyFines: Record<string, Record<string, number>> = {};
+  const deptMonthlyExtra: Record<string, Record<string, number>> = {};
 
   await Promise.all(
     targetDepts.map(async (d) => {
-      if (d === 'hq') return;
       const prefix = getDeptPrefix(d);
 
       // Batch fetch attendance for current month
@@ -441,42 +438,76 @@ export async function listStaffCards({
         )
       ).catch(() => ({ docs: [] } as any));
 
-      const attMap: Record<string, { present: number, absent: number, late: number }> = {};
+      const attMap: Record<string, any[]> = {};
       attSnap.docs.forEach((docSnap: any) => {
         const data = docSnap.data();
         const sid = data.staffId;
         if (!sid) return;
         const simpleSid = getSimpleId(sid);
-        if (!attMap[simpleSid]) {
-          attMap[simpleSid] = { present: 0, absent: 0, late: 0 };
-        }
-        const s = String(data.status || data.state || '').toLowerCase();
-        if (s.includes('present')) {
-          if (data.isLate === true) attMap[simpleSid].late++;
-          else attMap[simpleSid].present++;
-        }
-        else if (s.includes('late')) attMap[simpleSid].late++;
-        else if (s.includes('absent')) attMap[simpleSid].absent++;
+        if (!attMap[simpleSid]) attMap[simpleSid] = [];
+        attMap[simpleSid].push(data);
       });
       deptMonthlyAttendance[d] = attMap;
 
-      // Batch fetch growth points
-      const gpSnap = await getDocs(
+      // Batch fetch dress logs for current month
+      const dressSnap = await getDocs(
         query(
-          collection(db, `${prefix}_growth_points`),
-          where('month', '==', monthKey)
+          collection(db, `${prefix}_dress_logs`),
+          where('date', '>=', `${monthKey}-01`),
+          where('date', '<=', `${monthKey}-31`)
         )
       ).catch(() => ({ docs: [] } as any));
 
-      const gpMap: Record<string, number> = {};
-      gpSnap.docs.forEach((docSnap: any) => {
+      const dressMap: Record<string, any[]> = {};
+      dressSnap.docs.forEach((docSnap: any) => {
         const data = docSnap.data();
         const sid = data.staffId;
         if (!sid) return;
         const simpleSid = getSimpleId(sid);
-        gpMap[simpleSid] = Math.max(gpMap[simpleSid] || 0, data.total || 0);
+        if (!dressMap[simpleSid]) dressMap[simpleSid] = [];
+        dressMap[simpleSid].push(data);
       });
-      deptMonthlyGrowthPoints[d] = gpMap;
+      deptMonthlyDressLogs[d] = dressMap;
+
+      // Batch fetch duty logs for current month
+      const dutySnap = await getDocs(
+        query(
+          collection(db, `${prefix}_duty_logs`),
+          where('date', '>=', `${monthKey}-01`),
+          where('date', '<=', `${monthKey}-31`)
+        )
+      ).catch(() => ({ docs: [] } as any));
+
+      const dutyMap: Record<string, any[]> = {};
+      dutySnap.docs.forEach((docSnap: any) => {
+        const data = docSnap.data();
+        const sid = data.staffId;
+        if (!sid) return;
+        const simpleSid = getSimpleId(sid);
+        if (!dutyMap[simpleSid]) dutyMap[simpleSid] = [];
+        dutyMap[simpleSid].push(data);
+      });
+      deptMonthlyDutyLogs[d] = dutyMap;
+
+      // Batch fetch contributions for current month
+      const contribSnap = await getDocs(
+        query(
+          collection(db, `${prefix}_contributions`),
+          where('date', '>=', `${monthKey}-01`),
+          where('date', '<=', `${monthKey}-31`)
+        )
+      ).catch(() => ({ docs: [] } as any));
+
+      const contribMap: Record<string, any[]> = {};
+      contribSnap.docs.forEach((docSnap: any) => {
+        const data = docSnap.data();
+        const sid = data.staffId;
+        if (!sid) return;
+        const simpleSid = getSimpleId(sid);
+        if (!contribMap[simpleSid]) contribMap[simpleSid] = [];
+        contribMap[simpleSid].push(data);
+      });
+      deptMonthlyContributions[d] = contribMap;
 
       // Batch fetch unpaid fines
       const finesSnap = await getDocs(
@@ -495,6 +526,24 @@ export async function listStaffCards({
         finesMap[simpleSid] = (finesMap[simpleSid] || 0) + (Number(data.amount) || 0);
       });
       deptMonthlyFines[d] = finesMap;
+
+      // Batch fetch growth points to get the 'extra' points
+      const gpSnap = await getDocs(
+        query(
+          collection(db, `${prefix}_growth_points`),
+          where('month', '==', monthKey)
+        )
+      ).catch(() => ({ docs: [] } as any));
+
+      const extraMap: Record<string, number> = {};
+      gpSnap.docs.forEach((docSnap: any) => {
+        const data = docSnap.data();
+        const sid = data.staffId;
+        if (!sid) return;
+        const simpleSid = getSimpleId(sid);
+        extraMap[simpleSid] = data.extra || 0;
+      });
+      deptMonthlyExtra[d] = extraMap;
     })
   );
 
@@ -507,12 +556,75 @@ export async function listStaffCards({
       const today = deptTodayStats[d]?.[staffId] || { uniform: 'na', duty: 'na', score: 0 };
 
       // Get batch-fetched monthly data
-      const att = deptMonthlyAttendance[d]?.[simpleId] || { present: 0, absent: 0, late: 0 };
-      const gp = deptMonthlyGrowthPoints[d]?.[simpleId] || 0;
+      const rawAtt = deptMonthlyAttendance[d]?.[simpleId] || [];
+      const rawDress = deptMonthlyDressLogs[d]?.[simpleId] || [];
+      const rawDuty = deptMonthlyDutyLogs[d]?.[simpleId] || [];
+      const rawContrib = deptMonthlyContributions[d]?.[simpleId] || [];
       const fines = deptMonthlyFines[d]?.[simpleId] || 0;
+      const extra = deptMonthlyExtra[d]?.[simpleId] || 0;
+
+      // Calculate attendance counts
+      let presentCount = 0;
+      let absentCount = 0;
+      let lateCount = 0;
+
+      rawAtt.forEach((r: any) => {
+        const status = String(r.status || r.state || '').toLowerCase();
+        if (status.includes('present')) {
+          if (r.isLate === true) lateCount++;
+          else presentCount++;
+        }
+        else if (status.includes('late')) lateCount++;
+        else if (status.includes('absent')) absentCount++;
+      });
+
+      // Calculate in-memory monthly growth points/scores
+      let attendancePoints = 0;
+      let punctualityPoints = 0;
+      rawAtt.forEach((r: any) => {
+        const status = String(r.status || r.state || '').toLowerCase();
+        if (status.includes('present') || status.includes('late')) {
+          attendancePoints += 1;
+          if (r.isLate === false || r.arrivedOnTime === true) {
+            punctualityPoints += 1;
+          }
+          if (r.departedOnTime === true) {
+            punctualityPoints += 1;
+          }
+        }
+      });
+
+      let dutyPoints = 0;
+      rawDuty.forEach((r: any) => {
+        if (r.status === 'completed' || r.status === 'yes') {
+          dutyPoints += 1;
+        } else if (Array.isArray(r.duties)) {
+          const allDone = r.duties.every((duty: any) => duty.status === 'done');
+          if (allDone) dutyPoints++;
+        }
+      });
+
+      let dressCodePoints = 0;
+      rawDress.forEach((r: any) => {
+        if (r.isCompliant === true || r.status === 'yes') {
+          dressCodePoints++;
+        } else if (Array.isArray(r.items)) {
+          const allWearing = r.items.every((item: any) => item.wearing === true || item.status === 'yes');
+          if (allWearing) dressCodePoints++;
+        }
+      });
+
+      let contributionPoints = 0;
+      rawContrib.forEach((r: any) => {
+        if (r.isApproved === true || r.status === 'yes') {
+          contributionPoints += (r.points || 0) || 1;
+        }
+      });
+
+      const growthPointsTotal = attendancePoints + punctualityPoints + dutyPoints + dressCodePoints + contributionPoints + extra;
 
       // Only fetch expensive individual logs if fullEnrichment is enabled (like lastDuty)
-      const lastDuty = (fullEnrichment && d !== 'hq') ? await loadLastDuty(d, staffId) : undefined;
+      const lastDuty = fullEnrichment ? await loadLastDuty(d, staffId) : undefined;
 
       return {
         id: `${d}_${s.id}`,
@@ -522,10 +634,10 @@ export async function listStaffCards({
         role: normalizeRole(s.role),
         isActive: s.isActive !== false,
         status: s.status || (s.isActive !== false ? 'active' : 'inactive'),
-        presentCount: att.present + att.late, // Redefined to include late days as present
-        absentCount: att.absent,
-        lateCount: att.late,
-        growthPointsTotal: gp,
+        presentCount: presentCount + lateCount, // Include late days as present
+        absentCount,
+        lateCount,
+        growthPointsTotal,
         totalFines: fines,
         employeeId: s.employeeId || s.customId || '—',
         designation: s.designation || s.role || 'Staff Member',
@@ -611,7 +723,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     dressCodeConfig: data.dressCodeConfig || [],
     designation: data.designation || data.role || 'Staff Member',
     dutyStartTime: data.dutyStartTime || '09:00',
-    dutyEndTime: data.dutyEndTime || '17:00',
+    dutyEndTime: data.dutyEndTime || '17:05',
     secondaryDepts: data.secondaryDepts || [],
     basicInfoExtras: data.basicInfoExtras || {},
     seniority: data.seniority,
