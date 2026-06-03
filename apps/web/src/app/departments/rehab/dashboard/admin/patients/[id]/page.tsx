@@ -249,6 +249,9 @@ export default function PatientDetailPage() {
   const filteredPayments = useMemo(() => {
     if (!dateFilter || selectedStayIndex === -1) return allPayments;
     return allPayments.filter((p: any) => {
+      if (p.stayDurationIndex !== undefined && p.stayDurationIndex !== null) {
+        return p.stayDurationIndex === selectedStayIndex;
+      }
       const pDate = toDate(p.date);
 
       let start = dateFilter.admissionDate;
@@ -2658,7 +2661,7 @@ export default function PatientDetailPage() {
                   )}
                 </div>
 
-                {allPayments.length === 0 ? (
+                {filteredPayments.length === 0 ? (
                   <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
                     <DollarSign size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="text-gray-400 dark:text-gray-500 font-bold uppercase text-xs tracking-widest">No transactions found</p>
@@ -2667,7 +2670,7 @@ export default function PatientDetailPage() {
                   <div className="w-full">
                     {/* Mobile transaction cards layout */}
                     <div className="block lg:hidden space-y-4">
-                      {allPayments.map((p: any) => {
+                      {filteredPayments.map((p: any) => {
                         const dateObj = toDate(p.date);
                         return (
                           <div key={p.id} className="bg-gray-50/80 dark:bg-gray-800/40 border border-gray-100 dark:border-white/5 rounded-2xl p-4 space-y-3">
@@ -2690,9 +2693,26 @@ export default function PatientDetailPage() {
                                 {String(p.status || 'pending').toUpperCase()}
                               </span>
                             </div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {p.stayDurationIndex !== undefined && p.stayDurationIndex !== null && (
+                                <span className="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[8px] font-black uppercase tracking-wider">
+                                  Stay #{Number(p.stayDurationIndex) + 1}
+                                </span>
+                              )}
+                              {Number(p.discount || 0) > 0 && (
+                                <span className="px-1.5 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded text-[8px] font-black uppercase tracking-wider">
+                                  Discount: Rs {Number(p.discount).toLocaleString()}
+                                </span>
+                              )}
+                              {Number(p.returnAmount || p.return || 0) > 0 && (
+                                <span className="px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-[8px] font-black uppercase tracking-wider">
+                                  Returned: Rs {Number(p.returnAmount || p.return).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
                               Verifier: {p.cashierId || 'Admin'}
-                              {p.note && <p className="text-[#1a3a5c] dark:text-blue-400 font-black italic mt-1 break-words">"{p.note}"</p>}
+                              {p.note && <p className="text-[#1a3a5c] dark:text-blue-400 font-black italic mt-1 break-words">&quot;{p.note}&quot;</p>}
                             </div>
                             {session?.role === 'superadmin' && (
                               <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-white/5">
@@ -2736,7 +2756,7 @@ export default function PatientDetailPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                          {allPayments.map((p: any) => {
+                          {filteredPayments.map((p: any) => {
                             const dateObj = toDate(p.date);
                             return (
                               <tr key={p.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
@@ -2761,7 +2781,24 @@ export default function PatientDetailPage() {
                                 </td>
                                 <td className="py-5">
                                   <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
-                                  {p.note && <p className="text-[10px] text-[#1a3a5c] dark:text-blue-400 font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    {p.stayDurationIndex !== undefined && p.stayDurationIndex !== null && (
+                                      <span className="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[8px] font-black uppercase tracking-wider">
+                                        Stay #{Number(p.stayDurationIndex) + 1}
+                                      </span>
+                                    )}
+                                    {Number(p.discount || 0) > 0 && (
+                                      <span className="px-1.5 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded text-[8px] font-black uppercase tracking-wider">
+                                        Discount: Rs {Number(p.discount).toLocaleString()}
+                                      </span>
+                                    )}
+                                    {Number(p.returnAmount || p.return || 0) > 0 && (
+                                      <span className="px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-[8px] font-black uppercase tracking-wider">
+                                        Returned: Rs {Number(p.returnAmount || p.return).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {p.note && <p className="text-[10px] text-[#1a3a5c] dark:text-blue-400 font-black italic mt-1 truncate max-w-[150px]">&quot;{p.note}&quot;</p>}
                                 </td>
                                 {session?.role === 'superadmin' && (
                                   <td className="py-5 flex items-center gap-2">

@@ -94,6 +94,8 @@ type EntityEnrich = {
   totalPackageAmount?: number; // Normalized field for Rehab
   totalReceived?: number;
   remaining?: number;
+  rejoinHistory?: any[];
+  admissionDate?: any;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -246,6 +248,7 @@ function EditTransactionModal({
   onClose,
   onConfirm,
   busy,
+  enrich,
 }: {
   tx: UnifiedTx;
   onClose: () => void;
@@ -255,9 +258,13 @@ function EditTransactionModal({
     description: string,
     category: string,
     categoryName: string,
-    spimsFeeSubtype: string
+    spimsFeeSubtype: string,
+    discount?: number,
+    returnAmount?: number,
+    stayDurationIndex?: number
   ) => void;
   busy: boolean;
+  enrich?: EntityEnrich;
 }) {
   const [amount, setAmount] = useState(String(tx.amount || ''));
   const [date, setDate] = useState(() => {
@@ -279,6 +286,33 @@ function EditTransactionModal({
   const [description, setDescription] = useState(tx.description || '');
   const [category, setCategory] = useState(tx.category || '');
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState((tx as any).spimsFeeSubtype || 'monthly');
+  const [discount, setDiscount] = useState(String(tx.discount || 0));
+  const [returnAmount, setReturnAmount] = useState(String(tx.returnAmount || (tx as any).return || 0));
+  const [stayDurationIndex, setStayDurationIndex] = useState(tx.stayDurationIndex !== undefined && tx.stayDurationIndex !== null ? String(tx.stayDurationIndex) : '');
+
+  const getLocalDateString = (val: any): string => {
+    if (!val) return '';
+    const d = toDate(val);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const stayOptions = useMemo(() => {
+    if (tx.dept !== 'rehab' || !enrich) return [];
+    const history = enrich.rejoinHistory || [];
+    const list = history.map((stay: any, idx: number) => ({
+      index: idx,
+      label: `Stay #${idx + 1} (Historical: ${getLocalDateString(stay.admissionDate)} to ${stay.dischargeDate ? getLocalDateString(stay.dischargeDate) : 'Present'})`
+    }));
+    list.push({
+      index: history.length,
+      label: `Stay #${history.length + 1} (Current Stay: ${getLocalDateString(enrich.admissionDate || tx.createdAt)} to Present)`
+    });
+    return list;
+  }, [tx, enrich]);
 
   const categoryOptions = [
     { id: tx.dept === 'rehab' ? 'patient_fee' : 'fee', label: 'Admission / Fees' },
@@ -367,6 +401,46 @@ function EditTransactionModal({
           </div>
 
           <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Discount Amount (PKR)</label>
+            <input
+              type="number"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+              placeholder="Enter discount..."
+              className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Return Amount (PKR)</label>
+            <input
+              type="number"
+              value={returnAmount}
+              onChange={(e) => setReturnAmount(e.target.value)}
+              placeholder="Enter return amount..."
+              className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+            />
+          </div>
+
+          {stayOptions.length > 1 && (
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Stay Duration</label>
+              <select
+                value={stayDurationIndex}
+                onChange={(e) => setStayDurationIndex(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 p-4 text-sm font-bold bg-gray-50 text-black outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="">Select Stay...</option>
+                {stayOptions.map((opt) => (
+                  <option key={opt.index} value={opt.index}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block italic">Description / Reference</label>
             <textarea
               rows={3}
@@ -391,7 +465,10 @@ function EditTransactionModal({
                 description,
                 category,
                 categoryName,
-                tx.dept === 'spims' && category === 'fee' ? spimsFeeSubtype : ''
+                tx.dept === 'spims' && category === 'fee' ? spimsFeeSubtype : '',
+                Number(discount) || 0,
+                Number(returnAmount) || 0,
+                stayDurationIndex !== '' ? Number(stayDurationIndex) : undefined
               );
             }
           }}
@@ -719,11 +796,30 @@ function TxCard({
       <div className={`p-8 sm:p-10 ${showSelect ? 'pl-16 sm:pl-20' : ''}`}>
         {/* Header: Badges & Amount */}
         <div className="flex flex-wrap items-start justify-between gap-6 mb-10">
-          <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${deptBadge}`}>
-              {tx.dept === 'rehab' ? 'Rehab Center' : tx.dept === 'spims' ? 'SPIMS Academy' : 'Job Center'}
-            </span>
-            <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${typeBadge}`}>{typ}</span>
+          <div className="flex flex-col gap-2 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${deptBadge}`}>
+                {tx.dept === 'rehab' ? 'Rehab Center' : tx.dept === 'spims' ? 'SPIMS Academy' : 'Job Center'}
+              </span>
+              <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${typeBadge}`}>{typ}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              {tx.stayDurationIndex !== undefined && tx.stayDurationIndex !== null && (
+                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase tracking-wider">
+                  Stay #{Number(tx.stayDurationIndex) + 1}
+                </span>
+              )}
+              {Number(tx.discount || 0) > 0 && (
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-wider">
+                  Discount: Rs {Number(tx.discount).toLocaleString()}
+                </span>
+              )}
+              {Number(tx.returnAmount || (tx as any).return || 0) > 0 && (
+                <span className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded text-[9px] font-black uppercase tracking-wider">
+                  Returned: Rs {Number(tx.returnAmount || (tx as any).return).toLocaleString()}
+                </span>
+              )}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-4xl font-black text-gray-900 tracking-tighter leading-none">{fmtPKR(tx.amount)}</div>
@@ -1126,6 +1222,8 @@ export default function HqApprovalsPage() {
           totalPackage: totalPkg,
           totalReceived: Number(d.totalReceived || d.overallReceived || 0),
           remaining: Number(d.remaining ?? d.remainingBalance ?? d.overallRemaining ?? 0),
+          rejoinHistory: d.rejoinHistory || [],
+          admissionDate: d.admissionDate || null,
         };
         if (selectedEntity.dept === 'spims') {
           next.course = String(d.course || '');
@@ -1187,6 +1285,8 @@ export default function HqApprovalsPage() {
             totalPackage: totalPkg,
             totalReceived: Number(d.totalReceived || d.overallReceived || 0),
             remaining: Number(d.remaining ?? d.remainingBalance ?? d.overallRemaining ?? 0),
+            rejoinHistory: (d.rejoinHistory as any[]) || [],
+            admissionDate: d.admissionDate || null,
           };
           if (v.dept === 'spims') {
             next.course = String(d.course || '');
@@ -1412,7 +1512,10 @@ export default function HqApprovalsPage() {
     description: string,
     category: string,
     categoryName: string,
-    spimsFeeSubtype: string
+    spimsFeeSubtype: string,
+    discount?: number,
+    returnAmount?: number,
+    stayDurationIndex?: number
   ) => {
     if (!editTx) return;
     setEditSaving(true);
@@ -1426,6 +1529,9 @@ export default function HqApprovalsPage() {
         categoryName,
         spimsFeeSubtype,
         description,
+        discount,
+        returnAmount,
+        stayDurationIndex,
       });
       if (!res.success) throw new Error(res.error ?? 'Failed to edit transaction');
       
@@ -2139,6 +2245,7 @@ export default function HqApprovalsPage() {
           onClose={() => setEditTx(null)}
           onConfirm={runEditApprovedTransaction}
           busy={editSaving}
+          enrich={editTx ? enriched[`${editTx.dept}_${entityId(editTx)}`] : undefined}
         />
       ) : null}
 

@@ -66,14 +66,20 @@ async function syncPatientFinance(
 
   let totalReceived = 0;
   let totalMedicineCharges = 0;
+  let totalDiscount = 0;
 
   txSnap.docs.forEach((doc) => {
     const tx = doc.data();
     const amount = Number(tx.amount) || 0;
+    const discount = Number(tx.discount || 0);
+    const returnAmount = Number(tx.returnAmount || tx.return || 0);
+    const netAmount = amount - returnAmount;
+
     if (tx.category === 'medicine_charge') {
-      totalMedicineCharges += amount;
+      totalMedicineCharges += netAmount;
     } else {
-      totalReceived += amount;
+      totalReceived += netAmount;
+      totalDiscount += discount;
     }
   });
 
@@ -140,7 +146,7 @@ async function syncPatientFinance(
   const totalStayPackage = currentStayPackage + historicalStayPackage;
   const finalMedicineCharges = typeof patientData.medicineCharges === 'number' ? patientData.medicineCharges : totalMedicineCharges;
   const totalObligation = totalStayPackage + finalMedicineCharges;
-  const remaining = Math.max(0, totalObligation - totalReceived);
+  const remaining = Math.max(0, totalObligation - totalReceived - totalDiscount);
 
   // Calculate daysAdmitted for active stay
   const diffTimeMs = endDate.getTime() - admissionDate.getTime();
@@ -161,6 +167,7 @@ async function syncPatientFinance(
   await patientRef.update({
     totalReceived,
     overallReceived: totalReceived,
+    totalDiscount,
     medicineCharges: finalMedicineCharges,
     remaining,
     remainingBalance: remaining,
@@ -210,11 +217,14 @@ async function updateEntityTotals(
   if (!snap.exists) return;
 
   const amount = Number(txData.amount) || 0;
+  const discount = Number(txData.discount) || 0;
+  const returnAmount = Number(txData.returnAmount || txData.return || 0);
   const isIncome = txData.type === 'income';
-  const diff = isIncome ? amount : -amount;
+  const diff = isIncome ? (amount - returnAmount) : -(amount - returnAmount);
 
   const update: Record<string, any> = {};
   update.totalReceived = FieldValue.increment(diff);
+  update.totalDiscount = FieldValue.increment(isIncome ? discount : -discount);
 
   if (dept === 'spims' && isIncome && txData.category !== 'medicine_charge') {
     const subtype = txData.spimsFeeSubtype;
@@ -230,13 +240,14 @@ async function updateEntityTotals(
   const updatedData = updatedSnap.data() as any;
   const medCharges = Number(updatedData?.medicineCharges) || 0;
   const received = Number(updatedData?.totalReceived) || 0;
+  const totalDiscount = Number(updatedData?.totalDiscount) || 0;
   
   const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
   const totalObligation = pkg + medCharges;
   
   await ref.update({
-    remaining: Math.max(0, totalObligation - received),
-    remainingBalance: Math.max(0, totalObligation - received), // Support both naming conventions
+    remaining: Math.max(0, totalObligation - received - totalDiscount),
+    remainingBalance: Math.max(0, totalObligation - received - totalDiscount), // Support both naming conventions
   });
 }
 
@@ -291,6 +302,9 @@ async function syncRehabRecords(
         .get();
 
       const amount = Number(txData.amount) || 0;
+      const discount = Number(txData.discount || 0);
+      const returnAmount = Number(txData.returnAmount || txData.return || 0);
+      const creditAmount = amount + discount - returnAmount;
       console.log('[syncRehabRecords] Querying rehab_fees with patientId:', patientId, 'month:', month, 'found:', feesSnap.size);
 
       if (feesSnap.empty) {
@@ -298,18 +312,20 @@ async function syncRehabRecords(
         const packageAmount = patientSnap.exists
           ? (Number(patientSnap.data()?.packageAmount || patientSnap.data()?.monthlyPackage) || 60000)
           : 60000;
-        const amountRemaining = Math.max(0, packageAmount - amount);
-        console.log('[syncRehabRecords] Creating new fee record for patientId:', patientId, 'packageAmount:', packageAmount, 'amountPaid:', amount);
+        const amountRemaining = Math.max(0, packageAmount - creditAmount);
+        console.log('[syncRehabRecords] Creating new fee record for patientId:', patientId, 'packageAmount:', packageAmount, 'amountPaid:', creditAmount);
 
         await feesRef.add({
           patientId,
           patientName: txData.patientName || '',
           month,
           packageAmount,
-          amountPaid: amount,
+          amountPaid: creditAmount,
           amountRemaining,
           payments: [{
-            amount,
+            amount: creditAmount,
+            discount,
+            returnAmount,
             date: txDate,
             transactionId: txId,
             approvedBy,
@@ -322,7 +338,7 @@ async function syncRehabRecords(
       } else {
         const feeDoc = feesSnap.docs[0];
         const current = feeDoc.data();
-        const newPaid = (Number(current.amountPaid) || 0) + amount;
+        const newPaid = (Number(current.amountPaid) || 0) + creditAmount;
         const newRemaining = Math.max(0, (Number(current.packageAmount || current.monthlyPackage) || 60000) - newPaid);
         const existingPayments = current.payments || [];
         console.log('[syncRehabRecords] Updating existing fee record for patientId:', patientId, 'newPaid:', newPaid, 'newRemaining:', newRemaining);
@@ -333,7 +349,9 @@ async function syncRehabRecords(
           lastPaymentDate: FieldValue.serverTimestamp(),
           lastPaymentAmount: amount,
           payments: [...existingPayments, {
-            amount,
+            amount: creditAmount,
+            discount,
+            returnAmount,
             date: txDate,
             transactionId: txId,
             approvedBy,
@@ -352,22 +370,25 @@ async function syncRehabRecords(
         .get();
 
       const amount = Number(txData.amount) || 0;
+      const discount = Number(txData.discount || 0);
+      const returnAmount = Number(txData.returnAmount || txData.return || 0);
+      const netCanteen = amount + discount - returnAmount;
 
       if (canteenSnap.empty) {
         await canteenRef.add({
           patientId,
           patientName: txData.patientName || '',
           month,
-          totalDeposited: amount,
+          totalDeposited: netCanteen,
           totalSpent: 0,
-          balance: amount,
+          balance: netCanteen,
           lastDepositDate: FieldValue.serverTimestamp(),
           createdAt: FieldValue.serverTimestamp(),
         });
       } else {
         const canteenDoc = canteenSnap.docs[0];
         const current = canteenDoc.data();
-        const newDeposited = (Number(current.totalDeposited) || 0) + amount;
+        const newDeposited = (Number(current.totalDeposited) || 0) + netCanteen;
         const newBalance = newDeposited - (Number(current.totalSpent) || 0);
 
         await canteenDoc.ref.update({
@@ -705,6 +726,9 @@ export async function editApprovedTransaction(params: {
   categoryName?: string;
   spimsFeeSubtype?: string;
   description?: string;
+  discount?: number;
+  returnAmount?: number;
+  stayDurationIndex?: number;
 }): Promise<{ success: boolean; error?: string }> {
   const caller = await requireHqSuperadmin();
   try {
@@ -743,7 +767,12 @@ export async function editApprovedTransaction(params: {
       description: String(params.description || '').trim(),
       updatedAt: new Date(),
       editedBy: caller.customId,
+      discount: typeof params.discount === 'number' ? params.discount : Number(oldData.discount || 0),
+      returnAmount: typeof params.returnAmount === 'number' ? params.returnAmount : Number(oldData.returnAmount || oldData.return || 0),
     };
+    if (typeof params.stayDurationIndex === 'number') {
+      updatePayload.stayDurationIndex = params.stayDurationIndex;
+    }
     if (params.category) {
       updatePayload.category = params.category;
       if (params.categoryName) {
@@ -770,8 +799,16 @@ export async function editApprovedTransaction(params: {
       }
     }
 
-    // 2. Adjust patient/student totals if amount, category, or subtype changed
-    if (isAmountChanged || isCategoryChanged || isSubtypeChanged) {
+    // 2. Adjust patient/student totals if amount, category, subtype, discount, or returnAmount changed
+    const oldDiscount = Number(oldData.discount || 0);
+    const newDiscount = typeof params.discount === 'number' ? params.discount : oldDiscount;
+    const oldReturnAmount = Number(oldData.returnAmount || oldData.return || 0);
+    const newReturnAmount = typeof params.returnAmount === 'number' ? params.returnAmount : oldReturnAmount;
+
+    const isDiscountChanged = newDiscount !== oldDiscount;
+    const isReturnChanged = newReturnAmount !== oldReturnAmount;
+
+    if (isAmountChanged || isCategoryChanged || isSubtypeChanged || isDiscountChanged || isReturnChanged) {
       const entityId = oldData.patientId || oldData.studentId || oldData.seekerId || oldData.donorId;
       if (entityId) {
         let entityCol = '';
@@ -787,13 +824,19 @@ export async function editApprovedTransaction(params: {
           const entitySnap = await entityRef.get();
           if (entitySnap.exists) {
             const isIncome = oldData.type === 'income';
-            const entityUpdate: Record<string, any> = {};
 
             if (params.dept === 'rehab') {
               await syncPatientFinance(adminDb, entityId);
             } else {
-              const diffAdjustment = isIncome ? amountDiff : -amountDiff;
+              const oldNet = isIncome ? (oldAmount - oldReturnAmount) : -(oldAmount - oldReturnAmount);
+              const newNet = isIncome ? (newAmount - newReturnAmount) : -(newAmount - newReturnAmount);
+              const diffAdjustment = newNet - oldNet;
+              
+              const discountDiff = isIncome ? (newDiscount - oldDiscount) : -(newDiscount - oldDiscount);
+
+              const entityUpdate: Record<string, any> = {};
               entityUpdate.totalReceived = FieldValue.increment(diffAdjustment);
+              entityUpdate.totalDiscount = FieldValue.increment(discountDiff);
 
               if (params.dept === 'spims' && isIncome && newCategory === 'fee') {
                 if (oldCategory !== 'fee') {
@@ -828,15 +871,64 @@ export async function editApprovedTransaction(params: {
               const updatedData = updatedSnap.data() as any;
               const medCharges = Number(updatedData?.medicineCharges) || 0;
               const received = Number(updatedData?.totalReceived) || 0;
+              const totalDiscountVal = Number(updatedData?.totalDiscount) || 0;
 
               const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
               const totalObligation = pkg + medCharges;
 
               await entityRef.update({
-                remaining: Math.max(0, totalObligation - received),
-                remainingBalance: Math.max(0, totalObligation - received),
+                remaining: Math.max(0, totalObligation - received - totalDiscountVal),
+                remainingBalance: Math.max(0, totalObligation - received - totalDiscountVal),
               });
             }
+          }
+        }
+      }
+    }
+
+    if (params.dept === 'rehab') {
+      // Find the fee record for this patient and month and update it
+      const patientId = oldData.patientId;
+      if (patientId) {
+        let oldTxDate = safeToDate(oldData.date || oldData.transactionDate);
+        const oldMonth = `${oldTxDate.getFullYear()}-${String(oldTxDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const feesRef = adminDb.collection('rehab_fees');
+        const feesSnap = await feesRef
+          .where('patientId', '==', patientId)
+          .where('month', '==', oldMonth)
+          .limit(1)
+          .get();
+        
+        if (!feesSnap.empty) {
+          const feeDoc = feesSnap.docs[0];
+          const feeData = feeDoc.data();
+          const payments = feeData.payments || [];
+          
+          let paymentFound = false;
+          const updatedPayments = payments.map((p: any) => {
+            if (p.transactionId === params.txId) {
+              paymentFound = true;
+              return {
+                ...p,
+                amount: newAmount + newDiscount - newReturnAmount,
+                date: transactionDate,
+                discount: newDiscount,
+                returnAmount: newReturnAmount,
+              };
+            }
+            return p;
+          });
+          
+          if (paymentFound) {
+            const newPaid = updatedPayments.reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0);
+            const newRemaining = Math.max(0, (Number(feeData.packageAmount || feeData.monthlyPackage) || 60000) - newPaid);
+            
+            await feeDoc.ref.update({
+              payments: updatedPayments,
+              amountPaid: newPaid,
+              amountRemaining: newRemaining,
+            });
           }
         }
       }
@@ -861,6 +953,8 @@ export async function editApprovedTransaction(params: {
         newAmount,
         oldDate: oldData.date || oldData.transactionDate || null,
         newDate: params.date,
+        discount: newDiscount,
+        returnAmount: newReturnAmount,
       },
       createdAt: new Date(),
       performedBy: 'hq_superadmin',

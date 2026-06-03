@@ -65,15 +65,19 @@ async function reverseEntityTotals(db: any, deptCode: string, txData: any) {
     if (!snap.exists()) return;
 
     const amount = Number(txData.amount) || 0;
+    const discount = Number(txData.discount || 0);
+    const returnAmount = Number(txData.returnAmount || txData.return || 0);
     const isIncome = txData.type === 'income' || txData.type === undefined;
-    const diff = isIncome ? -amount : amount;
+    const netAmount = amount - returnAmount;
+    const diff = isIncome ? -netAmount : netAmount;
 
     const update: Record<string, any> = {};
 
     if (deptCode === 'rehab' && txData.category === 'medicine_charge') {
-      update.medicineCharges = increment(-amount);
+      update.medicineCharges = increment(-netAmount);
     } else {
       update.totalReceived = increment(diff);
+      update.totalDiscount = increment(isIncome ? -discount : discount);
     }
 
     if (deptCode === 'spims' && isIncome && txData.category !== 'medicine_charge') {
@@ -87,14 +91,15 @@ async function reverseEntityTotals(db: any, deptCode: string, txData: any) {
 
     const updatedSnap = await getDoc(ref);
     const updatedData = updatedSnap.data() as any;
-    const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+    const pkg = Number(updatedData?.totalStayPackage || updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
     const medCharges = Number(updatedData?.medicineCharges) || 0;
     const totalObligation = pkg + medCharges;
     const received = Number(updatedData?.totalReceived) || 0;
+    const totalDiscount = Number(updatedData?.totalDiscount) || 0;
 
     await updateDoc(ref, {
-      remaining: Math.max(0, totalObligation - received),
-      remainingBalance: Math.max(0, totalObligation - received),
+      remaining: Math.max(0, totalObligation - received - totalDiscount),
+      remainingBalance: Math.max(0, totalObligation - received - totalDiscount),
     });
   } catch (err) {
     console.error('[Cashier] reverseEntityTotals error:', err);
@@ -147,6 +152,9 @@ export default function CashierStationPage() {
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [returnAmount, setReturnAmount] = useState('');
+  const [stayDurationIndex, setStayDurationIndex] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [referenceNo, setReferenceNo] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -218,6 +226,21 @@ export default function CashierStationPage() {
   }, [customCategories]);
   const selectedCategory = allCategories.find((c) => c.id === selectedCategoryId);
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
+  
+  const mainStayOptions = useMemo(() => {
+    if (departmentCode !== 'rehab' || !selectedEntity) return [];
+    const history = selectedEntity.rejoinHistory || [];
+    const list = history.map((stay: any, idx: number) => ({
+      index: idx,
+      label: `Stay #${idx + 1} (Historical: ${getLocalDateString(stay.admissionDate)} to ${stay.dischargeDate ? getLocalDateString(stay.dischargeDate) : 'Present'})`
+    }));
+    list.push({
+      index: history.length,
+      label: `Stay #${history.length + 1} (Current Stay: ${getLocalDateString(selectedEntity.admissionDate)} to Present)`
+    });
+    return list;
+  }, [departmentCode, selectedEntity]);
+
   const isStaffMode = false; // Cashiers cannot manage staff details or salaries
   
   useEffect(() => {
@@ -963,6 +986,9 @@ export default function CashierStationPage() {
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
+        discount: Number(discount) || 0,
+        returnAmount: Number(returnAmount) || 0,
+        ...(stayDurationIndex !== '' ? { stayDurationIndex: Number(stayDurationIndex) } : {}),
         ...(departmentCode === 'spims' && selectedCategory.id === 'fee' ? { spimsFeeSubtype } : {}),
       };
       if (proofUrl) createPayload.proofUrl = proofUrl;
@@ -1067,6 +1093,9 @@ export default function CashierStationPage() {
       
       setSelectedEntity(null);
       setAmount('');
+      setDiscount('');
+      setReturnAmount('');
+      setStayDurationIndex('');
       setDescription('');
       setReferenceNo('');
       setProofFile(null);
@@ -1649,6 +1678,50 @@ export default function CashierStationPage() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between px-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Discount (PKR)</label>
+                        </div>
+                        <input
+                          type="number"
+                          value={discount}
+                          onChange={(e) => setDiscount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between px-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Return Amount (PKR)</label>
+                        </div>
+                        <input
+                          type="number"
+                          value={returnAmount}
+                          onChange={(e) => setReturnAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
+                        />
+                      </div>
+                      {mainStayOptions.length > 1 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between px-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Stay Duration</label>
+                          </div>
+                          <select
+                            value={stayDurationIndex}
+                            onChange={(e) => setStayDurationIndex(e.target.value)}
+                            className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] px-8 text-xs font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
+                          >
+                            <option value="">Select Stay...</option>
+                            {mainStayOptions.map((opt: any) => (
+                              <option key={opt.index} value={opt.index}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-6">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Settlement Route / Method</label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -2221,6 +2294,9 @@ function EntityProfileModal({
     categoryName: 'Admission / Fees',
     date: new Date().toISOString().split('T')[0],
     description: '',
+    discount: '',
+    returnAmount: '',
+    stayDurationIndex: '',
   });
 
   const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
@@ -2228,6 +2304,21 @@ function EntityProfileModal({
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const { session } = useHqSession();
+
+  const stayOptions = useMemo(() => {
+    const deptCode = entity._deptCode || 'rehab';
+    if (deptCode !== 'rehab') return [];
+    const history = entity.rejoinHistory || [];
+    const list = history.map((stay: any, idx: number) => ({
+      index: idx,
+      label: `Stay #${idx + 1} (Historical: ${getLocalDateString(stay.admissionDate)} to ${stay.dischargeDate ? getLocalDateString(stay.dischargeDate) : 'Present'})`
+    }));
+    list.push({
+      index: history.length,
+      label: `Stay #${history.length + 1} (Current Stay: ${getLocalDateString(entity.admissionDate)} to Present)`
+    });
+    return list;
+  }, [entity]);
 
   const handleCreateCategory = async (isForEdit: boolean = false) => {
     const name = customCategoryName.trim();
@@ -2311,7 +2402,12 @@ function EntityProfileModal({
         type: 'income',
         departmentCode: deptCode,
         cashierId: 'CASHIER',
+        discount: Number(newTx.discount) || 0,
+        returnAmount: Number(newTx.returnAmount) || 0,
       };
+      if (newTx.stayDurationIndex !== '') {
+        payload.stayDurationIndex = Number(newTx.stayDurationIndex);
+      }
 
       if (deptCode === 'spims') {
         payload.studentId = entity.id;
@@ -2331,7 +2427,7 @@ function EntityProfileModal({
       setLocalTxns(prev => [freshDoc, ...prev]);
       
       setShowAddForm(false);
-      setNewTx({ amount: '', category: 'fee', categoryName: 'Admission / Fees', date: new Date().toISOString().split('T')[0], description: '' });
+      setNewTx({ amount: '', category: 'fee', categoryName: 'Admission / Fees', date: new Date().toISOString().split('T')[0], description: '', discount: '', returnAmount: '', stayDurationIndex: '' });
       toast.success('Transaction added successfully ✓');
       if (onRefetch) onRefetch();
     } catch (err: any) {
@@ -2353,6 +2449,9 @@ function EntityProfileModal({
         category: editForm.category,
         categoryName: editForm.categoryName,
         date: Timestamp.fromDate(new Date(`${editForm.date}T12:00:00`)),
+        discount: Number(editForm.discount) || 0,
+        returnAmount: Number(editForm.returnAmount) || 0,
+        stayDurationIndex: editForm.stayDurationIndex !== '' ? Number(editForm.stayDurationIndex) : null,
       };
 
       if (coll === 'spims_fees') {
@@ -2621,7 +2720,7 @@ function EntityProfileModal({
 
         {showAddForm && (
           <div className="p-6 bg-indigo-50 border-b border-indigo-100 animate-in slide-in-from-top-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
               <div className="space-y-2">
                 <BrutalistCalendar
                   label="Date"
@@ -2678,6 +2777,41 @@ function EntityProfileModal({
                   className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-black outline-none focus:border-indigo-400 tabular-nums"
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-indigo-400">Discount (Rs)</label>
+                <input 
+                  type="number" 
+                  placeholder="0.00"
+                  value={newTx.discount}
+                  onChange={(e) => setNewTx({...newTx, discount: e.target.value})}
+                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-black outline-none focus:border-indigo-400 tabular-nums"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-indigo-400">Return (Rs)</label>
+                <input 
+                  type="number" 
+                  placeholder="0.00"
+                  value={newTx.returnAmount}
+                  onChange={(e) => setNewTx({...newTx, returnAmount: e.target.value})}
+                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-black outline-none focus:border-indigo-400 tabular-nums"
+                />
+              </div>
+              {stayOptions.length > 1 && (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase text-indigo-400">Stay Duration</label>
+                  <select 
+                    value={newTx.stayDurationIndex}
+                    onChange={(e) => setNewTx({...newTx, stayDurationIndex: e.target.value})}
+                    className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
+                  >
+                    <option value="">Select Stay...</option>
+                    {stayOptions.map((opt: any) => (
+                      <option key={opt.index} value={opt.index}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <button 
                 onClick={handleAddTransaction}
                 disabled={adding}
@@ -2809,12 +2943,44 @@ function EntityProfileModal({
                                         {allCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                       </select>
                                     )}
+                                    {stayOptions.length > 1 && (
+                                      <div className="space-y-1 mt-1">
+                                        <label className="text-[8px] font-black uppercase text-zinc-400">Stay Duration</label>
+                                        <select 
+                                          className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-xs font-bold outline-none"
+                                          value={editForm.stayDurationIndex}
+                                          onChange={(e) => setEditForm({ ...editForm, stayDurationIndex: e.target.value })}
+                                        >
+                                          <option value="">Select Stay...</option>
+                                          {stayOptions.map((opt: any) => (
+                                            <option key={opt.index} value={opt.index}>{opt.label}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : (
                                   <>
                                     <p className="text-sm font-black text-zinc-900 truncate uppercase tracking-tight">{tx.categoryName || tx.category}</p>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                      {tx.stayDurationIndex !== undefined && tx.stayDurationIndex !== null && (
+                                        <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase tracking-wider">
+                                          Stay #{Number(tx.stayDurationIndex) + 1}
+                                        </span>
+                                      )}
+                                      {Number(tx.discount || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-wider">
+                                          Discount: Rs {Number(tx.discount).toLocaleString()}
+                                        </span>
+                                      )}
+                                      {Number(tx.returnAmount || tx.return || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[9px] font-black uppercase tracking-wider">
+                                          Returned: Rs {Number(tx.returnAmount || tx.return).toLocaleString()}
+                                        </span>
+                                      )}
+                                    </div>
                                     {tx.description && (
-                                      <p className="text-[10px] text-zinc-400 truncate max-w-[200px] font-bold italic">{tx.description}</p>
+                                      <p className="text-[10px] text-zinc-400 truncate max-w-[200px] font-bold italic mt-1">{tx.description}</p>
                                     )}
                                   </>
                                 )}
@@ -2823,12 +2989,35 @@ function EntityProfileModal({
                           </td>
                           <td className="px-6 py-4 text-right">
                             {isEditing ? (
-                              <input 
-                                type="number" 
-                                className="w-32 bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
-                                value={editForm.amount}
-                                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                              />
+                              <div className="space-y-2 text-left min-w-[120px]">
+                                <div>
+                                  <label className="text-[8px] font-black uppercase text-zinc-400">Amount (Rs)</label>
+                                  <input 
+                                    type="number" 
+                                    className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
+                                    value={editForm.amount}
+                                    onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[8px] font-black uppercase text-zinc-400">Discount (Rs)</label>
+                                  <input 
+                                    type="number" 
+                                    className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
+                                    value={editForm.discount}
+                                    onChange={(e) => setEditForm({ ...editForm, discount: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[8px] font-black uppercase text-zinc-400">Return (Rs)</label>
+                                  <input 
+                                    type="number" 
+                                    className="w-full bg-white border border-zinc-200 rounded-lg p-2 text-right text-sm font-black outline-none"
+                                    value={editForm.returnAmount}
+                                    onChange={(e) => setEditForm({ ...editForm, returnAmount: e.target.value })}
+                                  />
+                                </div>
+                              </div>
                             ) : (
                               <span className={cn(
                                 'text-lg font-[1000] tabular-nums tracking-tighter',
@@ -2960,13 +3149,51 @@ function EntityProfileModal({
                               </select>
                             )}
                           </div>
-                          <input 
-                            type="number" 
-                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-sm font-black"
-                            value={editForm.amount}
-                            onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                          />
-                          <div className="flex gap-2">
+                          <div className="space-y-2">
+                            <div>
+                              <label className="text-[8px] font-black text-zinc-400 uppercase">Amount (Rs)</label>
+                              <input 
+                                type="number" 
+                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-sm font-black outline-none"
+                                value={editForm.amount}
+                                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[8px] font-black text-zinc-400 uppercase">Discount (Rs)</label>
+                              <input 
+                                type="number" 
+                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-sm font-black outline-none"
+                                value={editForm.discount}
+                                onChange={(e) => setEditForm({ ...editForm, discount: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[8px] font-black text-zinc-400 uppercase">Return Amount (Rs)</label>
+                              <input 
+                                type="number" 
+                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-sm font-black outline-none"
+                                value={editForm.returnAmount}
+                                onChange={(e) => setEditForm({ ...editForm, returnAmount: e.target.value })}
+                              />
+                            </div>
+                            {stayOptions.length > 1 && (
+                              <div>
+                                <label className="text-[8px] font-black text-zinc-400 uppercase">Stay Duration</label>
+                                <select 
+                                  className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-bold outline-none"
+                                  value={editForm.stayDurationIndex}
+                                  onChange={(e) => setEditForm({ ...editForm, stayDurationIndex: e.target.value })}
+                                >
+                                  <option value="">Select Stay...</option>
+                                  {stayOptions.map((opt: any) => (
+                                    <option key={opt.index} value={opt.index}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2 mt-3">
                             <button 
                               onClick={() => handleUpdate(tx)} 
                               disabled={loading}
@@ -2996,7 +3223,24 @@ function EntityProfileModal({
                               </div>
                               <div>
                                 <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">{tx.categoryName || tx.category}</p>
-                                <p className="text-[10px] font-bold text-zinc-400">{dateLabel}</p>
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  {tx.stayDurationIndex !== undefined && tx.stayDurationIndex !== null && (
+                                    <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[8px] font-black uppercase tracking-wider">
+                                      Stay #{Number(tx.stayDurationIndex) + 1}
+                                    </span>
+                                  )}
+                                  {Number(tx.discount || 0) > 0 && (
+                                    <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[8px] font-black uppercase tracking-wider">
+                                      Discount: Rs {Number(tx.discount).toLocaleString()}
+                                    </span>
+                                  )}
+                                  {Number(tx.returnAmount || tx.return || 0) > 0 && (
+                                    <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[8px] font-black uppercase tracking-wider">
+                                      Returned: Rs {Number(tx.returnAmount || tx.return).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] font-bold text-zinc-400 mt-1">{dateLabel}</p>
                               </div>
                             </div>
                             <span className={cn(
@@ -3032,7 +3276,10 @@ function EntityProfileModal({
                                     amount: tx.amount,
                                     category: tx.category || 'fee',
                                     categoryName: tx.categoryName || 'Admission / Fees',
-                                    date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
+                                    date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0],
+                                    discount: tx.discount || 0,
+                                    returnAmount: tx.returnAmount || tx.return || 0,
+                                    stayDurationIndex: tx.stayDurationIndex !== undefined ? String(tx.stayDurationIndex) : '',
                                   });
                                 }}
                                 className="flex-1 bg-indigo-50 text-indigo-600 h-9 rounded-lg font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2"

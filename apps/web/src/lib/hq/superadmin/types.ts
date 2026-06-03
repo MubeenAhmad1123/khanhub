@@ -87,5 +87,8 @@ export type UnifiedTx = {
   session?: string;
   rollNo?: string;
   rehabDepartmentLabel?: string;
+  discount?: number;
+  returnAmount?: number;
+  stayDurationIndex?: number;
 };
 
