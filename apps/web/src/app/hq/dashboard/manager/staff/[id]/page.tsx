@@ -198,6 +198,7 @@ export default function StaffProfilePage() {
   const [openRule, setOpenRule] = useState<string | null>(null);
   const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
   const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
+  const [fines, setFines] = useState<any[]>([]);
 
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
@@ -309,15 +310,34 @@ export default function StaffProfilePage() {
         absentDeduction: 0,
         estimatedSalary: 0,
         fines: 0,
+        bonus: 0,
+        bonusReason: '',
+        deductionReason: '',
         payableDatesList: [] as { date: string; status: string }[],
-        deductedDatesList: [] as { date: string; status: string; deduction: number }[]
+        deductedDatesList: [] as { date: string; status: string; deduction: number }[],
+        isFinalized: false,
+        status: ''
       };
     }
 
     const monthlySalary = Number(staff.monthlySalary) || 0;
+    const dailyWage = monthlySalary / 30;
+
+    // Check if finalized slip exists
+    const slip = salaryRecords.find(s => s.month === selectedMonth);
+
+    // Calculate dynamic values (always needed for lists of dates, even if finalized)
     const days = daysInMonth();
-    const totalDaysCount = days.length || 30;
-    const dailyWage = monthlySalary / totalDaysCount;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const isCurrentMonth = selectedMonth === todayStr.slice(0, 7);
+
+    // Calculate days passed in month
+    let daysPassed = 30;
+    if (isCurrentMonth) {
+      daysPassed = Math.min(new Date().getDate(), 30);
+    } else if (selectedMonth > todayStr.slice(0, 7)) {
+      daysPassed = 0;
+    }
 
     let presentDays = 0;
     let lateDays = 0;
@@ -328,8 +348,6 @@ export default function StaffProfilePage() {
 
     const payableDatesList: { date: string; status: string }[] = [];
     const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
-
-    const todayStr = new Date().toISOString().slice(0, 10);
 
     days.forEach(dayStr => {
       const att = attendanceMap[dayStr];
@@ -347,7 +365,9 @@ export default function StaffProfilePage() {
         payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
       } else if (status === 'absent') {
         absentDays++;
-        deductedDatesList.push({ date: dayStr, status: 'Absent', deduction: dailyWage });
+        if (dayStr <= todayStr) {
+          deductedDatesList.push({ date: dayStr, status: 'Absent', deduction: dailyWage });
+        }
       } else {
         if (isPast) {
           unmarkedDays++;
@@ -356,13 +376,41 @@ export default function StaffProfilePage() {
       }
     });
 
-    const payableDays = presentDays + lateDays + paidLeaves;
-    const unpaidDaysTotal = absentDays + unpaidLeaves + unmarkedDays;
+    const totalAbsentDays = absentDays + unmarkedDays;
+    const payableDays = Math.max(0, daysPassed - totalAbsentDays);
 
     const earnings = payableDays * dailyWage;
-    const absentDeduction = unpaidDaysTotal * dailyWage;
-    const fines = staff.totalFines || 0;
-    const estimatedSalary = Math.floor(Math.max(0, earnings - fines));
+    const absentDeduction = totalAbsentDays * dailyWage;
+
+    // Filter fines for selected month
+    const monthlyFinesList = fines.filter(f => f.date && f.date.startsWith(selectedMonth));
+    const totalFines = monthlyFinesList.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+    if (slip) {
+      return {
+        dailyWage: slip.dailyWage || dailyWage,
+        presentDays: slip.presentDays || 0,
+        lateDays: 0,
+        paidLeaves: slip.leaveDays || 0,
+        unpaidLeaves: slip.unpaidLeaveDays || 0,
+        absentDays: slip.absentDays || 0,
+        payableDays: slip.presentDays || 0,
+        unpaidDays: slip.absentDays || 0,
+        earnings: slip.basicSalary - (slip.absentDeduction || 0),
+        absentDeduction: slip.absentDeduction || 0,
+        estimatedSalary: slip.netSalary || 0,
+        fines: slip.otherDeductions || 0,
+        bonus: slip.bonus || 0,
+        bonusReason: slip.bonusReason || '',
+        deductionReason: slip.deductionReason || '',
+        payableDatesList,
+        deductedDatesList,
+        isFinalized: true,
+        status: slip.status
+      };
+    }
+
+    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
 
     return {
       dailyWage,
@@ -372,15 +420,20 @@ export default function StaffProfilePage() {
       unpaidLeaves,
       absentDays,
       payableDays,
-      unpaidDays: unpaidDaysTotal,
+      unpaidDays: totalAbsentDays,
       earnings,
       absentDeduction,
       estimatedSalary,
-      fines,
+      fines: totalFines,
+      bonus: 0,
+      bonusReason: '',
+      deductionReason: '',
       payableDatesList,
-      deductedDatesList
+      deductedDatesList,
+      isFinalized: false,
+      status: ''
     };
-  }, [staff, attendanceMap, daysInMonth]);
+  }, [staff, attendanceMap, fines, salaryRecords, selectedMonth, daysInMonth]);
 
   const tillDateSalary = useMemo(() => {
     return salaryDetails.estimatedSalary;
@@ -577,6 +630,7 @@ export default function StaffProfilePage() {
         contribDocs,
         salarySnap,
         tasksDocs,
+        fineDocs,
         metaDoc
       ] = await Promise.all([
         fetchParallel(`${prefix}_attendance`),
@@ -585,6 +639,7 @@ export default function StaffProfilePage() {
         fetchParallel(`${prefix}_contributions`),
         fetchParallel(`${prefix}_salary_records`),
         fetchParallel(`${prefix}_special_tasks`),
+        fetchParallel(`${prefix}_fines`),
         getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any))
       ]);
       console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
@@ -643,6 +698,7 @@ export default function StaffProfilePage() {
       setDutyLogs(dutyDocs.map((d: any) => d.data()));
       setSalaryRecords(salarySnap.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
       setSpecialTasks(tasksDocs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
+      setFines(fineDocs.map((d: any) => ({ id: d.id, ...d.data() })));
 
       // Fetch growth history (all records)
       const monthlyGpDocs = (await fetchParallel(`${prefix}_growth_points`)).map((d: any) => d.data());
@@ -4213,26 +4269,61 @@ export default function StaffProfilePage() {
 
               {/* Calculations Formula */}
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
-                <p className="text-[9px] font-black text-black uppercase tracking-widest">Calculation Formula</p>
+                <p className="text-[9px] font-black text-black uppercase tracking-widest">
+                  {salaryDetails.isFinalized ? `Official Salary Slip Registry (${salaryDetails.status})` : 'Calculation Formula'}
+                </p>
                 <div className="space-y-1 font-mono text-gray-600">
                   <div className="flex justify-between">
                     <span>Base Daily Rate:</span>
-                    <span>₨{Number(staff?.monthlySalary || 0).toLocaleString()} / {daysInMonth().length} = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
+                    <span>₨{Number(staff?.monthlySalary || 0).toLocaleString()} / 30 = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
                   </div>
-                  <div className="flex justify-between text-emerald-600">
-                    <span>Payable Days Earned ({salaryDetails.payableDays} Days):</span>
-                    <span>+ ₨{Math.round(salaryDetails.earnings).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-rose-500">
-                    <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
-                    <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-rose-500">
-                    <span>Fines:</span>
-                    <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
-                  </div>
+                  {salaryDetails.isFinalized ? (
+                    <>
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Base Monthly Salary:</span>
+                        <span>+ ₨{Number(staff?.monthlySalary || 0).toLocaleString()}</span>
+                      </div>
+                      {salaryDetails.absentDeduction > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Absent Deductions:</span>
+                          <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {salaryDetails.bonus > 0 && (
+                        <div className="flex justify-between text-emerald-600">
+                          <span>Allowance/Bonus ({salaryDetails.bonusReason || 'Adjustment'}):</span>
+                          <span>+ ₨{salaryDetails.bonus.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {salaryDetails.fines > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Adjustments/Deductions ({salaryDetails.deductionReason || 'Fines'}):</span>
+                          <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Payable Days Earned ({salaryDetails.payableDays} Days):</span>
+                        <span>+ ₨{Math.round(salaryDetails.earnings).toLocaleString()}</span>
+                      </div>
+                      {salaryDetails.absentDeduction > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
+                          <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {salaryDetails.fines > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Fines:</span>
+                          <span>- ₨{salaryDetails.fines.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-black text-gray-900">
-                    <span>Till Date Net:</span>
+                    <span>{salaryDetails.isFinalized ? 'Disbursed Net Salary:' : 'Till Date Net:'}</span>
                     <span>₨{salaryDetails.estimatedSalary.toLocaleString()}</span>
                   </div>
                 </div>
@@ -4277,6 +4368,29 @@ export default function StaffProfilePage() {
                             <span className="text-[8px] text-rose-400 uppercase font-black">{item.status}</span>
                           </div>
                           <span className="font-black text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Fine Deductions List */}
+                <div className="space-y-3 col-span-1 md:col-span-2 mt-4">
+                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Fine Deductions Details ({fines.filter(f => f.date && f.date.startsWith(selectedMonth)).length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {fines.filter(f => f.date && f.date.startsWith(selectedMonth)).length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No fines enforced this month</p>
+                    ) : (
+                      fines.filter(f => f.date && f.date.startsWith(selectedMonth)).map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{item.reason || 'Penalty'}</span>
+                            <span className="text-[8px] text-gray-400 uppercase font-black">{formatDateDMY(item.date)}</span>
+                          </div>
+                          <span className="font-black text-rose-500">-₨{Number(item.amount).toLocaleString()}</span>
                         </div>
                       ))
                     )}

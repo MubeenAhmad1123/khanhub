@@ -595,6 +595,13 @@ export default function DailyReportPage() {
         };
 
         const onLeave = updatedRow.attendance === 'leave';
+        if (field === 'fineReason' && !value) {
+          updatedRow.fines = 0;
+        }
+        if (field === 'gpLink' && !value) {
+          updatedRow.gpStatus = 'no';
+        }
+
         const attPoint = (updatedRow.attendance === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && updatedRow.uniformStatus === 'yes') ? 1 : 0;
         const dutyPoint = (!onLeave && updatedRow.dutyStatus === 'yes') ? 1 : 0;
@@ -798,22 +805,23 @@ export default function DailyReportPage() {
         }
 
         if (row.gpStatus !== 'na') {
+          const finalGpStatus = (row.gpStatus === 'yes' && !row.gpLink) ? 'no' : row.gpStatus;
           await setDoc(doc(db, `${prefix}_contributions`, attId), {
             staffId: simpleId,
             date: reportDate,
-            status: row.gpStatus,
-            isApproved: row.gpStatus === 'yes',
+            status: finalGpStatus,
+            isApproved: finalGpStatus === 'yes',
             link: row.gpLink || '',
             updatedAt: Timestamp.now(),
             markedBy: session?.uid
           }, { merge: true });
         }
 
-        if (row.fines > 0) {
+        if (row.fines > 0 && row.fineReason) {
           await setDoc(doc(db, `${prefix}_fines`, attId), {
             staffId: simpleId,
             amount: row.fines,
-            reason: row.fineReason || (row.attendance === 'absent' ? 'Absent without leave' : 'Penalty'),
+            reason: row.fineReason,
             status: 'unpaid',
             date: reportDate,
             createdAt: Timestamp.now(),
@@ -1498,25 +1506,33 @@ export default function DailyReportPage() {
 
                       <td className="px-6 py-4 text-center">
                         <div className="flex flex-col gap-1 items-center">
-                          <select
-                            value={row.gpStatus}
-                            onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
-                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                              row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              'bg-rose-50 text-rose-700 border-rose-100'
-                            }`}
-                          >
-                            <option value="no">No</option>
-                            <option value="yes">Yes</option>
-                          </select>
-                          {row.gpStatus === 'yes' && (
-                            <input
-                              type="text"
-                              value={row.gpLink || ''}
-                              onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
-                              placeholder="GP Line / Post"
-                              className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none mt-1"
-                            />
+                          <input
+                            type="text"
+                            value={row.gpLink || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleInlineUpdate(row.id, 'gpLink', val);
+                              if (!val) {
+                                handleInlineUpdate(row.id, 'gpStatus', 'no');
+                              }
+                            }}
+                            placeholder="GP Reason / Post"
+                            className="w-28 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                          />
+                          {row.gpLink ? (
+                            <select
+                              value={row.gpStatus}
+                              onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
+                              className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center mt-1 ${
+                                row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                'bg-rose-50 text-rose-700 border-rose-100'
+                              }`}
+                            >
+                              <option value="no">No</option>
+                              <option value="yes">Yes</option>
+                            </select>
+                          ) : (
+                            <span className="text-[9px] text-gray-400 font-bold uppercase mt-1">Enter reason first</span>
                           )}
                         </div>
                       </td>
@@ -1529,38 +1545,46 @@ export default function DailyReportPage() {
 
                       <td className="px-6 py-4 text-center">
                         <div className="flex flex-col gap-1.5 items-center">
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              value={row.fines || ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                handleInlineUpdate(row.id, 'fines', val);
-                              }}
-                              placeholder="0"
-                              className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
-                            />
-                            {row.fines > 0 && (
-                              <button
-                                onClick={() => {
-                                  handleInlineUpdate(row.id, 'fines', 0);
-                                  handleInlineUpdate(row.id, 'fineReason', '');
+                          <input
+                            type="text"
+                            value={row.fineReason || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleInlineUpdate(row.id, 'fineReason', val);
+                              if (!val) {
+                                handleInlineUpdate(row.id, 'fines', 0);
+                              }
+                            }}
+                            placeholder="Reason for fine"
+                            className="w-28 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                          />
+                          {row.fineReason ? (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <input
+                                type="number"
+                                value={row.fines || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                  handleInlineUpdate(row.id, 'fines', val);
                                 }}
-                                className="text-rose-500 hover:text-rose-700 transition-colors"
-                                title="Remove fine"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            )}
-                          </div>
-                          {row.fines > 0 && (
-                            <input
-                              type="text"
-                              value={row.fineReason || ''}
-                              onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
-                              placeholder="Reason"
-                              className="w-24 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
-                            />
+                                placeholder="Amount"
+                                className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                              />
+                              {row.fines > 0 && (
+                                <button
+                                  onClick={() => {
+                                    handleInlineUpdate(row.id, 'fines', 0);
+                                    handleInlineUpdate(row.id, 'fineReason', '');
+                                  }}
+                                  className="text-rose-500 hover:text-rose-700 transition-colors"
+                                  title="Remove fine"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[9px] text-gray-400 font-bold uppercase mt-1">Enter reason first</span>
                           )}
                         </div>
                       </td>
@@ -1800,33 +1824,41 @@ export default function DailyReportPage() {
                     <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Growth Points (GP)</label>
                       <div className="flex flex-col gap-2 w-full">
-                        <div className="flex flex-wrap gap-1 mt-0.5 w-full">
-                          {[
-                            { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
-                            { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' }
-                          ].map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              disabled={row.attendance === 'leave'}
-                              onClick={() => handleInlineUpdate(row.id, 'gpStatus', opt.value)}
-                              className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
-                                row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                                row.gpStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                        {row.gpStatus === 'yes' && (
-                          <input
-                            type="text"
-                            value={row.gpLink || ''}
-                            onChange={(e) => handleInlineUpdate(row.id, 'gpLink', e.target.value)}
-                            placeholder="GP Line / Post URL"
-                            className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
-                          />
+                        <input
+                          type="text"
+                          value={row.gpLink || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            handleInlineUpdate(row.id, 'gpLink', val);
+                            if (!val) {
+                              handleInlineUpdate(row.id, 'gpStatus', 'no');
+                            }
+                          }}
+                          placeholder="GP Reason / Post URL"
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
+                        />
+                        {row.gpLink ? (
+                          <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                            {[
+                              { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                              { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' }
+                            ].map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                disabled={row.attendance === 'leave'}
+                                onClick={() => handleInlineUpdate(row.id, 'gpStatus', opt.value)}
+                                className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                                  row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                                  row.gpStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 italic text-center">Enter reason first</span>
                         )}
                       </div>
                     </div>
@@ -1835,38 +1867,46 @@ export default function DailyReportPage() {
                     <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 sm:col-span-2 w-full">
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fines & Reason</label>
                       <div className="flex flex-col gap-2 w-full">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={row.fines || ''}
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? 0 : Number(e.target.value);
-                              handleInlineUpdate(row.id, 'fines', val);
-                            }}
-                            placeholder="No fine penalty"
-                            className="flex-1 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
-                          />
-                          {row.fines > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleInlineUpdate(row.id, 'fines', 0);
-                                handleInlineUpdate(row.id, 'fineReason', '');
+                        <input
+                          type="text"
+                          value={row.fineReason || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            handleInlineUpdate(row.id, 'fineReason', val);
+                            if (!val) {
+                              handleInlineUpdate(row.id, 'fines', 0);
+                            }
+                          }}
+                          placeholder="Deduction reason..."
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
+                        />
+                        {row.fineReason ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              value={row.fines || ''}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                handleInlineUpdate(row.id, 'fines', val);
                               }}
-                              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
-                            >
-                              <XCircle size={14} /> Clear
-                            </button>
-                          )}
-                        </div>
-                        {row.fines > 0 && (
-                          <input
-                            type="text"
-                            value={row.fineReason || ''}
-                            onChange={(e) => handleInlineUpdate(row.id, 'fineReason', e.target.value)}
-                            placeholder="Deduction reason..."
-                            className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
-                          />
+                              placeholder="Fine amount"
+                              className="flex-1 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
+                            />
+                            {row.fines > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleInlineUpdate(row.id, 'fines', 0);
+                                  handleInlineUpdate(row.id, 'fineReason', '');
+                                }}
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+                              >
+                                <XCircle size={14} /> Clear
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 italic text-center">Enter reason first</span>
                         )}
                       </div>
                     </div>

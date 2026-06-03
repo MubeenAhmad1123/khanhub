@@ -17,6 +17,23 @@ function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+function getDaysInMonth(monthStr: string) {
+  if (!monthStr || !monthStr.includes('-')) return [];
+  const [year, month] = monthStr.split('-').map(Number);
+  const date = new Date(year, month - 1, 1);
+  if (isNaN(date.getTime())) return [];
+
+  const days = [];
+  while (date.getMonth() === month - 1) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    days.push(`${y}-${m}-${d}`);
+    date.setDate(date.getDate() + 1);
+  }
+  return days;
+}
+
 // Extended slip type that carries the source collection so we can update it later
 type SlipWithCol = SalarySlip & { _col: string };
 
@@ -126,16 +143,28 @@ export default function SalarySlipsPage() {
         return dateStr.startsWith(selectedMonth);
       });
 
+    const daysInMonthList = getDaysInMonth(selectedMonth);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    
+    let absentCount = 0;
+    daysInMonthList.forEach(dayStr => {
+      const att = monthAttendance.find((a: any) => a.date === dayStr);
+      const status = att ? att.status : 'unmarked';
+      const isPast = dayStr < todayStr;
+      if (status === 'absent' || (status === 'unmarked' && isPast)) {
+        absentCount++;
+      }
+    });
+
     const presentDays = monthAttendance.filter((a: any) => a.status === 'present').length;
     const paidLeaveDays = monthAttendance.filter((a: any) => a.status === 'paid_leave').length;
     const unpaidLeaveDays = monthAttendance.filter((a: any) => a.status === 'unpaid_leave').length;
     const legacyLeaveDays = monthAttendance.filter((a: any) => a.status === 'leave').length;
-    const absentDays = monthAttendance.filter((a: any) => a.status === 'absent').length;
 
     const workingDays = 30;
 
     const dailyWage = Math.floor((member.monthlySalary || 0) / 30);
-    const absentDeduction = Math.round(absentDays * dailyWage);
+    const absentDeduction = Math.round(absentCount * dailyWage);
     
     const currentBonus = existingSlip ? (existingSlip.bonus || 0) : 0;
     const currentDeductions = existingSlip ? (existingSlip.otherDeductions || 0) : 0;
@@ -152,7 +181,7 @@ export default function SalarySlipsPage() {
       dailyWage,
       workingDays,
       presentDays,
-      absentDays,
+      absentDays: absentCount,
       leaveDays: paidLeaveDays + unpaidLeaveDays + legacyLeaveDays,
       paidLeaveDays,
       unpaidLeaveDays,
