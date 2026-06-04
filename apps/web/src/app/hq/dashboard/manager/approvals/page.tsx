@@ -14,6 +14,23 @@ import { awardStaffPoint } from '@/app/hq/actions/points';
 
 type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it' | 'urgent';
 
+const getFilterLabel = (f: FilterType) => {
+  switch (f) {
+    case 'all': return 'All';
+    case 'hq': return 'HQ';
+    case 'rehab': return 'Rehab';
+    case 'spims': return 'SPIMS';
+    case 'hospital': return 'Hospital';
+    case 'sukoon': return 'Sukoon';
+    case 'welfare': return 'Welfare';
+    case 'job-center': return 'Job Center';
+    case 'social-media': return 'Social Media';
+    case 'it': return 'IT';
+    case 'urgent': return 'Urgent';
+    default: return f;
+  }
+};
+
 function getValidDate(t: any): Date | null {
   if (!t) return null;
   if (t.createdAt) {
@@ -201,7 +218,7 @@ export default function ManagerApprovalsPage() {
   }
 
   return (
-    <div className="space-y-8 pb-32 p-4 md:p-8 bg-[#FDFDFD] min-h-screen overflow-x-hidden w-full max-w-full text-gray-900 font-sans">
+    <div className="space-y-8 pb-32 px-5 md:px-8 py-6 md:py-8 bg-[#FDFDFD] min-h-screen overflow-x-hidden w-full max-w-full text-gray-900 font-sans">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">Staff Contributions</h1>
         <p className="text-gray-500 text-sm font-medium">Review and approve employee contributions</p>
@@ -217,34 +234,37 @@ export default function ManagerApprovalsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 p-2 bg-gray-50 border border-gray-100 rounded-2xl w-full">
-        {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it', 'urgent'] as FilterType[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 whitespace-nowrap border shadow-sm ${
-              filter === f
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white text-gray-700 border-gray-100 hover:bg-gray-50'
-            }`}
-          >
-            <Filter size={12} />
-            {f === 'job-center' ? 'Job Center' : f === 'social-media' ? 'Social Media' : f.charAt(0).toUpperCase() + f.slice(1)}
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              filter === f ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-            }`}>
-              {counts[f]}
-            </span>
-          </button>
-        ))}
+      <div className="relative w-full overflow-hidden">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-2 p-2 bg-gray-50 border border-gray-100 rounded-2xl w-full whitespace-nowrap">
+          {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it', 'urgent'] as FilterType[]).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-2 whitespace-nowrap border shadow-sm flex-shrink-0 ${
+                filter === f
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-gray-700 border-gray-100 hover:bg-gray-50'
+              }`}
+            >
+              <Filter size={12} className="flex-shrink-0" />
+              <span>{getFilterLabel(f)}</span>
+              <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${
+                filter === f ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {counts[f]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" />
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm animate-in fade-in duration-300">
-          <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center mb-3 text-gray-400 text-xl font-bold">
+        <div className="flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px] px-6 py-20 bg-white rounded-3xl border border-gray-100 shadow-sm w-full animate-in fade-in duration-300">
+          <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center mb-3 text-gray-400 text-xl font-bold flex-shrink-0 select-none">
             !
           </div>
-          <p className="text-gray-400 font-bold uppercase tracking-wider text-xs">Clear Horizon — No Pending Tasks</p>
+          <p className="text-gray-400 font-bold uppercase tracking-wider text-xs text-center px-4 max-w-sm select-none">No contributions to review</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
