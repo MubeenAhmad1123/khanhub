@@ -1237,27 +1237,27 @@ export default function CashierStationPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[2rem] md:rounded-[4rem] p-4 md:p-14 border border-zinc-100 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
+          <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
             <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] group-hover/search:bg-indigo-600/10 transition-all duration-1000" />
             
-            <div className="relative z-10 space-y-12">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
-                <div className="flex items-center gap-8">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-zinc-900 rounded-[2rem] flex items-center justify-center text-white shadow-2xl group-hover/search:scale-110 transition-transform duration-700">
-                    <Search size={32} />
+            <div className="relative z-10 space-y-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-2xl group-hover/search:scale-110 transition-transform duration-700 flex-shrink-0">
+                    <Search size={22} />
                   </div>
                   <div>
-                    <h3 className="text-2xl md:text-4xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
-                    <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.4em] mt-2">Access cross-departmental records instantaneously</p>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
+                    <p className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Access cross-departmental records instantaneously</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 p-2 bg-zinc-100 rounded-[2rem]">
+                <div className="flex flex-wrap gap-1.5 p-1.5 bg-zinc-100 rounded-2xl">
                   {(['patient', 'student', 'other'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setSearchType(t)}
                       className={cn(
-                        "px-8 md:px-10 py-4 md:py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+                        "px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer",
                         searchType === t 
                           ? "bg-white text-indigo-600 shadow-2xl shadow-indigo-600/10" 
                           : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/50"
@@ -1270,19 +1270,19 @@ export default function CashierStationPage() {
               </div>
 
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-10 md:pl-12 flex items-center pointer-events-none">
-                  <User size={32} className="text-indigo-600/30" />
+                <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
+                  <User size={20} className="text-indigo-600/30" />
                 </div>
                 <input
                   value={searchQuery}
                   onFocus={() => setSearchFocused(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
-                  className="w-full h-16 md:h-24 lg:h-32 bg-zinc-50 border-4 border-transparent rounded-[1.5rem] md:rounded-[2.5rem] lg:rounded-[3.5rem] pl-20 md:pl-32 pr-12 text-lg md:text-2xl lg:text-3xl font-black text-zinc-900 outline-none focus:ring-[20px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-200"
+                  className="w-full h-12 sm:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-16 pr-10 text-sm sm:text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-200"
                 />
                 {entitiesLoading && (
-                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                    <Loader2 size={32} className="animate-spin text-indigo-600" />
+                  <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                    <Loader2 size={20} className="animate-spin text-indigo-600" />
                   </div>
                 )}
               </div>
@@ -1445,45 +1445,45 @@ export default function CashierStationPage() {
             </div>
           </div>
         </div>        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-1 lg:order-2">
-          <div className="bg-white rounded-[2rem] md:rounded-[4rem] border border-zinc-100 p-6 md:p-14 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
+          <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 p-4 sm:p-6 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
-            <div className="relative z-10 space-y-14">
+            <div className="relative z-10 space-y-8 md:space-y-10">
               {selectedEntity ? (
-                <div className="space-y-12 animate-in fade-in zoom-in-95 duration-700">
-                  <div className="w-full p-6 md:p-16 rounded-[2.5rem] md:rounded-[5rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
+                <div className="space-y-8 md:space-y-10 animate-in fade-in zoom-in-95 duration-700">
+                  <div className="w-full p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-[2rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
                     
                     <div className="relative z-10">
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-12">
-                        <div className="flex flex-col md:flex-row items-center md:items-start gap-12">
-                          <div className="w-24 h-24 md:w-48 md:h-48 bg-white/10 backdrop-blur-2xl rounded-[2rem] md:rounded-[4rem] flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden">
-                            <User className="w-12 h-12 md:w-32 md:h-32 text-white/40 group-hover/avatar:scale-110 transition-transform duration-700" />
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 md:gap-8">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 xl:w-24 xl:h-24 bg-white/10 backdrop-blur-2xl rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden flex-shrink-0">
+                            <User className="w-8 h-8 sm:w-10 sm:h-10 xl:w-12 xl:h-12 text-white/40 group-hover/avatar:scale-110 transition-transform duration-700" />
                             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-transparent opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
-                            <div className="absolute -bottom-2 -right-2 w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-2xl flex items-center justify-center border-4 border-zinc-900 shadow-xl">
-                              <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-lg flex items-center justify-center border sm:border-2 border-zinc-900 shadow-xl">
+                              <ShieldCheck className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-white" />
                             </div>
                           </div>
-                          <div className="text-center md:text-left space-y-6 min-w-0">
-                            <div className="flex items-center justify-center md:justify-start gap-4">
-                              <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">Active Protocol Target</p>
+                          <div className="text-center sm:text-left space-y-4 min-w-0">
+                            <div className="flex items-center justify-center sm:justify-start gap-2">
+                              <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Active Protocol Target</p>
                               </div>
                             </div>
-                            <h2 className="text-2xl md:text-5xl lg:text-7xl font-[1000] tracking-tighter leading-none uppercase break-words">{selectedEntity.name || selectedEntity.fullName}</h2>
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-5">
-                              <div className="px-5 py-2.5 md:px-8 md:py-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-[1.2rem] md:rounded-[1.5rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest truncate max-w-full">
+                            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">{selectedEntity.name || selectedEntity.fullName}</h2>
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 md:gap-3">
+                              <div className="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest truncate max-w-full">
                                 ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.id.slice(0, 8)}</span>
                               </div>
-                              <div className="px-5 py-2.5 md:px-8 md:py-3 bg-indigo-600 rounded-[1.2rem] md:rounded-[1.5rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-xl truncate">
+                              <div className="px-4 py-2 bg-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl truncate">
                                 {departmentCode}
                               </div>
                               <button 
                                 onClick={() => setShowProfileModal(true)}
-                                className="px-5 py-2.5 md:px-8 md:py-3 bg-white text-zinc-900 rounded-[1.2rem] md:rounded-[1.5rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-3 truncate"
+                                className="px-4 py-2 bg-white text-zinc-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-2 truncate cursor-pointer"
                               >
-                                <Eye size={16} />
+                                <Eye size={14} />
                                 Full Ledger
                               </button>
                             </div>
@@ -1491,24 +1491,24 @@ export default function CashierStationPage() {
                         </div>
                         <button 
                           onClick={() => { setSelectedEntity(null); setAmount(''); }} 
-                          className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-rose-600 text-white rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90 self-center md:self-start"
+                          className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 hover:bg-rose-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90 self-center sm:self-start flex-shrink-0 cursor-pointer"
                         >
-                          <X size={24} className="md:w-8 md:h-8 group-hover/btn:rotate-90 transition-transform" />
+                          <X size={18} className="group-hover/btn:rotate-90 transition-transform" />
                         </button>
                       </div>
  
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mt-12 md:mt-20">
-                        <div className="p-6 md:p-10 bg-white/5 backdrop-blur-sm border border-white/10 rounded-[2rem] md:rounded-[3rem] group/card hover:bg-white/10 transition-all">
-                          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-3 md:mb-4">Total Protocol Value</p>
-                          <h4 className="text-2xl md:text-3xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 md:mt-8">
+                        <div className="p-3 sm:p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl sm:rounded-2xl group/card hover:bg-white/10 transition-all">
+                          <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-2">Total Protocol Value</p>
+                          <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
                         </div>
-                        <div className="p-6 md:p-10 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-[2rem] md:rounded-[3rem] group/card hover:bg-emerald-500/20 transition-all">
-                          <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-[0.3em] mb-3 md:mb-4">Total Settled</p>
-                          <h4 className="text-2xl md:text-3xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
+                        <div className="p-3 sm:p-4 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-xl sm:rounded-2xl group/card hover:bg-emerald-500/20 transition-all">
+                          <p className="text-[9px] font-black text-emerald-400/60 uppercase tracking-[0.2em] mb-2">Total Settled</p>
+                          <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
                         </div>
-                        <div className="p-6 md:p-10 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-[2rem] md:rounded-[3rem] group/card hover:bg-rose-500/20 transition-all">
-                          <p className="text-[10px] font-black text-rose-400/60 uppercase tracking-[0.3em] mb-3 md:mb-4">Current Exposure</p>
-                          <h4 className="text-2xl md:text-3xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
+                        <div className="p-3 sm:p-4 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-xl sm:rounded-2xl group/card hover:bg-rose-500/20 transition-all">
+                          <p className="text-[9px] font-black text-rose-400/60 uppercase tracking-[0.2em] mb-2">Current Exposure</p>
+                          <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
                         </div>
                       </div>
                     </div>
@@ -1571,15 +1571,15 @@ export default function CashierStationPage() {
                 </div>
               )}
 
-              <form onSubmit={submitTx} className="space-y-16 pt-10 border-t border-zinc-100">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20">
-                  <div className="space-y-12">
+              <form onSubmit={submitTx} className="space-y-10 pt-10 border-t border-zinc-100">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
+                  <div className="space-y-8">
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department Vector</label>
                         <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {DEPARTMENTS.map((dept) => (
                           <button
                             key={dept.code}
@@ -1590,7 +1590,7 @@ export default function CashierStationPage() {
                               setAmount('');
                             }}
                             className={cn(
-                              "h-20 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 transition-all border-2 group/dept",
+                              "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all border-2 group/dept",
                               departmentCode === dept.code 
                                 ? "bg-indigo-600 border-indigo-600 text-white shadow-2xl shadow-indigo-600/30 -translate-y-1" 
                                 : "bg-white border-zinc-100 text-zinc-400 hover:border-indigo-200 hover:text-zinc-600"
@@ -1601,35 +1601,35 @@ export default function CashierStationPage() {
                         ))}
                       </div>
                     </div>
-
+ 
                     <div className="space-y-6">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Directional Flow</label>
-                      <div className="grid grid-cols-2 gap-4 md:gap-6">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <button
                           type="button"
                           onClick={() => setTxnType('income')}
                           className={cn(
-                            "h-20 md:h-28 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center gap-2 md:gap-4 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
+                            "h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
                             txnType === 'income' 
                               ? "bg-emerald-600 border-emerald-500 text-white shadow-2xl shadow-emerald-500/30 -translate-y-1" 
                               : "bg-white border-zinc-100 text-zinc-400 hover:border-emerald-200 hover:bg-emerald-50"
                           )}
                         >
-                          <TrendingUp className={cn("w-6 h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
-                          <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em]">Credit Entry</span>
+                          <TrendingUp className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Credit Entry</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setTxnType('expense')}
                           className={cn(
-                            "h-20 md:h-28 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center gap-2 md:gap-4 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
+                            "h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
                             txnType === 'expense' 
                               ? "bg-rose-600 border-rose-500 text-white shadow-2xl shadow-rose-500/30 -translate-y-1" 
                               : "bg-white border-zinc-100 text-zinc-400 hover:border-rose-200 hover:bg-rose-50"
                           )}
                         >
-                          <TrendingDown className={cn("w-6 h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
-                          <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em]">Debit Entry</span>
+                          <TrendingDown className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Debit Entry</span>
                         </button>
                       </div>
                     </div>
@@ -1686,7 +1686,7 @@ export default function CashierStationPage() {
                     )}
                   </div>
 
-                  <div className="space-y-12">
+                  <div className="space-y-8">
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Transaction Date</label>
@@ -1697,7 +1697,7 @@ export default function CashierStationPage() {
                         className="bg-white"
                       />
                     </div>
-
+ 
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol Value (PKR)</label>
@@ -1707,8 +1707,8 @@ export default function CashierStationPage() {
                         </div>
                       </div>
                       <div className="relative group/amount">
-                        <div className="absolute inset-y-0 left-0 pl-6 md:pl-10 flex items-center pointer-events-none">
-                          <DollarSign size={28} className="md:w-10 md:h-10 text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
+                          <DollarSign size={20} className="sm:w-6 sm:h-6 text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
                         </div>
                         <input
                           type="number"
@@ -1716,12 +1716,12 @@ export default function CashierStationPage() {
                           value={amount}
                           onChange={(e) => setAmount(e.target.value)}
                           placeholder="0.00"
-                          className="w-full h-16 md:h-32 lg:h-40 bg-zinc-50 border-2 md:border-4 border-transparent rounded-[1.2rem] md:rounded-[2.5rem] lg:rounded-[3.5rem] pl-14 md:pl-24 pr-6 md:pr-12 text-xl md:text-5xl lg:text-7xl font-[1000] text-zinc-900 outline-none focus:ring-8 md:focus:ring-[24px] focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                          className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
                         />
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+ 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between px-4">
                           <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Discount (PKR)</label>
@@ -1731,7 +1731,7 @@ export default function CashierStationPage() {
                           value={discount}
                           onChange={(e) => setDiscount(e.target.value)}
                           placeholder="0.00"
-                          className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
+                          className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-sm font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
                         />
                       </div>
                       <div className="space-y-3">
@@ -1743,7 +1743,7 @@ export default function CashierStationPage() {
                           value={returnAmount}
                           onChange={(e) => setReturnAmount(e.target.value)}
                           placeholder="0.00"
-                          className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
+                          className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-sm font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
                         />
                       </div>
                       {mainStayOptions.length > 1 && (
@@ -1754,7 +1754,7 @@ export default function CashierStationPage() {
                           <select
                             value={stayDurationIndex}
                             onChange={(e) => setStayDurationIndex(e.target.value)}
-                            className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] px-8 text-xs font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
+                            className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-xs font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
                           >
                             <option value="">Select Stay...</option>
                             {mainStayOptions.map((opt: any) => (
@@ -1764,10 +1764,10 @@ export default function CashierStationPage() {
                         </div>
                       )}
                     </div>
-
+ 
                     <div className="space-y-6">
                       <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Settlement Route / Method</label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         {([
                           { id: 'cash', label: 'Cash' },
                           { id: 'bank_transfer', label: 'Bank Transfer' },
@@ -1781,7 +1781,7 @@ export default function CashierStationPage() {
                             type="button"
                             onClick={() => setPaymentMethod(m.id)}
                             className={cn(
-                              "py-4 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                              "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
                               paymentMethod === m.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
                             )}
                           >
@@ -2680,57 +2680,57 @@ function EntityProfileModal({
   const remaining = totalPackage - totalApproved;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
-      <div className="relative w-full max-w-5xl h-[98vh] md:h-[92vh] bg-white rounded-t-[2.5rem] md:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
+    <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-10 lg:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
+      <div className="relative w-full max-w-5xl h-[98vh] md:h-[90vh] lg:h-[86vh] bg-white rounded-t-[2rem] md:rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-zinc-100">
         
-        <div className="bg-zinc-900 px-6 md:px-8 py-6 md:py-8 text-white flex-shrink-0">
+        <div className="bg-zinc-900 px-4 sm:px-6 py-4 sm:py-5 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center flex-shrink-0">
-                <User size={24} className="md:hidden text-white" />
-                <User size={32} className="hidden md:block text-white" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <User size={18} className="sm:hidden text-white" />
+                <User size={22} className="hidden sm:block text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-lg md:text-3xl font-black text-white uppercase tracking-tight truncate leading-tight">
+                <h2 className="text-base sm:text-xl md:text-2xl font-black text-white uppercase tracking-tight truncate leading-tight">
                   {entity.name || entity.fullName}
                 </h2>
-                <p className="text-[10px] md:text-sm text-white/50 font-bold mt-0.5 md:mt-1 truncate">
+                <p className="text-[9px] sm:text-xs text-white/50 font-bold mt-0.5 truncate">
                   {entity._deptLabel} • ID: {entity.patientId || entity.studentId || entity.id?.slice(0,8)}
                   {entity.rollNumber && ` • Roll: ${entity.rollNumber}`}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => window.print()} className="w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-xl flex items-center justify-center transition-all">
-                <Printer size={20} />
+            <div className="flex items-center gap-2">
+              <button onClick={() => window.print()} className="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-xl flex items-center justify-center transition-all cursor-pointer" title="Print Ledger">
+                <Printer size={16} />
               </button>
-              <button onClick={onClose} className="w-12 h-12 bg-white/10 hover:bg-rose-500 text-white rounded-xl flex items-center justify-center transition-all">
-                <X size={20} />
+              <button onClick={onClose} className="w-10 h-10 bg-white/10 hover:bg-rose-500 text-white rounded-xl flex items-center justify-center transition-all cursor-pointer">
+                <X size={16} />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0 overflow-hidden">
-          <div className="p-4 md:p-6 border-r border-b md:border-b-0 border-zinc-100">
-            <p className="text-[9px] md:text-xs font-black text-zinc-400 uppercase tracking-widest mb-1">Total Package</p>
-            <p className="text-base md:text-2xl font-[1000] text-zinc-900 tracking-tighter">Rs {totalPackage.toLocaleString()}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0 overflow-hidden text-gray-900">
+          <div className="p-2 sm:p-3 border-r border-b md:border-b-0 border-zinc-100">
+            <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Total Package</p>
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black tracking-tight">Rs {totalPackage.toLocaleString()}</p>
           </div>
-          <div className="p-4 md:p-6 border-r border-b md:border-b-0 border-zinc-100 bg-emerald-50/30">
-            <p className="text-[9px] md:text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">Approved Paid</p>
-            <p className="text-base md:text-2xl font-[1000] text-emerald-700 tracking-tighter">Rs {totalApproved.toLocaleString()}</p>
+          <div className="p-2 sm:p-3 border-r border-b md:border-b-0 border-zinc-100 bg-emerald-50/30">
+            <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Approved Paid</p>
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black text-emerald-700 tracking-tight">Rs {totalApproved.toLocaleString()}</p>
           </div>
-          <div className="p-4 md:p-6 border-r border-zinc-100 bg-amber-50/30">
-            <p className="text-[9px] md:text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Pending Review</p>
-            <p className="text-base md:text-2xl font-[1000] text-amber-700 tracking-tighter">Rs {totalPending.toLocaleString()}</p>
+          <div className="p-2 sm:p-3 border-r border-zinc-100 bg-amber-50/30">
+            <p className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Pending Review</p>
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black text-amber-700 tracking-tight">Rs {totalPending.toLocaleString()}</p>
           </div>
-          <div className="p-4 md:p-6 bg-rose-50/30">
-            <p className="text-[9px] md:text-xs font-black text-rose-600 uppercase tracking-widest mb-1">Still Remaining</p>
-            <p className="text-base md:text-2xl font-[1000] text-rose-700 tracking-tighter">Rs {remaining.toLocaleString()}</p>
+          <div className="p-2 sm:p-3 bg-rose-50/30">
+            <p className="text-[8px] sm:text-[9px] font-black text-rose-600 uppercase tracking-widest mb-0.5">Still Remaining</p>
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black text-rose-700 tracking-tight">Rs {remaining.toLocaleString()}</p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 border-b border-zinc-100 flex-shrink-0 bg-zinc-50 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3 border-b border-zinc-100 flex-shrink-0 bg-zinc-50 gap-3">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest whitespace-nowrap">Filter:</span>
             {(['all', 'pending', 'approved'] as const).map(s => (
@@ -2763,7 +2763,7 @@ function EntityProfileModal({
 
         {showAddForm && (
           <div className="p-6 bg-indigo-50 border-b border-indigo-100 animate-in slide-in-from-top-4 duration-500">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
               <div className="space-y-2">
                 <BrutalistCalendar
                   label="Date"
@@ -3004,7 +3004,7 @@ function EntityProfileModal({
                                   </div>
                                 ) : (
                                   <>
-                                    <p className="text-sm font-black text-zinc-900 truncate uppercase tracking-tight">{tx.categoryName || tx.category}</p>
+                                    <p className="text-xs sm:text-sm font-black text-zinc-900 truncate uppercase tracking-tight">{tx.categoryName || tx.category}</p>
                                     <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                       {tx.stayDurationIndex !== undefined && tx.stayDurationIndex !== null && (
                                         <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase tracking-wider">
@@ -3063,7 +3063,7 @@ function EntityProfileModal({
                               </div>
                             ) : (
                               <span className={cn(
-                                'text-lg font-[1000] tabular-nums tracking-tighter',
+                                'text-sm sm:text-base font-black tabular-nums tracking-tighter',
                                 tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
                               )}>
                                 {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
@@ -3137,13 +3137,13 @@ function EntityProfileModal({
                 </table>
               </div>
 
-              <div className="md:hidden space-y-3">
+              <div className="md:hidden space-y-2.5">
                 {filtered.map((tx) => {
                   const isEditing = editingId === tx.id;
                   const dateLabel = formatDateDMY(tx.transactionDate || tx.date || tx.createdAt);
                   return (
                     <div key={tx.id} className={cn(
-                      "bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm transition-all",
+                      "bg-white rounded-xl border border-zinc-100 p-3.5 shadow-sm transition-all",
                       isEditing && "ring-2 ring-indigo-500 border-transparent shadow-xl"
                     )}>
                       {isEditing ? (

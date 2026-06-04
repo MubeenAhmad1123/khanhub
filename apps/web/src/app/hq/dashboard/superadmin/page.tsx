@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Activity, BadgeCheck, Building2, ClipboardList, CreditCard, 
-  Users2, UserPlus, TrendingUp, Search, ShieldCheck, ChevronRight, Wallet 
+  Users2, UserPlus, TrendingUp, Search, ShieldCheck, ChevronRight, Wallet, FileText 
 } from 'lucide-react';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
@@ -257,7 +257,14 @@ export default function HqSuperadminPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Link
+              href="/hq/dashboard/cashier/daily-report"
+              className="px-8 py-5 bg-white border border-gray-200 text-gray-900 text-[10px] font-black uppercase tracking-[0.2em] rounded-3xl shadow-md hover:scale-105 hover:bg-gray-50 active:scale-95 transition-all flex items-center gap-3"
+            >
+              <FileText size={18} className="text-indigo-600" />
+              Daily Report
+            </Link>
             <Link
               href="/hq/dashboard/superadmin/approvals"
               className="px-10 py-5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-3xl shadow-xl shadow-indigo-600/30 hover:scale-105 hover:shadow-indigo-600/40 active:scale-95 transition-all flex items-center gap-3"

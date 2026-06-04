@@ -52,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
   { label: 'Credentials', href: '/hq/dashboard/manager/passwords', icon: <Lock size={16} />, roles: ['manager'] },
   { label: 'Cashier Station', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
+  { label: 'Daily Report', href: '/hq/dashboard/cashier/daily-report', icon: <FileText size={16} />, roles: ['superadmin', 'cashier'] },
   { label: 'Daily Close', href: '/hq/dashboard/cashier/reconciliation', icon: <Calculator size={16} />, roles: ['cashier'] },
   { label: 'Transaction History', href: '/hq/dashboard/cashier/history', icon: <History size={16} />, roles: ['cashier'] },
   { label: 'Profile', href: '/hq/dashboard/cashier/profile', icon: <User size={16} />, roles: ['cashier'] },
