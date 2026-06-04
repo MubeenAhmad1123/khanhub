@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, Timestamp, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -114,6 +114,20 @@ function timeAgo(dateInput: any): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
+
+const mapDeptName = (code: string) => {
+  const c = code.toLowerCase();
+  if (c === 'job-center' || c === 'job_center') return 'Job Center';
+  if (c === 'social-media' || c === 'social_media') return 'Social Media';
+  if (c === 'hq') return 'HQ';
+  if (c === 'rehab') return 'Rehab';
+  if (c === 'spims') return 'SPIMS';
+  if (c === 'hospital') return 'Hospital';
+  if (c === 'sukoon') return 'Sukoon';
+  if (c === 'welfare') return 'Welfare';
+  if (c === 'it') return 'IT';
+  return code.toUpperCase();
+};
 
 export default function ManagerOverviewPage() {
   const router = useRouter();
@@ -317,36 +331,36 @@ export default function ManagerOverviewPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 text-gray-900 p-4 md:p-8 space-y-8 font-sans">
       {/* Header Section with Carousel */}
-      <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-8">
-        <div className="flex-1 space-y-4 text-center lg:text-left order-2 lg:order-1">
+      <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div className="flex-1 space-y-4 text-center lg:text-left order-2 lg:order-1 w-full">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-2">
             <Activity size={14} />
-            <span>Managerial Command Center</span>
+            <span>Manager Dashboard</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
-            Global Departmental Oversight
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-gray-900 uppercase">
+            Department Overview
           </h1>
-          <p className="text-gray-500 max-w-xl mx-auto lg:mx-0">
-            Real-time operational metrics and performance intelligence across all institutional divisions.
+          <p className="text-gray-500 max-w-xl mx-auto lg:mx-0 text-sm">
+            Live attendance and performance summary for all departments.
           </p>
           
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4 w-full">
             <button 
               onClick={() => setShowBroadcast(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all hover:bg-indigo-700 hover:shadow-md hover:scale-105 active:scale-95"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all hover:bg-indigo-700 hover:shadow-md hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
-              <Calendar size={18} /> Broadcast Meeting
+              <Calendar size={18} /> Start Meeting
             </button>
             <Link 
               href="/hq/dashboard/manager/reports/daily"
-              className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-all hover:bg-gray-50 hover:shadow-sm hover:border-gray-300"
+              className="flex items-center justify-center gap-3 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-all hover:bg-gray-50 hover:shadow-sm hover:border-gray-300 w-full sm:w-auto"
             >
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Live Connection</span>
+                <span>Connected</span>
               </div>
-              <div className="w-px h-4 bg-gray-200" />
-              <span className="text-gray-500">
+              <div className="w-px h-4 bg-gray-200 hidden sm:block" />
+              <span className="text-gray-500 text-xs sm:text-sm">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </Link>
@@ -354,7 +368,7 @@ export default function ManagerOverviewPage() {
         </div>
 
         {/* Carousel implementation like mobile view */}
-        <div className="order-1 lg:order-2 flex justify-center w-full lg:w-auto relative z-10">
+        <div className="hidden sm:flex order-1 lg:order-2 justify-center w-full lg:w-auto relative z-10">
            <ImageCarousel />
         </div>
       </div>
@@ -365,8 +379,8 @@ export default function ManagerOverviewPage() {
         <StatCard label="Present" value={stats.presentToday} icon={<CheckCircle size={20} />} color="bg-emerald-50" textColor="text-emerald-600" onClick={() => setSelectedMetric('present')} />
         <StatCard label="Absent" value={stats.absentToday} icon={<XCircle size={20} />} color="bg-rose-50" textColor="text-rose-600" onClick={() => setSelectedMetric('absent')} />
         <StatCard label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={20} />} color="bg-amber-50" textColor="text-amber-600" onClick={() => setSelectedMetric('leave')} />
-        <StatCard label="Unmarked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-gray-100" textColor="text-gray-600" onClick={() => setSelectedMetric('notMarked')} />
-        <StatCard label="Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-blue-50" textColor="text-blue-600" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
+        <StatCard label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={20} />} color="bg-gray-100" textColor="text-gray-600" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard label="Pending Approvals" value={stats.pendingApprovals} icon={<FileText size={20} />} color="bg-blue-50" textColor="text-blue-600" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
 
       {/* Metric Detail View */}
@@ -423,33 +437,33 @@ export default function ManagerOverviewPage() {
 
       {/* Main Analysis Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Department Breakdown */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
+        {/* Department Attendance */}
+        <div className="lg:col-span-7 bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-8 gap-4">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Institutional Velocity</h3>
-              <p className="text-sm text-gray-500 mt-1">Real-time attendance density by division</p>
+              <h3 className="text-xl font-bold text-gray-900">Department Attendance</h3>
+              <p className="text-sm text-gray-500 mt-1">Today's attendance by department</p>
             </div>
-            <div className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">
-              24H Matrix
+            <div className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold flex-shrink-0">
+              Last 24 Hours
             </div>
           </div>
 
           <div className="space-y-6">
             {Object.entries(deptStats).map(([dept, data]) => (
               <div key={dept} className="group">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-indigo-500 opacity-50 group-hover:opacity-100 group-hover:scale-125 transition-all" />
-                    <span className="text-sm font-semibold text-gray-700 uppercase">{dept}</span>
+                    <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{mapDeptName(dept)}</span>
                   </div>
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 self-end sm:self-auto">
                     <div className="text-right">
-                      <span className="block text-xs font-medium text-gray-400">Verified</span>
+                      <span className="block text-xs font-medium text-gray-400">Present</span>
                       <span className="text-sm font-bold text-gray-900">{data.present}</span>
                     </div>
                     <div className="text-right">
-                      <span className="block text-xs font-medium text-gray-400">Deficit</span>
+                      <span className="block text-xs font-medium text-gray-400">Absent</span>
                       <span className="text-sm font-bold text-gray-900">{data.absent}</span>
                     </div>
                   </div>
@@ -462,7 +476,7 @@ export default function ManagerOverviewPage() {
                       <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-300 transition-all duration-1000" />
                     </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-medium">Registry Empty</div>
+                    <div className="w-full h-full min-h-[2rem] flex items-center justify-center bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-medium rounded-full text-center">No data</div>
                   )}
                 </div>
               </div>
@@ -472,24 +486,24 @@ export default function ManagerOverviewPage() {
         
         {/* Operations & Pending */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Priority Operations</h3>
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Links</h3>
             <div className="grid grid-cols-1 gap-3">
               {[
-                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance logs', icon: <CheckCircle className="text-indigo-600" /> },
-                { href: '/hq/dashboard/manager/approvals', label: 'Contribution desk', icon: <FileText className="text-emerald-600" /> },
-                { href: '/hq/dashboard/manager/staff', label: 'Personnel Registry', icon: <Users className="text-blue-600" /> },
-                { href: '/hq/dashboard/manager/users', label: 'Identity Provision', icon: <KeyRound className="text-amber-600" /> },
-                { href: '/hq/dashboard/manager/passwords', label: 'Credential Hub', icon: <Lock className="text-rose-600" /> }
+                { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance Logs', icon: <CheckCircle className="text-indigo-600" /> },
+                { href: '/hq/dashboard/manager/approvals', label: 'Contributions', icon: <FileText className="text-emerald-600" /> },
+                { href: '/hq/dashboard/manager/staff', label: 'Staff Records', icon: <Users className="text-blue-600" /> },
+                { href: '/hq/dashboard/manager/users', label: 'ID Management', icon: <KeyRound className="text-amber-600" /> },
+                { href: '/hq/dashboard/manager/passwords', label: 'Login & Access', icon: <Lock className="text-rose-600" /> }
               ].map((op, i) => (
-                <Link key={i} href={op.href} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all group">
+                <Link key={i} href={op.href} className="flex items-center justify-between p-4 min-h-[48px] rounded-2xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all group w-full gap-2">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform flex-shrink-0">
                       {op.icon}
                     </div>
                     <span className="text-sm font-semibold text-gray-700">{op.label}</span>
                   </div>
-                  <ChevronRight size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                  <ChevronRight size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
                 </Link>
               ))}
             </div>
@@ -597,13 +611,13 @@ function StatCard({ label, value, icon, color, textColor, urgent, onClick }: any
   return (
     <button 
       onClick={onClick}
-      className={`relative flex flex-col p-6 rounded-3xl border border-gray-100 transition-all hover:-translate-y-1 hover:shadow-md bg-white text-left group`}
+      className={`relative flex flex-col p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100 transition-all hover:-translate-y-1 hover:shadow-md bg-white text-left group w-full`}
     >
-      <div className={`w-12 h-12 rounded-xl ${color} ${textColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-        {icon}
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${color} ${textColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}>
+        {React.cloneElement(icon, { size: 18 })}
       </div>
-      <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
-      <p className="text-xs font-medium text-gray-500">{label}</p>
+      <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 truncate block w-full">{value}</p>
+      <p className="text-[10px] sm:text-xs font-medium text-gray-500 truncate block w-full uppercase tracking-wider">{label}</p>
       {urgent && <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
     </button>
   );

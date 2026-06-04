@@ -178,9 +178,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, selectedDate,
       }).filter((tx: any) => {
         if (tx.status !== 'approved') return false;
         
-        const isCreatedTarget = tx._date && dayKey(tx._date) === targetDateStr;
-        const isApprovedTarget = tx._approvedDate && dayKey(tx._approvedDate) === targetDateStr;
-        return isCreatedTarget || isApprovedTarget;
+        return tx._date && dayKey(tx._date) === targetDateStr;
       }).sort((a: any, b: any) => {
         const ta = a._date?.getTime?.() ?? 0;
         const tb = b._date?.getTime?.() ?? 0;

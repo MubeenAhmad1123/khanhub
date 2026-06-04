@@ -19,7 +19,6 @@ import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 import { getCached, setCached, invalidateCache } from '@/lib/queryCache';
 
-
 export type FinanceTab = 'combined' | 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq';
 export type TxType = 'fees' | 'medicine' | 'salary' | 'maintenance' | 'other' | 'session';
 
@@ -43,7 +42,6 @@ export type FinanceSummary = {
   pendingCountToday: number;
   pendingReconciliations: number;
   totalTransactionsToday: number;
-  // Trends (percentage change)
   collectedDailyTrend: number;
   collectedMonthlyTrend: number;
 };
@@ -85,10 +83,6 @@ function classifyTxType(t: any): TxType {
   return 'other';
 }
 
-/**
- * Robustly load transactions with error handling per department.
- * Defaults to 'approved' but can include pending for real-time collection metrics.
- */
 export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq', days: number, statuses: string[]) {
   const cacheKey = `finance_recent_${dept}_${days}_${statuses.join('_')}`;
   const cached = getCached<any[]>(cacheKey);
@@ -129,10 +123,6 @@ export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hos
   }
 }
 
-
-/**
- * Legacy wrapper for backward compatibility.
- */
 export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq', days = 35) {
   return loadRecentTx(dept, days, ['approved']);
 }
@@ -147,9 +137,6 @@ async function getCountByDocs(q: any, max = 100): Promise<number> {
   }
 }
 
-/**
- * Fetches data specifically tailored for the Finance Hub visualization.
- */
 export async function fetchFinanceHubData(force = false) {
   const cacheKey = 'finance_hub_data';
   if (force) {
@@ -159,58 +146,29 @@ export async function fetchFinanceHubData(force = false) {
     if (cached) return cached;
   }
 
-  const now = new Date();
-  const today = dayKey(now);
-  
-  const depts = [
-    { id: 'rehab', name: 'Rehab' },
-    { id: 'spims', name: 'SPIMS' },
-    { id: 'hq', name: 'HQ' },
-    { id: 'hospital', name: 'Hospital' },
-    { id: 'job-center', name: 'Job Center' }
-  ];
+  const todayBreakdown = await fetchDailyBreakdown(new Date());
 
-  const results = await Promise.all(depts.map(async (d) => {
-    const txs = await loadApprovedTx(d.id as any, 30); // Get wider window to check recent approvals of older transactions
-    const todayTxs = txs.filter(t => 
-      (t._date && dayKey(t._date) === today) || 
-      (t._approvedDate && dayKey(t._approvedDate) === today)
-    );
-    
-    // Fetch pending count
+  const results = await Promise.all(todayBreakdown.departments.map(async (dept) => {
     let col = '';
-    if (d.id === 'rehab') col = 'rehab_transactions';
-    else if (d.id === 'spims') col = 'spims_transactions';
-    else if (d.id === 'job-center') col = 'job_center_transactions';
-    else if (d.id === 'hospital') col = 'hospital_transactions';
+    if (dept.deptId === 'rehab') col = 'rehab_transactions';
+    else if (dept.deptId === 'spims') col = 'spims_transactions';
+    else if (dept.deptId === 'job-center') col = 'job_center_transactions';
+    else if (dept.deptId === 'hospital') col = 'hospital_transactions';
     else col = 'cashierTransactions';
 
-    // Use getCountByDocs to save aggregation quota
     const pendingCount = await getCountByDocs(query(collection(db, col), where('status', '==', 'pending')), 100);
     
-    // For pending sum, we fetch the actual docs and sum them locally (limited to 100)
     const pendingSnap = await getDocs(query(collection(db, col), where('status', '==', 'pending'), limit(100))).catch(() => ({ docs: [] }));
     const pendingAmount = pendingSnap.docs.reduce((s, d) => s + (Number(d.data().amount) || 0), 0);
-    
-    const income = todayTxs.reduce((acc, t) => (t.type !== 'expense' ? acc + (Number(t.amount) || 0) : acc), 0);
-    const expense = todayTxs.reduce((acc, t) => (t.type === 'expense' ? acc + (Number(t.amount) || 0) : acc), 0);
-    
-    const ways: Record<string, number> = {};
-    todayTxs.forEach(t => {
-      if (t.type !== 'expense') {
-        const type = 'categoryName' in t ? (t.categoryName as string) : 'General';
-        ways[type] = (ways[type] || 0) + (Number(t.amount) || 0);
-      }
-    });
 
     return {
-      deptId: d.id,
-      deptName: d.name,
-      totalIncome: income,
-      totalExpense: expense,
+      deptId: dept.deptId,
+      deptName: dept.deptName,
+      totalIncome: dept.income,
+      totalExpense: dept.expense,
       pendingCount,
       pendingAmount,
-      ways,
+      ways: dept.categories,
       percentOfTotal: 0
     };
   }));
@@ -235,39 +193,50 @@ export async function fetchFinanceSummary(force = false): Promise<FinanceSummary
   }
 
   const now = new Date();
-  const today = dayKey(now);
   const thisMonth = monthKey(now);
   
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = dayKey(yesterday);
 
-  const statuses = ['approved', 'pending', 'pending_cashier'];
+  const [todayBreakdown, yesterdayBreakdown] = await Promise.all([
+    fetchDailyBreakdown(now),
+    fetchDailyBreakdown(yesterday)
+  ]);
+
+  const collectedToday = todayBreakdown.grandIncome;
+  const collectedYesterday = yesterdayBreakdown.grandIncome;
+  const collectedDailyTrend = collectedYesterday === 0 ? 0 : ((collectedToday - collectedYesterday) / collectedYesterday) * 100;
+
+  // Calculate pending for today (from today's transactions list)
+  let pendingAmountToday = 0;
+  let pendingCountToday = 0;
+  let totalTransactionsToday = 0;
+
+  for (const dept of todayBreakdown.departments) {
+    for (const tx of dept.transactions) {
+      totalTransactionsToday++;
+      if (tx.status === 'pending' || tx.status === 'pending_cashier') {
+        pendingAmountToday += (Number(tx.amount) || 0);
+        pendingCountToday++;
+      }
+    }
+  }
+
+  // Monthly totals via loadRecentTx
+  const statuses = ['approved'];
   const [rehab, spims, jobcenter, hospital, hq] = await Promise.all([
-    loadRecentTx('rehab', 30, statuses), // Increase window to 30 days to correctly fetch and calculate metrics
-    loadRecentTx('spims', 30, statuses),
-    loadRecentTx('job-center', 30, statuses),
-    loadRecentTx('hospital' as any, 30, statuses),
-    loadRecentTx('hq', 30, statuses)
+    loadRecentTx('rehab', 35, statuses),
+    loadRecentTx('spims', 35, statuses),
+    loadRecentTx('job-center', 35, statuses),
+    loadRecentTx('hospital' as any, 35, statuses),
+    loadRecentTx('hq', 35, statuses)
   ]);
 
   const allTx = [...rehab, ...spims, ...jobcenter, ...hospital, ...hq];
-
   const sumBy = (txs: any[], predicate: (r: any) => boolean) =>
     txs.reduce((acc, r) => predicate(r) ? acc + (Number(r.amount) || 0) : acc, 0);
 
-  const isToday = (date: Date | null) => date ? dayKey(date) === today : false;
-  const isYesterday = (date: Date | null) => date ? dayKey(date) === yesterdayStr : false;
-
-  const collectedToday = sumBy(allTx, (r) => (r.status === 'approved' && isToday(r._approvedDate)) || (r.status === 'approved' && isToday(r._date)));
-  const collectedYesterday = sumBy(allTx, (r) => (r.status === 'approved' && isYesterday(r._approvedDate)) || (r.status === 'approved' && isYesterday(r._date)));
   const collectedThisMonth = sumBy(allTx, (r) => r.status === 'approved' && r._date && monthKey(r._date) === thisMonth);
-  
-  const collectedDailyTrend = collectedYesterday === 0 ? 0 : ((collectedToday - collectedYesterday) / collectedYesterday) * 100;
-
-  const pendingTodayTx = allTx.filter(r => r.status === 'pending' && isToday(r._date));
-  const pendingAmountToday = pendingTodayTx.reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
-  const pendingCountToday = pendingTodayTx.length;
 
   const [rehabPending, spimsPending, jcPending, hosPending, hqPending, recPending, rehabSum, spimsSum, jcSum, hospitalSum] = await Promise.all([
     getCountByDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
@@ -276,7 +245,6 @@ export async function fetchFinanceSummary(force = false): Promise<FinanceSummary
     getCountByDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))),
     getCountByDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))),
     getCountByDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))),
-    // Use getAggregateFromServer for these only once every 15 mins
     getAggregateFromServer(collection(db, 'rehab_patients'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
     getAggregateFromServer(collection(db, 'spims_students'), { t: sum('totalCourseFee') }).then(s => s.data().t).catch(() => 0),
     getAggregateFromServer(collection(db, 'job_center_seekers'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
@@ -291,16 +259,13 @@ export async function fetchFinanceSummary(force = false): Promise<FinanceSummary
     pendingAmountToday,
     pendingCountToday,
     pendingReconciliations: recPending,
-    totalTransactionsToday: allTx.filter(t => isToday(t._date)).length,
+    totalTransactionsToday,
     collectedDailyTrend,
     collectedMonthlyTrend: 0,
   };
-  setCached(cacheKey, result, 900); // 15 mins for heavy summary
+  setCached(cacheKey, result, 900);
   return result;
 }
-
-
-// ─── Daily Breakdown for date-filter on Finance page ─────────────────────────
 
 export type DailyDeptBreakdown = {
   deptId: string;
@@ -314,24 +279,18 @@ export type DailyDeptBreakdown = {
 };
 
 export type DailyBreakdownResult = {
-  date: string; // YYYY-MM-DD
+  date: string;
   departments: DailyDeptBreakdown[];
   grandIncome: number;
   grandExpense: number;
   grandNet: number;
 };
 
-/**
- * Fetches all transactions (approved + pending) across all departments
- * for a specific calendar date (PKT) and returns per-department breakdowns.
- */
 export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakdownResult> {
   const targetDayKey = dayKey(targetDate);
 
-  // PKT is UTC+5. Build the UTC range that covers the full PKT calendar day.
   const dayStartPKT = new Date(targetDate);
   dayStartPKT.setHours(0, 0, 0, 0);
-  // Shift: PKT midnight = UTC 19:00 of previous day
   const utcStart = new Date(dayStartPKT.getTime() - 5 * 60 * 60 * 1000);
   const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
 
@@ -350,7 +309,6 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
         const tsStart = Timestamp.fromDate(utcStart);
         const tsEnd   = Timestamp.fromDate(utcEnd);
 
-        // Query 1: by createdAt (most common)
         const q1 = query(
           colRef,
           where('createdAt', '>=', tsStart),
@@ -358,7 +316,6 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
           limit(500)
         );
 
-        // Query 2: by transactionDate (explicit date override used in some depts)
         const q2 = query(
           colRef,
           where('transactionDate', '>=', tsStart),
@@ -366,7 +323,6 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
           limit(500)
         );
 
-        // Query 3: by approvedAt (catch transactions approved on this day)
         const q3 = query(
           colRef,
           where('approvedAt', '>=', tsStart),
@@ -380,7 +336,6 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
           getDocs(q3).catch(() => ({ docs: [] as any[] })),
         ]);
 
-        // Merge & deduplicate by doc ID
         const seen = new Set<string>();
         const rawDocs: any[] = [];
         for (const d of [...snap1.docs, ...snap2.docs, ...snap3.docs]) {
@@ -390,7 +345,6 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
           }
         }
 
-        // Map & filter by resolved _date or _approvedDate to catch any edge-cases from TZ differences
         const dayTxs = rawDocs
           .map((d: any) => {
             const data = d.data();
@@ -403,9 +357,7 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
             };
           })
           .filter((tx) => {
-            const isCreatedTarget = tx._date && dayKey(tx._date) === targetDayKey;
-            const isApprovedTarget = tx._approvedDate && dayKey(tx._approvedDate) === targetDayKey;
-            return isCreatedTarget || (tx.status === 'approved' && isApprovedTarget);
+            return tx.status !== 'rejected' && tx._date && dayKey(tx._date) === targetDayKey;
           });
 
         let income = 0;
@@ -413,6 +365,8 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
         const categories: Record<string, number> = {};
 
         for (const tx of dayTxs) {
+          if (tx.status !== 'approved') continue; // Only approved transactions contribute to totals!
+
           const amt = Number(tx.amount) || 0;
           const isExp =
             tx.type === 'expense' ||
@@ -469,8 +423,6 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
   };
 }
 
-// ─── Original Finance Report ──────────────────────────────────────────────────
-
 export type FinanceReport = {
   income: number;
   expense: number;
@@ -491,7 +443,6 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
   const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hospital', 'hq'] as const) : ([tab] as const);
   const approvedRows = (await Promise.all(deptList.map((d) => loadApprovedTx(d, 45)))).flat();
 
-  // 1. Daily Series (Income vs Expense)
   const map: Record<string, { income: number; expense: number; count: number }> = {};
   for (let i = 0; i < days; i++) {
     const d = new Date(start);
@@ -522,15 +473,14 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
       variance: map[k].income - map[k].expense
     }));
 
-  // 2. Type Breakdown (Pie Chart)
   const typeMap: Record<TxType, number> = { fees: 0, medicine: 0, salary: 0, maintenance: 0, session: 0, other: 0 };
   const typeColors: Record<TxType, string> = {
-    fees: '#FBBF24', // Amber 400
-    medicine: '#10B981', // Emerald 500
-    session: '#8B5CF6', // Violet 500
-    salary: '#6366F1', // Indigo 500
-    maintenance: '#F87171', // Red 400
-    other: '#94A3B8', // Slate 400
+    fees: '#FBBF24',
+    medicine: '#10B981',
+    session: '#8B5CF6',
+    salary: '#6366F1',
+    maintenance: '#F87171',
+    other: '#94A3B8',
   };
 
   for (const r of approvedRows) {
@@ -548,7 +498,6 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
     color: typeColors[t]
   })).filter(t => t.amount > 0);
 
-  // 3. Week over Week Comparison (Bar Chart)
   const weeks: WeekComparison[] = [];
   for (let i = 3; i >= 0; i--) {
     const wStart = new Date();
@@ -570,7 +519,6 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
     });
   }
 
-  // 4. Top Outstanding
   const [rehabEntities, spimsEntities, jcEntities, hospitalEntities] = await Promise.all([
     tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
     tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(50))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
@@ -669,9 +617,6 @@ export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDa
   };
 }
 
-/**
- * Approves a transaction across any department.
- */
 export async function approveTransaction(deptId: string, txId: string) {
   let col = '';
   if (deptId === 'rehab') col = 'rehab_transactions';
@@ -690,6 +635,5 @@ export async function approveTransaction(deptId: string, txId: string) {
     updatedAt: Timestamp.now()
   });
 
-  // Automatically invalidate cache on approval so the dashboard shows fresh data immediately
   invalidateCache('finance');
 }
