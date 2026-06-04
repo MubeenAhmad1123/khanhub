@@ -27,6 +27,32 @@ const getSimpleId = (id: string) => {
   return id;
 };
 
+const formatDesignation = (desig?: string) => {
+  if (!desig) return 'Staff';
+  const d = desig.trim();
+  const dUpper = d.toUpperCase();
+  if (dUpper === 'CASHIER') return 'Cashier';
+  if (dUpper === 'ADMIN REHAB') return 'Rehab Admin';
+  if (dUpper === 'NURSSING STAFF') return 'Nursing Staff';
+  return d;
+};
+
+const getDeptLabel = (dept?: string) => {
+  if (!dept) return '';
+  switch (dept.toLowerCase()) {
+    case 'hq': return 'HQ';
+    case 'rehab': return 'Rehab';
+    case 'spims': return 'SPIMS';
+    case 'hospital': return 'Hospital';
+    case 'sukoon': return 'Sukoon';
+    case 'welfare': return 'Welfare';
+    case 'job-center': return 'Job Center';
+    case 'social-media': return 'Social Media';
+    case 'it': return 'IT';
+    default: return dept;
+  }
+};
+
 export default function ManagerReportsPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -517,31 +543,31 @@ export default function ManagerReportsPage() {
               <ArrowLeft size={20} className="text-slate-600" />
             </Link>
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">Monthly Staff Audit Ledger</h1>
-              <div className="flex flex-wrap items-center gap-2 mt-2 font-medium text-xs sm:text-sm text-slate-500">
-                <span>Unified Monthly Performance Analytics</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                <Link href="/hq/dashboard/manager/reports/daily" className="text-indigo-600 font-bold hover:underline flex items-center gap-1 hover:text-indigo-700 transition-colors">
-                  Open Daily Audit Log <ArrowRight size={14} />
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">Monthly Staff Report</h1>
+              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 mt-2 font-medium text-xs sm:text-sm text-slate-500">
+                <span>Monthly performance summary for all staff</span>
+                <span className="hidden md:inline w-1.5 h-1.5 rounded-full bg-slate-300" />
+                <Link href="/hq/dashboard/manager/reports/daily" className="text-indigo-600 font-bold hover:underline flex items-center gap-1 hover:text-indigo-700 transition-colors mt-1 md:mt-0">
+                  View Daily Log <ArrowRight size={14} />
                 </Link>
               </div>
             </div>
           </div>
           
           {/* Controls */}
-          <div className="flex items-center gap-3 self-stretch sm:self-auto">
-            <div className="relative flex-1 sm:flex-initial">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:flex-initial w-1/2 md:w-auto">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 w-4 h-4 pointer-events-none" />
               <input 
                 type="month" 
                 value={selectedMonth} 
                 onChange={e => setSelectedMonth(e.target.value)} 
-                className="w-full sm:w-auto bg-white border border-slate-100 rounded-2xl pl-11 pr-5 py-3 text-slate-800 text-xs font-bold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm cursor-pointer" 
+                className="w-full bg-white border border-slate-100 rounded-2xl pl-11 pr-5 py-3 text-slate-800 text-xs font-bold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm cursor-pointer" 
               />
             </div>
             <button 
               onClick={() => window.print()} 
-              className="bg-white hover:bg-slate-50 border border-slate-100 text-slate-700 font-bold text-xs px-5 py-3 rounded-2xl transition-all shadow-sm flex items-center gap-2 hover:shadow-md active:scale-95 duration-200"
+              className="w-1/2 md:w-auto bg-white hover:bg-slate-50 border border-slate-100 text-slate-700 font-bold text-xs px-5 py-3 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:shadow-md active:scale-95 duration-200"
             >
               <Printer size={16} className="text-slate-500" /> Print Table
             </button>
@@ -550,7 +576,7 @@ export default function ManagerReportsPage() {
 
         {/* ==================== PODIUM TOP 3 SECTION ==================== */}
         {first && (
-          <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 rounded-[2.5rem] p-6 md:p-8 text-white relative overflow-hidden shadow-2xl border border-indigo-900/50 print:hidden">
+          <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 rounded-[2.5rem] px-5 py-6 sm:p-8 text-white relative overflow-hidden shadow-2xl border border-indigo-900/50 print:hidden">
             {/* Visual background decorations */}
             <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-20 -left-20 w-[30rem] h-[30rem] bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -558,17 +584,17 @@ export default function ManagerReportsPage() {
             <div className="relative z-10 flex flex-col items-center">
               <div className="flex items-center gap-2 mb-4 bg-indigo-900/40 border border-indigo-700/30 px-4 py-1.5 rounded-full">
                 <Sparkles className="text-amber-400 w-4 h-4 animate-bounce" />
-                <span className="text-[11px] font-bold tracking-widest uppercase text-indigo-200">Departmental Leaderboard Champions</span>
+                <span className="text-[11px] font-bold tracking-widest uppercase text-indigo-200">Top Performers</span>
               </div>
-              <h2 className="text-xl md:text-2xl font-extrabold text-white text-center tracking-tight">Top Performers Podium</h2>
-              <p className="text-xs text-indigo-300 font-medium text-center mt-1">Rewarding consistent daily execution, uniform adherence, and contribution points</p>
+              <h2 className="text-xl md:text-2xl font-extrabold text-white text-center tracking-tight">Top Performers</h2>
+              <p className="text-xs text-indigo-300 font-medium text-center mt-1">Based on attendance, dress code, and contributions</p>
               
               {/* Podium Base Layout */}
-              <div className="grid grid-cols-3 items-end gap-3 sm:gap-6 md:gap-10 w-full max-w-3xl mt-12">
+              <div className="flex flex-col md:grid md:grid-cols-3 items-stretch md:items-end gap-6 md:gap-10 w-full max-w-3xl mt-12">
                 
                 {/* 2nd Place (Silver) */}
                 {second ? (
-                  <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleOpenStaffModal(second)}>
+                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto order-2 md:order-1" onClick={() => handleOpenStaffModal(second)}>
                     <div className="relative">
                       <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-slate-800/80 border-2 border-slate-300 flex items-center justify-center text-lg sm:text-2xl font-black text-slate-100 overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
                         {second.photoUrl ? (
@@ -582,15 +608,15 @@ export default function ManagerReportsPage() {
                     
                     <div className="text-center mt-3 max-w-full">
                       <p className="font-extrabold text-xs sm:text-sm truncate w-24 sm:w-36 text-white group-hover:text-indigo-200 transition-colors">{second.name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{second.designation || 'Staff'}</p>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{formatDesignation(second.designation)}</p>
                     </div>
-
+ 
                     {/* Silver Stand */}
-                    <div className="w-full bg-gradient-to-t from-slate-700/80 to-slate-800/40 border border-slate-700/50 rounded-t-2xl mt-4 h-24 sm:h-32 flex flex-col justify-between p-3 text-center shadow-lg">
-                      <div className="flex justify-center">
+                    <div className="w-full bg-gradient-to-t from-slate-700/80 to-slate-800/40 border border-slate-700/50 rounded-2xl md:rounded-b-none md:rounded-t-2xl mt-4 py-4 md:h-32 flex flex-col justify-between items-center text-center shadow-lg">
+                      <div className="flex justify-center shrink-0">
                         <Medal size={22} className="text-slate-300" />
                       </div>
-                      <div>
+                      <div className="mt-2 md:mt-0">
                         <p className="text-slate-100 font-extrabold text-sm sm:text-base">{second.stats.totalPoints}</p>
                         <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">Points</p>
                       </div>
@@ -602,7 +628,7 @@ export default function ManagerReportsPage() {
 
                 {/* 1st Place (Gold Champion) */}
                 {first ? (
-                  <div className="flex flex-col items-center group cursor-pointer -translate-y-2 relative" onClick={() => handleOpenStaffModal(first)}>
+                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto order-1 md:order-2 -translate-y-2 relative" onClick={() => handleOpenStaffModal(first)}>
                     
                     {/* Crown badge */}
                     <div className="absolute -top-10 animate-pulse">
@@ -622,16 +648,16 @@ export default function ManagerReportsPage() {
                     
                     <div className="text-center mt-3 max-w-full">
                       <p className="font-black text-xs sm:text-base truncate w-24 sm:w-44 text-white group-hover:text-amber-200 transition-colors">{first.name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-amber-400/80 uppercase tracking-wider mt-0.5 truncate">{first.designation || 'Champion'}</p>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-amber-400/80 uppercase tracking-wider mt-0.5 truncate">{formatDesignation(first.designation)}</p>
                     </div>
 
                     {/* Gold Stand */}
-                    <div className="w-full bg-gradient-to-t from-amber-600/50 via-amber-600/20 to-amber-700/50 border border-amber-500/50 rounded-t-3xl mt-4 h-32 sm:h-44 flex flex-col justify-between p-4 text-center shadow-2xl relative">
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-t-3xl pointer-events-none" />
-                      <div className="flex justify-center relative z-10">
+                    <div className="w-full bg-gradient-to-t from-amber-600/50 via-amber-600/20 to-amber-700/50 border border-amber-500/50 rounded-2xl md:rounded-b-none md:rounded-t-3xl mt-4 py-5 md:h-44 flex flex-col justify-between items-center text-center shadow-2xl relative">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 rounded-2xl md:rounded-b-none md:rounded-t-3xl pointer-events-none" />
+                      <div className="flex justify-center relative z-10 shrink-0">
                         <Trophy size={28} className="text-amber-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]" />
                       </div>
-                      <div className="relative z-10">
+                      <div className="relative z-10 mt-2 md:mt-0">
                         <p className="text-white font-black text-base sm:text-2xl tracking-tight leading-none">{first.stats.totalPoints}</p>
                         <p className="text-[9px] sm:text-[10px] font-black text-amber-200 uppercase tracking-widest mt-1">Points</p>
                       </div>
@@ -643,7 +669,7 @@ export default function ManagerReportsPage() {
 
                 {/* 3rd Place (Bronze) */}
                 {third ? (
-                  <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleOpenStaffModal(third)}>
+                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto order-3 md:order-3" onClick={() => handleOpenStaffModal(third)}>
                     <div className="relative">
                       <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-amber-950/80 border-2 border-amber-700/80 flex items-center justify-center text-lg sm:text-2xl font-black text-amber-600 overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
                         {third.photoUrl ? (
@@ -657,15 +683,15 @@ export default function ManagerReportsPage() {
                     
                     <div className="text-center mt-3 max-w-full">
                       <p className="font-extrabold text-xs sm:text-sm truncate w-24 sm:w-36 text-white group-hover:text-indigo-200 transition-colors">{third.name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{third.designation || 'Staff'}</p>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{formatDesignation(third.designation)}</p>
                     </div>
 
                     {/* Bronze Stand */}
-                    <div className="w-full bg-gradient-to-t from-amber-900/60 to-amber-950/40 border border-amber-900/40 rounded-t-2xl mt-4 h-20 sm:h-28 flex flex-col justify-between p-3 text-center shadow-lg">
-                      <div className="flex justify-center">
+                    <div className="w-full bg-gradient-to-t from-amber-900/60 to-amber-950/40 border border-amber-900/40 rounded-2xl md:rounded-b-none md:rounded-t-2xl mt-4 py-4 md:h-28 flex flex-col justify-between items-center text-center shadow-lg">
+                      <div className="flex justify-center shrink-0">
                         <Medal size={22} className="text-amber-700" />
                       </div>
-                      <div>
+                      <div className="mt-2 md:mt-0">
                         <p className="text-amber-100 font-extrabold text-sm sm:text-base">{third.stats.totalPoints}</p>
                         <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">Points</p>
                       </div>
@@ -689,7 +715,7 @@ export default function ManagerReportsPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input 
                 type="text" 
-                placeholder="Search staff by name, designation, or ID..." 
+                placeholder="Search by name or department..." 
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-100/80 rounded-2xl pl-11 pr-5 py-3.5 text-xs font-semibold outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-slate-800"
@@ -697,9 +723,9 @@ export default function ManagerReportsPage() {
             </div>
             
             {/* Dropdowns & Sorts */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-3 w-full md:w-auto">
               {/* Department Dropdown */}
-              <div className="relative flex-1 sm:flex-initial min-w-[130px]">
+              <div className="relative w-full md:w-auto md:min-w-[130px] col-span-1">
                 <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 w-3.5 h-3.5" />
                 <select 
                   value={deptFilter} 
@@ -720,13 +746,13 @@ export default function ManagerReportsPage() {
               </div>
 
               {/* Designation Dropdown */}
-              <div className="relative flex-1 sm:flex-initial min-w-[130px]">
+              <div className="relative w-full md:w-auto md:min-w-[130px] col-span-1">
                 <select 
                   value={desigFilter} 
                   onChange={e => setDesigFilter(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3 text-[11px] font-extrabold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 cursor-pointer appearance-none"
                 >
-                  <option value="all">All Designations</option>
+                  <option value="all">All Roles</option>
                   {designations.map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
@@ -734,16 +760,16 @@ export default function ManagerReportsPage() {
               </div>
 
               {/* Sort Toggle */}
-              <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl p-1">
+              <div className="col-span-2 md:col-span-1 flex items-center bg-slate-50 border border-slate-100 rounded-2xl p-1 w-full md:w-auto">
                 <button 
                   onClick={() => setSortBy('points')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${sortBy === 'points' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                  className={`w-1/2 md:w-auto px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${sortBy === 'points' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 >
                   By Points
                 </button>
                 <button 
                   onClick={() => setSortBy('seniority')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${sortBy === 'seniority' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                  className={`w-1/2 md:w-auto px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${sortBy === 'seniority' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 >
                   By Seniority
                 </button>
@@ -755,19 +781,24 @@ export default function ManagerReportsPage() {
 
         {/* Leaderboard Table Container */}
         <div className="bg-white border border-slate-100 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-55/10">
+          <div className="px-5 sm:px-6 py-5 border-b border-slate-55 flex justify-between items-center bg-slate-50/20 w-full gap-2 shrink-0">
             <div className="flex items-center gap-2.5">
-              <Award className="text-indigo-600 w-5 h-5" />
-              <h3 className="text-slate-900 font-extrabold text-base">Monthly Scoreboard Ledgers</h3>
+              <Award className="text-indigo-600 w-5 h-5 shrink-0" />
+              <h3 className="text-slate-900 font-extrabold text-sm sm:text-base">Monthly Scoreboard</h3>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">{processedStaff.length} active staff found</span>
+            <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full shrink-0">
+              {processedStaff.length} staff member{processedStaff.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
-          <div className="overflow-x-auto w-full">
+          {/* TABLE VIEW (Tablet/Desktop) */}
+          <div className="hidden md:block overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  {['Rank', 'Staff Member', 'Department', 'Attendance Compliance', 'Dress Code', 'Duty Accomplished', 'Contributions', 'Fines', 'Monthly Points'].map(h => (
+                  <th className="sticky left-0 bg-slate-50/90 backdrop-blur-sm z-20 px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Rank</th>
+                  <th className="sticky left-20 bg-slate-50/90 backdrop-blur-sm z-20 px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-r border-slate-100">Name</th>
+                  {['Department', 'Attendance', 'Dress Code', 'Duties Done', 'Contributions', 'Fines', 'Monthly Points'].map(h => (
                     <th key={h} className="px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -779,7 +810,7 @@ export default function ManagerReportsPage() {
                   
                   return (
                     <tr key={member.id} className="hover:bg-slate-50/50 transition-colors duration-200 group">
-                      <td className="px-6 py-4.5">
+                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors px-6 py-4.5">
                         <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black border ${
                           index === 0 ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' : 
                           index === 1 ? 'bg-slate-50 text-slate-600 border-slate-200' : 
@@ -790,7 +821,7 @@ export default function ManagerReportsPage() {
                         </span>
                       </td>
                       
-                      <td className="px-6 py-4.5 cursor-pointer min-w-[200px]" onClick={() => handleOpenStaffModal(member)}>
+                      <td className="sticky left-20 bg-white group-hover:bg-slate-50 z-10 transition-colors px-6 py-4.5 cursor-pointer min-w-[200px] border-r border-slate-100" onClick={() => handleOpenStaffModal(member)}>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-sm text-indigo-600 overflow-hidden shadow-inner shrink-0">
                             {member.photoUrl ? (
@@ -801,14 +832,14 @@ export default function ManagerReportsPage() {
                           </div>
                           <div>
                             <p className="text-slate-900 font-extrabold text-sm group-hover:text-indigo-600 transition-colors leading-snug">{member.name}</p>
-                            <p className="text-slate-400 font-bold uppercase text-[9px] tracking-wider mt-0.5">{member.designation || 'Staff Member'}</p>
+                            <p className="text-slate-400 font-bold uppercase text-[9px] tracking-wider mt-0.5">{formatDesignation(member.designation)}</p>
                           </div>
                         </div>
                       </td>
 
                       <td className="px-6 py-4.5">
                         <span className="px-3 py-1.5 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-black border border-slate-100 uppercase tracking-wide">
-                          {member.department}
+                          {getDeptLabel(member.department)}
                         </span>
                       </td>
 
@@ -861,11 +892,95 @@ export default function ManagerReportsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* CARD VIEW (Mobile) */}
+          <div className="md:hidden divide-y divide-slate-100 w-full">
+            {processedStaff.map((member, index) => {
+              const { stats } = member;
+              const hasFines = stats.finesTotal > 0;
+              return (
+                <div 
+                  key={member.id} 
+                  onClick={() => handleOpenStaffModal(member)}
+                  className="p-5 space-y-4 hover:bg-slate-50/50 active:bg-slate-100/50 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black border shrink-0 ${
+                        index === 0 ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' : 
+                        index === 1 ? 'bg-slate-50 text-slate-600 border-slate-200' : 
+                        index === 2 ? 'bg-orange-50 text-orange-600 border-orange-200' : 
+                        'bg-slate-50/50 text-slate-400 border-slate-100'
+                      }`}>
+                        {index + 1}
+                      </span>
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-sm text-indigo-600 overflow-hidden shadow-inner shrink-0">
+                        {member.photoUrl ? (
+                          <img src={member.photoUrl} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          member.name?.[0]
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-slate-900 font-extrabold text-sm leading-snug">{member.name}</p>
+                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-wider mt-0.5">{formatDesignation(member.designation)}</p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-black border border-slate-100 uppercase tracking-wide shrink-0">
+                      {getDeptLabel(member.department)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    {[
+                      { label: 'Attendance', val: stats.attPct },
+                      { label: 'Dress Code', val: stats.dressPct },
+                      { label: 'Duties Done', val: stats.dutyPct },
+                      { label: 'Contributions', val: stats.gpPct }
+                    ].map((item, i) => (
+                      <div key={i} className="bg-slate-50/50 border border-slate-100/50 rounded-2xl p-3">
+                        <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5">{item.label}</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-100">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                item.val >= 85 ? 'bg-emerald-500' : item.val >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                              }`} 
+                              style={{ width: `${item.val}%` }} 
+                            />
+                          </div>
+                          <span className={`text-[10px] font-black shrink-0 ${
+                            item.val >= 85 ? 'text-emerald-600' : item.val >= 50 ? 'text-amber-600' : 'text-rose-600'
+                          }`}>{item.val}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      {hasFines ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 font-extrabold text-[10px] tracking-wide shrink-0">
+                          <Coins size={12} /> ₨{stats.finesTotal.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-slate-350 font-extrabold text-xs select-none">—</span>
+                      )}
+                    </div>
+                    <span className="text-indigo-600 font-black text-xs bg-indigo-50 border border-indigo-100/50 px-3 py-2 rounded-xl shadow-inner min-w-[70px] text-center">
+                      {stats.totalPoints} <span className="text-[10px] text-indigo-400 font-bold">/ {stats.maxPoints}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {processedStaff.length === 0 && (
             <div className="flex flex-col items-center justify-center p-16 text-center border-t border-slate-100">
               <AlertTriangle className="text-slate-300 w-12 h-12 mb-3" />
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No matching staff audits found</p>
-              <p className="text-slate-400 text-xs mt-1">Try relaxing your search query or department filters.</p>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No staff members found</p>
+              <p className="text-slate-400 text-xs mt-1">Try a different search or filter.</p>
             </div>
           )}
         </div>
@@ -892,14 +1007,14 @@ export default function ManagerReportsPage() {
                   </div>
                   <div>
                     <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-none">{viewingStaff.name}</h2>
-                    <p className="text-indigo-600 text-xs font-extrabold tracking-wide mt-1.5 uppercase">{viewingStaff.designation || 'Staff Member'}</p>
-                    <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1.5 capitalize">{viewingStaff.department} Department • ID: {viewingStaff.employeeId || viewingStaff.customId}</p>
+                    <p className="text-indigo-600 text-xs font-extrabold tracking-wide mt-1.5 uppercase">{formatDesignation(viewingStaff.designation)}</p>
+                    <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1.5">{getDeptLabel(viewingStaff.department)} Department • ID: {viewingStaff.employeeId || viewingStaff.customId}</p>
                   </div>
                 </div>
                 
                 <button 
                   onClick={() => setViewingStaff(null)} 
-                  className="text-slate-400 hover:text-slate-600 transition-all bg-slate-50 hover:bg-slate-100 border border-slate-100 p-2.5 rounded-full"
+                  className="text-slate-400 hover:text-slate-600 transition-all bg-slate-55/10 bg-slate-50 hover:bg-slate-100 border border-slate-100 p-2.5 rounded-full"
                 >
                   <XCircle size={22} />
                 </button>
@@ -907,9 +1022,9 @@ export default function ManagerReportsPage() {
 
               {/* Print Only Title Block */}
               <div className="hidden print:block border-b border-slate-200 pb-4 mb-6">
-                <h1 className="text-3xl font-black text-slate-900">Monthly Performance Intelligence Audit Ledger</h1>
-                <p className="text-sm font-bold text-indigo-600 mt-1 uppercase tracking-wider">Staff Ledger: {viewingStaff.name} ({viewingStaff.designation})</p>
-                <p className="text-xs text-slate-400 mt-1">Audit Month: {selectedMonth} • Department: {viewingStaff.department.toUpperCase()} • Generated Ref: KH-MPL-{selectedMonth.replace('-', '')}</p>
+                <h1 className="text-3xl font-black text-slate-900">Monthly Performance Report</h1>
+                <p className="text-sm font-bold text-indigo-600 mt-1 uppercase tracking-wider">Staff Report: {viewingStaff.name} ({formatDesignation(viewingStaff.designation)})</p>
+                <p className="text-xs text-slate-400 mt-1">Month: {selectedMonth} • Department: {getDeptLabel(viewingStaff.department).toUpperCase()} • Generated Ref: KH-MPL-{selectedMonth.replace('-', '')}</p>
               </div>
 
               {/* Grid Metrics */}
