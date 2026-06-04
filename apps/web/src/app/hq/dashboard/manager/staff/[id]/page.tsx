@@ -32,6 +32,7 @@ import {
 import { Timestamp, increment } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import ScoreCard from '@/components/rehab/ScoreCard';
+import StaffProfileReport from '@/components/hq/StaffProfileReport';
 import { SCORE_CATEGORIES, MONTHLY_REWARDS, WEEKLY_RULE } from '@/data/scoreRules';
 import { HqCheckCell } from '@/components/hq/HqCheckCell';
 import {
@@ -115,6 +116,7 @@ export default function StaffProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processingConfig, setProcessingConfig] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -760,6 +762,17 @@ export default function StaffProfilePage() {
     } finally {
       setSaving(false);
     }
+  };
+  
+  const handleDownloadReport = async () => {
+    const html2canvas = (await import('html2canvas')).default;
+    const el = document.getElementById('staff-report-root');
+    if (!el) return;
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+    const link = document.createElement('a');
+    link.download = `${staff?.name || 'staff'}-report.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   };
 
   const handleDeleteConfig = async (type: 'duty' | 'dress', key: string) => {
@@ -1948,9 +1961,14 @@ export default function StaffProfilePage() {
                         <p className={`text-[10px] font-bold ${theme.text} uppercase tracking-widest`}>Public profile details</p>
                       </div>
                     </div>
-                    <button onClick={() => setActiveTab('edit')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-gray-100 text-gray-900 hover:bg-gray-200`}>
-                      Request Update
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setShowReport(true)} className="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2">
+                        <FileText size={14} /> Generate Report
+                      </button>
+                      <button onClick={() => setActiveTab('edit')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-gray-100 text-gray-900 hover:bg-gray-200`}>
+                        Request Update
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
@@ -4403,6 +4421,35 @@ export default function StaffProfilePage() {
             <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-[10px] text-gray-400 italic">
               All marked leaves are fully paid. Deductions only apply to absences and past unmarked days.
             </div>
+          </div>
+        </div>
+      )}
+
+      {showReport && staff && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 print:bg-transparent print:p-0 print:fixed print:inset-0">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto print:max-h-none print:h-auto print:w-full print:shadow-none print:rounded-none print:p-0">
+            {/* Action bar - hidden on print */}
+            <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-100 print:hidden">
+              <span className="text-xs font-black uppercase tracking-widest text-gray-500">Staff Profile Report</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleDownloadReport}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-700 transition-all cursor-pointer"
+                >
+                  <Download size={14} /> Download PNG
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all cursor-pointer"
+                >
+                  <Printer size={14} /> Print
+                </button>
+                <button onClick={() => setShowReport(false)} className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all cursor-pointer">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <StaffProfileReport staff={staff} />
           </div>
         </div>
       )}
