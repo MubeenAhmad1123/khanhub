@@ -223,33 +223,33 @@ export default function AttendanceMarkingPage() {
       {/* Premium Header */}
       <div className={`sticky top-0 z-20 border-b backdrop-blur-md ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
             <div>
-              <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl text-white ${darkMode ? 'bg-teal-600' : 'bg-gray-900'}`}>
                   <Calendar size={24} />
                 </div>
-                <h1 className="text-2xl font-black tracking-tight">Staff Attendance</h1>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight">Staff Attendance</h1>
               </div>
-              <p className="text-black text-[10px] font-black uppercase tracking-[0.2em] ml-11">
-                {formatDateDMY(new Date())}
+              <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] ml-0 sm:ml-11 mt-1.5">
+                {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-               <div className={`rounded-2xl p-3 flex items-center gap-4 border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-black uppercase tracking-widest">Marked</p>
-                    <p className="text-lg font-black">{markedCount} / {staffList.length}</p>
+            <div className="flex items-center gap-4 w-full md:w-auto">
+               <div className={`rounded-2xl p-3 flex items-center justify-between md:justify-start gap-4 border w-full md:w-auto ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className="text-left md:text-right">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Marked</p>
+                    <p className="text-base sm:text-lg font-black text-gray-900">{markedCount} / {staffList.length}</p>
                   </div>
                   <div className={`w-px h-8 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`} />
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2"
+                    className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 sm:py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2 flex-1 sm:flex-initial"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    Save All
+                    Save
                   </button>
                </div>
             </div>
@@ -259,10 +259,10 @@ export default function AttendanceMarkingPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
         {/* Bulk Controls */}
-        <div className={`rounded-[2.5rem] p-6 mb-8 border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex flex-col lg:flex-row gap-6 items-center">
-             <div className="flex-1 w-full relative">
-                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-black' : 'text-black'}`} size={18} />
+        <div className={`rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-6 mb-8 border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-center">
+             <div className="w-full relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
                   type="text" 
                   placeholder="Search by Name or ID..."
@@ -274,11 +274,9 @@ export default function AttendanceMarkingPage() {
                 />
              </div>
              
-             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+             <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
                 <select 
-                  className={`flex-1 lg:flex-none rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer ${
-                    darkMode ? 'bg-gray-800 border-gray-700 text-black' : 'bg-gray-50 text-black'
-                  }`}
+                  className={`w-full lg:w-auto rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer bg-gray-50 text-black border-none`}
                   value={deptFilter}
                   onChange={e => setDeptFilter(e.target.value)}
                 >
@@ -288,16 +286,16 @@ export default function AttendanceMarkingPage() {
                   <option value="hq">HQ / Admin</option>
                 </select>
 
-                <div className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 dark:bg-gray-800/50 w-full sm:w-auto">
                    <button 
                      onClick={() => bulkMark('present')}
-                     className="px-4 py-3 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-lg shadow-green-500/20"
+                     className="flex-1 sm:flex-none px-4 py-3 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all text-center w-1/2 sm:w-auto shadow-lg shadow-green-500/20"
                    >
                      Mark Present
                    </button>
                    <button 
                      onClick={() => bulkMark('absent')}
-                     className="px-4 py-3 rounded-xl bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                     className="flex-1 sm:flex-none px-4 py-3 rounded-xl bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all text-center w-1/2 sm:w-auto shadow-lg shadow-red-500/20"
                    >
                      Mark Absent
                    </button>
@@ -316,7 +314,7 @@ export default function AttendanceMarkingPage() {
                {selectedIds.size === filteredStaff.length && filteredStaff.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
                {selectedIds.size === filteredStaff.length ? 'Deselect All' : `Select All (${filteredStaff.length})`}
              </button>
-             <p className="text-[10px] font-black uppercase tracking-widest text-black">Status & Timing</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-black">Status & Time</p>
           </div>
 
           {filteredStaff.map(s => {
@@ -327,7 +325,7 @@ export default function AttendanceMarkingPage() {
             return (
               <div 
                 key={s.id} 
-                className={`group rounded-[2rem] p-4 border transition-all duration-300 flex flex-col md:flex-row md:items-center gap-4 ${
+                className={`group rounded-[2rem] p-4 sm:p-5 border transition-all duration-300 flex flex-col md:flex-row md:items-center gap-4 ${
                   isSelected ? 'border-teal-500 bg-teal-50/10 dark:bg-teal-900/10' : 
                   darkMode ? 'bg-gray-900 border-gray-800 hover:border-gray-700' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm'
                 }`}
@@ -374,7 +372,7 @@ export default function AttendanceMarkingPage() {
                 </div>
 
                 {/* Status Toggle */}
-                <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 p-1 rounded-2xl md:w-64">
+                <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 p-1 rounded-2xl w-full md:w-64">
                    {['present', 'absent', 'leave'].map(st => (
                      <button
                        key={st}
@@ -393,27 +391,27 @@ export default function AttendanceMarkingPage() {
                 </div>
 
                 {/* Timings */}
-                <div className="flex items-center gap-2">
-                   <div className="relative group/time">
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                   <div className="relative group/time flex-1 md:flex-initial">
                       <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black" />
                       <input 
                         type="time" 
                         value={rec.arrivalTime}
                         onChange={e => setRecords(prev => ({ ...prev, [s.id]: { ...prev[s.id], arrivalTime: e.target.value } }))}
-                        className={`pl-9 pr-3 py-2.5 rounded-xl text-[10px] font-bold outline-none border transition-all ${
-                          darkMode ? 'bg-gray-800 border-gray-700 focus:border-teal-500' : 'bg-white border-gray-100 focus:border-teal-500'
+                        className={`pl-9 pr-3 py-2.5 rounded-xl text-[10px] font-bold outline-none border transition-all w-full focus:border-teal-500 ${
+                          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
                         }`}
                       />
                       <span className="absolute -top-4 left-2 text-[8px] font-black text-black uppercase tracking-widest opacity-0 group-hover/time:opacity-100 transition-opacity">Arrival</span>
                    </div>
-                   <div className="relative group/time">
+                   <div className="relative group/time flex-1 md:flex-initial">
                       <ChevronRight size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black" />
                       <input 
                         type="time" 
                         value={rec.departureTime}
                         onChange={e => setRecords(prev => ({ ...prev, [s.id]: { ...prev[s.id], departureTime: e.target.value } }))}
-                        className={`pl-9 pr-3 py-2.5 rounded-xl text-[10px] font-bold outline-none border transition-all ${
-                          darkMode ? 'bg-gray-800 border-gray-700 focus:border-teal-500' : 'bg-white border-gray-100 focus:border-teal-500'
+                        className={`pl-9 pr-3 py-2.5 rounded-xl text-[10px] font-bold outline-none border transition-all w-full focus:border-teal-500 ${
+                          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
                         }`}
                       />
                       <span className="absolute -top-4 left-2 text-[8px] font-black text-black uppercase tracking-widest opacity-0 group-hover/time:opacity-100 transition-opacity">Departure</span>
@@ -424,30 +422,30 @@ export default function AttendanceMarkingPage() {
           })}
 
           {filteredStaff.length === 0 && (
-            <div className={`rounded-[3rem] py-24 border-2 border-dashed flex flex-col items-center justify-center text-center ${
+            <div className={`rounded-[2rem] sm:rounded-[3rem] px-4 py-20 sm:py-24 border-2 border-dashed flex flex-col items-center justify-center text-center w-full ${
               darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'
             }`}>
-              <Users className="text-black dark:text-black mb-4" size={48} />
-              <h3 className="text-lg font-black">No Staff Found</h3>
-              <p className="text-black text-sm mt-1">Try a different search or department filter.</p>
+              <Users className="text-gray-355 dark:text-gray-600 mb-4" size={48} strokeWidth={1.5} />
+              <h3 className="text-lg font-black text-gray-900">No Staff Found</h3>
+              <p className="text-gray-500 text-sm mt-1 max-w-xs px-2">Try a different search or department filter.</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Floating Action Bar */}
-      <div className={`fixed bottom-0 left-0 right-0 p-4 lg:left-64 z-30 transition-transform ${markedCount > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
-         <div className={`max-w-4xl mx-auto rounded-[2rem] p-4 flex items-center justify-between border shadow-2xl ${
+      <div className={`fixed bottom-0 left-0 right-0 p-4 md:left-20 lg:left-64 z-30 transition-all duration-300 ${markedCount > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+         <div className={`max-w-4xl mx-auto rounded-2xl sm:rounded-[2rem] p-3 sm:p-4 flex flex-col xs:flex-row items-center justify-between gap-3 xs:gap-0 border shadow-2xl ${
            darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
          }`}>
-            <div className="px-4">
-               <p className="text-[10px] font-black text-black uppercase tracking-widest">Marked Progress</p>
-               <p className="font-black text-teal-500">{markedCount} of {staffList.length} staff members</p>
+            <div className="px-2 text-center xs:text-left">
+               <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Marked Progress</p>
+               <p className="font-black text-teal-500 text-xs sm:text-sm">{markedCount} of {staffList.length} staff members</p>
             </div>
             <button 
                onClick={handleSave}
                disabled={saving}
-               className="bg-gray-900 dark:bg-teal-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+               className="bg-gray-900 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 w-full xs:w-auto"
             >
                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                Commit Changes
