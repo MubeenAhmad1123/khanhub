@@ -110,8 +110,10 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
   const fetchLock = useRef(false);
   const lastFetchedId = useRef<string | null>(null);
+  const lastFetchedMonth = useRef<string | null>(null);
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
+  const [generatingSlip, setGeneratingSlip] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action' | 'leads'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -249,6 +251,8 @@ export default function StaffProfilePage() {
     month: new Date().toISOString().slice(0, 7),
     basicSalary: 0,
     presentDays: 30,
+    leaveDays: 0,
+    actionDays: 0,
     incentive: 0,
     otherEarnings: 0,
     otherEarningsReason: '',
@@ -1289,9 +1293,81 @@ export default function StaffProfilePage() {
     }
   };
 
+  const isPayrollWindow = (monthStr: string) => {
+    if (!monthStr || !monthStr.includes('-')) return false;
+    const [year, month] = monthStr.split('-').map(Number);
+    if (isNaN(year) || isNaN(month)) return false;
+
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1; // 1-indexed
+    const todayDay = today.getDate();
+
+    // Last 5 days of the selected month
+    const lastDayOfSelectedMonth = new Date(year, month, 0).getDate();
+    const isLast5Days = (
+      todayYear === year &&
+      todayMonth === month &&
+      todayDay >= (lastDayOfSelectedMonth - 4) &&
+      todayDay <= lastDayOfSelectedMonth
+    );
+
+    // First 10 days of the next month
+    let nextMonthYear = year;
+    let nextMonth = month + 1;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextMonthYear += 1;
+    }
+    const isFirst10DaysNextMonth = (
+      todayYear === nextMonthYear &&
+      todayMonth === nextMonth &&
+      todayDay >= 1 &&
+      todayDay <= 10
+    );
+
+    // First 10 days of the selected month (as fallback)
+    const isFirst10DaysSelectedMonth = (
+      todayYear === year &&
+      todayMonth === month &&
+      todayDay >= 1 &&
+      todayDay <= 10
+    );
+
+    return isLast5Days || isFirst10DaysNextMonth || isFirst10DaysSelectedMonth;
+  };
+
+  const handleDeleteSlip = async (record: SalarySlip) => {
+    if (!staff) return;
+    
+    const recordsForMonth = salaryRecords.filter(r => r.month === record.month);
+    const inWindow = isPayrollWindow(record.month);
+    
+    if (inWindow && recordsForMonth.length <= 1) {
+      toast.error(`You cannot delete the last remaining salary slip for ${record.month} during the payroll window (last 5 days of the month or first 10 days of the month).`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete the salary slip for ${record.month}? This action is irreversible.`)) {
+      return;
+    }
+
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      const salaryPrefix = getDeptPrefix(staff.dept);
+      await deleteDoc(doc(db, `${salaryPrefix}_salary_records`, record.id));
+      toast.success("Salary slip deleted successfully");
+      fetchData();
+    } catch (e) {
+      toast.error("Failed to delete salary slip");
+    }
+  };
+
   const handleGenerateSlip = async () => {
+    if (generatingSlip) return;
     try {
       if (!staff) return;
+      setGeneratingSlip(true);
       const [y, m] = payrollForm.month.split('-');
       const workingDays = new Date(Number(y), Number(m), 0).getDate();
       
@@ -1300,7 +1376,7 @@ export default function StaffProfilePage() {
       const totalDeductions = (payrollForm.fine || 0) + (payrollForm.advance || 0) + (payrollForm.absentDeduction || 0) + (payrollForm.otherDeductions || 0);
       const netSalary = Math.round(proRatedBase + totalAdditions - totalDeductions);
 
-      const slip: Partial<SalarySlip> = {
+      const slip: any = {
         staffId: staff.staffId,
         employeeId: staff.employeeId || staff.customId || '',
         staffName: staff.name || '',
@@ -1311,7 +1387,8 @@ export default function StaffProfilePage() {
         workingDays,
         presentDays: payrollForm.presentDays,
         absentDays: workingDays - payrollForm.presentDays,
-        leaveDays: 0,
+        leaveDays: payrollForm.leaveDays,
+        actionDays: payrollForm.actionDays,
         absentDeduction: payrollForm.absentDeduction || 0,
         incentive: payrollForm.incentive || 0,
         otherEarnings: payrollForm.otherEarnings || 0,
@@ -1330,12 +1407,11 @@ export default function StaffProfilePage() {
       await addDoc(collection(db, `${salaryPrefix}_salary_records`), slip);
       toast.success("Financial Ledger Updated & Finalized");
       setShowPayrollModal(false);
-      
-      setTimeout(() => {
-        router.push('/hq/dashboard/manager/staff');
-      }, 1000);
+      fetchData();
     } catch (e) {
       toast.error("Failed to generate slip");
+    } finally {
+      setGeneratingSlip(false);
     }
   };
 
@@ -1349,14 +1425,15 @@ export default function StaffProfilePage() {
   useEffect(() => {
     if (sessionLoading || !staffId) return;
     
-    // Prevent double-fetching if the ID hasn't changed and we aren't already fetching
-    if (lastFetchedId.current === staffId && staff) return;
+    // Prevent double-fetching if the ID and month hasn't changed and we aren't already fetching
+    if (lastFetchedId.current === staffId && lastFetchedMonth.current === selectedMonth && staff) return;
     if (fetchLock.current) return;
 
     fetchLock.current = true;
     lastFetchedId.current = staffId;
+    lastFetchedMonth.current = selectedMonth;
     fetchData();
-  }, [staffId, sessionLoading, fetchData]); // Removed session and router as dependencies to stop loops
+  }, [staffId, selectedMonth, sessionLoading, fetchData]); // Removed session and router as dependencies to stop loops
 
   const handleScheduleMeeting = async () => {
     if (!meetingForm.title || !meetingForm.date || !staff) return;
@@ -3602,40 +3679,50 @@ export default function StaffProfilePage() {
             {activeTab === 'payroll' && (
               <div className="space-y-6">
                 <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all bg-white border-gray-100`}>
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
                         <DollarSign size={16} /> Financial Ledger
                       </h3>
                       <p className="text-[10px] font-black text-black uppercase tracking-widest">Personnel Economic Audit</p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setPayrollForm({
-                          month: selectedMonth || new Date().toISOString().slice(0, 7),
-                          basicSalary: staff?.monthlySalary || 0,
-                          presentDays: salaryDetails.payableDays,
-                          incentive: 0,
-                          otherEarnings: 0,
-                          otherEarningsReason: '',
-                          fine: salaryDetails.fines,
-                          advance: 0,
-                          absentDeduction: Math.round(salaryDetails.absentDeduction),
-                          otherDeductions: 0,
-                          deductionReason: '',
-                        });
-                        setShowPayrollModal(!showPayrollModal);
-                      }}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : ('bg-amber-50 text-amber-600')}`}
-                    >
-                      {showPayrollModal ? 'Cancel' : 'Generate Slip'}
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <input
+                        type="month"
+                        value={selectedMonth}
+                        onChange={e => setSelectedMonth(e.target.value)}
+                        className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none bg-gray-100 text-gray-900`}
+                      />
+                      <button
+                        onClick={() => {
+                          setPayrollForm({
+                            month: selectedMonth || new Date().toISOString().slice(0, 7),
+                            basicSalary: staff?.monthlySalary || 0,
+                            presentDays: salaryDetails.payableDays,
+                            leaveDays: salaryDetails.paidLeaves + salaryDetails.unpaidLeaves,
+                            actionDays: salaryDetails.payableDays + salaryDetails.paidLeaves,
+                            incentive: 0,
+                            otherEarnings: 0,
+                            otherEarningsReason: '',
+                            fine: salaryDetails.fines,
+                            advance: 0,
+                            absentDeduction: Math.round(salaryDetails.absentDeduction),
+                            otherDeductions: 0,
+                            deductionReason: '',
+                          });
+                          setShowPayrollModal(!showPayrollModal);
+                        }}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : ('bg-amber-50 text-amber-600')}`}
+                      >
+                        {showPayrollModal ? 'Cancel' : 'Generate Slip'}
+                      </button>
+                    </div>
                   </div>
 
                   {showPayrollModal && (
                     <div className={`p-6 rounded-3xl border mb-8 bg-amber-50/50 border-amber-100`}>
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Month (YYYY-MM)</label>
                           <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.month} onChange={e => setPayrollForm({ ...payrollForm, month: e.target.value })} />
@@ -3647,6 +3734,14 @@ export default function StaffProfilePage() {
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Present Days</label>
                           <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.presentDays} onChange={e => setPayrollForm({ ...payrollForm, presentDays: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Leave Days</label>
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.leaveDays} onChange={e => setPayrollForm({ ...payrollForm, leaveDays: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-black ml-2 mb-1 block">Action Days</label>
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none bg-white text-gray-900`} value={payrollForm.actionDays} onChange={e => setPayrollForm({ ...payrollForm, actionDays: Number(e.target.value) })} />
                         </div>
                       </div>
 
@@ -3701,7 +3796,14 @@ export default function StaffProfilePage() {
                           </div>
                         </div>
                       </div>
-                      <button onClick={handleGenerateSlip} className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20">Finalize Slip</button>
+                      <button
+                        disabled={generatingSlip}
+                        onClick={handleGenerateSlip}
+                        className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {generatingSlip && <Loader2 size={12} className="animate-spin" />}
+                        {generatingSlip ? 'Finalizing Slip...' : 'Finalize Slip'}
+                      </button>
                     </div>
                   )}
 
@@ -3737,7 +3839,7 @@ export default function StaffProfilePage() {
                                     {record.status}
                                   </span>
                                   <span className="text-[10px] text-black font-bold uppercase tracking-widest">
-                                    {(record as any).presentDays || 0} Working Days
+                                    {(record as any).presentDays || 0} Present · {(record as any).leaveDays || 0} Leaves · {(record as any).actionDays || 0} Action Days
                                   </span>
                                 </div>
                               </div>
@@ -3753,6 +3855,13 @@ export default function StaffProfilePage() {
                                 title="Print Salary Slip"
                               >
                                 <Printer size={18} strokeWidth={2.5} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSlip(record)}
+                                className="p-3 rounded-xl bg-white border border-gray-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all shadow-sm active:scale-90"
+                                title="Delete Salary Slip"
+                              >
+                                <Trash2 size={18} strokeWidth={2.5} />
                               </button>
                               <div className="md:text-right">
                                 <p className={`text-2xl font-black text-gray-900`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
