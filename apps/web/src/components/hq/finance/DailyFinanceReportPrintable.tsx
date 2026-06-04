@@ -197,21 +197,21 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 flex justify-between items-center">
                 <div>
-                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Gross Inflows</span>
+                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Gross Income</span>
                   <span className="text-lg font-black text-emerald-600">Rs {stats.totalIncome.toLocaleString()}</span>
                 </div>
                 <TrendingUp size={20} className="text-emerald-500 opacity-60" />
               </div>
               <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 flex justify-between items-center">
                 <div>
-                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Gross Outflows</span>
+                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Gross Expenses</span>
                   <span className="text-lg font-black text-rose-600">Rs {stats.totalExpense.toLocaleString()}</span>
                 </div>
                 <TrendingDown size={20} className="text-rose-500 opacity-60" />
               </div>
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900 text-white flex justify-between items-center">
                 <div>
-                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Net Flow Balance</span>
+                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Net Balance</span>
                   <span className="text-lg font-black text-white">Rs {stats.netBalance.toLocaleString()}</span>
                 </div>
                 <div className="bg-white/10 p-1.5 rounded-lg text-white">
@@ -231,9 +231,9 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                 <thead>
                   <tr className="bg-zinc-50 font-black text-[9px] uppercase tracking-wider text-zinc-500 border-b border-zinc-200">
                     <th className="px-4 py-3">Department Name</th>
-                    <th className="px-4 py-3 text-right">Inflow (Income)</th>
-                    <th className="px-4 py-3 text-right">Outflow (Expense)</th>
-                    <th className="px-4 py-3 text-right">Net Flow</th>
+                    <th className="px-4 py-3 text-right">Income</th>
+                    <th className="px-4 py-3 text-right">Expense</th>
+                    <th className="px-4 py-3 text-right">Net Balance</th>
                     <th className="px-4 py-3 text-center">Trans. Count</th>
                   </tr>
                 </thead>
@@ -265,14 +265,14 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
               <div className="space-y-3">
                 <div className="border-l-4 border-emerald-600 pl-3.5 py-0.5">
                   <h3 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
-                    Itemized Income Ledgers (Inflows)
+                    Itemized Income Ledgers
                   </h3>
                 </div>
                 {Object.entries(stats.incomeCategories).map(([cat, data]) => (
                   <div key={cat} className="space-y-2 border border-zinc-200 p-4 rounded-xl bg-zinc-50/10">
                     <div className="flex justify-between items-center border-b border-dashed border-zinc-200 pb-1.5">
                       <span className="text-[10px] font-black text-zinc-800 uppercase tracking-wider">{cat}</span>
-                      <span className="text-xs font-black text-emerald-600">Total Inflow: ₨{data.total.toLocaleString()}</span>
+                      <span className="text-xs font-black text-emerald-600">Total Income: ₨{data.total.toLocaleString()}</span>
                     </div>
                     <table className="w-full text-left text-[10px]">
                       <thead>
@@ -313,14 +313,14 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
               <div className="space-y-3">
                 <div className="border-l-4 border-rose-600 pl-3.5 py-0.5">
                   <h3 className="text-[10px] font-black text-rose-600 uppercase tracking-widest leading-none">
-                    Itemized Expenses Ledgers (Outflows)
+                    Itemized Expenses Ledgers
                   </h3>
                 </div>
                 {Object.entries(stats.expenseCategories).map(([cat, data]) => (
                   <div key={cat} className="space-y-2 border border-zinc-200 p-4 rounded-xl bg-zinc-50/10">
                     <div className="flex justify-between items-center border-b border-dashed border-zinc-200 pb-1.5">
                       <span className="text-[10px] font-black text-zinc-800 uppercase tracking-wider">{cat}</span>
-                      <span className="text-xs font-black text-rose-600">Total Outflow: ₨{data.total.toLocaleString()}</span>
+                      <span className="text-xs font-black text-rose-600">Total Expense: ₨{data.total.toLocaleString()}</span>
                     </div>
                     <table className="w-full text-left text-[10px]">
                       <thead>

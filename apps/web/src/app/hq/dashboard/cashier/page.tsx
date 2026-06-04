@@ -32,13 +32,13 @@ const DEPARTMENTS = [
 ];
 
 const BASE_CATEGORIES = [
-  { id: 'fee', name: 'Admission / Fees', appliesTo: 'income' },
-  { id: 'medicine_charge', name: 'Medicine / Treatment Charge', appliesTo: 'income' },
+  { id: 'fee', name: 'Admission Fee', appliesTo: 'income' },
+  { id: 'medicine_charge', name: 'Medicine / Treatment', appliesTo: 'income' },
   { id: 'donation', name: 'Donation', appliesTo: 'income' },
-  { id: 'canteen', name: 'Canteen Funds', appliesTo: 'both' },
+  { id: 'canteen', name: 'Canteen', appliesTo: 'both' },
   { id: 'utilities', name: 'Utilities', appliesTo: 'expense' },
   { id: 'maintenance', name: 'Maintenance', appliesTo: 'expense' },
-  { id: 'other_income', name: 'Other Income', appliesTo: 'income' },
+  { id: 'other_income', name: 'Other', appliesTo: 'income' },
   { id: 'other_expense', name: 'Other Expense', appliesTo: 'expense' },
 ] as const;
 
@@ -160,6 +160,7 @@ export default function CashierStationPage() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofReason, setProofReason] = useState('');
   const [proofUploading, setProofUploading] = useState(false);
+  const [customTargetName, setCustomTargetName] = useState('');
 
   const [customCategories, setCustomCategories] = useState<{ id: string; name: string; appliesTo: 'income' | 'expense' | 'both' }[]>([]);
   const [categorySearch, setCategorySearch] = useState('');
@@ -784,7 +785,14 @@ export default function CashierStationPage() {
     setSearchResults([]);
     setSearchOpen(false);
     setSearchQuery('');
+    setCustomTargetName('');
   }, [departmentCode]);
+
+  useEffect(() => {
+    if (selectedEntity) {
+      setCustomTargetName('');
+    }
+  }, [selectedEntity]);
 
 
 
@@ -948,7 +956,7 @@ export default function CashierStationPage() {
     e.preventDefault();
     if (processing) return;
     setMessage(null);
-    if (!selectedEntity && departmentCode !== 'hospital') return setMessage({ type: 'error', text: 'Select account first.' });
+    if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) return setMessage({ type: 'error', text: 'Select account or enter a Target Person / Purpose Name.' });
     if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
     if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
     if (!proofFile && !proofReason.trim()) {
@@ -976,17 +984,17 @@ export default function CashierStationPage() {
           ? { staffId: selectedEntity?.id, staffName: selectedEntity?.name || selectedEntity?.employeeId || 'Unknown' }
           : departmentCode === 'welfare' 
             ? { 
-                donorId: selectedEntity?.id, 
-                donorName: selectedEntity?.name || selectedEntity?.fullName || 'Unknown',
+                donorId: selectedEntity?.id || 'welfare-general', 
+                donorName: selectedEntity?.name || selectedEntity?.fullName || customTargetName.trim() || 'General Welfare Account',
                 childId: selectedEntity?.linkedChildId || undefined,
                 childName: selectedEntity?.linkedChildName || undefined,
                 donationScope: selectedEntity?.donationScope || undefined,
                 donationType: selectedEntity?.donationType || undefined
               }
             : { 
-                patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : undefined), 
-                studentId: departmentCode === 'spims' ? selectedEntity?.id : undefined,
-                patientName: selectedEntity?.name || selectedEntity?.fullName || (departmentCode === 'hospital' ? 'General Hospital Account' : 'Unknown') 
+                patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : `${departmentCode}-general`), 
+                studentId: departmentCode === 'spims' ? (selectedEntity?.id || 'spims-general') : undefined,
+                patientName: selectedEntity?.name || selectedEntity?.fullName || customTargetName.trim() || (departmentCode === 'hospital' ? 'General Hospital Account' : `General ${activeDepartment.label} Account`) 
               }),
         description,
         paymentMethod,
@@ -1195,23 +1203,23 @@ export default function CashierStationPage() {
       <div className="max-w-[1600px] mx-auto px-4 md:px-12">
         
         <div className="space-y-12 mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-            <div className="flex items-center gap-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-10">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8 text-center sm:text-left">
               <div className="relative group">
                 <div className="absolute -inset-4 bg-indigo-600/20 rounded-[2.5rem] blur-2xl group-hover:bg-indigo-600/40 transition-all duration-700" />
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-indigo-600 rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl relative">
-                  <Terminal size={40} strokeWidth={2.5} />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-indigo-600 rounded-2xl sm:rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl relative">
+                  <Terminal className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" strokeWidth={2.5} />
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
-                  <p className="text-[10px] md:text-xs font-black text-indigo-600 uppercase tracking-[0.5em]">System Node: 001-HQ</p>
+                <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
+                  <p className="text-[10px] md:text-xs font-black text-indigo-600 uppercase tracking-[0.5em]">Station: 001</p>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-[1000] text-zinc-900 tracking-tighter uppercase leading-none">
-                  Cashier <span className="text-indigo-600">Station</span>
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-[1000] text-zinc-900 tracking-tighter uppercase leading-none">
+                  Cashier
                 </h1>
-                <p className="text-zinc-400 font-bold flex items-center gap-2">
+                <p className="text-zinc-400 font-bold flex items-center justify-center sm:justify-start gap-2">
                   <User size={14} className="text-zinc-300" />
                   Logged in as <span className="text-zinc-900">{session?.name || 'Authorized Personnel'}</span>
                 </p>
@@ -1219,13 +1227,13 @@ export default function CashierStationPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <div className="px-8 py-5 bg-white border border-zinc-100 rounded-[2rem] shadow-xl flex items-center gap-6 group hover:border-indigo-200 transition-all">
-                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                  <Activity size={24} />
+              <div className="px-6 py-4 bg-white border border-zinc-100 rounded-2xl shadow-xl flex items-center gap-4 group hover:border-indigo-200 transition-all">
+                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <Activity size={18} />
                 </div>
                 <div>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Network Latency</p>
-                  <p className="text-lg font-black text-zinc-900 tracking-tight">Active / Secure</p>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Connection</p>
+                  <p className="text-sm font-black text-zinc-900 tracking-tight">Active</p>
                 </div>
               </div>
               <button 
@@ -1242,25 +1250,25 @@ export default function CashierStationPage() {
             
             <div className="relative z-10 space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 md:w-16 md:h-16 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-2xl group-hover/search:scale-110 transition-transform duration-700 flex-shrink-0">
-                    <Search size={22} />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 md:w-16 md:h-16 bg-zinc-900 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-2xl group-hover/search:scale-110 transition-transform duration-700 flex-shrink-0">
+                    <Search className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Universal Search</h3>
-                    <p className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Access cross-departmental records instantaneously</p>
+                    <h3 className="text-lg sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Search</h3>
+                    <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-0.5 sm:mt-1">Search patients, students or others</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 p-1.5 bg-zinc-100 rounded-2xl">
+                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 p-1 bg-zinc-100 rounded-xl sm:rounded-2xl w-full sm:w-auto shrink-0">
                   {(['patient', 'student', 'other'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setSearchType(t)}
                       className={cn(
-                        "px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer",
+                        "py-2 sm:py-3 px-3 sm:px-8 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer text-center",
                         searchType === t 
-                          ? "bg-white text-indigo-600 shadow-2xl shadow-indigo-600/10" 
-                          : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/50"
+                          ? "bg-white text-indigo-600 shadow-xl" 
+                          : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/30"
                       )}
                     >
                       {t}s
@@ -1350,14 +1358,14 @@ export default function CashierStationPage() {
         </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 overflow-hidden">
-        <div className="lg:col-span-4 space-y-8 md:space-y-12 min-w-0 order-2 lg:order-1">
+        <div className="lg:col-span-4 space-y-8 md:space-y-12 min-w-0 order-1 lg:order-1">
           <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 border border-zinc-100 shadow-2xl shadow-zinc-200/50 h-full">
             <div className="flex items-center justify-between mb-8 md:mb-10">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-600">
                   <Clock size={20} className="md:w-6 md:h-6" />
                 </div>
-                <h3 className="text-xl md:text-2xl font-[1000] text-zinc-900 uppercase tracking-tight">Queue</h3>
+                <h3 className="text-xl md:text-2xl font-[1000] text-zinc-900 uppercase tracking-tight">Pending Requests</h3>
               </div>
               <div className="px-3 md:px-4 py-1.5 md:py-2 bg-amber-500 text-white rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest animate-pulse">
                 {incomingFeeReqs.length} Pending
@@ -1398,8 +1406,8 @@ export default function CashierStationPage() {
                           {req.type === 'income' ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
                         </div>
                         <div>
-                          <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{req.departmentCode}</p>
-                          <h4 className="text-base md:text-lg font-black text-zinc-900 uppercase tracking-tight mt-0.5 md:mt-1">{req.patientName || req.donorName || 'General Req'}</h4>
+                          <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{req.departmentCode === 'spims' ? 'Request' : req.departmentCode}</p>
+                          <h4 className="text-base md:text-lg font-black text-zinc-900 uppercase tracking-tight mt-0.5 md:mt-1">{req.patientName || req.donorName || 'General Request'}</h4>
                         </div>
                       </div>
                       <div className="text-right">
@@ -1408,14 +1416,14 @@ export default function CashierStationPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         type="button"
                         disabled={incomingActionId === req.id}
                         onClick={(e) => { e.stopPropagation(); openForwardModal(req); }}
                         className="flex-1 h-10 md:h-12 rounded-xl md:rounded-[1.2rem] bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
                       >
-                        {incomingActionId === req.id ? <Loader2 size={14} className="animate-spin" /> : 'Authorize'}
+                        {incomingActionId === req.id ? <Loader2 size={14} className="animate-spin" /> : 'Approve'}
                       </button>
                       <button
                         type="button"
@@ -1444,7 +1452,7 @@ export default function CashierStationPage() {
               <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.expense.toLocaleString()}</h4>
             </div>
           </div>
-        </div>        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-1 lg:order-2">
+        </div>        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-2 lg:order-2">
           <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 p-4 sm:p-6 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
@@ -1521,7 +1529,7 @@ export default function CashierStationPage() {
                           <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-500">
                             <History size={20} />
                           </div>
-                          Journal Snippet
+                          Recent Transactions
                         </h4>
                         <div className="h-[1px] flex-1 bg-zinc-100 mx-8" />
                       </div>
@@ -1566,8 +1574,8 @@ export default function CashierStationPage() {
                       <Terminal size={48} className="md:w-16 md:h-16" />
                     </div>
                   </div>
-                  <h3 className="text-3xl md:text-5xl font-[1000] text-zinc-900 uppercase tracking-tighter">Terminal Awaiting Target</h3>
-                  <p className="text-xs md:text-base font-black text-zinc-400 uppercase tracking-[0.3em] mt-6 max-w-xl mx-auto leading-relaxed opacity-60">Select an entity from the universal search to initialize transaction protocol and open financial gateway.</p>
+                  <h3 className="text-3xl md:text-5xl font-[1000] text-zinc-900 uppercase tracking-tighter">Select a Patient to Begin</h3>
+                  <p className="text-xs md:text-base font-black text-zinc-400 uppercase tracking-[0.3em] mt-6 max-w-xl mx-auto leading-relaxed opacity-60">Search and select a patient above to start a transaction.</p>
                 </div>
               )}
 
@@ -1576,7 +1584,7 @@ export default function CashierStationPage() {
                   <div className="space-y-8">
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department Vector</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department</label>
                         <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1603,7 +1611,7 @@ export default function CashierStationPage() {
                     </div>
  
                     <div className="space-y-6">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Directional Flow</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Direction</label>
                       <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <button
                           type="button"
@@ -1616,7 +1624,7 @@ export default function CashierStationPage() {
                           )}
                         >
                           <TrendingUp className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Credit Entry</span>
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money In</span>
                         </button>
                         <button
                           type="button"
@@ -1629,7 +1637,7 @@ export default function CashierStationPage() {
                           )}
                         >
                           <TrendingDown className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Debit Entry</span>
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money Out</span>
                         </button>
                       </div>
                     </div>
@@ -1684,12 +1692,32 @@ export default function CashierStationPage() {
                         </div>
                       </div>
                     )}
+
+                    {!selectedEntity && departmentCode !== 'hospital' && (
+                      <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
+                            <User size={16} />
+                          </div>
+                          <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Unregistered/General Target</h4>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Person Name / Purpose / Narrative Target</label>
+                          <input
+                            value={customTargetName}
+                            onChange={(e) => setCustomTargetName(e.target.value)}
+                            placeholder="e.g., General Welfare, Walk-in Seeker, Utility Bill payment, Rent..."
+                            className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-8">
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Transaction Date</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Date</label>
                       </div>
                       <BrutalistCalendar
                         value={txDate}
@@ -1700,10 +1728,10 @@ export default function CashierStationPage() {
  
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol Value (PKR)</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount (PKR)</label>
                         <div className="flex items-center gap-3">
                           <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
-                          <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Real-time Calculation</span>
+                          <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Calculated</span>
                         </div>
                       </div>
                       <div className="relative group/amount">
@@ -1724,7 +1752,7 @@ export default function CashierStationPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between px-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Discount (PKR)</label>
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Discount</label>
                         </div>
                         <input
                           type="number"
@@ -1736,7 +1764,7 @@ export default function CashierStationPage() {
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between px-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Return Amount (PKR)</label>
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Refund</label>
                         </div>
                         <input
                           type="number"
@@ -1766,14 +1794,14 @@ export default function CashierStationPage() {
                     </div>
  
                     <div className="space-y-6">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Settlement Route / Method</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Payment Method</label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         {([
                           { id: 'cash', label: 'Cash' },
                           { id: 'bank_transfer', label: 'Bank Transfer' },
                           { id: 'jazzcash', label: 'JazzCash' },
                           { id: 'easypaisa', label: 'EasyPaisa' },
-                          { id: 'credit', label: 'On Account / Credit' },
+                          { id: 'credit', label: 'Credit' },
                           { id: 'other', label: 'Other' },
                         ] as const).map((m) => (
                           <button
@@ -1793,7 +1821,7 @@ export default function CashierStationPage() {
 
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Target Category</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Category</label>
                         <button type="button" onClick={() => createCategory()} className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Custom</button>
                       </div>
                       <div className="relative">
@@ -1806,6 +1834,15 @@ export default function CashierStationPage() {
                         />
                       </div>
                       <div className="flex flex-wrap gap-2 max-h-36 md:max-h-48 overflow-y-auto pr-2 no-scrollbar">
+                        {categorySearch.trim() && !visibleCategories.some(c => c.name.toLowerCase() === categorySearch.trim().toLowerCase()) && (
+                          <button
+                            type="button"
+                            onClick={() => createCategory()}
+                            className="px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2 bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white cursor-pointer"
+                          >
+                            + Create "{categorySearch}"
+                          </button>
+                        )}
                         {visibleCategories.map((c) => (
                           <button 
                             key={c.id} 
@@ -1823,25 +1860,25 @@ export default function CashierStationPage() {
                         ))}
                       </div>
                     </div>
-
+ 
                     <div className="space-y-8 pt-6 border-t border-zinc-100">
                       <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Protocol Narration</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Notes / Description</label>
                         <textarea
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
-                          placeholder="Enter mandatory context for this ledger entry..."
+                          placeholder="Add a note for this transaction..."
                           className="w-full bg-zinc-50 border-2 border-transparent rounded-[1.5rem] md:rounded-[2rem] px-6 md:px-8 py-6 md:py-8 text-sm md:text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner min-h-[120px] md:min-h-[140px] resize-none"
                         />
                       </div>
                       <button 
                         type="submit" 
-                        disabled={processing || (!selectedEntity && departmentCode !== 'hospital')} 
+                        disabled={processing || (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
                         className="w-full h-16 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-sm md:text-xl uppercase tracking-[0.4em] rounded-[1.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 md:gap-8 group/submit active:scale-[0.98]"
                       >
                         {processing ? <Loader2 size={24} className="animate-spin md:w-8 md:h-8" /> : (
                           <>
-                            Commit Entry
+                            Save Transaction
                             <ArrowRight size={24} className="md:w-8 md:h-8 group-hover:translate-x-4 transition-transform" />
                           </>
                         )}
@@ -1862,9 +1899,9 @@ export default function CashierStationPage() {
               </div>
               <div>
                 <h2 className="text-4xl md:text-6xl font-[1000] text-zinc-900 uppercase tracking-tighter leading-none">
-                  Live <span className="text-indigo-600">Journal</span>
+                  Live <span className="text-indigo-600">Transactions</span>
                 </h2>
-                <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">Quantum Financial Stream • Real-time Sync</p>
+                <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">Live updates, auto refreshing</p>
               </div>
             </div>
 
@@ -1931,8 +1968,8 @@ export default function CashierStationPage() {
                 className="h-16 bg-white border border-zinc-100 rounded-[1.5rem] px-8 text-[10px] font-black uppercase tracking-widest shadow-xl cursor-pointer"
               >
                 <option value="all">Full Spectrum</option>
-                <option value="income">Credits Only</option>
-                <option value="expense">Debits Only</option>
+                <option value="income">Income Only</option>
+                <option value="expense">Expenses Only</option>
               </select>
 
               <div className="relative group min-w-[240px]">
@@ -1940,7 +1977,7 @@ export default function CashierStationPage() {
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Scan history..."
+                  placeholder="Search history..."
                   className="w-full h-16 bg-white border border-zinc-100 rounded-[1.5rem] pl-16 pr-8 text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-600/20 shadow-xl"
                 />
               </div>
@@ -1954,7 +1991,7 @@ export default function CashierStationPage() {
                   <tr className="bg-zinc-50/50 border-b-2 border-zinc-100 h-28">
                     <th className="px-12 text-left cursor-pointer hover:bg-zinc-100 transition-colors group/h" onClick={() => setSortConfig({key: 'date', direction: sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'asc' : 'desc'})}>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Timestamp</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Date</span>
                         {sortConfig.key === 'date' && (
                           <div className="text-indigo-600 animate-in fade-in zoom-in duration-300">
                             {sortConfig.direction === 'asc' ? <ArrowUp size={12} strokeWidth={3} /> : <ArrowDown size={12} strokeWidth={3} />}
@@ -1963,10 +2000,10 @@ export default function CashierStationPage() {
                       </div>
                     </th>
                     <th className="px-12 text-left">
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Entity Node</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Name</span>
                     </th>
                     <th className="px-12 text-left">
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Protocol</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Type</span>
                     </th>
                     <th className="px-12 text-right cursor-pointer hover:bg-zinc-100 transition-colors group/h" onClick={() => setSortConfig({key: 'amount', direction: sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'asc' : 'desc'})}>
                       <div className="flex items-center justify-end gap-2">
@@ -1975,7 +2012,7 @@ export default function CashierStationPage() {
                             {sortConfig.direction === 'asc' ? <ArrowUp size={12} strokeWidth={3} /> : <ArrowDown size={12} strokeWidth={3} />}
                           </div>
                         )}
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount</span>
                       </div>
                     </th>
                     <th className="px-12 text-right">
@@ -1989,14 +2026,14 @@ export default function CashierStationPage() {
                       <td colSpan={5} className="px-12 py-40 text-center">
                         <div className="flex flex-col items-center gap-8">
                           <div className="w-20 h-20 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin" />
-                          <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.5em]">Synchronizing Nexus...</p>
+                          <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.5em]">Loading...</p>
                         </div>
                       </td>
                     </tr>
                   ) : historyFiltered.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-12 py-40 text-center">
-                        <p className="text-zinc-300 text-sm font-black uppercase tracking-[0.5em]">Zero records found in this dimension</p>
+                        <p className="text-zinc-300 text-sm font-black uppercase tracking-[0.5em]">No transactions found</p>
                       </td>
                     </tr>
                   ) : historyFiltered.map((tx: any) => (
@@ -2006,7 +2043,7 @@ export default function CashierStationPage() {
                         <div className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-2">UTC {new Date(tx.createdAt?.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                       </td>
                       <td className="px-12 py-8">
-                        <div className="text-lg font-[1000] text-zinc-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{tx.patientName || tx.staffName || 'General Nexus'}</div>
+                        <div className="text-lg font-[1000] text-zinc-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{tx.patientName || tx.staffName || 'General'}</div>
                         <div className="text-[9px] font-black text-zinc-400 tracking-[0.3em] uppercase mt-2">{tx.id?.slice(0, 12)}</div>
                       </td>
                       <td className="px-12 py-8">
@@ -2035,7 +2072,59 @@ export default function CashierStationPage() {
                 </tbody>
               </table>
             </div>
-        </div>
+          </div>
+
+          <div className="block md:hidden space-y-4">
+            {historyLoading ? (
+              <div className="py-20 flex flex-col items-center gap-4">
+                <Loader2 size={32} className="animate-spin text-indigo-600" />
+                <p className="text-zinc-400 text-xs font-black uppercase tracking-widest">Loading...</p>
+              </div>
+            ) : historyFiltered.length === 0 ? (
+              <div className="py-20 text-center">
+                <p className="text-zinc-300 text-sm font-black uppercase tracking-widest">No transactions found</p>
+              </div>
+            ) : (
+              historyFiltered.map((tx: any) => (
+                <div
+                  key={tx.id}
+                  onClick={() => setDetailModalTx(tx)}
+                  className="p-5 bg-white border border-zinc-100 rounded-2xl shadow-md hover:border-indigo-200 transition-all cursor-pointer flex flex-col gap-3"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-black text-zinc-900 uppercase tracking-tight">
+                        {tx.patientName || tx.staffName || 'General'}
+                      </h4>
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">
+                        {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
+                      </p>
+                    </div>
+                    <span className={cn(
+                      'text-lg font-[1000] tracking-tighter tabular-nums',
+                      tx.type === 'income' ? 'text-indigo-600' : 'text-rose-500'
+                    )}>
+                      {tx.type === 'income' ? '+' : '-'} {Number(tx.amount || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center pt-2 border-t border-zinc-50">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-zinc-100 text-zinc-600 text-[9px] font-black uppercase tracking-widest">
+                      {tx.categoryName || tx.category}
+                    </span>
+                    <span className={cn(
+                      'px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border',
+                      tx.status === 'approved' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                      tx.status === 'rejected' ? 'bg-rose-50 text-rose-500 border-rose-100' :
+                      'bg-zinc-50 text-zinc-400 border-zinc-100'
+                    )}>
+                      {tx.status || 'pending'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
       </div>
 
       {showProfileModal && selectedEntity && (
@@ -2218,42 +2307,42 @@ export default function CashierStationPage() {
                 <div className="w-20 h-20 md:w-24 md:h-24 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white mb-6 shadow-2xl shadow-indigo-600/20">
                   <FileText size={32} className="md:w-10 md:h-10" strokeWidth={2.5} />
                 </div>
-                <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Audit Dossier</h3>
+                <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Transaction Details</h3>
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">{detailModalTx.id}</p>
               </div>
 
               <div className="space-y-8">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Matrix Time</p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Date</p>
                     <p className="text-sm font-[1000] text-zinc-900">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
                   </div>
                   <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Node Source</p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Department</p>
                     <p className="text-sm font-[1000] text-zinc-900 uppercase">{detailModalTx.departmentCode || 'HQ-MAIN'}</p>
                   </div>
                 </div>
 
                 <div className="p-8 rounded-[2.5rem] bg-indigo-600 shadow-2xl shadow-indigo-600/30 group text-white">
-                  <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-3">Entity Identity</p>
-                  <p className="text-2xl font-[1000] text-white tracking-tight">{detailModalTx.patientName || detailModalTx.staffName || 'General Nexus'}</p>
-                  <p className="text-xs font-black text-white/60 mt-2 font-mono uppercase tracking-widest">{detailModalTx.patientId || detailModalTx.staffId || 'ANONYMOUS_VOID'}</p>
+                  <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-3">Name</p>
+                  <p className="text-2xl font-[1000] text-white tracking-tight">{detailModalTx.patientName || detailModalTx.staffName || 'General'}</p>
+                  <p className="text-xs font-black text-white/60 mt-2 font-mono uppercase tracking-widest">{detailModalTx.patientId || detailModalTx.staffId || 'N/A'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8 px-4">
                   <div>
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Classification</p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Category</p>
                     <p className="text-base font-[1000] text-zinc-900">{detailModalTx.categoryName || detailModalTx.category || 'Undefined'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Magnitude</p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Amount</p>
                     <p className="text-2xl font-[1000] text-zinc-900 tabular-nums">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {detailModalTx.description && (
                   <div className="p-8 rounded-[2.5rem] bg-zinc-50 border-2 border-dashed border-zinc-200">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4 text-center">Context Payload</p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4 text-center">Notes / Description</p>
                     <p className="text-sm font-black text-zinc-600 text-center leading-relaxed italic">
                       "{detailModalTx.description}"
                     </p>

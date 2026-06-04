@@ -165,7 +165,7 @@ export default function HqRehabFinancePage() {
             color="indigo"
           />
           <FinanceCard 
-            label="System Debits" 
+            label="System Expenses" 
             value={summary.totalExpenses} 
             icon={<TrendingDown className="text-rose-600" />} 
             trend="COMMITTED"
@@ -264,8 +264,8 @@ export default function HqRehabFinancePage() {
                     onChange={(e) => setTypeFilter(e.target.value)}
                   >
                     <option value="all">Unified Stream</option>
-                    <option value="income">Credits Only</option>
-                    <option value="expense">Debits Only</option>
+                    <option value="income">Income Only</option>
+                    <option value="expense">Expenses Only</option>
                   </select>
                 </div>
               </div>

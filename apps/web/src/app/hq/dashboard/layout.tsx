@@ -51,10 +51,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Profile', href: '/hq/dashboard/manager/profile', icon: <User size={16} />, roles: ['manager'] },
   { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
   { label: 'Credentials', href: '/hq/dashboard/manager/passwords', icon: <Lock size={16} />, roles: ['manager'] },
-  { label: 'Cashier Station', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
+  { label: 'Home', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
   { label: 'Daily Report', href: '/hq/dashboard/cashier/daily-report', icon: <FileText size={16} />, roles: ['superadmin', 'cashier'] },
-  { label: 'Daily Close', href: '/hq/dashboard/cashier/reconciliation', icon: <Calculator size={16} />, roles: ['cashier'] },
-  { label: 'Transaction History', href: '/hq/dashboard/cashier/history', icon: <History size={16} />, roles: ['cashier'] },
+  { label: 'End of Day', href: '/hq/dashboard/cashier/reconciliation', icon: <Calculator size={16} />, roles: ['cashier'] },
+  { label: 'Transactions', href: '/hq/dashboard/cashier/history', icon: <History size={16} />, roles: ['cashier'] },
   { label: 'Profile', href: '/hq/dashboard/cashier/profile', icon: <User size={16} />, roles: ['cashier'] },
 ];
 
@@ -410,7 +410,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
         <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto scrollbar-hide">
           <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-black/40">
-            System Menu
+            Menu
           </p>
           {navItems.map((item, i) => {
             const matches = navItems
@@ -469,7 +469,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               className="w-full flex items-center justify-center gap-3 py-3 border border-gray-100 text-[10px] font-black uppercase tracking-[0.2em] transition-all bg-white text-gray-400 hover:text-rose-600 hover:bg-rose-50 shadow-sm rounded-xl active:scale-[0.98]"
             >
               <ArrowLeft size={14} />
-              EXIT TO HUB
+              Go Back
             </Link>
           </div>
         </div>
