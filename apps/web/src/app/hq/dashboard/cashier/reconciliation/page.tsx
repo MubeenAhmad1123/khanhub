@@ -82,68 +82,76 @@ export default function ReconciliationAuditPage() {
   return (
     <div className="min-h-screen bg-[#FCFBF8] text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-5">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-5 w-full sm:w-auto">
             <button 
               onClick={() => router.back()}
-              className="p-2.5 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
+              className="p-2.5 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900 flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div>
-              <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-                 Audit Archives
+            <div className="min-w-0">
+              <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3 truncate">
+                 Transaction Records
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Financial Reconciliation Logs</p>
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest truncate">All recorded transactions for review</p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-             <div className="relative group w-full md:w-64">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+             <div className="relative group w-full sm:w-64">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-indigo-600 transition-colors" />
                 <input 
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Filter by date/cashier..."
+                  placeholder="Search by date or name..."
                   className="w-full bg-white border border-zinc-100 rounded-2xl pl-11 pr-4 py-2.5 text-sm font-bold placeholder:text-zinc-200 outline-none focus:border-indigo-500 focus:shadow-xl focus:shadow-indigo-100/50 transition-all"
                 />
              </div>
              <button 
                onClick={() => router.push('/hq/dashboard/cashier/day-close')}
-               className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-900 transition-all active:scale-95 flex items-center gap-2 shadow-2xl shadow-indigo-600/20"
+               className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-900 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-2xl shadow-indigo-600/20 w-full sm:w-auto"
              >
                 <Clock className="w-4 h-4" />
-                Close Day
+                End Day
              </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-10 md:px-8 space-y-12">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex flex-wrap gap-2">
-            {(['all', 'pending', 'verified', 'flagged'] as const).map(s => (
-                <button 
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={cn(
-                    "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95",
-                    statusFilter === s 
-                        ? "bg-zinc-900 text-white border-zinc-900 shadow-xl shadow-zinc-200/50 scale-105" 
-                        : "bg-white border-zinc-100 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50"
-                )}
-                >
-                {s} Records
-                </button>
-            ))}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
+            {(['all', 'pending', 'verified', 'flagged'] as const).map(s => {
+                const labels = {
+                  all: 'All',
+                  pending: 'Pending',
+                  verified: 'Verified',
+                  flagged: 'Flagged'
+                };
+                return (
+                  <button 
+                    key={s}
+                    onClick={() => setStatusFilter(s)}
+                    className={cn(
+                        "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 text-center",
+                        statusFilter === s 
+                            ? "bg-zinc-900 text-white border-zinc-900 shadow-xl shadow-zinc-200/50 scale-105" 
+                            : "bg-white border-zinc-100 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50"
+                    )}
+                  >
+                    {labels[s]}
+                  </button>
+                );
+            })}
             </div>
-            <div className="text-right">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Displaying</p>
-                <p className="text-sm font-black text-zinc-900 leading-none">{filtered.length} Entries Found</p>
+            <div className="text-left sm:text-right">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Showing</p>
+                <p className="text-sm font-black text-zinc-900 leading-none">{filtered.length} Records Found</p>
             </div>
         </div>
 
@@ -241,22 +249,22 @@ export default function ReconciliationAuditPage() {
              </div>
            ))}
 
-           {filtered.length === 0 && (
-             <div className="col-span-full py-60 text-center animate-in fade-in zoom-in-95 duration-700">
-                <div className="w-24 h-24 bg-zinc-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
-                    <History className="w-12 h-12 text-zinc-200" />
-                </div>
-                <h3 className="text-2xl font-black text-zinc-400 uppercase tracking-tighter">Vault is Empty</h3>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-3">No matching archival records were found in this node.</p>
-             </div>
-           )}
-        </div>
-      </main>
+            {filtered.length === 0 && (
+              <div className="col-span-full py-20 sm:py-32 md:py-40 flex flex-col items-center justify-center text-center px-6 animate-in fade-in zoom-in-95 duration-700">
+                 <div className="w-24 h-24 bg-zinc-50 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner">
+                     <History className="w-12 h-12 text-zinc-200" />
+                 </div>
+                 <h3 className="text-2xl font-black text-zinc-400 uppercase tracking-tighter">No Records Found</h3>
+                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-3 max-w-sm leading-relaxed">No transactions match your search.</p>
+              </div>
+            )}
+         </div>
+       </main>
 
-      <footer className="max-w-7xl mx-auto px-8 py-32 text-center">
-         <div className="h-px w-32 bg-zinc-100 mx-auto mb-10" />
-         <p className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-300 italic">End of Reconciled Archives • Secure Audit Node</p>
-      </footer>
+       <footer className="max-w-7xl mx-auto px-8 py-16 sm:py-24 md:py-32 text-center pb-20 sm:pb-32">
+          <div className="h-px w-32 bg-zinc-100 mx-auto mb-8" />
+          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-300 italic">End of records</p>
+       </footer>
     </div>
   );
 }

@@ -357,7 +357,7 @@ export default function DailyReportPage() {
   return (
     <div className="min-h-screen bg-[#FCFBF8] pb-20 print:bg-white print:pb-0 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8 print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
             <button 
               onClick={() => router.back()}
@@ -369,13 +369,13 @@ export default function DailyReportPage() {
               <h1 className="text-2xl font-black text-zinc-900 tracking-tight leading-tight">Daily Report</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">HQ Financial Intelligence</p>
+                <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Today's financial summary</p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative group overflow-hidden rounded-2xl border border-zinc-100 shadow-sm bg-white">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <div className="relative group overflow-hidden rounded-2xl border border-zinc-100 shadow-sm bg-white w-full sm:w-48">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-hover:text-indigo-600 transition-colors z-10" />
               <input 
                 type="text" 
@@ -386,38 +386,40 @@ export default function DailyReportPage() {
                   const parsed = parseDateDMY(e.target.value);
                   if (parsed) setReportDate(parsed.toISOString().split('T')[0]);
                 }}
-                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-zinc-50 border-none rounded-2xl text-sm font-bold text-zinc-900 outline-none transition-all cursor-pointer relative z-0"
+                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-zinc-50 border-none rounded-2xl text-sm font-bold text-zinc-900 outline-none transition-all cursor-pointer relative z-0 w-full"
               />
             </div>
-            <button 
-              onClick={handlePrint}
-              className="px-5 py-2.5 bg-white hover:bg-zinc-50 text-zinc-900 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center gap-2 border border-zinc-100 shadow-sm"
-            >
-              <Printer className="w-4 h-4" />
-              Print
-            </button>
-            <button 
-              onClick={() => setReportOpen(true)}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center gap-2 shadow-md shadow-indigo-600/10 cursor-pointer"
-            >
-              <FileText className="w-4 h-4" />
-              Generate Report
-            </button>
-            
-            {!isDayClosed ? (
+            <div className="grid grid-cols-3 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <button 
-                onClick={() => setShowCloseModal(true)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-zinc-900 text-white rounded-2xl text-sm font-black transition-all shadow-xl shadow-indigo-600/10 active:scale-95 flex items-center gap-2"
+                onClick={handlePrint}
+                className="px-3 sm:px-5 py-2.5 bg-white hover:bg-zinc-50 text-zinc-900 rounded-2xl text-xs sm:text-sm font-black transition-all active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 border border-zinc-100 shadow-sm w-full sm:w-auto"
               >
-                <FileCheck className="w-4 h-4" />
-                Close Day
+                <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="truncate">Print</span>
               </button>
-            ) : (
-                <div className="px-5 py-2.5 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-black flex items-center gap-2 border border-emerald-100 italic">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Day Finalized
+              <button 
+                onClick={() => setReportOpen(true)}
+                className="px-3 sm:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs sm:text-sm font-black transition-all active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 shadow-md shadow-indigo-600/10 cursor-pointer w-full sm:w-auto"
+              >
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="truncate">Generate Report</span>
+              </button>
+              
+              {!isDayClosed ? (
+                <button 
+                  onClick={() => setShowCloseModal(true)}
+                  className="px-3 sm:px-5 py-2.5 bg-indigo-600 hover:bg-zinc-900 text-white rounded-2xl text-xs sm:text-sm font-black transition-all shadow-xl shadow-indigo-600/10 active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 w-full sm:w-auto"
+                >
+                  <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="truncate">End Day</span>
+                </button>
+              ) : (
+                <div className="px-3 sm:px-5 py-2.5 bg-emerald-50 text-emerald-700 rounded-2xl text-[10px] sm:text-sm font-black flex items-center justify-center gap-1.5 border border-emerald-100 italic w-full sm:w-auto">
+                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="truncate">Finalized</span>
                 </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -447,31 +449,31 @@ export default function DailyReportPage() {
             </div>
         )}
 
-        <div className="flex justify-center mb-12 print:hidden">
-          <div className="bg-zinc-100/80 p-1.5 rounded-[2.5rem] flex items-center border border-zinc-200/50 gap-1">
+        <div className="flex justify-center mb-12 print:hidden w-full px-2">
+          <div className="bg-zinc-100/80 p-1.5 rounded-[2.5rem] flex items-center border border-zinc-200/50 gap-1 w-full sm:w-auto max-w-md">
             <button 
               onClick={() => setViewMode('summary')}
               className={cn(
-                "flex items-center gap-2.5 px-8 py-3 rounded-[2rem] text-sm font-black transition-all whitespace-nowrap",
+                "flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 rounded-[2rem] text-sm font-black transition-all whitespace-nowrap flex-1 sm:flex-initial",
                 viewMode === 'summary' 
                   ? "bg-white text-zinc-900 shadow-xl shadow-zinc-200/50 scale-100" 
                   : "text-zinc-400 hover:text-zinc-900 hover:bg-white/50"
               )}
             >
               <LayoutDashboard className="w-4 h-4" />
-              Insight View
+              Summary View
             </button>
             <button 
               onClick={() => setViewMode('detail')}
               className={cn(
-                "flex items-center gap-2.5 px-8 py-3 rounded-[2rem] text-sm font-black transition-all whitespace-nowrap",
+                "flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 rounded-[2rem] text-sm font-black transition-all whitespace-nowrap flex-1 sm:flex-initial",
                 viewMode === 'detail' 
                   ? "bg-white text-zinc-900 shadow-xl shadow-zinc-200/50 scale-100" 
                   : "text-zinc-400 hover:text-zinc-900 hover:bg-white/50"
               )}
             >
               <List className="w-4 h-4" />
-              Raw Ledger
+              Full Ledger
             </button>
           </div>
         </div>
@@ -485,7 +487,7 @@ export default function DailyReportPage() {
                     <TrendingUp className="w-6 h-6 text-emerald-600" />
                    </div>
                 </div>
-                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Income</h3>
+                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Money In</h3>
                 <p className="text-3xl font-black text-zinc-900 tracking-tight">PKR {stats.totalIncome.toLocaleString()}</p>
                 <div className="mt-4 flex items-center gap-1.5">
                    <div className="h-1 w-full bg-zinc-50 rounded-full overflow-hidden">
@@ -500,7 +502,7 @@ export default function DailyReportPage() {
                     <TrendingDown className="w-6 h-6 text-rose-600" />
                    </div>
                 </div>
-                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Expenses</h3>
+                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Money Out</h3>
                 <p className="text-3xl font-black text-zinc-900 tracking-tight">PKR {stats.totalExpense.toLocaleString()}</p>
                 <div className="mt-4 flex items-center gap-1.5">
                    <div className="h-1 w-full bg-zinc-50 rounded-full overflow-hidden">
@@ -513,17 +515,17 @@ export default function DailyReportPage() {
                 <div className="absolute top-0 right-0 p-4 opacity-20">
                     <Wallet className="w-20 h-20 text-white" />
                 </div>
-                <h3 className="text-sm font-black text-indigo-200 uppercase tracking-widest mb-1">Net Flow Balance</h3>
+                <h3 className="text-sm font-black text-indigo-200 uppercase tracking-widest mb-1">Net Balance</h3>
                 <p className="text-4xl font-black text-white tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
-                <div className="mt-6 flex items-center gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-indigo-200/60 uppercase tracking-widest">Expected Cash</span>
-                    <span className="text-white font-black">PKR {stats.cashExpected.toLocaleString()}</span>
+                <div className="mt-6 flex items-center gap-3 sm:gap-6 border-t border-white/10 pt-6">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 uppercase tracking-widest block truncate">Cash Expected</span>
+                    <span className="text-white text-sm sm:text-base font-black truncate block">PKR {stats.cashExpected.toLocaleString()}</span>
                   </div>
-                  <div className="h-8 w-[1px] bg-white/20" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-indigo-200/60 uppercase tracking-widest">Digital/Bank</span>
-                    <span className="text-white font-black">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
+                  <div className="w-[1px] h-8 bg-white/20 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 uppercase tracking-widest block truncate">Digital / Bank</span>
+                    <span className="text-white text-sm sm:text-base font-black truncate block">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -534,9 +536,9 @@ export default function DailyReportPage() {
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-lg font-black text-zinc-900 flex items-center gap-3">
                     <div className="w-2 h-8 bg-emerald-500 rounded-full" />
-                    Income Streams
+                    Income
                   </h2>
-                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.income).length} Categories</span>
+                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.income).length} items</span>
                 </div>
                  <div className="space-y-3">
                   {Object.entries(stats.categoryBreakdown.income).map(([cat, data]) => (
@@ -591,9 +593,9 @@ export default function DailyReportPage() {
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-lg font-black text-zinc-900 flex items-center gap-3">
                     <div className="w-2 h-8 bg-rose-500 rounded-full" />
-                    Operating Expenses
+                    Expenses
                   </h2>
-                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.expense).length} Categories</span>
+                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.expense).length} items</span>
                 </div>
                 <div className="space-y-3">
                   {Object.entries(stats.categoryBreakdown.expense).map(([cat, data]) => (
@@ -645,9 +647,9 @@ export default function DailyReportPage() {
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-[3rem] border border-zinc-100 shadow-sm">
-                <h2 className="text-lg font-black text-zinc-900 mb-8 px-2">Cash Flow by Department</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[3rem] border border-zinc-100 shadow-sm">
+                <h2 className="text-lg font-black text-zinc-900 mb-8 px-2">Department Breakdown</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {Object.entries(stats.deptTotals).map(([dept, totals]) => (
                         <div key={dept} className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100 relative group transition-all hover:bg-white hover:shadow-xl hover:shadow-zinc-200/50">
                             <div className="flex justify-between items-start mb-6">
