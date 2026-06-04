@@ -433,14 +433,23 @@ export default function ManagerReportsPage() {
     return 0;
   };
 
-  // Process and sort staff listings
-  const processedStaff = useMemo(() => {
-    let result = staff.map(m => {
+  // Ranked staff (overall top, without filters)
+  const rankedStaff = useMemo(() => {
+    const withStats = staff.map(m => {
       const stats = getStaffStats(m);
       return { ...m, stats };
     });
+    withStats.sort((a, b) =>
+      b.stats.totalPoints - a.stats.totalPoints ||
+      getSeniorityRank(b.designation || '') - getSeniorityRank(a.designation || ''));
+    return withStats;
+  }, [staff, logs]);
 
-    // Apply real-time filters
+  // Filtered staff for table and card display
+  const filteredStaff = useMemo(() => {
+    let result = rankedStaff;
+
+    // Apply filters
     result = result.filter(r => {
       const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
         (r.designation || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -450,15 +459,15 @@ export default function ManagerReportsPage() {
       return matchesSearch && matchesDept && matchesDesig;
     });
 
-    // Apply sorting
-    if (sortBy === 'points') {
-      result.sort((a, b) => b.stats.totalPoints - a.stats.totalPoints || getSeniorityRank(b.designation || '') - getSeniorityRank(a.designation || ''));
-    } else {
-      result.sort((a, b) => getSeniorityRank(b.designation || '') - getSeniorityRank(a.designation || '') || b.stats.totalPoints - a.stats.totalPoints);
+    // Apply sorting for seniority if selected
+    if (sortBy === 'seniority') {
+      result = [...result].sort((a, b) =>
+        getSeniorityRank(b.designation || '') - getSeniorityRank(a.designation || '') ||
+        b.stats.totalPoints - a.stats.totalPoints);
     }
 
     return result;
-  }, [staff, logs, search, deptFilter, desigFilter, sortBy]);
+  }, [rankedStaff, search, deptFilter, desigFilter, sortBy]);
 
   // Designations extractor for the drop-down filter
   const designations = useMemo(() => {
@@ -469,20 +478,8 @@ export default function ManagerReportsPage() {
     return Array.from(set).sort();
   }, [staff]);
 
-  // Podium Positions (Top 3 overall)
-  const podiumStaff = useMemo(() => {
-    // We get the overall top 3 active staff in the list before specific visual search filters are applied
-    const overallRanked = staff.map(m => {
-      const stats = getStaffStats(m);
-      return { ...m, stats };
-    }).sort((a, b) => b.stats.totalPoints - a.stats.totalPoints);
-
-    return {
-      first: overallRanked[0] || null,
-      second: overallRanked[1] || null,
-      third: overallRanked[2] || null,
-    };
-  }, [staff, logs]);
+  // Podium Positions are derived from rankedStaff (top 3 overall)
+  // No separate useMemo needed; we slice rankedStaff later.
 
   const handleOpenStaffModal = (member: any) => {
     setViewingStaff(member);
@@ -527,7 +524,7 @@ export default function ManagerReportsPage() {
     );
   }
 
-  const { first, second, third } = podiumStaff;
+  const [first, second, third] = rankedStaff.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans p-3 sm:p-6 md:p-8 pb-32 max-w-full overflow-x-hidden print:bg-white print:p-0" id="reports-print">
@@ -787,7 +784,7 @@ export default function ManagerReportsPage() {
               <h3 className="text-slate-900 font-extrabold text-sm sm:text-base">Monthly Scoreboard</h3>
             </div>
             <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full shrink-0">
-              {processedStaff.length} staff member{processedStaff.length !== 1 ? 's' : ''}
+              {filteredStaff.length} staff member{filteredStaff.length !== 1 ? 's' : ''}
             </span>
           </div>
 
@@ -804,7 +801,7 @@ export default function ManagerReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {processedStaff.map((member, index) => {
+                {filteredStaff.map((member, index) => {
                   const { stats } = member;
                   const hasFines = stats.finesTotal > 0;
                   
@@ -895,7 +892,7 @@ export default function ManagerReportsPage() {
 
           {/* CARD VIEW (Mobile) */}
           <div className="md:hidden divide-y divide-slate-100 w-full">
-            {processedStaff.map((member, index) => {
+            {filteredStaff.map((member, index) => {
               const { stats } = member;
               const hasFines = stats.finesTotal > 0;
               return (
@@ -976,7 +973,7 @@ export default function ManagerReportsPage() {
             })}
           </div>
 
-          {processedStaff.length === 0 && (
+          {filteredStaff.length === 0 && (
             <div className="flex flex-col items-center justify-center p-16 text-center border-t border-slate-100">
               <AlertTriangle className="text-slate-300 w-12 h-12 mb-3" />
               <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">No staff members found</p>
