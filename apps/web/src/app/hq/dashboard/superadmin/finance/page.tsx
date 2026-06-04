@@ -23,6 +23,7 @@ import {
   DollarSign,
   PieChart,
   ArrowRight,
+  FileText,
 } from "lucide-react";
 import {
   fetchFinanceHubData,
@@ -35,6 +36,7 @@ import {
 } from "@/lib/hq/superadmin/finance";
 import { FinanceHub } from "@/components/hq/finance/FinanceHub";
 import { RemainingFlowModal } from "@/components/hq/superadmin/RemainingFlowModal";
+import { DailyFinanceReportPrintable } from "@/components/hq/finance/DailyFinanceReportPrintable";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import AmountBreakdownModal from "@/components/hq/finance/AmountBreakdownModal";
@@ -287,6 +289,10 @@ export default function SuperadminFinancePage() {
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [remainingsOpen, setRemainingsOpen] = useState(false);
+
+  // ── Report Modal State ────────────────────────────────────────────────────
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTransactions, setReportTransactions] = useState<any[]>([]);
 
   const todayStr = todayLocalDateString();
 
@@ -671,6 +677,21 @@ export default function SuperadminFinancePage() {
                 </div>
               )}
 
+              {/* Generate Report Button */}
+              <div className="flex items-center">
+                <button
+                  onClick={() => {
+                    const allTxs = dailyResult.departments.flatMap((d) => d.transactions);
+                    setReportTransactions(allTxs);
+                    setReportOpen(true);
+                  }}
+                  className="px-8 py-4.5 rounded-[2rem] bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 cursor-pointer shadow-lg shadow-indigo-600/20 active:scale-95 group"
+                >
+                  <FileText size={16} className="group-hover:scale-110 transition-transform" />
+                  Generate Report
+                </button>
+              </div>
+
               <div className="ml-auto grid grid-cols-2 lg:grid-cols-4 gap-12">
                 {dailyResult.departments.filter(d => d.txCount > 0).map((dept) => {
                   const pct = dailyResult.grandIncome > 0
@@ -811,12 +832,22 @@ export default function SuperadminFinancePage() {
       )}
 
       {breakdownOpen && (
-  <AmountBreakdownModal
-    isOpen={breakdownOpen}
-    onClose={() => setBreakdownOpen(false)}
-    departments={dailyResult?.departments ?? []}
-  />
-)}
+        <AmountBreakdownModal
+          isOpen={breakdownOpen}
+          onClose={() => setBreakdownOpen(false)}
+          departments={dailyResult?.departments ?? []}
+        />
+      )}
+
+      {/* Daily Finance Report Printable Overlay */}
+      {reportOpen && dailyResult && (
+        <DailyFinanceReportPrintable
+          date={dailyResult.date}
+          transactions={reportTransactions}
+          onClose={() => setReportOpen(false)}
+          generatingUser="Superadmin"
+        />
+      )}
 {/* Decorative glows */}
       <div className="fixed -top-96 -left-96 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[200px] -z-10 pointer-events-none" />
       <div className="fixed -bottom-96 -right-96 w-[1000px] h-[1000px] bg-primary/10 rounded-full blur-[200px] -z-10 pointer-events-none" />

@@ -35,11 +35,13 @@ import {
   TrendingDown, 
   TrendingUp,
   Wallet,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { DailyFinanceReportPrintable } from '@/components/hq/finance/DailyFinanceReportPrintable';
 
 // Shared with main cashier page
 const DEPARTMENTS = [
@@ -78,6 +80,7 @@ export default function DailyReportPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Settlement States
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -392,6 +395,13 @@ export default function DailyReportPage() {
             >
               <Printer className="w-4 h-4" />
               Print
+            </button>
+            <button 
+              onClick={() => setReportOpen(true)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center gap-2 shadow-md shadow-indigo-600/10 cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              Generate Report
             </button>
             
             {!isDayClosed ? (
@@ -853,6 +863,16 @@ export default function DailyReportPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Daily Finance Report Printable Overlay */}
+      {reportOpen && (
+        <DailyFinanceReportPrintable
+          date={reportDate}
+          transactions={transactions}
+          onClose={() => setReportOpen(false)}
+          generatingUser={session?.name || session?.displayName || 'Cashier'}
+        />
       )}
     </div>
   );

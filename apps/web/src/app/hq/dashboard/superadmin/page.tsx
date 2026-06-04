@@ -14,6 +14,8 @@ import { fetchRemainingBalances } from '@/lib/hq/superadmin/remainings';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
 import { RemainingFlowModal } from '@/components/hq/superadmin/RemainingFlowModal';
+import { TransactionsFlowModal } from '@/components/hq/superadmin/TransactionsFlowModal';
+import { DailyFinanceReportPrintable } from '@/components/hq/finance/DailyFinanceReportPrintable';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -54,6 +56,11 @@ export default function HqSuperadminPage() {
   const [remainingsTotal, setRemainingsTotal] = useState<number>(0);
   const [remainingsLoading, setRemainingsLoading] = useState(true);
   const [remainingsOpen, setRemainingsOpen] = useState(false);
+
+  // ── Transactions flow state ───────────────────────────────────────────────
+  const [txOpen, setTxOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTransactions, setReportTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -117,10 +124,10 @@ export default function HqSuperadminPage() {
         title: 'Transactions today',
         value: stats?.txAmountToday ?? 0,
         subtitle: 'Combined amount',
-        href: '/hq/dashboard/superadmin/finance',
         icon: CreditCard,
         tone: 'primary' as const,
         format: 'pkr' as const,
+        onClick: () => setTxOpen(true),
       },
       {
         title: 'Outstanding Debts',
@@ -209,6 +216,28 @@ export default function HqSuperadminPage() {
           <RemainingFlowModal
             open={remainingsOpen}
             onClose={() => setRemainingsOpen(false)}
+          />
+        )}
+
+        {/* ── Transactions Flow Modal ────────────────────────────────────────── */}
+        {txOpen && (
+          <TransactionsFlowModal
+            open={txOpen}
+            onClose={() => setTxOpen(false)}
+            onGenerateReport={(txs) => {
+              setReportTransactions(txs);
+              setReportOpen(true);
+            }}
+          />
+        )}
+
+        {/* ── Daily Finance Report Printable Overlay ─────────────────────────── */}
+        {reportOpen && (
+          <DailyFinanceReportPrintable
+            date={new Date().toISOString().split('T')[0]}
+            transactions={reportTransactions}
+            onClose={() => setReportOpen(false)}
+            generatingUser="Superadmin"
           />
         )}
 
