@@ -6,10 +6,10 @@ interface StaffProfileReportProps {
   staff: StaffProfile;
 }
 
-const formatDate = (val: any): string => {
+const formatDate = (val: unknown): string => {
   if (!val) return '—';
   try {
-    const d = toDate(val);
+    const d = toDate(val as unknown);
     if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '—';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');

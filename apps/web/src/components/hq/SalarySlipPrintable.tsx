@@ -46,7 +46,7 @@ export function SalarySlipPrintable({ slip, showActionControls = false }: Props)
     const d = slip.paidAt || slip.approvedAt;
     if (!d) return '—';
     try {
-      const dateObj = toDate(d);
+      const dateObj = toDate(d as unknown);
       if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return '—';
       return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
     } catch (e) {
