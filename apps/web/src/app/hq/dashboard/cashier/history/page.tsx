@@ -177,43 +177,45 @@ export default function CashierHistoryPage() {
   return (
     <div className="min-h-screen bg-[#FCFBF8] text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-5">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-5 w-full sm:w-auto">
             <button 
               onClick={() => router.back()}
-              className="p-2.5 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900"
+              className="p-2.5 hover:bg-zinc-50 rounded-2xl transition-all active:scale-95 text-zinc-400 hover:text-zinc-900 flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div>
-              <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-                 <History className="w-6 h-6 text-indigo-600" />
-                 Master Ledger
+            <div className="min-w-0">
+              <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3 truncate">
+                 <History className="w-6 h-6 text-indigo-600 flex-shrink-0" />
+                 Transaction History
               </h1>
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-0.5">Global Audit View</p>
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-0.5 truncate">All transactions across all departments</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-             <div className="relative group w-full md:w-64">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-indigo-600 transition-colors" />
-                <input 
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search archives..."
-                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-11 pr-4 py-2.5 text-sm font-bold placeholder:text-zinc-400 outline-none focus:border-indigo-500/50 focus:bg-white transition-all"
-                />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+             <div className="flex items-center gap-2 w-full sm:w-auto">
+               <div className="relative group w-full sm:w-64">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-indigo-600 transition-colors" />
+                  <input 
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search transactions..."
+                    className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-11 pr-4 py-2.5 text-sm font-bold placeholder:text-zinc-400 outline-none focus:border-indigo-500/50 focus:bg-white transition-all"
+                  />
+               </div>
+               <button 
+                 onClick={() => fetchData()}
+                 className="p-2.5 bg-zinc-50 hover:bg-zinc-100 rounded-2xl text-zinc-400 hover:text-zinc-900 transition-all active:rotate-180 flex-shrink-0"
+               >
+                  <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
+               </button>
              </div>
              <button 
-               onClick={() => fetchData()}
-               className="p-2.5 bg-zinc-50 hover:bg-zinc-100 rounded-2xl text-zinc-400 hover:text-zinc-900 transition-all active:rotate-180"
-             >
-                <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
-             </button>
-             <button 
                onClick={() => window.print()}
-               className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-900 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-indigo-600/10"
+               className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-900 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/10 w-full sm:w-auto"
              >
                 <Printer className="w-4 h-4" />
                 Print
@@ -223,12 +225,12 @@ export default function CashierHistoryPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 md:px-8 space-y-8">
-         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total Inflow', val: stats.income, color: 'text-emerald-600', border: 'border-emerald-100', bg: 'bg-emerald-50' },
-              { label: 'Total Outflow', val: stats.expense, color: 'text-rose-600', border: 'border-rose-100', bg: 'bg-rose-50' },
-              { label: 'Pending Items', val: stats.pending, color: 'text-amber-600', border: 'border-amber-100', bg: 'bg-amber-50', raw: true },
-              { label: 'Net Liquidity', val: stats.net, color: 'text-indigo-600', border: 'border-indigo-100', bg: 'bg-indigo-50' }
+              { label: 'Total Money In', val: stats.income, color: 'text-emerald-600', border: 'border-emerald-100', bg: 'bg-emerald-50' },
+              { label: 'Total Money Out', val: stats.expense, color: 'text-rose-600', border: 'border-rose-100', bg: 'bg-rose-50' },
+              { label: 'Pending', val: stats.pending, color: 'text-amber-600', border: 'border-amber-100', bg: 'bg-amber-50', raw: true },
+              { label: 'Net Balance', val: stats.net, color: 'text-indigo-600', border: 'border-indigo-100', bg: 'bg-indigo-50' }
             ].map((s, idx) => (
               <div key={idx} className={cn("bg-white border rounded-[2.5rem] p-6 transition-all hover:shadow-xl hover:shadow-zinc-200 hover:translate-y-[-2px]", s.border)}>
                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{s.label}</p>
@@ -240,59 +242,89 @@ export default function CashierHistoryPage() {
          </div>
 
         <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-6 space-y-6">
-           <div className="flex flex-wrap items-center gap-4">
-              <div className="flex bg-zinc-50 p-1.5 rounded-2xl border border-zinc-100 overflow-hidden shrink-0">
-                 {(['today', 'range', 'all'] as DateMode[]).map(m => (
-                   <button 
-                     key={m}
-                     onClick={() => setDateMode(m)}
-                     className={cn(
-                       "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                       dateMode === m ? "bg-white text-zinc-900 shadow-xl border border-zinc-100" : "text-zinc-400 hover:text-zinc-900"
-                     )}
-                   >
-                     {m}
-                   </button>
-                 ))}
+           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="flex overflow-x-auto whitespace-nowrap bg-zinc-50 p-1.5 rounded-2xl border border-zinc-100 shrink-0 max-w-full scrollbar-none">
+                 {(['today', 'range', 'all'] as DateMode[]).map(m => {
+                   const labels = {
+                     today: 'Today',
+                     range: 'Date Range',
+                     all: 'All Time'
+                   };
+                   return (
+                     <button 
+                       key={m}
+                       onClick={() => setDateMode(m)}
+                       className={cn(
+                         "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
+                         dateMode === m ? "bg-white text-zinc-900 shadow-xl border border-zinc-100" : "text-zinc-400 hover:text-zinc-900"
+                       )}
+                     >
+                       {labels[m]}
+                     </button>
+                   );
+                 })}
               </div>
 
-              <div className="h-8 w-[1px] bg-white/10 hidden lg:block" />
+              <div className="h-8 w-[1px] bg-zinc-100 hidden lg:block" />
 
-              <div className="flex flex-wrap gap-2">
-                 {DEPARTMENTS.concat([{ code: 'all', label: 'All Depts' } as any]).map(d => (
-                   <button 
-                     key={d.code}
-                     onClick={() => setDeptFilter(d.code as any)}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
-                       deptFilter === d.code ? "bg-indigo-600 text-white border-indigo-600" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-900"
-                     )}
-                   >
-                     {d.code === 'all' ? 'All' : d.code}
-                   </button>
-                 ))}
+              <div className="relative w-full overflow-hidden">
+                <div className="flex overflow-x-auto whitespace-nowrap pb-1 gap-2 scrollbar-none w-full pr-10">
+                   {DEPARTMENTS.concat([{ code: 'all', label: 'All Depts' } as any]).map(d => {
+                     const labels: Record<string, string> = {
+                       all: 'All',
+                       rehab: 'Rehab',
+                       spims: 'Spins',
+                       hospital: 'Hospital',
+                       'sukoon-center': 'Sukoon Center',
+                       welfare: 'Welfare',
+                       'job-center': 'Job Center'
+                     };
+                     return (
+                       <button 
+                         key={d.code}
+                         onClick={() => setDeptFilter(d.code as any)}
+                         className={cn(
+                           "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap shrink-0",
+                           deptFilter === d.code ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-900"
+                         )}
+                       >
+                         {labels[d.code] || d.code}
+                       </button>
+                     );
+                   })}
+                </div>
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent sm:hidden" />
               </div>
            </div>
 
-           <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/5">
-              <div className="flex flex-wrap gap-2">
-                 {(['all', 'pending', 'approved', 'rejected'] as StatusFilter[]).map(s => (
-                   <button 
-                     key={s}
-                     onClick={() => setStatusFilter(s)}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
-                       statusFilter === s ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/10" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-900"
-                     )}
-                   >
-                     {s.replace('_', ' ')}
-                   </button>
-                 ))}
+           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-zinc-50">
+              <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
+                  {(['all', 'pending', 'approved', 'rejected'] as StatusFilter[]).map(s => {
+                    const labels: Record<StatusFilter, string> = {
+                      all: 'All',
+                      pending: 'Pending',
+                      pending_cashier: 'Pending Cashier',
+                      approved: 'Approved',
+                      rejected: 'Rejected'
+                    };
+                    return (
+                      <button 
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all text-center whitespace-nowrap flex-1 sm:flex-initial",
+                          statusFilter === s ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/10" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-900"
+                        )}
+                      >
+                        {labels[s]}
+                      </button>
+                    );
+                  })}
               </div>
 
               {dateMode === 'range' && (
-                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ml-auto">
-                   <div className="relative group">
+                <div className="flex items-center justify-between sm:justify-end gap-3 animate-in fade-in slide-in-from-left-2 duration-300 w-full sm:w-auto">
+                   <div className="relative group flex-1 sm:flex-initial">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 group-within:text-indigo-600 transition-colors" />
                       <input
                         type="text"
@@ -303,11 +335,11 @@ export default function CashierHistoryPage() {
                           const parsed = parseDateDMY(e.target.value);
                           if (parsed) setDateFrom(parsed.toISOString().split('T')[0]);
                         }}
-                        className="bg-zinc-50 border border-zinc-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-zinc-900 outline-none focus:border-indigo-500/40"
+                        className="bg-zinc-50 border border-zinc-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-zinc-900 outline-none focus:border-indigo-500/40 w-full"
                       />
                    </div>
-                   <span className="text-zinc-300 font-black uppercase text-[10px]">to</span>
-                   <div className="relative group">
+                   <span className="text-zinc-300 font-black uppercase text-[10px] shrink-0">to</span>
+                   <div className="relative group flex-1 sm:flex-initial">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 group-within:text-indigo-600 transition-colors" />
                       <input
                         type="text"
@@ -318,7 +350,7 @@ export default function CashierHistoryPage() {
                           const parsed = parseDateDMY(e.target.value);
                           if (parsed) setDateTo(parsed.toISOString().split('T')[0]);
                         }}
-                        className="bg-zinc-50 border border-zinc-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-zinc-900 outline-none focus:border-indigo-500/40"
+                        className="bg-zinc-50 border border-zinc-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-zinc-900 outline-none focus:border-indigo-500/40 w-full"
                       />
                    </div>
                 </div>
@@ -326,15 +358,15 @@ export default function CashierHistoryPage() {
            </div>
         </div>
 
-        <div className="bg-white border border-zinc-100 rounded-[3rem] overflow-hidden shadow-2xl shadow-zinc-200/50 relative">
+        <div className="hidden md:block bg-white border border-zinc-100 rounded-[3rem] overflow-hidden shadow-2xl shadow-zinc-200/50 relative">
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-zinc-50 border-b border-zinc-100">
-                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Transaction Date</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Source Dept</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Entity / Account</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Description</th>
+                  <th className="sticky left-0 bg-zinc-50 z-10 px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Department</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Name / Account</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Details</th>
                   <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-center">Status</th>
                   <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Amount</th>
                 </tr>
@@ -342,7 +374,7 @@ export default function CashierHistoryPage() {
               <tbody className="divide-y divide-zinc-50">
                 {filtered.map((tx) => (
                   <tr key={tx.id} className="group hover:bg-zinc-50/50 transition-colors duration-150">
-                    <td className="px-8 py-6">
+                    <td className="sticky left-0 bg-white group-hover:bg-zinc-50/50 transition-colors z-10 px-8 py-6 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">
                        <div className="text-sm font-black text-zinc-900">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</div>
                        <div className="text-[10px] font-black text-zinc-400 uppercase mt-1">
                           {tx.createdAt?.seconds ? new Date(tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ref: Auto'}
@@ -413,8 +445,70 @@ export default function CashierHistoryPage() {
           </div>
         </div>
 
-        <div className="text-center py-10 opacity-30">
-           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">End of Financial Record • {filtered.length} Entries</p>
+        <div className="block md:hidden space-y-4 print:hidden">
+          {filtered.length === 0 ? (
+            <div className="bg-white rounded-[2rem] border border-zinc-100 p-10 text-center shadow-sm">
+              <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-100">
+                 <History className="w-8 h-8 text-zinc-300" />
+              </div>
+              <p className="text-zinc-400 font-bold italic">No records match your current filters.</p>
+            </div>
+          ) : (
+            filtered.map((tx) => (
+              <div key={tx.id} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm flex flex-col gap-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-sm font-black text-zinc-900 capitalize">
+                      {tx.patientName || tx.staffName || 'General Account'}
+                    </h3>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">
+                      ID: {tx.patientId || tx.staffId || 'MASTER'}
+                    </p>
+                  </div>
+                  <span className={cn(
+                    "text-base font-[1000] tracking-tight",
+                    tx.type === 'income' ? "text-emerald-600" : "text-rose-600"
+                  )}>
+                    {tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center pt-3 border-t border-zinc-50">
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-bold text-zinc-600 leading-normal">
+                      {tx.categoryName || tx.category}: {tx.description || tx.note || 'Internal Flow'}
+                    </p>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+                      {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
+                    <span className={cn(
+                      "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                      tx.dept === 'rehab' ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
+                      tx.dept === 'spims' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                      tx.dept === 'hospital' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                      "bg-zinc-50 text-zinc-600 border-zinc-100"
+                    )}>
+                      {tx.departmentName || tx.dept}
+                    </span>
+                    <span className={cn(
+                      "px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
+                      tx.status === 'approved' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                      tx.status?.includes('pending') ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                      "bg-rose-50 text-rose-600 border border-rose-100"
+                    )}>
+                      {tx.status || 'pending'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="text-center py-10 pb-20 sm:pb-32 opacity-40">
+           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Showing {filtered.length} records</p>
         </div>
       </main>
 
