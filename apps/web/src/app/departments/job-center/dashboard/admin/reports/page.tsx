@@ -91,6 +91,12 @@ export default function AdminReportsPage() {
         return map;
       };
 
+      // Seekers fees & commissions breakdown
+      const seekerFeesList = txns.filter((t: any) => t.category === 'seeker_fee' || t.category === 'registration');
+      const commissionsList = txns.filter((t: any) => t.category === 'commission_30_percent' || t.category?.includes('commission'));
+      const totalSeekerFeesCollected = seekerFeesList.reduce((sum, t: any) => sum + (t.amount || 0), 0);
+      const totalCommissionsCollected = commissionsList.reduce((sum, t: any) => sum + (t.amount || 0), 0);
+
       setReportData({
         txns,
         income,
@@ -102,6 +108,10 @@ export default function AdminReportsPage() {
         expenseByCategory: byCategory(expense),
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
+        seekerFeesList,
+        commissionsList,
+        totalSeekerFeesCollected,
+        totalCommissionsCollected
       });
 
       setGenerated(true);
@@ -186,7 +196,7 @@ export default function AdminReportsPage() {
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">Job Center</h2>
+              <h2 className="text-2xl font-black text-gray-900">Khan Hub Job Center</h2>
               <p className="text-lg font-bold text-teal-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
@@ -206,7 +216,7 @@ export default function AdminReportsPage() {
               <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
                 <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-600'}`} />
                 <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
-                <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-700'}`}>{formatPKR(reportData.netBalance)}</div>
+                <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-600'}`}>{formatPKR(reportData.netBalance)}</div>
               </div>
             </div>
 
@@ -216,7 +226,7 @@ export default function AdminReportsPage() {
               </div>
             ) : (
               <>
-                {/* Income Breakdown */}
+                {/* Income/Expense Breakdown */}
                 {Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
@@ -243,7 +253,6 @@ export default function AdminReportsPage() {
                   </div>
                 )}
 
-                {/* Expense Breakdown */}
                 {Object.keys(reportData.expenseByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown</h3>
@@ -267,6 +276,55 @@ export default function AdminReportsPage() {
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {/* Job Seeker & Employer Placement Breakdown */}
+                {((reportData.seekerFeesList && reportData.seekerFeesList.length > 0) || (reportData.commissionsList && reportData.commissionsList.length > 0)) && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-orange-500" /> Seeker Registrations & Placement Commissions
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Seeker Fees Collected</div>
+                        <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalSeekerFeesCollected)}</div>
+                      </div>
+                      <div className="bg-green-50 border border-green-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Placement Commissions</div>
+                        <div className="text-xl font-black text-green-800">{formatPKR(reportData.totalCommissionsCollected)}</div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 text-gray-600">
+                          <tr>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Client / Candidate Name</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Category / Description</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Date</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Amount Paid</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-150">
+                          {reportData.seekerFeesList.map((t: any) => (
+                            <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{t.seekerName || '—'}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-orange-700 font-bold">Job Seeker Registration Fee</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900 font-black">{formatPKR(t.amount)}</td>
+                            </tr>
+                          ))}
+                          {reportData.commissionsList.map((t: any) => (
+                            <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{t.seekerName || '—'}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-green-700 font-bold">Placement Commission ({t.description || 'Employer Payment'})</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900 font-black">{formatPKR(t.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
@@ -311,4 +369,3 @@ export default function AdminReportsPage() {
     </div>
   );
 }
-

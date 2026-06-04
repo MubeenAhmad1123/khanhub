@@ -51,7 +51,7 @@ export default function SuperAdminReportsPage() {
 
       // === FINANCIAL TRANSACTIONS ===
       const txnQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'spims_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -62,7 +62,7 @@ export default function SuperAdminReportsPage() {
 
       // Pending count
       const pendingQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'spims_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'pending')
@@ -82,13 +82,13 @@ export default function SuperAdminReportsPage() {
       };
 
       // === STAFF SALARY ===
-      const staffSnap = await getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)));
+      const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
+      const finesSnap = await getDocs(query(collection(db, 'spims_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
-      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'),
+      const attendanceSnap = await getDocs(query(collection(db, 'spims_attendance'),
         where('date', '>=', `${monthStr}-01`),
         where('date', '<=', `${monthStr}-31`),
         where('status', '==', 'absent')
@@ -113,16 +113,45 @@ export default function SuperAdminReportsPage() {
 
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
-      // === PATIENTS ===
-      const activePatientsSnap = await getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
-      const totalActivePatients = activePatientsSnap.size;
+      // === STUDENTS ===
+      const activeStudentsSnap = await getDocs(query(collection(db, 'spims_students'), where('isActive', '==', true)));
+      const students = activeStudentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      const totalActiveStudents = activeStudentsSnap.size;
 
       const newAdmissionsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'),
+        collection(db, 'spims_students'),
         where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
         where('admissionDate', '<=', Timestamp.fromDate(lastDay))
       ));
       const newAdmissions = newAdmissionsSnap.size;
+
+      // === STUDENT FEES BREAKDOWN ===
+      const feesSnap = await getDocs(collection(db, 'spims_fees'));
+      const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
+      const monthFees = allFees.filter(fee => {
+        if (fee.status !== 'approved') return false;
+        const feeDate = fee.date?.toDate?.() ? fee.date.toDate() : new Date(fee.date || 0);
+        return feeDate.getFullYear() === selectedYear && feeDate.getMonth() === selectedMonth;
+      });
+
+      const studentFeesBreakdown = students.map(student => {
+        const studentPayments = monthFees.filter(f => f.studentId === student.id);
+        const amountPaidThisMonth = studentPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        return {
+          id: student.id,
+          name: student.name,
+          rollNo: student.rollNo || student.serialNumber || '—',
+          course: student.course || '—',
+          monthlyFee: Number(student.monthlyFee || 0),
+          totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
+          amountPaidThisMonth,
+          overallRemaining: Number(student.remaining ?? student.remainingBalance ?? 0)
+        };
+      });
+
+      const totalStudentFeesCollectedThisMonth = studentFeesBreakdown.reduce((sum, s) => sum + s.amountPaidThisMonth, 0);
+      const totalStudentOutstandingDues = studentFeesBreakdown.reduce((sum, s) => sum + s.overallRemaining, 0);
 
       setReportData({
         txns, income, expense,
@@ -133,8 +162,11 @@ export default function SuperAdminReportsPage() {
         pendingCount,
         staffSalaries,
         totalPayroll,
-        totalActivePatients,
+        totalActiveStudents,
         newAdmissions,
+        studentFeesBreakdown,
+        totalStudentFeesCollectedThisMonth,
+        totalStudentOutstandingDues,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
       });
@@ -152,8 +184,8 @@ export default function SuperAdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #spims-report-print, #spims-report-print * { visibility: visible; }
+          #spims-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -196,11 +228,11 @@ export default function SuperAdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
+          <div id="spims-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">Khan Hub Rehab Center — Super Admin Report</h2>
+              <h2 className="text-2xl font-black text-gray-900">SPIMS Medical Institute — Super Admin Report</h2>
               <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
@@ -215,13 +247,13 @@ export default function SuperAdminReportsPage() {
               </div>
             )}
 
-            {/* Patients Summary */}
+            {/* Students Summary */}
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-500" /> Patient Summary</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-500" /> Student Summary</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                  <div className="text-3xl font-black text-teal-800">{reportData.totalActivePatients}</div>
-                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Patients</div>
+                  <div className="text-3xl font-black text-teal-800">{reportData.totalActiveStudents}</div>
+                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Students</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <div className="text-3xl font-black text-blue-800">{reportData.newAdmissions}</div>
@@ -314,6 +346,49 @@ export default function SuperAdminReportsPage() {
                   </div>
                 )}
 
+                {/* Student Fee Collection Breakdown */}
+                {reportData.studentFeesBreakdown && reportData.studentFeesBreakdown.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> Student Fee Collections & Dues
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Month Collections</div>
+                        <div className="text-xl font-black text-teal-800">{formatPKR(reportData.totalStudentFeesCollectedThisMonth)}</div>
+                      </div>
+                      <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Balances</div>
+                        <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalStudentOutstandingDues)}</div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 text-gray-600">
+                          <tr>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Student Name</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Roll No / Course</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Total Package</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Paid in Month</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Overall Remaining</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-150">
+                          {reportData.studentFeesBreakdown.map((s: any) => (
+                            <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{s.name}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{s.rollNo} / {s.course}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900">{formatPKR(s.totalPackage)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-teal-700 font-black">{formatPKR(s.amountPaidThisMonth)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-rose-600 font-black">{formatPKR(s.overallRemaining)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                 {/* Transaction Detail */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
@@ -337,7 +412,7 @@ export default function SuperAdminReportsPage() {
                               <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
-                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[160px] truncate">{t.description || '—'}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[180px] truncate">{t.description || '—'}</td>
                             <td className="border border-gray-200 px-3 py-2 text-right font-medium text-gray-900">{formatPKR(t.amount)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>

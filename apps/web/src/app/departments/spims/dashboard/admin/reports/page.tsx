@@ -56,7 +56,7 @@ export default function AdminReportsPage() {
       const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'spims_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -80,6 +80,37 @@ export default function AdminReportsPage() {
         return map;
       };
 
+      // Fetch active students and their monthly fee records
+      const studentsSnap = await getDocs(query(collection(db, 'spims_students'), where('isActive', '==', true)));
+      const students = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
+      const feesSnap = await getDocs(collection(db, 'spims_fees'));
+      const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
+      const monthFees = allFees.filter(fee => {
+        if (fee.status !== 'approved') return false;
+        const feeDate = fee.date?.toDate?.() ? fee.date.toDate() : new Date(fee.date || 0);
+        return feeDate.getFullYear() === selectedYear && feeDate.getMonth() === selectedMonth;
+      });
+
+      const studentFeesBreakdown = students.map(student => {
+        const studentPayments = monthFees.filter(f => f.studentId === student.id);
+        const amountPaidThisMonth = studentPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        return {
+          id: student.id,
+          name: student.name,
+          rollNo: student.rollNo || student.serialNumber || '—',
+          course: student.course || '—',
+          monthlyFee: Number(student.monthlyFee || 0),
+          totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
+          amountPaidThisMonth,
+          overallRemaining: Number(student.remaining ?? student.remainingBalance ?? 0)
+        };
+      });
+
+      const totalStudentFeesCollectedThisMonth = studentFeesBreakdown.reduce((sum, s) => sum + s.amountPaidThisMonth, 0);
+      const totalStudentOutstandingDues = studentFeesBreakdown.reduce((sum, s) => sum + s.overallRemaining, 0);
+
       setReportData({
         txns,
         income,
@@ -91,6 +122,9 @@ export default function AdminReportsPage() {
         expenseByCategory: byCategory(expense),
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
+        studentFeesBreakdown,
+        totalStudentFeesCollectedThisMonth,
+        totalStudentOutstandingDues
       });
 
       setGenerated(true);
@@ -109,8 +143,8 @@ export default function AdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #spims-report-print, #spims-report-print * { visibility: visible; }
+          #spims-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
 
@@ -171,11 +205,11 @@ export default function AdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
+          <div id="spims-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">Khan Hub Rehab Center</h2>
+              <h2 className="text-2xl font-black text-gray-900">SPIMS Medical Institute</h2>
               <p className="text-lg font-bold text-teal-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
@@ -256,6 +290,49 @@ export default function AdminReportsPage() {
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {/* Student Fee Collection Breakdown */}
+                {reportData.studentFeesBreakdown && reportData.studentFeesBreakdown.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> Student Fee Collections & Dues
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Month Collections</div>
+                        <div className="text-xl font-black text-teal-800">{formatPKR(reportData.totalStudentFeesCollectedThisMonth)}</div>
+                      </div>
+                      <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Balances</div>
+                        <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalStudentOutstandingDues)}</div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 text-gray-600">
+                          <tr>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Student Name</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Roll No / Course</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Total Package</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Paid in Month</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Overall Remaining</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-150">
+                          {reportData.studentFeesBreakdown.map((s: any) => (
+                            <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{s.name}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{s.rollNo} / {s.course}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900">{formatPKR(s.totalPackage)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-teal-700 font-black">{formatPKR(s.amountPaidThisMonth)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-rose-600 font-black">{formatPKR(s.overallRemaining)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 

@@ -19,7 +19,6 @@ import { toast } from 'react-hot-toast';
 import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
 import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
-import { toPng } from 'html-to-image';
 
 import type { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
 import dynamic from 'next/dynamic';
@@ -4237,28 +4236,20 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const node = reportRef.current;
-      const dataUrl = await toPng(node, {
-        cacheBust: true,
-        backgroundColor: '#fff',
-        pixelRatio: 2,
-        width: 794,
-        filter: (node) => {
-          if (node instanceof HTMLElement && node.classList.contains('no-print')) {
-            return false;
-          }
-          return true;
-        },
-        style: {
-          width: '794px',
-          minWidth: '794px',
-          maxWidth: '794px',
-          margin: '0',
-          padding: '40px',
-          transform: 'none',
-          boxShadow: 'none'
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        onclone: (clonedDoc) => {
+          const noPrintElements = clonedDoc.querySelectorAll('.no-print');
+          noPrintElements.forEach((el: any) => {
+            el.style.display = 'none';
+          });
         }
       });
+      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `Report-${reportData.name}-${new Date().toLocaleDateString()}.png`;
       link.href = dataUrl;

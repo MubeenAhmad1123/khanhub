@@ -115,6 +115,7 @@ export default function SuperAdminReportsPage() {
 
       // === PATIENTS ===
       const activePatientsSnap = await getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
+      const patients = activePatientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
       const totalActivePatients = activePatientsSnap.size;
 
       const newAdmissionsSnap = await getDocs(query(
@@ -123,6 +124,30 @@ export default function SuperAdminReportsPage() {
         where('admissionDate', '<=', Timestamp.fromDate(lastDay))
       ));
       const newAdmissions = newAdmissionsSnap.size;
+
+      // === PATIENT FEES BREAKDOWN ===
+      const feesSnap = await getDocs(collection(db, 'rehab_fees'));
+      const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
+      const monthFees = allFees.filter(fee => fee.month === monthStr);
+
+      const patientFeesBreakdown = patients.map(patient => {
+        const patientFeeRecord = monthFees.find(f => f.patientId === patient.id);
+        const amountPaidThisMonth = patientFeeRecord ? Number(patientFeeRecord.amountPaid || 0) : 0;
+        const expectedFee = Number(patient.packageAmount || 60000);
+        const overallRemaining = patientFeeRecord ? Number(patientFeeRecord.amountRemaining || 0) : expectedFee;
+        return {
+          id: patient.id,
+          name: patient.name,
+          inpatientNumber: patient.inpatientNumber || patient.serialNumber || '—',
+          expectedFee,
+          amountPaidThisMonth,
+          overallRemaining
+        };
+      });
+
+      const totalPatientFeesCollectedThisMonth = patientFeesBreakdown.reduce((sum, p) => sum + p.amountPaidThisMonth, 0);
+      const totalPatientOutstandingDues = patientFeesBreakdown.reduce((sum, p) => sum + p.overallRemaining, 0);
 
       setReportData({
         txns, income, expense,
@@ -135,6 +160,9 @@ export default function SuperAdminReportsPage() {
         totalPayroll,
         totalActivePatients,
         newAdmissions,
+        patientFeesBreakdown,
+        totalPatientFeesCollectedThisMonth,
+        totalPatientOutstandingDues,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
       });
@@ -247,7 +275,7 @@ export default function SuperAdminReportsPage() {
                 <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
                   <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-500'}`} />
                   <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
-                  <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-700'}`}>{formatPKR(reportData.netBalance)}</div>
+                  <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-755'}`}>{formatPKR(reportData.netBalance)}</div>
                 </div>
               </div>
             </div>
@@ -314,6 +342,49 @@ export default function SuperAdminReportsPage() {
                   </div>
                 )}
 
+                {/* Patient Fee Collection Breakdown */}
+                {reportData.patientFeesBreakdown && reportData.patientFeesBreakdown.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> Patient Fee Collections & Dues
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Month Collections</div>
+                        <div className="text-xl font-black text-teal-800">{formatPKR(reportData.totalPatientFeesCollectedThisMonth)}</div>
+                      </div>
+                      <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Balances</div>
+                        <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalPatientOutstandingDues)}</div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 text-gray-600">
+                          <tr>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Patient Name</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Inpatient Number</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Expected Fee</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Paid in Month</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Overall Remaining</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-150">
+                          {reportData.patientFeesBreakdown.map((p: any) => (
+                            <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{p.name}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{p.inpatientNumber}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900">{formatPKR(p.expectedFee)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-teal-700 font-black">{formatPKR(p.amountPaidThisMonth)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-rose-600 font-black">{formatPKR(p.overallRemaining)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                 {/* Transaction Detail */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
@@ -337,7 +408,7 @@ export default function SuperAdminReportsPage() {
                               <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
-                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[160px] truncate">{t.description || '—'}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[180px] truncate">{t.description || '—'}</td>
                             <td className="border border-gray-200 px-3 py-2 text-right font-medium text-gray-900">{formatPKR(t.amount)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>

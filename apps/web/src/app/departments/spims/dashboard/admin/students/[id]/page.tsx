@@ -13,7 +13,6 @@ import {
 import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
 import { doc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { toPng } from 'html-to-image';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import type { SpimsStudent } from '@/types/spims';
@@ -1155,22 +1154,20 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const node = reportRef.current;
-      const dataUrl = await toPng(node, {
-        cacheBust: true,
-        backgroundColor: '#fff',
-        pixelRatio: 2,
-        width: 794,
-        style: {
-          width: '794px',
-          minWidth: '794px',
-          maxWidth: '794px',
-          margin: '0',
-          padding: '40px',
-          transform: 'none',
-          boxShadow: 'none'
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        onclone: (clonedDoc) => {
+          const noPrintElements = clonedDoc.querySelectorAll('.no-print');
+          noPrintElements.forEach((el: any) => {
+            el.style.display = 'none';
+          });
         }
       });
+      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `Student-Report-${reportData.name}-${new Date().toLocaleDateString()}.png`;
       link.href = dataUrl;

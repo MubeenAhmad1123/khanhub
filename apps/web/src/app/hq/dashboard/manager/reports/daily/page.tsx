@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
-import { toPng } from 'html-to-image';
 
 interface DailyReportRow {
   id: string;
@@ -532,11 +531,14 @@ export default function DailyReportPage() {
 
       await new Promise(resolve => setTimeout(resolve, 150));
 
-      const dataUrl = await toPng(captureContainer, {
-        quality: 1.0,
-        pixelRatio: 3, 
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(captureContainer, {
+        scale: 3,
+        useCORS: true,
         backgroundColor: '#FFFFFF',
+        logging: false,
       });
+      const dataUrl = canvas.toDataURL('image/png');
 
       const link = document.createElement('a');
       link.download = `HQ_Daily_Report_${reportDate}.png`;

@@ -148,6 +148,12 @@ export default function SuperAdminReportsPage() {
 
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
+      // Seekers fees & commissions breakdown
+      const seekerFeesList = txns.filter((t: any) => t.category === 'seeker_fee' || t.category === 'registration');
+      const commissionsList = txns.filter((t: any) => t.category === 'commission_30_percent' || t.category?.includes('commission'));
+      const totalSeekerFeesCollected = seekerFeesList.reduce((sum, t: any) => sum + (t.amount || 0), 0);
+      const totalCommissionsCollected = commissionsList.reduce((sum, t: any) => sum + (t.amount || 0), 0);
+
       setReportData({
         txns, income, expense,
         totalIncome, totalExpenses,
@@ -159,6 +165,10 @@ export default function SuperAdminReportsPage() {
         totalPayroll,
         totalActiveSeekers,
         newAdmissions,
+        seekerFeesList,
+        commissionsList,
+        totalSeekerFeesCollected,
+        totalCommissionsCollected,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
       });
@@ -338,6 +348,55 @@ export default function SuperAdminReportsPage() {
                   </div>
                 )}
 
+                {/* Job Seeker & Employer Placement Breakdown */}
+                {((reportData.seekerFeesList && reportData.seekerFeesList.length > 0) || (reportData.commissionsList && reportData.commissionsList.length > 0)) && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-orange-500" /> Seeker Registrations & Placement Commissions
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Seeker Fees Collected</div>
+                        <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalSeekerFeesCollected)}</div>
+                      </div>
+                      <div className="bg-green-50 border border-green-100 p-4 rounded-xl text-center">
+                        <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Placement Commissions</div>
+                        <div className="text-xl font-black text-green-800">{formatPKR(reportData.totalCommissionsCollected)}</div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 text-gray-600">
+                          <tr>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Client / Candidate Name</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Category / Description</th>
+                            <th className="border border-gray-200 px-3 py-3 text-left font-bold">Date</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Amount Paid</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-150">
+                          {reportData.seekerFeesList.map((t: any) => (
+                            <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{t.seekerName || '—'}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-orange-700 font-bold">Job Seeker Registration Fee</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900 font-black">{formatPKR(t.amount)}</td>
+                            </tr>
+                          ))}
+                          {reportData.commissionsList.map((t: any) => (
+                            <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{t.seekerName || '—'}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-green-700 font-bold">Placement Commission ({t.description || 'Employer Payment'})</td>
+                              <td className="border border-gray-200 px-3 py-2 text-gray-500">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-900 font-black">{formatPKR(t.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                 {/* Transaction Detail */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
@@ -361,7 +420,7 @@ export default function SuperAdminReportsPage() {
                               <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
-                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[160px] truncate">{t.description || '—'}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[180px] truncate">{t.description || '—'}</td>
                             <td className="border border-gray-200 px-3 py-2 text-right font-medium text-gray-900">{formatPKR(t.amount)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>
@@ -414,4 +473,3 @@ export default function SuperAdminReportsPage() {
     </div>
   );
 }
-
