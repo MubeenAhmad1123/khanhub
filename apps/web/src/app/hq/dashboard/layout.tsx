@@ -225,9 +225,11 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     }
 
     // 2. Auth initialization check
+    let authTimeout: NodeJS.Timeout | null = null;
     const unsubAuth = auth.onAuthStateChanged((firebaseUser) => {
       setAuthInitialized(true);
       if (firebaseUser) {
+        if (authTimeout) clearTimeout(authTimeout);
         setIsChecking(false);
         setTimeout(() => setMounted(true), 50);
       } else {
@@ -240,15 +242,23 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           setIsChecking(false);
           setTimeout(() => setMounted(true), 50);
         } else {
-          console.warn('[HQ Layout] No Firebase user. Redirecting to login...');
-          localStorage.removeItem(SESSION_KEY);
-          setUser(null);
-          router.push('/hq/login');
+          console.warn('[HQ Layout] Firebase Auth user is null, checking for redirection...');
+          authTimeout = setTimeout(() => {
+            if (!auth.currentUser) {
+              console.warn('[HQ Layout] No Firebase user. Redirecting to login...');
+              localStorage.removeItem(SESSION_KEY);
+              setUser(null);
+              router.push('/hq/login');
+            }
+          }, 8000);
         }
       }
     });
 
-    return () => unsubAuth();
+    return () => {
+      unsubAuth();
+      if (authTimeout) clearTimeout(authTimeout);
+    };
   }, [router, pathname]);
 
   useEffect(() => {
@@ -489,7 +499,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       )}
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 md:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
       } bg-white border-r border-gray-100`}>
         <button
           onClick={() => setSidebarOpen(false)}

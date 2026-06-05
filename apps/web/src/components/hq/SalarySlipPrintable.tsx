@@ -8,21 +8,46 @@ import { toDate } from '@/lib/utils';
 interface Props {
   slip: SalarySlip;
   showActionControls?: boolean;
+  staff?: {
+    designation?: string;
+    joiningDate?: any;
+    employeeId?: string;
+    monthlySalary?: number;
+  } | null;
 }
 
-export function SalarySlipPrintable({ slip, showActionControls = false }: Props) {
-  // Computed values calculated at top of component
-  const grossPay = slip.basicSalary || 0;
-  const incentive = slip.incentive || 0;
-  const otherPay = slip.otherEarnings || 0;
+export function SalarySlipPrintable({ slip, showActionControls = false, staff = null }: Props) {
+  const hasFullSlip = typeof slip.netSalary === 'number' && slip.netSalary > 0;
+
+  let grossPay = 0;
+  let incentive = 0;
+  let otherPay = 0;
+  let absentee = 0;
+  let fines = 0;
+  let otherDed = 0;
+  let netPay = 0;
+
+  if (hasFullSlip) {
+    grossPay = slip.basicSalary || 0;
+    incentive = slip.incentive || 0;
+    otherPay = slip.otherEarnings || 0;
+    absentee = slip.absentDeduction || 0;
+    fines = slip.fine || 0;
+    otherDed = (slip.otherDeductions || 0) + (slip.advance || 0);
+    netPay = slip.netSalary || 0;
+  } else {
+    netPay = (slip as any).amount || 0;
+    const baseWage = staff?.monthlySalary || netPay;
+    grossPay = baseWage;
+    if (netPay > baseWage) {
+      incentive = netPay - baseWage;
+    } else if (netPay < baseWage) {
+      otherDed = baseWage - netPay;
+    }
+  }
+
   const totalPay = grossPay + incentive + otherPay;
-
-  const absentee = slip.absentDeduction || 0;
-  const fines = slip.fine || 0;
-  const otherDed = (slip.otherDeductions || 0) + (slip.advance || 0);
   const totalDed = absentee + fines + otherDed;
-
-  const netPay = slip.netSalary || 0;
 
   // Month label: slip.month is "YYYY-MM" → "June- 2024"
   const monthLabel = (() => {
@@ -47,6 +72,19 @@ export function SalarySlipPrintable({ slip, showActionControls = false }: Props)
     if (!d) return '—';
     try {
       const dateObj = toDate(d as unknown);
+      if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return '—';
+      return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+    } catch (e) {
+      return '—';
+    }
+  })();
+
+  // Joining date: format dynamically using toDate helper
+  const joiningDateStr = (() => {
+    const jd = staff?.joiningDate;
+    if (!jd) return '—';
+    try {
+      const dateObj = toDate(jd as unknown);
       if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return '—';
       return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
     } catch (e) {
@@ -147,18 +185,18 @@ export function SalarySlipPrintable({ slip, showActionControls = false }: Props)
               <td className="border border-black px-3 py-2 w-[25%]">{slip.staffName || '—'}</td>
               <td className="border border-black w-[2%]"></td>
               <td className="font-bold border border-black px-3 py-2 w-[23%]">Designation :</td>
-              <td className="border border-black px-3 py-2 w-[25%]">{slip.department || '—'}</td>
+              <td className="border border-black px-3 py-2 w-[25%]">{staff?.designation || '—'}</td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-2">Employe Code :</td>
-              <td className="border border-black px-3 py-2">{slip.employeeId || '—'}</td>
+              <td className="border border-black px-3 py-2">{staff?.employeeId || slip.employeeId || '—'}</td>
               <td className="border border-black"></td>
               <td className="font-bold border border-black px-3 py-2">Department :</td>
               <td className="border border-black px-3 py-2">{slip.department || '—'}</td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-2">Joing Date :</td>
-              <td className="border border-black px-3 py-2">—</td>
+              <td className="border border-black px-3 py-2">{joiningDateStr}</td>
               <td className="border border-black"></td>
               <td className="font-bold border border-black px-3 py-2">Salary Period :</td>
               <td className="border border-black px-3 py-2">{salaryPeriod}</td>

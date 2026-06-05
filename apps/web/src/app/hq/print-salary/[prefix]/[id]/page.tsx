@@ -1,23 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { SalarySlip } from '@/types/hq';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 export default function StandalonePrintSalaryPage() {
   const { prefix, id } = useParams() as { prefix: string; id: string };
   const [slip, setSlip] = useState<SalarySlip | null>(null);
+  const [staff, setStaff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!prefix || !id) return;
 
-    const fetchSlip = async () => {
+    const fetchSlipAndStaff = async () => {
       try {
         const collectionName = `${prefix}_salary_records`;
         const docRef = doc(db, collectionName, id);
@@ -29,7 +31,28 @@ export default function StandalonePrintSalaryPage() {
           return;
         }
 
-        setSlip({ id: snap.id, ...snap.data() } as SalarySlip);
+        const slipData = { id: snap.id, ...snap.data() } as SalarySlip;
+        setSlip(slipData);
+
+        if (slipData.staffId) {
+          try {
+            const deptCollection = getDeptCollection(prefix as StaffDept);
+            const staffRef = doc(db, deptCollection, slipData.staffId);
+            const staffSnap = await getDoc(staffRef);
+            if (staffSnap.exists()) {
+              const sData = staffSnap.data();
+              setStaff({
+                designation: sData.designation || sData.role || 'Staff Member',
+                joiningDate: sData.joiningDate || sData.createdAt || null,
+                employeeId: sData.employeeId || sData.customId || null,
+                monthlySalary: sData.monthlySalary || null,
+              });
+            }
+          } catch (staffErr) {
+            console.error('Failed to fetch staff details:', staffErr);
+          }
+        }
+
         setLoading(false);
       } catch (err) {
         console.error('Failed to load slip:', err);
@@ -38,7 +61,7 @@ export default function StandalonePrintSalaryPage() {
       }
     };
 
-    fetchSlip();
+    fetchSlipAndStaff();
   }, [prefix, id]);
 
   if (loading) {
@@ -79,7 +102,7 @@ export default function StandalonePrintSalaryPage() {
         }
       `}</style>
 
-      <SalarySlipPrintable slip={slip} showActionControls={true} />
+      <SalarySlipPrintable slip={slip} staff={staff} showActionControls={true} />
     </div>
   );
 }
