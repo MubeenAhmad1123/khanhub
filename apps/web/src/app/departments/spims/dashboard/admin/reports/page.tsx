@@ -7,7 +7,8 @@ import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/
 import { formatDateDMY } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
-  TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3
+  TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 const MONTHS = [
@@ -15,6 +16,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// PKR Currency Formatter
 function formatPKR(n: number) {
   return `Rs. ${n.toLocaleString('en-PK')}`;
 }
@@ -48,9 +50,14 @@ export default function AdminReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
+  const [reportFocus, setReportFocus] = useState<'income' | 'remaining'>('income');
+
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [generated, setGenerated] = useState(false);
+
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -64,10 +71,75 @@ export default function AdminReportsPage() {
     setSession(parsed);
   }, [router]);
 
+  const handleSort = (field: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortField === field && sortDirection === 'asc') {
+      direction = 'desc';
+    }
+    setSortField(field);
+    setSortDirection(direction);
+  };
+
+  const getSortedStudentFees = () => {
+    if (!reportData?.studentFeesBreakdown) return [];
+    
+    // 1. Filter by reportFocus
+    let list = [...reportData.studentFeesBreakdown];
+    if (reportData.reportFocus === 'income') {
+      list = list.filter((s: any) => s.paidInPeriod > 0);
+    } else if (reportData.reportFocus === 'remaining') {
+      list = list.filter((s: any) => s.overallRemaining > 0);
+    }
+
+    // 2. Sort list
+    if (sortField) {
+      list.sort((a: any, b: any) => {
+        let valA = a[sortField];
+        let valB = b[sortField];
+
+        // Handle numeric fields
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortDirection === 'asc' ? valA - valB : valB - valA;
+        }
+
+        // Handle rollNo numeric sorting if possible
+        if (sortField === 'rollNo') {
+          const numA = parseInt(String(valA).replace(/\D/g, '')) || 0;
+          const numB = parseInt(String(valB).replace(/\D/g, '')) || 0;
+          if (numA !== numB) {
+            return sortDirection === 'asc' ? numA - numB : numB - numA;
+          }
+        }
+
+        // Handle string fields
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      // Default Sort Order for Remaining Report
+      if (reportData.reportFocus === 'remaining') {
+        list.sort((a: any, b: any) => {
+          const paidA = a.paidInPeriod > 0 ? 1 : 0;
+          const paidB = b.paidInPeriod > 0 ? 1 : 0;
+          if (paidA !== paidB) {
+            return paidA - paidB; // 0 (unpaid) comes before 1 (paid)
+          }
+          // Secondary sort: sort by remaining dues descending
+          return b.overallRemaining - a.overallRemaining;
+        });
+      }
+    }
+    return list;
+  };
+
   const handleGenerate = async () => {
     try {
       setGenerating(true);
       setGenerated(false);
+      setSortField(''); // Reset sort field on fresh generation
 
       let firstDay: Date;
       let lastDay: Date;
@@ -187,7 +259,8 @@ export default function AdminReportsPage() {
         generatedAt: new Date().toLocaleString(),
         studentFeesBreakdown,
         totalStudentFeesCollectedInPeriod,
-        totalStudentOutstandingDues
+        totalStudentOutstandingDues,
+        reportFocus,
       });
 
       setGenerated(true);
@@ -250,7 +323,33 @@ export default function AdminReportsPage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
+          {/* Report Focus Selector */}
+          <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm">Report Category</h3>
+              <p className="text-xs text-gray-400">Choose the type of report you want to generate</p>
+            </div>
+            <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+              <button
+                onClick={() => setReportFocus('income')}
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  reportFocus === 'income' ? 'bg-white shadow-sm text-teal-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Income Report
+              </button>
+              <button
+                onClick={() => setReportFocus('remaining')}
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  reportFocus === 'remaining' ? 'bg-white shadow-sm text-teal-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Remaining Dues Report
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-end pt-2">
             {reportType === 'daily' && (
               <div className="flex-1 w-full">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date</label>
@@ -324,7 +423,9 @@ export default function AdminReportsPage() {
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
               <h2 className="text-2xl font-black text-gray-900">SPIMS Medical Institute</h2>
-              <p className="text-lg font-bold text-teal-700 mt-1">{reportData.reportLabel}</p>
+              <p className="text-lg font-bold text-teal-700 mt-1">
+                {reportData.reportLabel} — {reportData.reportFocus === 'income' ? 'Income Report' : 'Remaining Dues Report'}
+              </p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
@@ -347,14 +448,14 @@ export default function AdminReportsPage() {
               </div>
             </div>
 
-            {reportData.txns.length === 0 ? (
+            {reportData.txns.length === 0 && reportData.reportFocus === 'income' ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-500">
                 No approved transactions found for the selected period.
               </div>
             ) : (
               <>
                 {/* Income Breakdown */}
-                {Object.keys(reportData.incomeByCategory).length > 0 && (
+                {reportData.reportFocus === 'income' && Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -383,7 +484,7 @@ export default function AdminReportsPage() {
                 )}
 
                 {/* Expense Breakdown */}
-                {Object.keys(reportData.expenseByCategory).length > 0 && (
+                {reportData.reportFocus === 'income' && Object.keys(reportData.expenseByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown</h3>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -415,7 +516,7 @@ export default function AdminReportsPage() {
                 {reportData.studentFeesBreakdown && reportData.studentFeesBreakdown.length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-teal-600" /> Student Fee Collections & Dues
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> {reportData.reportFocus === 'income' ? 'Student Fee Collections' : 'Outstanding Student Dues'}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
@@ -429,25 +530,123 @@ export default function AdminReportsPage() {
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
                       <table className="w-full text-xs border-collapse">
-                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200">
+                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
                           <tr>
-                            <th className="px-3 py-3 text-left font-bold">Student Name</th>
-                            <th className="px-3 py-3 text-left font-bold">Roll No / Course</th>
-                            <th className="px-3 py-3 text-right font-bold">Total Package Amount</th>
-                            <th className="px-3 py-3 text-right font-bold text-teal-800">Paid in Selected Period</th>
-                            <th className="px-3 py-3 text-right font-bold text-indigo-800">Paid in Month Total</th>
-                            <th className="px-3 py-3 text-right font-bold text-rose-700">Outstanding Remaining Dues</th>
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
+                              <div className="flex items-center gap-1">
+                                Student Name
+                                {sortField === 'name' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('rollNo')}>
+                              <div className="flex items-center gap-1">
+                                Roll No / Course
+                                {sortField === 'rollNo' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('totalPackage')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Total Package Amount
+                                {sortField === 'totalPackage' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold text-teal-800 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('paidInPeriod')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Paid in Selected Period
+                                {sortField === 'paidInPeriod' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-teal-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold text-indigo-800 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('amountPaidThisMonth')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Paid in Month Total
+                                {sortField === 'amountPaidThisMonth' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold text-rose-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('overallRemaining')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Outstanding Remaining Dues
+                                {sortField === 'overallRemaining' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-450" />
+                                )}
+                              </div>
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-150">
-                          {reportData.studentFeesBreakdown.map((s: any) => (
+                          {getSortedStudentFees().map((s: any) => (
                             <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-3 py-2.5 text-gray-850 font-bold">{s.name}</td>
-                              <td className="px-3 py-2.5 text-gray-550 font-mono">{s.rollNo} / {s.course}</td>
+                              <td className="px-3 py-2.5 text-gray-555 font-mono">{s.rollNo} / {s.course}</td>
                               <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.totalPackage)}</td>
                               <td className="px-3 py-2.5 text-right text-teal-800 font-bold bg-teal-50/20">{formatPKR(s.paidInPeriod)}</td>
                               <td className="px-3 py-2.5 text-right text-indigo-700 font-black bg-indigo-50/30">{formatPKR(s.amountPaidThisMonth)}</td>
                               <td className={`px-3 py-2.5 text-right font-black ${s.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>{formatPKR(s.overallRemaining)}</td>
+                            </tr>
+                          ))}
+                          {getSortedStudentFees().length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="px-3 py-8 text-center text-gray-400 italic">
+                                No records found for this category.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transaction Detail (Only for Income Report) */}
+                {reportData.reportFocus === 'income' && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Date</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Student Name</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Type</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Category</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Description</th>
+                            <th className="px-3 py-3 text-right font-bold text-gray-600">Amount</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Cashier Signature</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportData.txns.map((t: any) => (
+                            <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
+                              <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                              <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.studentName || t.patientName || '—'}</td>
+                              <td className="px-3 py-2.5">
+                                <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-700 font-medium">{formatCat(t.category)}</td>
+                              <td className="px-3 py-2.5 text-gray-550 max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
+                              <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatPKR(t.amount)}</td>
+                              <td className="px-3 py-2.5 text-gray-550 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -455,41 +654,6 @@ export default function AdminReportsPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Transaction Detail */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
-                  <div className="overflow-x-auto rounded-xl border border-gray-200">
-                    <table className="w-full text-xs border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Date</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Student Name</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Type</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Category</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Description</th>
-                          <th className="px-3 py-3 text-right font-bold text-gray-600">Amount</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Cashier Signature</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.txns.map((t: any) => (
-                          <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
-                            <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
-                            <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.studentName || t.patientName || '—'}</td>
-                            <td className="px-3 py-2.5">
-                              <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
-                            </td>
-                            <td className="px-3 py-2.5 text-gray-700 font-medium">{formatCat(t.category)}</td>
-                            <td className="px-3 py-2.5 text-gray-500 max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
-                            <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatPKR(t.amount)}</td>
-                            <td className="px-3 py-2.5 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
               </>
             )}
           </div>

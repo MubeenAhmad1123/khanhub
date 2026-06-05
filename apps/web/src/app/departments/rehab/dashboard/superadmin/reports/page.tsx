@@ -54,6 +54,8 @@ export default function SuperAdminReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
+  const [reportFocus, setReportFocus] = useState<'income' | 'remaining'>('income');
+
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [generated, setGenerated] = useState(false);
@@ -82,9 +84,18 @@ export default function SuperAdminReportsPage() {
 
   const getSortedPatientFees = () => {
     if (!reportData?.patientFeesBreakdown) return [];
-    const sorted = [...reportData.patientFeesBreakdown];
+    
+    // 1. Filter by reportFocus
+    let list = [...reportData.patientFeesBreakdown];
+    if (reportData.reportFocus === 'income') {
+      list = list.filter((p: any) => p.paidInPeriod > 0);
+    } else if (reportData.reportFocus === 'remaining') {
+      list = list.filter((p: any) => p.overallRemaining > 0);
+    }
+
+    // 2. Sort list
     if (sortField) {
-      sorted.sort((a: any, b: any) => {
+      list.sort((a: any, b: any) => {
         let valA = a[sortField];
         let valB = b[sortField];
 
@@ -109,8 +120,21 @@ export default function SuperAdminReportsPage() {
         if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
         return 0;
       });
+    } else {
+      // Default Sort Order for Remaining Report
+      if (reportData.reportFocus === 'remaining') {
+        list.sort((a: any, b: any) => {
+          const paidA = a.paidInPeriod > 0 ? 1 : 0;
+          const paidB = b.paidInPeriod > 0 ? 1 : 0;
+          if (paidA !== paidB) {
+            return paidA - paidB; // 0 (unpaid) comes before 1 (paid)
+          }
+          // Secondary sort: sort by remaining dues descending
+          return b.overallRemaining - a.overallRemaining;
+        });
+      }
     }
-    return sorted;
+    return list;
   };
 
   const handleGenerate = async () => {
@@ -286,6 +310,7 @@ export default function SuperAdminReportsPage() {
         reportLabel: label,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
+        reportFocus,
       });
       setGenerated(true);
     } catch (error) {
@@ -341,6 +366,32 @@ export default function SuperAdminReportsPage() {
                   {t}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Report Focus Selector */}
+          <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm">Report Category</h3>
+              <p className="text-xs text-gray-400">Choose the type of report you want to generate</p>
+            </div>
+            <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+              <button
+                onClick={() => setReportFocus('income')}
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  reportFocus === 'income' ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Income Report
+              </button>
+              <button
+                onClick={() => setReportFocus('remaining')}
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  reportFocus === 'remaining' ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Remaining Dues Report
+              </button>
             </div>
           </div>
 
@@ -418,12 +469,14 @@ export default function SuperAdminReportsPage() {
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
               <h2 className="text-2xl font-black text-gray-900">Khan Hub Rehab Center — Super Admin</h2>
-              <p className="text-lg font-bold text-purple-700 mt-1">{reportData.reportLabel}</p>
+              <p className="text-lg font-bold text-purple-700 mt-1">
+                {reportData.reportLabel} — {reportData.reportFocus === 'income' ? 'Income Report' : 'Remaining Dues Report'}
+              </p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
             {/* Pending Warning Banner */}
-            {reportData.pendingCount > 0 && (
+            {reportData.pendingCount > 0 && reportData.reportFocus === 'income' && (
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 p-4 rounded-xl">
                 <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-800">
@@ -462,19 +515,19 @@ export default function SuperAdminReportsPage() {
                   <div className="text-2xl font-black text-red-700">{formatPKR(reportData.totalExpenses)}</div>
                 </div>
                 <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
-                  <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-500'}`} />
-                  <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
+                  <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-552'}`} />
+                  <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-755'}`}>Net Balance</div>
                   <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-755'}`}>{formatPKR(reportData.netBalance)}</div>
                 </div>
               </div>
             </div>
 
-            {reportData.txns.length === 0 ? (
+            {reportData.txns.length === 0 && reportData.reportFocus === 'income' ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-500">No approved transactions found for the selected period.</div>
             ) : (
               <>
                 {/* Income Breakdown */}
-                {Object.keys(reportData.incomeByCategory).length > 0 && (
+                {reportData.reportFocus === 'income' && Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -503,7 +556,7 @@ export default function SuperAdminReportsPage() {
                 )}
 
                 {/* Expense Breakdown */}
-                {Object.keys(reportData.expenseByCategory).length > 0 && (
+                {reportData.reportFocus === 'income' && Object.keys(reportData.expenseByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown</h3>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -535,7 +588,7 @@ export default function SuperAdminReportsPage() {
                 {reportData.patientFeesBreakdown && reportData.patientFeesBreakdown.length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-teal-600" /> Patient Fee Collections & Dues
+                      <TrendingUp className="w-5 h-5 text-purple-600" /> {reportData.reportFocus === 'income' ? 'Patient Fee Collections' : 'Outstanding Patient Dues'}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
@@ -548,8 +601,8 @@ export default function SuperAdminReportsPage() {
                       </div>
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
-                      <table className="w-full text-xs border-collapse font-bold">
-                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none font-bold">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
                           <tr>
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
                               <div className="flex items-center gap-1">
@@ -617,11 +670,55 @@ export default function SuperAdminReportsPage() {
                           {getSortedPatientFees().map((p: any) => (
                             <tr key={p.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                               <td className="px-3 py-2.5 text-gray-850 font-bold">{p.name}</td>
-                              <td className="px-3 py-2.5 text-gray-550 font-mono">{p.inpatientNumber}</td>
+                              <td className="px-3 py-2.5 text-gray-555 font-mono">{p.inpatientNumber}</td>
                               <td className="px-3 py-2.5 text-right text-gray-850">{formatPKR(p.expectedFee)}</td>
                               <td className="px-3 py-2.5 text-right text-teal-800 font-bold bg-teal-50/20">{formatPKR(p.paidInPeriod)}</td>
                               <td className="px-3 py-2.5 text-right text-indigo-700 font-black bg-indigo-50/30">{formatPKR(p.amountPaidThisMonth)}</td>
                               <td className={`px-3 py-2.5 text-right font-black ${p.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>{formatPKR(p.overallRemaining)}</td>
+                            </tr>
+                          ))}
+                          {getSortedPatientFees().length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="px-3 py-8 text-center text-gray-400 italic">
+                                No records found for this category.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transaction Detail (Only for Income Report) */}
+                {reportData.reportFocus === 'income' && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Date</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Patient Name</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Type</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Category</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Description</th>
+                            <th className="px-3 py-3 text-right font-bold text-gray-600">Amount</th>
+                            <th className="px-3 py-3 text-left font-bold text-gray-600">Cashier Signature</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportData.txns.map((t: any) => (
+                            <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
+                              <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                              <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.patientName || '—'}</td>
+                              <td className="px-3 py-2.5">
+                                <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-700 font-medium">{formatCat(t.category)}</td>
+                              <td className="px-3 py-2.5 text-gray-500 max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
+                              <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatPKR(t.amount)}</td>
+                              <td className="px-3 py-2.5 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -629,41 +726,6 @@ export default function SuperAdminReportsPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Transaction Detail */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
-                  <div className="overflow-x-auto rounded-xl border border-gray-200">
-                    <table className="w-full text-xs border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Date</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Patient Name</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Type</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Category</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Description</th>
-                          <th className="px-3 py-3 text-right font-bold text-gray-600">Amount</th>
-                          <th className="px-3 py-3 text-left font-bold text-gray-600">Cashier Signature</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.txns.map((t: any) => (
-                          <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
-                            <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
-                            <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.patientName || '—'}</td>
-                            <td className="px-3 py-2.5">
-                              <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
-                            </td>
-                            <td className="px-3 py-2.5 text-gray-700 font-medium">{formatCat(t.category)}</td>
-                            <td className="px-3 py-2.5 text-gray-500 max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
-                            <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatPKR(t.amount)}</td>
-                            <td className="px-3 py-2.5 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
               </>
             )}
 
