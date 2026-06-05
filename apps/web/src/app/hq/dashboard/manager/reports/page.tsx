@@ -53,6 +53,13 @@ const getDeptLabel = (dept?: string) => {
   }
 };
 
+const getOrdinalRank = (rank: number) => {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const val = rank % 100;
+  const suffix = suffixes[(val - 20) % 10] || suffixes[val] || suffixes[0];
+  return `${rank}${suffix} Rank`;
+};
+
 export default function ManagerReportsPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -63,6 +70,9 @@ export default function ManagerReportsPage() {
   const [viewingStaff, setViewingStaff] = useState<any | null>(null);
   const [selectedDay, setSelectedDay] = useState<any | null>(null);
   
+  // Weekly vs Monthly Toggle State
+  const [reportPeriod, setReportPeriod] = useState<'monthly' | 'weekly'>('monthly');
+
   // Real-time filters state
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
@@ -75,6 +85,57 @@ export default function ManagerReportsPage() {
       router.push('/hq/login');
     }
   }, [session, sessionLoading, router]);
+
+  // Calculate the actual active dates for metrics aggregation
+  const dateRange = useMemo(() => {
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    if (reportPeriod === 'weekly') {
+      const today = new Date();
+      const currentMonthStr = today.toISOString().slice(0, 7);
+      if (selectedMonth === currentMonthStr) {
+        // Use last 7 days ending today
+        const dates = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          dates.push(d.toISOString().slice(0, 10));
+        }
+        return {
+          start: dates[0],
+          end: dates[6],
+          days: dates
+        };
+      } else {
+        // Use last 7 days of the selected month
+        const dates = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(year, month - 1, daysInMonth - i);
+          dates.push(d.toISOString().slice(0, 10));
+        }
+        return {
+          start: dates[0],
+          end: dates[6],
+          days: dates
+        };
+      }
+    } else {
+      // Full Month
+      const dates = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dayStr = String(i).padStart(2, '0');
+        dates.push(`${selectedMonth}-${dayStr}`);
+      }
+      return {
+        start: `${selectedMonth}-01`,
+        end: `${selectedMonth}-${daysInMonth}`,
+        days: dates
+      };
+    }
+  }, [selectedMonth, reportPeriod]);
 
   const fetchData = async () => {
     try {
@@ -109,8 +170,9 @@ export default function ManagerReportsPage() {
           return false;
         }
 
+        // Active Logic: Must explicitly NOT be false and status must NOT suggest inactivity
         const statusStr = String(s.status || '').toLowerCase();
-        const isActive = statusStr === 'active' && s.isActive !== false;
+        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
 
         return isActive;
       };
@@ -239,7 +301,7 @@ export default function ManagerReportsPage() {
       setLogs({ attMap, dressMap, dutyMap, contribMap, fineMap });
     } catch (err) {
       console.error("Error fetching report data:", err);
-      toast.error("Failed to fetch monthly reports");
+      toast.error("Failed to fetch reports");
     } finally {
       setLoading(false);
     }
@@ -250,7 +312,7 @@ export default function ManagerReportsPage() {
     fetchData();
   }, [session, selectedMonth]);
 
-  // Aggregate monthly stats exactly like the daily page
+  // Aggregate stats based on dynamic dateRange
   const getStaffStats = (member: HqStaff) => {
     if (!logs) return { 
       attPct: 0, dressPct: 0, dutyPct: 0, gpPct: 0, 
@@ -261,11 +323,8 @@ export default function ManagerReportsPage() {
     const { attMap, dressMap, dutyMap, contribMap, fineMap } = logs;
     const simpleSid = getSimpleId(member.id);
 
-    const [yearStr, monthStr] = selectedMonth.split('-');
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const maxPoints = daysInMonth * 4;
+    const daysToProcess = dateRange.days;
+    const maxPoints = daysToProcess.length * 4;
 
     let presents = 0;
     let absents = 0;
@@ -287,9 +346,7 @@ export default function ManagerReportsPage() {
 
     const dailyBreakdown: any[] = [];
 
-    for (let i = 1; i <= daysInMonth; i++) {
-      const dayStr = String(i).padStart(2, '0');
-      const date = `${selectedMonth}-${dayStr}`;
+    daysToProcess.forEach(date => {
       const logKey = `${simpleSid}_${date}`;
 
       const att = attMap.get(logKey);
@@ -377,9 +434,11 @@ export default function ManagerReportsPage() {
         totalPoints += dailyPoints;
       }
 
+      const dayNum = parseInt(date.split('-')[2], 10);
+
       dailyBreakdown.push({
         date,
-        day: i,
+        day: dayNum,
         attendance: attendanceStatus,
         uniform: uniformStatus,
         duty: dutyStatus,
@@ -393,7 +452,7 @@ export default function ManagerReportsPage() {
           dutyItems: duty?.duties || []
         }
       });
-    }
+    });
 
     const totalLogged = presents + lates + absents;
     const attPct = totalLogged > 0 ? Math.round((presents / totalLogged) * 100) : 0;
@@ -443,7 +502,7 @@ export default function ManagerReportsPage() {
       b.stats.totalPoints - a.stats.totalPoints ||
       getSeniorityRank(b.designation || '') - getSeniorityRank(a.designation || ''));
     return withStats;
-  }, [staff, logs]);
+  }, [staff, logs, dateRange]);
 
   // Filtered staff for table and card display
   const filteredStaff = useMemo(() => {
@@ -477,9 +536,6 @@ export default function ManagerReportsPage() {
     });
     return Array.from(set).sort();
   }, [staff]);
-
-  // Podium Positions are derived from rankedStaff (top 3 overall)
-  // No separate useMemo needed; we slice rankedStaff later.
 
   const handleOpenStaffModal = (member: any) => {
     setViewingStaff(member);
@@ -540,9 +596,15 @@ export default function ManagerReportsPage() {
               <ArrowLeft size={20} className="text-slate-600" />
             </Link>
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">Monthly Staff Report</h1>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                {reportPeriod === 'weekly' ? 'Weekly Staff Report' : 'Monthly Staff Report'}
+              </h1>
               <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 mt-2 font-medium text-xs sm:text-sm text-slate-500">
-                <span>Monthly performance summary for all staff</span>
+                <span>
+                  {reportPeriod === 'weekly' 
+                    ? `Showing week from ${dateRange.start} to ${dateRange.end}` 
+                    : `Showing month: ${selectedMonth}`}
+                </span>
                 <span className="hidden md:inline w-1.5 h-1.5 rounded-full bg-slate-300" />
                 <Link href="/hq/dashboard/manager/reports/daily" className="text-indigo-600 font-bold hover:underline flex items-center gap-1 hover:text-indigo-700 transition-colors mt-1 md:mt-0">
                   View Daily Log <ArrowRight size={14} />
@@ -552,7 +614,33 @@ export default function ManagerReportsPage() {
           </div>
           
           {/* Controls */}
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            {/* Monthly / Weekly Selector Buttons */}
+            <div className="flex items-center bg-white border border-slate-100 p-1.5 rounded-2xl shadow-sm">
+              <button
+                type="button"
+                onClick={() => setReportPeriod('monthly')}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                  reportPeriod === 'monthly'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportPeriod('weekly')}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                  reportPeriod === 'weekly'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                Weekly
+              </button>
+            </div>
+
             <div className="relative flex-1 md:flex-initial w-1/2 md:w-auto">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 w-4 h-4 pointer-events-none" />
               <input 
@@ -584,14 +672,18 @@ export default function ManagerReportsPage() {
                 <span className="text-[11px] font-bold tracking-widest uppercase text-indigo-200">Top Performers</span>
               </div>
               <h2 className="text-xl md:text-2xl font-extrabold text-white text-center tracking-tight">Top Performers</h2>
-              <p className="text-xs text-indigo-300 font-medium text-center mt-1">Based on attendance, dress code, and contributions</p>
+              <p className="text-xs text-indigo-300 font-medium text-center mt-1">
+                {reportPeriod === 'weekly' 
+                  ? `Based on performance from ${dateRange.start} to ${dateRange.end}` 
+                  : `Based on attendance, dress code, and contributions for ${selectedMonth}`}
+              </p>
               
-              {/* Podium Base Layout */}
-              <div className="flex flex-col md:grid md:grid-cols-3 items-stretch md:items-end gap-6 md:gap-10 w-full max-w-3xl mt-12">
+              {/* Centered Podium Base Layout using flex */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-end justify-center gap-6 md:gap-10 w-full max-w-4xl mt-12">
                 
                 {/* 2nd Place (Silver) */}
-                {second ? (
-                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto order-2 md:order-1" onClick={() => handleOpenStaffModal(second)}>
+                {second && (
+                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-56 order-2 md:order-1" onClick={() => handleOpenStaffModal(second)}>
                     <div className="relative">
                       <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-slate-800/80 border-2 border-slate-300 flex items-center justify-center text-lg sm:text-2xl font-black text-slate-100 overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
                         {second.photoUrl ? (
@@ -619,13 +711,11 @@ export default function ManagerReportsPage() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="h-10" />
                 )}
 
                 {/* 1st Place (Gold Champion) */}
-                {first ? (
-                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto order-1 md:order-2 -translate-y-2 relative" onClick={() => handleOpenStaffModal(first)}>
+                {first && (
+                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-64 -translate-y-2 relative order-1 md:order-2" onClick={() => handleOpenStaffModal(first)}>
                     
                     {/* Crown badge */}
                     <div className="absolute -top-10 animate-pulse">
@@ -660,13 +750,11 @@ export default function ManagerReportsPage() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="h-10" />
                 )}
 
                 {/* 3rd Place (Bronze) */}
-                {third ? (
-                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto order-3 md:order-3" onClick={() => handleOpenStaffModal(third)}>
+                {third && (
+                  <div className="flex flex-col items-center group cursor-pointer w-full md:w-52 order-3 md:order-3" onClick={() => handleOpenStaffModal(third)}>
                     <div className="relative">
                       <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-amber-950/80 border-2 border-amber-700/80 flex items-center justify-center text-lg sm:text-2xl font-black text-amber-600 overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
                         {third.photoUrl ? (
@@ -694,8 +782,6 @@ export default function ManagerReportsPage() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="h-10" />
                 )}
 
               </div>
@@ -781,10 +867,10 @@ export default function ManagerReportsPage() {
           <div className="px-5 sm:px-6 py-5 border-b border-slate-55 flex justify-between items-center bg-slate-50/20 w-full gap-2 shrink-0">
             <div className="flex items-center gap-2.5">
               <Award className="text-indigo-600 w-5 h-5 shrink-0" />
-              <h3 className="text-slate-900 font-extrabold text-sm sm:text-base">Monthly Scoreboard</h3>
+              <h3 className="text-slate-900 font-extrabold text-sm sm:text-base">Scoreboard Rankings</h3>
             </div>
             <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full shrink-0">
-              {filteredStaff.length} staff member{filteredStaff.length !== 1 ? 's' : ''}
+              {filteredStaff.length} active staff member{filteredStaff.length !== 1 ? 's' : ''}
             </span>
           </div>
 
@@ -795,7 +881,7 @@ export default function ManagerReportsPage() {
                 <tr className="bg-slate-50/50 border-b border-slate-100">
                   <th className="sticky left-0 bg-slate-50/90 backdrop-blur-sm z-20 px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Rank</th>
                   <th className="sticky left-20 bg-slate-50/90 backdrop-blur-sm z-20 px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-r border-slate-100">Name</th>
-                  {['Department', 'Attendance', 'Dress Code', 'Duties Done', 'Contributions', 'Fines', 'Monthly Points'].map(h => (
+                  {['Department', 'Attendance', 'Dress Code', 'Duties Done', 'Contributions', 'Fines', 'Points Score'].map(h => (
                     <th key={h} className="px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -808,13 +894,13 @@ export default function ManagerReportsPage() {
                   return (
                     <tr key={member.id} className="hover:bg-slate-50/50 transition-colors duration-200 group">
                       <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors px-6 py-4.5">
-                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black border ${
-                          index === 0 ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' : 
-                          index === 1 ? 'bg-slate-50 text-slate-600 border-slate-200' : 
-                          index === 2 ? 'bg-orange-50 text-orange-600 border-orange-200' : 
-                          'bg-slate-50/50 text-slate-400 border-slate-100'
+                        <span className={`px-3 py-1 rounded-xl flex items-center justify-center text-[10px] font-black border tracking-wide min-w-[72px] ${
+                          index === 0 ? 'bg-amber-50 text-amber-700 border-amber-250 shadow-sm' : 
+                          index === 1 ? 'bg-slate-50 text-slate-700 border-slate-350' : 
+                          index === 2 ? 'bg-orange-50 text-orange-700 border-orange-250' : 
+                          'bg-slate-50/50 text-slate-500 border-slate-100'
                         }`}>
-                          {index + 1}
+                          {getOrdinalRank(index + 1)}
                         </span>
                       </td>
                       
@@ -903,15 +989,15 @@ export default function ManagerReportsPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black border shrink-0 ${
-                        index === 0 ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' : 
-                        index === 1 ? 'bg-slate-50 text-slate-600 border-slate-200' : 
-                        index === 2 ? 'bg-orange-50 text-orange-600 border-orange-200' : 
-                        'bg-slate-50/50 text-slate-400 border-slate-100'
+                      <span className={`px-2 py-1 rounded-xl flex items-center justify-center text-[9px] font-black border tracking-wide shrink-0 ${
+                        index === 0 ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm' : 
+                        index === 1 ? 'bg-slate-50 text-slate-700 border-slate-350' : 
+                        index === 2 ? 'bg-orange-50 text-orange-700 border-orange-200' : 
+                        'bg-slate-50/50 text-slate-550 border-slate-100'
                       }`}>
-                        {index + 1}
+                        {getOrdinalRank(index + 1)}
                       </span>
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-sm text-indigo-600 overflow-hidden shadow-inner shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-55 bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-sm text-indigo-600 overflow-hidden shadow-inner shrink-0">
                         {member.photoUrl ? (
                           <img src={member.photoUrl} alt={member.name} className="w-full h-full object-cover" />
                         ) : (
@@ -1019,9 +1105,11 @@ export default function ManagerReportsPage() {
 
               {/* Print Only Title Block */}
               <div className="hidden print:block border-b border-slate-200 pb-4 mb-6">
-                <h1 className="text-3xl font-black text-slate-900">Monthly Performance Report</h1>
-                <p className="text-sm font-bold text-indigo-600 mt-1 uppercase tracking-wider">Staff Report: {viewingStaff.name} ({formatDesignation(viewingStaff.designation)})</p>
-                <p className="text-xs text-slate-400 mt-1">Month: {selectedMonth} • Department: {getDeptLabel(viewingStaff.department).toUpperCase()} • Generated Ref: KH-MPL-{selectedMonth.replace('-', '')}</p>
+                <h1 className="text-3xl font-black text-slate-900">Performance Audit Record</h1>
+                <p className="text-sm font-bold text-indigo-600 mt-1 uppercase tracking-wider">Staff: {viewingStaff.name} ({formatDesignation(viewingStaff.designation)})</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Period: {reportPeriod === 'weekly' ? `Weekly (${dateRange.start} to ${dateRange.end})` : `Monthly (${selectedMonth})`} • Department: {getDeptLabel(viewingStaff.department).toUpperCase()}
+                </p>
               </div>
 
               {/* Grid Metrics */}
@@ -1046,7 +1134,7 @@ export default function ManagerReportsPage() {
                   <div>
                     <h3 className="text-slate-900 font-extrabold text-sm sm:text-base flex items-center gap-2">
                       <Calendar size={18} className="text-indigo-600 animate-pulse" />
-                      Monthly Performance Calendar Heatmap
+                      Performance Calendar Heatmap
                     </h3>
                     <p className="text-slate-400 text-[11px] font-medium mt-0.5">Click any day box below to audit daily granular logs</p>
                   </div>
@@ -1301,7 +1389,7 @@ export default function ManagerReportsPage() {
                               {b.fines > 0 ? (
                                 <span className="text-rose-600 font-black">₨{b.fines.toLocaleString()}</span>
                               ) : (
-                                <span className="text-slate-300">—</span>
+                                <span className="text-slate-350">—</span>
                               )}
                             </td>
 
@@ -1322,17 +1410,20 @@ export default function ManagerReportsPage() {
                   onClick={() => {
                     const attCount = viewingStaff.stats.presents + viewingStaff.stats.lates;
                     if (attCount < 7) {
-                      toast.error("Audit requires at least 7 active logs inside the selected month");
+                      toast.error("Audit requires at least 7 active logs inside the selected period");
                       return;
                     }
                     window.print();
                   }}
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 duration-200"
                 >
-                  <Printer size={16} /> Print Monthly Audit Record
+                  <Printer size={16} /> Print Audit Record
                 </button>
                 <button 
-                  onClick={() => router.push(`/hq/dashboard/manager/staff/${viewingStaff.department}_${viewingStaff.id}`)}
+                  onClick={() => {
+                    setViewingStaff(null);
+                    router.push(`/hq/dashboard/manager/staff/${viewingStaff.department}_${viewingStaff.id}`);
+                  }}
                   className="px-6 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all border border-slate-200 active:scale-95 duration-200 shadow-sm"
                 >
                   Go to Employee Profile

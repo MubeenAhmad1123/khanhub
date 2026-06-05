@@ -208,7 +208,7 @@ export default function DailyReportPage() {
           return false;
         }
 
-        const isActive = statusStr === 'active' && s.isActive !== false;
+        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
 
         return isActive;
       };

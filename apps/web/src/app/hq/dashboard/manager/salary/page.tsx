@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection, getDocs, addDoc, updateDoc, doc, query, where, orderBy
@@ -109,7 +109,9 @@ export default function SalarySlipsPage() {
     fetchData();
   }, [session]);
 
-  const monthSlips = slips.filter(s => s.month === selectedMonth);
+  const monthSlips = useMemo(() => {
+    return slips.filter(s => s.month === selectedMonth && staff.some(m => m.id === s.staffId));
+  }, [slips, selectedMonth, staff]);
 
   const generateSlip = async (member: HqStaff, existingSlip?: SalarySlip) => {
     if (!existingSlip) {
