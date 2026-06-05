@@ -432,6 +432,20 @@ export default function SeekerDetailPage() {
     }
   };
 
+  const handleDeleteSeeker = async () => {
+    if (!window.confirm("WARNING: Are you sure you want to PERMANENTLY DELETE this seeker profile? This action will remove all their profile data and cannot be undone.")) return;
+    try {
+      setDeactivating(true);
+      await deleteDoc(doc(db, 'jobcenter_seekers', seekerId));
+      toast.success('Seeker profile deleted permanently');
+      router.push('/departments/job-center/dashboard/admin/seekers');
+    } catch (error) {
+      console.error("Delete error", error);
+      toast.error('Deletion failed');
+      setDeactivating(false);
+    }
+  };
+
   const handlePlacement = () => {
     setShowPlacementModal(true);
   };
@@ -454,6 +468,7 @@ export default function SeekerDetailPage() {
       await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
         isActive: false,
         status: 'placed',
+        employmentStatus: 'Placed',
         placementDate: Timestamp.now(),
         placementCompany: employer.companyName,
         employerId: employer.id,
@@ -760,7 +775,7 @@ export default function SeekerDetailPage() {
               <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 ${
                 seeker.isActive ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-gray-50 border-gray-200 text-gray-400'
               }`}>
-                {seeker.status?.toUpperCase() || 'ACTIVE'}
+                {seeker.isActive ? (seeker.status ? seeker.status.replace('_', ' ').toUpperCase() : 'ACTIVE') : 'INACTIVE (FROZEN)'}
               </div>
             </div>
             {seeker.diagnosis && (
@@ -960,10 +975,10 @@ export default function SeekerDetailPage() {
                   <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Career Journey</p>
                     <p className="text-4xl font-black text-orange-700">
-                      {seeker.status === 'placed' ? 'Placed' : 'In Training'}
+                      {seeker.status === 'placed' ? 'Placed' : 'In Process'}
                     </p>
                     <p className="text-xs font-bold text-orange-500 mt-1">
-                      Seeker is currently {seeker.status === 'placed' ? 'working at an organization' : 'developing skills for placement'}
+                      Seeker is currently {seeker.status === 'placed' ? 'working at an organization' : 'in the process of finding placement'}
                     </p>
                     {seeker.isActive && (
                       <button
@@ -997,16 +1012,34 @@ export default function SeekerDetailPage() {
                 </div>
               )}
 
-              <div className="pt-8 border-t border-red-50 w-full">
-                <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
-                <p className="text-sm text-gray-500 mb-4">Deactivating a seeker hides them from the active list. Data remains intact.</p>
-                <button 
-                  onClick={handleDeactivate} 
-                  disabled={deactivating}
-                  className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
-                >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Seeker'}
-                </button>
+              <div className="pt-8 border-t border-red-50 w-full space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone (Sensitive Actions)</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Temporary Freeze: Hide this seeker from active lists. This keeps their records safe but marks them as inactive (on hold).
+                  </p>
+                  <button 
+                    onClick={handleDeactivate} 
+                    disabled={deactivating}
+                    className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  >
+                    {deactivating ? 'Deactivating...' : 'Temporarily Deactivate (Mark as Inactive)'}
+                  </button>
+                </div>
+
+                <div className="border-t border-red-50 pt-6">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Permanent Delete: Delete this account entirely. Use this if the account was created by mistake. All of their profile information will be deleted.
+                  </p>
+                  <button 
+                    onClick={handleDeleteSeeker} 
+                    disabled={deactivating}
+                    className="bg-red-600 text-white hover:bg-red-700 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Account Permanently
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1056,7 +1089,7 @@ export default function SeekerDetailPage() {
                       className="w-full bg-white border border-orange-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
                     >
                       <option value="active">LOOKING FOR JOB</option>
-                      <option value="training">IN TRAINING</option>
+                      <option value="training">IN PROCESS</option>
                       <option value="interviewing">INTERVIEWING</option>
                       <option value="hired">HIRED (MANUAL)</option>
                       <option value="placed">PLACED (VIA PORTAL)</option>

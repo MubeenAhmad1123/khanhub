@@ -146,6 +146,7 @@ export default function SeekersListPage() {
 
   const totalActive = seekers.filter(p => p.isActive).length;
   const totalPlaced = seekers.filter(p => p.employmentStatus === 'Placed').length;
+  const totalInProcess = seekers.filter(p => p.isActive && p.status?.toLowerCase() !== 'placed' && p.employmentStatus !== 'Placed').length;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 w-full overflow-x-hidden">
@@ -184,7 +185,7 @@ export default function SeekersListPage() {
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0"><GraduationCap className="w-5 h-5" /></div>
-              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Training</p><p className="text-xl font-black text-gray-900">0</p></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">In Process</p><p className="text-xl font-black text-gray-900">{totalInProcess}</p></div>
             </div>
           </div>
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
