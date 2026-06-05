@@ -173,16 +173,16 @@ export default function SuperAdminReportsPage() {
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
       // === STUDENTS ===
-      const activeStudentsSnap = await getDocs(query(collection(db, 'spims_students'), where('status', '==', 'Active')));
-      const students = activeStudentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      const totalActiveStudents = activeStudentsSnap.size;
+      const activeStudentsSnap = await getDocs(collection(db, 'spims_students'));
+      const allStudents = activeStudentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      const students = allStudents.filter(student => (student.status || 'Active') === 'Active');
+      const totalActiveStudents = students.length;
 
-      const newAdmissionsSnap = await getDocs(query(
-        collection(db, 'spims_students'),
-        where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
-        where('admissionDate', '<=', Timestamp.fromDate(lastDay))
-      ));
-      const newAdmissions = newAdmissionsSnap.size;
+      const newAdmissions = allStudents.filter((student: any) => {
+        if (!student.admissionDate) return false;
+        const d = student.admissionDate.toDate?.() ? student.admissionDate.toDate() : new Date(student.admissionDate);
+        return d >= firstDay && d <= lastDay;
+      }).length;
 
       // === STUDENT FEES BREAKDOWN ===
       const feesSnap = await getDocs(collection(db, 'spims_fees'));

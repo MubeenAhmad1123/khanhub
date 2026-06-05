@@ -128,8 +128,9 @@ export default function AdminReportsPage() {
       };
 
       // Fetch active students and their monthly fee records
-      const studentsSnap = await getDocs(query(collection(db, 'spims_students'), where('status', '==', 'Active')));
-      const students = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      const studentsSnap = await getDocs(collection(db, 'spims_students'));
+      const allStudents = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      const students = allStudents.filter(student => (student.status || 'Active') === 'Active');
 
       const feesSnap = await getDocs(collection(db, 'spims_fees'));
       const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
