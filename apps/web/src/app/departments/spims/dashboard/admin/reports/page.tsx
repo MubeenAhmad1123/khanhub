@@ -115,13 +115,20 @@ export default function AdminReportsPage() {
       const byCategory = (list: any[]) => {
         const map: Record<string, number> = {};
         list.forEach((t: any) => {
-          map[t.category] = (map[t.category] || 0) + (t.amount || 0);
+          const isFee = 
+            t.category === 'student_fee' || 
+            t.category === 'fee' || 
+            String(t.category || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('admission');
+          const catKey = isFee ? 'student_fee' : t.category;
+          map[catKey] = (map[catKey] || 0) + (t.amount || 0);
         });
         return map;
       };
 
       // Fetch active students and their monthly fee records
-      const studentsSnap = await getDocs(query(collection(db, 'spims_students'), where('isActive', '==', true)));
+      const studentsSnap = await getDocs(query(collection(db, 'spims_students'), where('status', '==', 'Active')));
       const students = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
 
       const feesSnap = await getDocs(collection(db, 'spims_fees'));
@@ -138,7 +145,16 @@ export default function AdminReportsPage() {
         const amountPaidThisMonth = studentPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
         // Calculate paid specifically in selected range (e.g. daily, weekly, monthly)
-        const studentPeriodTxns = txns.filter((t: any) => t.category === 'student_fee' && t.studentId === student.id);
+        const studentPeriodTxns = txns.filter((t: any) => {
+          if (t.studentId !== student.id && t.patientId !== student.id) return false;
+          return (
+            t.category === 'student_fee' ||
+            t.category === 'fee' ||
+            String(t.category || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('admission')
+          );
+        });
         const paidInPeriod = studentPeriodTxns.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
         return {
@@ -418,7 +434,7 @@ export default function AdminReportsPage() {
                             <th className="px-3 py-3 text-left font-bold">Roll No / Course</th>
                             <th className="px-3 py-3 text-right font-bold">Total Package Amount</th>
                             <th className="px-3 py-3 text-right font-bold text-teal-800">Paid in Selected Period</th>
-                            <th className="px-3 py-3 text-right font-bold">Paid in Month Total</th>
+                            <th className="px-3 py-3 text-right font-bold text-indigo-800">Paid in Month Total</th>
                             <th className="px-3 py-3 text-right font-bold text-rose-700">Outstanding Remaining Dues</th>
                           </tr>
                         </thead>
@@ -426,11 +442,11 @@ export default function AdminReportsPage() {
                           {reportData.studentFeesBreakdown.map((s: any) => (
                             <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-3 py-2.5 text-gray-850 font-bold">{s.name}</td>
-                              <td className="px-3 py-2.5 text-gray-500 font-mono">{s.rollNo} / {s.course}</td>
+                              <td className="px-3 py-2.5 text-gray-550 font-mono">{s.rollNo} / {s.course}</td>
                               <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.totalPackage)}</td>
                               <td className="px-3 py-2.5 text-right text-teal-800 font-bold bg-teal-50/20">{formatPKR(s.paidInPeriod)}</td>
-                              <td className="px-3 py-2.5 text-right text-gray-850">{formatPKR(s.amountPaidThisMonth)}</td>
-                              <td className={`px-3 py-2.5 text-right font-black ${s.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-emerald-700'}`}>{formatPKR(s.overallRemaining)}</td>
+                              <td className="px-3 py-2.5 text-right text-indigo-700 font-black bg-indigo-50/30">{formatPKR(s.amountPaidThisMonth)}</td>
+                              <td className={`px-3 py-2.5 text-right font-black ${s.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>{formatPKR(s.overallRemaining)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -447,6 +463,7 @@ export default function AdminReportsPage() {
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Date</th>
+                          <th className="px-3 py-3 text-left font-bold text-gray-600">Student Name</th>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Type</th>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Category</th>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Description</th>
@@ -458,6 +475,7 @@ export default function AdminReportsPage() {
                         {reportData.txns.map((t: any) => (
                           <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
                             <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                            <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.studentName || t.patientName || '—'}</td>
                             <td className="px-3 py-2.5">
                               <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
