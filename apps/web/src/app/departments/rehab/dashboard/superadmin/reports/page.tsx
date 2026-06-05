@@ -505,9 +505,9 @@ export default function SuperAdminReportsPage() {
                           <tr>
                             <th className="px-3 py-3 text-left font-bold">Patient Name</th>
                             <th className="px-3 py-3 text-left font-bold">Inpatient Number</th>
-                            <th className="px-3 py-3 text-right font-bold">Expected Monthly Package</th>
+                            <th className="px-3 py-3 text-right font-bold">Monthly Package</th>
                             <th className="px-3 py-3 text-right font-bold text-teal-800">Paid in Selected Period</th>
-                            <th className="px-3 py-3 text-right font-bold">Paid in Month Total</th>
+                            <th className="px-3 py-3 text-right font-bold text-indigo-800">Paid in Month Total</th>
                             <th className="px-3 py-3 text-right font-bold text-rose-700">Remaining Monthly Dues</th>
                           </tr>
                         </thead>
@@ -518,8 +518,8 @@ export default function SuperAdminReportsPage() {
                               <td className="px-3 py-2.5 text-gray-550 font-mono">{p.inpatientNumber}</td>
                               <td className="px-3 py-2.5 text-right text-gray-850">{formatPKR(p.expectedFee)}</td>
                               <td className="px-3 py-2.5 text-right text-teal-800 font-bold bg-teal-50/20">{formatPKR(p.paidInPeriod)}</td>
-                              <td className="px-3 py-2.5 text-right text-gray-850">{formatPKR(p.amountPaidThisMonth)}</td>
-                              <td className={`px-3 py-2.5 text-right font-black ${p.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-emerald-700'}`}>{formatPKR(p.overallRemaining)}</td>
+                              <td className="px-3 py-2.5 text-right text-indigo-700 font-black bg-indigo-50/30">{formatPKR(p.amountPaidThisMonth)}</td>
+                              <td className={`px-3 py-2.5 text-right font-black ${p.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>{formatPKR(p.overallRemaining)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -536,6 +536,7 @@ export default function SuperAdminReportsPage() {
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Date</th>
+                          <th className="px-3 py-3 text-left font-bold text-gray-600">Patient Name</th>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Type</th>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Category</th>
                           <th className="px-3 py-3 text-left font-bold text-gray-600">Description</th>
@@ -547,6 +548,7 @@ export default function SuperAdminReportsPage() {
                         {reportData.txns.map((t: any) => (
                           <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
                             <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                            <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.patientName || '—'}</td>
                             <td className="px-3 py-2.5">
                               <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
