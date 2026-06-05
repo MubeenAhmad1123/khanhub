@@ -168,6 +168,22 @@ export default function EmployerDetailPage() {
     }
   };
 
+  // Delete employer handler
+  const handleDeleteEmployer = async () => {
+    if (!confirm('Are you sure you want to permanently delete this company? This action cannot be undone.')) return;
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, 'jobcenter_employers', id));
+      toast.success('Company deleted');
+      router.push('/departments/job-center/dashboard/admin/employers');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete company');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
@@ -271,13 +287,20 @@ export default function EmployerDetailPage() {
                 <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Employer Control Panel • {employer.companyName}</p>
              </div>
              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => router.push(`/departments/job-center/dashboard/admin/employers/${id}/edit`)}
-                  className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-100 px-5 py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all active:scale-95 shadow-sm"
-                >
-                   <Settings size={14} className="text-indigo-600" />
-                   ADMIN ACTIONS
-                </button>
+                 <button 
+                   onClick={() => router.push(`/departments/job-center/dashboard/admin/employers/${id}/edit`)}
+                   className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-100 px-5 py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+                 >
+                    <Settings size={14} className="text-indigo-600" />
+                    ADMIN ACTIONS
+                 </button>
+                 <button 
+                   onClick={handleDeleteEmployer}
+                   className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+                 >
+                    <Trash2 size={14} className="text-white" />
+                    DELETE COMPANY
+                 </button>
              </div>
           </div>
 
