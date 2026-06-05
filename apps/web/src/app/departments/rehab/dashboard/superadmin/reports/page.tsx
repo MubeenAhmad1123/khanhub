@@ -125,7 +125,16 @@ export default function SuperAdminReportsPage() {
 
       const byCategory = (list: any[]) => {
         const map: Record<string, number> = {};
-        list.forEach((t: any) => { map[t.category] = (map[t.category] || 0) + (t.amount || 0); });
+        list.forEach((t: any) => {
+          const isFee = 
+            t.category === 'patient_fee' || 
+            t.category === 'fee' || 
+            String(t.category || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('admission');
+          const catKey = isFee ? 'patient_fee' : t.category;
+          map[catKey] = (map[catKey] || 0) + (t.amount || 0);
+        });
         return map;
       };
 
@@ -186,7 +195,16 @@ export default function SuperAdminReportsPage() {
         const overallRemaining = patientFeeRecord ? Number(patientFeeRecord.amountRemaining || 0) : expectedFee;
 
         // Calculate paid specifically in selected range (e.g. daily, weekly, monthly)
-        const patientPeriodTxns = txns.filter((t: any) => t.category === 'patient_fee' && t.patientId === patient.id);
+        const patientPeriodTxns = txns.filter((t: any) => {
+          if (t.patientId !== patient.id) return false;
+          return (
+            t.category === 'patient_fee' ||
+            t.category === 'fee' ||
+            String(t.category || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('admission')
+          );
+        });
         const paidInPeriod = patientPeriodTxns.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
         return {

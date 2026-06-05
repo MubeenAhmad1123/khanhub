@@ -427,7 +427,7 @@ export default function PatientDetailPage() {
             if (p.transactionId) syncedTxIds.add(p.transactionId);
             if (p.id) syncedTxIds.add(p.id); // Support legacy/manual entry ID field for deduplication
             aggregatedPayments.push({
-              id: `${doc.id}_${p.date}`,
+              id: `${doc.id}_${p.transactionId || p.id || p.date?.seconds || p.date?.nanoseconds || p.date || Math.random()}`,
               ...p,
               status,
               month: feeData.month,
@@ -724,7 +724,7 @@ export default function PatientDetailPage() {
           if (p.transactionId) syncedTxIds.add(p.transactionId);
           if (p.id) syncedTxIds.add(p.id);
           aggregatedPayments.push({
-            id: `${d.id}_${p.date}`,
+            id: `${d.id}_${p.transactionId || p.id || p.date?.seconds || p.date?.nanoseconds || p.date || Math.random()}`,
             ...p,
             status,
             month: feeData.month,
