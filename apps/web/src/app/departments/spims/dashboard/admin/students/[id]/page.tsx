@@ -13,7 +13,7 @@ import {
 import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
 import { doc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { formatDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY, toDate, withHtml2CanvasSafe } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import type { SpimsStudent } from '@/types/spims';
 import dynamic from 'next/dynamic';
@@ -1154,18 +1154,20 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc) => {
-          const noPrintElements = clonedDoc.querySelectorAll('.no-print');
-          noPrintElements.forEach((el: any) => {
-            el.style.display = 'none';
-          });
-        }
+      const canvas = await withHtml2CanvasSafe(async () => {
+        const html2canvas = (await import('html2canvas')).default;
+        return await html2canvas(reportRef.current!, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          onclone: (clonedDoc) => {
+            const noPrintElements = clonedDoc.querySelectorAll('.no-print');
+            noPrintElements.forEach((el: any) => {
+              el.style.display = 'none';
+            });
+          }
+        });
       });
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');

@@ -17,7 +17,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
-import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate, withHtml2CanvasSafe } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
 
 import type { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -4236,18 +4236,20 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc) => {
-          const noPrintElements = clonedDoc.querySelectorAll('.no-print');
-          noPrintElements.forEach((el: any) => {
-            el.style.display = 'none';
-          });
-        }
+      const canvas = await withHtml2CanvasSafe(async () => {
+        const html2canvas = (await import('html2canvas')).default;
+        return await html2canvas(reportRef.current!, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          onclone: (clonedDoc) => {
+            const noPrintElements = clonedDoc.querySelectorAll('.no-print');
+            noPrintElements.forEach((el: any) => {
+              el.style.display = 'none';
+            });
+          }
+        });
       });
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');

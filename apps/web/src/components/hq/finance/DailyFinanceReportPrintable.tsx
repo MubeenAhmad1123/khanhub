@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Printer, Download, X, TrendingUp, TrendingDown, Building2, Receipt } from 'lucide-react';
-import { toDate } from '@/lib/utils';
+import { toDate, withHtml2CanvasSafe } from '@/lib/utils';
 
 // Helper to determine if transaction is an expense
 const getIsExpense = (tx: any): boolean => {
@@ -103,10 +103,12 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
 
   // Download action
   const handleDownload = async () => {
-    const html2canvas = (await import('html2canvas')).default;
     const el = document.getElementById('daily-finance-report-root');
     if (!el) return;
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+    const canvas = await withHtml2CanvasSafe(async () => {
+      const html2canvas = (await import('html2canvas')).default;
+      return await html2canvas(el, { scale: 2, useCORS: true });
+    });
     const link = document.createElement('a');
     link.download = `daily-financial-report-${date}.png`;
     link.href = canvas.toDataURL('image/png');
