@@ -301,6 +301,17 @@ export default function StaffProfilePage() {
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
   const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
 
+  const isFineInSelectedMonth = useCallback((f: any) => {
+    if (!f.date) return false;
+    try {
+      const dObj = toDate(f.date);
+      if (dObj && typeof dObj.toISOString === 'function') {
+        return dObj.toISOString().slice(0, 7) === selectedMonth;
+      }
+    } catch (e) {}
+    return String(f.date).startsWith(selectedMonth);
+  }, [selectedMonth]);
+
   const salaryDetails = useMemo(() => {
     if (!staff) {
       return {
@@ -389,7 +400,7 @@ export default function StaffProfilePage() {
     const absentDeduction = totalAbsentDays * dailyWage;
 
     // Filter fines for selected month
-    const monthlyFinesList = fines.filter(f => f.date && f.date.startsWith(selectedMonth));
+    const monthlyFinesList = fines.filter(isFineInSelectedMonth);
     const totalFines = monthlyFinesList.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
     if (slip) {
@@ -4505,13 +4516,13 @@ export default function StaffProfilePage() {
                 <div className="space-y-3 col-span-1 md:col-span-2 mt-4">
                   <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                    Fine Deductions Details ({fines.filter(f => f.date && f.date.startsWith(selectedMonth)).length})
+                    Fine Deductions Details ({fines.filter(isFineInSelectedMonth).length})
                   </h4>
                   <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
-                    {fines.filter(f => f.date && f.date.startsWith(selectedMonth)).length === 0 ? (
+                    {fines.filter(isFineInSelectedMonth).length === 0 ? (
                       <p className="text-[10px] text-gray-400 italic text-center py-4">No fines enforced this month</p>
                     ) : (
-                      fines.filter(f => f.date && f.date.startsWith(selectedMonth)).map((item, idx) => (
+                      fines.filter(isFineInSelectedMonth).map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
                           <div className="flex flex-col">
                             <span className="font-bold text-gray-700">{item.reason || 'Penalty'}</span>
