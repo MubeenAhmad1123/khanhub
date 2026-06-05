@@ -112,6 +112,12 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link 
+            href={session?.role === 'superadmin' ? "/departments/rehab/dashboard/superadmin/reports" : "/departments/rehab/dashboard/admin/reports"}
+            className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 whitespace-nowrap"
+          >
+            <BarChart3 size={16} /> Finance Reports
+          </Link>
+          <Link 
             href="/departments/rehab/dashboard/admin/patients/new"
             className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-black hover:bg-teal-700 transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
           >

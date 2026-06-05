@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {
   Users, Building2, Monitor, Laptop, Plus, ChevronRight, Activity, 
-  TrendingUp, UserPlus, Search, ArrowUpRight, Calendar, GraduationCap
+  TrendingUp, UserPlus, Search, ArrowUpRight, Calendar, GraduationCap, BarChart3
 } from 'lucide-react';
 import { formatDateDMY } from '@/lib/utils';
 import { Spinner } from '@/components/ui';
@@ -105,6 +105,13 @@ export default function ITAdminDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          <Link 
+            href={session?.role === 'superadmin' ? "/departments/it/dashboard/superadmin/reports" : "/departments/it/dashboard/admin/reports"}
+            className="flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-2xl text-[13px] font-black hover:bg-emerald-700 transition-all active:scale-95 shadow-2xl shadow-emerald-100 group"
+          >
+            <BarChart3 size={20} className="group-hover:scale-110 transition-transform" /> 
+            Finance Reports
+          </Link>
           <Link 
             href="/departments/it/dashboard/admin/students/new"
             className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-2xl text-[13px] font-black hover:bg-indigo-600 transition-all active:scale-95 shadow-2xl shadow-black/10 group"

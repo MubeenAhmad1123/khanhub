@@ -11,7 +11,7 @@ import {
 import {
   UserCog, TrendingUp,
   Users, Activity, Loader2,
-  Plus, X, Calendar
+  Plus, X, Calendar, BarChart3
 } from 'lucide-react';
 import { formatDateDMY } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
@@ -146,6 +146,12 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={session?.role === 'superadmin' ? "/departments/sukoon/dashboard/superadmin/reports" : "/departments/sukoon/dashboard/admin/reports"}
+            className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 whitespace-nowrap"
+          >
+            <BarChart3 size={16} /> Finance Reports
+          </Link>
           <button 
             onClick={() => setShowStatsModal(true)}
             className="flex items-center gap-2 px-5 py-3 bg-purple-600 text-white rounded-xl text-sm font-black hover:bg-purple-700 transition-all shadow-lg shadow-purple-100 whitespace-nowrap"

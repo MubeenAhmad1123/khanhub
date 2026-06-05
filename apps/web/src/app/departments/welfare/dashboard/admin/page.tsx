@@ -11,7 +11,7 @@ import {
 import {
   Heart, UserCog, TrendingUp,
   Users, ChevronRight, Activity, Loader2,
-  Plus
+  Plus, BarChart3
 } from 'lucide-react';
 import { formatDateDMY } from '@/lib/utils';
 
@@ -93,7 +93,14 @@ export default function AdminDashboardPage() {
             Today is {formatDateDMY(new Date())}
           </p>
         </div>
-        <div>
+        <div className="flex items-center gap-3">
+          <Link 
+            href={session?.role === 'superadmin' ? "/departments/welfare/dashboard/superadmin/reports" : "/departments/welfare/dashboard/admin/reports"}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-sm font-medium transition-all shadow-sm whitespace-nowrap hover:-translate-y-0.5"
+          >
+            <BarChart3 size={15} />
+            Finance Reports
+          </Link>
           <Link 
             href="/departments/welfare/dashboard/admin/children/new"
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-sm font-medium transition-all shadow-sm whitespace-nowrap hover:-translate-y-0.5"

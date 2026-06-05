@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import {
   Users, Building2, Briefcase, Plus, ChevronRight, Activity, 
-  Loader2, TrendingUp, UserPlus, Building, Search, ArrowUpRight, Calendar
+  Loader2, TrendingUp, UserPlus, Building, Search, ArrowUpRight, Calendar, BarChart3
 } from 'lucide-react';
 import { formatDateDMY } from '@/lib/utils';
 
@@ -119,6 +119,13 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          <Link 
+            href={session?.role === 'superadmin' ? "/departments/job-center/dashboard/superadmin/reports" : "/departments/job-center/dashboard/admin/reports"}
+            className="flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-2xl text-[13px] font-black hover:bg-emerald-700 transition-all active:scale-95 shadow-2xl shadow-emerald-100 group"
+          >
+            <BarChart3 size={20} className="group-hover:scale-110 transition-transform" /> 
+            Finance Reports
+          </Link>
           <Link 
             href="/departments/job-center/dashboard/admin/seekers/new"
             className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-2xl text-[13px] font-black hover:bg-pink-600 transition-all active:scale-95 shadow-2xl shadow-black/10 group"

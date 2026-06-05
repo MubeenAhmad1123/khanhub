@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import {
   TrendingUp, TrendingDown, Users, Activity, Loader2,
-  Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight, X, Calendar
+  Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight, X, Calendar, BarChart3
 } from 'lucide-react';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { 
@@ -277,8 +277,14 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link 
-            href="/hq/dashboard/cashier"
+            href={session?.role === 'superadmin' ? "/departments/hospital/dashboard/superadmin/reports" : "/departments/hospital/dashboard/admin/reports"}
             className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 whitespace-nowrap"
+          >
+            <BarChart3 size={14} /> Finance Reports
+          </Link>
+          <Link 
+            href="/hq/dashboard/cashier"
+            className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-black transition-all shadow-lg shadow-slate-100 whitespace-nowrap"
           >
             Go to Cashier Station
           </Link>
