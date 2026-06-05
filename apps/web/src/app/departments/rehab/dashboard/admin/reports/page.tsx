@@ -7,7 +7,8 @@ import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/
 import { formatDateDMY } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
-  TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3
+  TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 const MONTHS = [
@@ -56,6 +57,9 @@ export default function AdminReportsPage() {
   const [reportData, setReportData] = useState<any>(null);
   const [generated, setGenerated] = useState(false);
 
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,10 +72,53 @@ export default function AdminReportsPage() {
     setSession(parsed);
   }, [router]);
 
+  const handleSort = (field: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortField === field && sortDirection === 'asc') {
+      direction = 'desc';
+    }
+    setSortField(field);
+    setSortDirection(direction);
+  };
+
+  const getSortedPatientFees = () => {
+    if (!reportData?.patientFeesBreakdown) return [];
+    const sorted = [...reportData.patientFeesBreakdown];
+    if (sortField) {
+      sorted.sort((a: any, b: any) => {
+        let valA = a[sortField];
+        let valB = b[sortField];
+
+        // Handle numeric fields
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortDirection === 'asc' ? valA - valB : valB - valA;
+        }
+
+        // Handle inpatientNumber / patient ID numeric sorting if possible
+        if (sortField === 'inpatientNumber') {
+          const numA = parseInt(String(valA).replace(/\D/g, '')) || 0;
+          const numB = parseInt(String(valB).replace(/\D/g, '')) || 0;
+          if (numA !== numB) {
+            return sortDirection === 'asc' ? numA - numB : numB - numA;
+          }
+        }
+
+        // Handle string fields
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sorted;
+  };
+
   const handleGenerate = async () => {
     try {
       setGenerating(true);
       setGenerated(false);
+      setSortField(''); // Reset sort field on fresh generation
 
       let firstDay: Date;
       let lastDay: Date;
@@ -428,18 +475,72 @@ export default function AdminReportsPage() {
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
                       <table className="w-full text-xs border-collapse">
-                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200">
+                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
                           <tr>
-                            <th className="px-3 py-3 text-left font-bold">Patient Name</th>
-                            <th className="px-3 py-3 text-left font-bold">Inpatient Number</th>
-                            <th className="px-3 py-3 text-right font-bold">Monthly Package</th>
-                            <th className="px-3 py-3 text-right font-bold text-teal-800">Paid in Selected Period</th>
-                            <th className="px-3 py-3 text-right font-bold text-indigo-800">Paid in Month Total</th>
-                            <th className="px-3 py-3 text-right font-bold text-rose-700">Remaining Monthly Dues</th>
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
+                              <div className="flex items-center gap-1">
+                                Patient Name
+                                {sortField === 'name' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('inpatientNumber')}>
+                              <div className="flex items-center gap-1">
+                                Inpatient Number
+                                {sortField === 'inpatientNumber' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('expectedFee')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Monthly Package
+                                {sortField === 'expectedFee' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold text-teal-800 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('paidInPeriod')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Paid in Selected Period
+                                {sortField === 'paidInPeriod' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-teal-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold text-indigo-800 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('amountPaidThisMonth')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Paid in Month Total
+                                {sortField === 'amountPaidThisMonth' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-3 py-3 text-right font-bold text-rose-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('overallRemaining')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Remaining Monthly Dues
+                                {sortField === 'overallRemaining' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-450" />
+                                )}
+                              </div>
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-150">
-                          {reportData.patientFeesBreakdown.map((p: any) => (
+                          {getSortedPatientFees().map((p: any) => (
                             <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-3 py-2.5 text-gray-850 font-bold">{p.name}</td>
                               <td className="px-3 py-2.5 text-gray-550 font-mono">{p.inpatientNumber}</td>
@@ -480,9 +581,9 @@ export default function AdminReportsPage() {
                               <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="px-3 py-2.5 text-gray-700 font-medium">{formatCat(t.category)}</td>
-                            <td className="px-3 py-2.5 text-gray-500 max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
+                            <td className="px-3 py-2.5 text-gray-550 max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
                             <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatPKR(t.amount)}</td>
-                            <td className="px-3 py-2.5 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
+                            <td className="px-3 py-2.5 text-gray-550 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
