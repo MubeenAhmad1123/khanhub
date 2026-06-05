@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { formatDateDMY, toDate, withHtml2CanvasSafe } from '@/lib/utils';
+import { formatDateDMY, toDate, downloadElementAsPng } from '@/lib/utils';
 import Link from 'next/link';
 import {
   Target, Camera, Activity,
@@ -782,14 +782,7 @@ export default function StaffProfilePage() {
   const handleDownloadReport = async () => {
     const el = document.getElementById('staff-report-root');
     if (!el) return;
-    const canvas = await withHtml2CanvasSafe(async () => {
-      const html2canvas = (await import('html2canvas')).default;
-      return await html2canvas(el, { scale: 2, useCORS: true });
-    });
-    const link = document.createElement('a');
-    link.download = `${staff?.name || 'staff'}-report.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    await downloadElementAsPng(el, `${staff?.name || 'staff'}-report.png`, { scale: 2 });
   };
 
   const handleDeleteConfig = async (type: 'duty' | 'dress', key: string) => {

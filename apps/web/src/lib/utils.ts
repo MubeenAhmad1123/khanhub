@@ -172,99 +172,33 @@ export function pktEndOfToday(): Date {
   return new Date(pktTime.getTime() - (5 * 60 * 60 * 1000));
 }
 
+interface ExportPngOptions {
+  scale?: number;
+  quality?: number;
+  backgroundColor?: string;
+  filter?: (node: HTMLElement) => boolean;
+}
+
 /**
- * Temporarily overrides window.getComputedStyle to translate unsupported color functions
- * (like oklch, oklab, lab, lch) to standard sRGB values using a temporary canvas.
- * This prevents html2canvas from throwing an error.
+ * Renders a DOM element as a PNG image using html-to-image (supports modern color spaces like oklch natively)
+ * and triggers a browser download.
  */
-export async function withHtml2CanvasSafe<T>(action: () => Promise<T>): Promise<T> {
-  if (typeof window === 'undefined') {
-    return action();
-  }
-
-  const replaceOklchInString = (str: string): string => {
-    if (!str || typeof str !== 'string') return str;
-    if (!str.includes('oklch') && !str.includes('oklab') && !str.includes('lab') && !str.includes('lch')) {
-      return str;
-    }
-
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return str;
-
-      const colorFunctions = ['oklch', 'oklab', 'lab', 'lch'];
-      let result = str;
-
-      for (const func of colorFunctions) {
-        let index = 0;
-        while ((index = result.indexOf(func + '(', index)) !== -1) {
-          let depth = 1;
-          let i = index + func.length + 1;
-          for (; i < result.length; i++) {
-            if (result[i] === '(') depth++;
-            else if (result[i] === ')') {
-              depth--;
-              if (depth === 0) break;
-            }
-          }
-          if (depth === 0) {
-            const match = result.substring(index, i + 1);
-            try {
-              ctx.fillStyle = match;
-              const resolved = ctx.fillStyle;
-              if (resolved) {
-                result = result.substring(0, index) + resolved + result.substring(i + 1);
-                index += resolved.length;
-                continue;
-              }
-            } catch (e) {
-              // ignore
-            }
-            index += match.length;
-          } else {
-            index += func.length + 1;
-          }
-        }
-      }
-      return result;
-    } catch (e) {
-      return str;
-    }
-  };
-
-  const originalGetComputedStyle = window.getComputedStyle;
-
-  try {
-    window.getComputedStyle = function (element, pseudoElt) {
-      const style = originalGetComputedStyle(element, pseudoElt);
-      return new Proxy(style, {
-        get(target, prop) {
-          if (prop === 'getPropertyValue') {
-            return function(propertyName: string) {
-              const val = target.getPropertyValue(propertyName);
-              if (typeof val === 'string') {
-                return replaceOklchInString(val);
-              }
-              return val;
-            };
-          }
-          const val = (target as any)[prop];
-          if (typeof val === 'string') {
-            return replaceOklchInString(val);
-          }
-          if (typeof val === 'function') {
-            return val.bind(target);
-          }
-          return val;
-        }
-      });
-    };
-
-    return await action();
-  } finally {
-    window.getComputedStyle = originalGetComputedStyle;
-  }
+export async function downloadElementAsPng(
+  element: HTMLElement,
+  filename: string,
+  options: ExportPngOptions = {}
+) {
+  const { toPng } = await import('html-to-image');
+  const dataUrl = await toPng(element, {
+    quality: options.quality ?? 0.95,
+    pixelRatio: options.scale ?? 2,
+    backgroundColor: options.backgroundColor ?? '#ffffff',
+    filter: options.filter as any,
+    cacheBust: true,
+  });
+  
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataUrl;
+  link.click();
 }

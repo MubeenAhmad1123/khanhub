@@ -17,7 +17,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
-import { formatDateDMY, parseDateDMY, toDate, withHtml2CanvasSafe } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate, downloadElementAsPng } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui';
 
 import type { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -4236,26 +4236,16 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     if (!reportRef.current) return;
     setIsDownloading(true);
     try {
-      const canvas = await withHtml2CanvasSafe(async () => {
-        const html2canvas = (await import('html2canvas')).default;
-        return await html2canvas(reportRef.current!, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          onclone: (clonedDoc) => {
-            const noPrintElements = clonedDoc.querySelectorAll('.no-print');
-            noPrintElements.forEach((el: any) => {
-              el.style.display = 'none';
-            });
+      await downloadElementAsPng(reportRef.current, `Report-${reportData.name}-${new Date().toLocaleDateString()}.png`, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        filter: (node) => {
+          if (node.classList && (node.classList.contains('no-print') || node.classList.contains('no-download'))) {
+            return false;
           }
-        });
+          return true;
+        }
       });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `Report-${reportData.name}-${new Date().toLocaleDateString()}.png`;
-      link.href = dataUrl;
-      link.click();
     } catch (err) {
       console.error('Download failed', err);
       toast.error('Download failed');

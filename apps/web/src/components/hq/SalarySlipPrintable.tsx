@@ -3,7 +3,7 @@
 import React from 'react';
 import type { SalarySlip } from '@/types/hq';
 import { Printer, Download } from 'lucide-react';
-import { toDate, withHtml2CanvasSafe } from '@/lib/utils';
+import { toDate, downloadElementAsPng } from '@/lib/utils';
 
 interface Props {
   slip: SalarySlip;
@@ -102,14 +102,7 @@ export function SalarySlipPrintable({ slip, showActionControls = false, staff = 
   const handleDownload = async () => {
     const el = document.getElementById('salary-slip-root');
     if (!el) return;
-    const canvas = await withHtml2CanvasSafe(async () => {
-      const html2canvas = (await import('html2canvas')).default;
-      return await html2canvas(el, { scale: 2, useCORS: true });
-    });
-    const link = document.createElement('a');
-    link.download = `salary-slip-${slip.staffName || 'employee'}-${slip.month || 'month'}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    await downloadElementAsPng(el, `salary-slip-${slip.staffName || 'employee'}-${slip.month || 'month'}.png`, { scale: 2 });
   };
 
   return (
