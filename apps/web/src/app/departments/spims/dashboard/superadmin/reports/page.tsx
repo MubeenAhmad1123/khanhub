@@ -20,24 +20,49 @@ function formatPKR(n: number) {
   return `Rs. ${n.toLocaleString('en-PK')}`;
 }
 
+const CATEGORIES: Record<string, string> = {
+  student_fee: 'Student Tuition Fees',
+  admission_fee: 'Admission / Enrollment Fees',
+  staff_salary: 'Staff Salary Disbursements',
+  utilities: 'Utility Bills',
+  rent: 'Rent & Lease Payments',
+  marketing: 'Marketing & CRM Ads',
+  office_supplies: 'Office & Study Materials',
+  repairs_maintenance: 'Repairs & Maintenance',
+  miscellaneous: 'Miscellaneous Expenses',
+  canteen_deposit: 'Canteen Deposits'
+};
+
 function formatCat(cat: string) {
+  if (CATEGORIES[cat]) return CATEGORIES[cat];
   return cat?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || cat;
 }
 
 export default function SuperAdminReportsPage() {
   const router = useRouter();
+  const [session, setSession] = useState<any>(null);
+
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [selectedDate, setSelectedDate] = useState(now.toISOString().split('T')[0]); // YYYY-MM-DD
+  const [selectedWeek, setSelectedWeek] = useState(1); // 1-5
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [generated, setGenerated] = useState(false);
+
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('spims_session');
     if (!sessionData) { router.push('/departments/spims/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/spims/login'); return; }
+    if (parsed.role !== 'superadmin') {
+      router.push('/departments/spims/login'); return;
+    }
+    setSession(parsed);
   }, [router]);
 
   const handleGenerate = async () => {
@@ -45,9 +70,34 @@ export default function SuperAdminReportsPage() {
       setGenerating(true);
       setGenerated(false);
 
-      const firstDay = new Date(selectedYear, selectedMonth, 1);
-      const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-      const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+      let firstDay: Date;
+      let lastDay: Date;
+      let label: string;
+      let monthStr: string;
+
+      if (reportType === 'daily') {
+        const parts = selectedDate.split('-');
+        const y = parseInt(parts[0]);
+        const m = parseInt(parts[1]) - 1;
+        const d = parseInt(parts[2]);
+        firstDay = new Date(y, m, d, 0, 0, 0);
+        lastDay = new Date(y, m, d, 23, 59, 59);
+        label = `Daily Report — ${d} ${MONTHS[m]} ${y}`;
+        monthStr = `${parts[0]}-${parts[1]}`;
+      } else if (reportType === 'weekly') {
+        const startDay = (selectedWeek - 1) * 7 + 1;
+        const endOfPeriod = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const endDay = selectedWeek === 5 ? endOfPeriod : Math.min(selectedWeek * 7, endOfPeriod);
+        firstDay = new Date(selectedYear, selectedMonth, startDay, 0, 0, 0);
+        lastDay = new Date(selectedYear, selectedMonth, endDay, 23, 59, 59);
+        label = `Weekly Report — Week ${selectedWeek} (${startDay} ${MONTHS[selectedMonth]} - ${endDay} ${MONTHS[selectedMonth]} ${selectedYear})`;
+        monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+      } else {
+        firstDay = new Date(selectedYear, selectedMonth, 1, 0, 0, 0);
+        lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+        label = `Monthly Report — ${MONTHS[selectedMonth]} ${selectedYear}`;
+        monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+      }
 
       // === FINANCIAL TRANSACTIONS ===
       const txnQ = query(
@@ -132,12 +182,18 @@ export default function SuperAdminReportsPage() {
       const monthFees = allFees.filter(fee => {
         if (fee.status !== 'approved') return false;
         const feeDate = fee.date?.toDate?.() ? fee.date.toDate() : new Date(fee.date || 0);
-        return feeDate.getFullYear() === selectedYear && feeDate.getMonth() === selectedMonth;
+        const feeMonthStr = `${feeDate.getFullYear()}-${String(feeDate.getMonth() + 1).padStart(2, '0')}`;
+        return feeMonthStr === monthStr;
       });
 
       const studentFeesBreakdown = students.map(student => {
         const studentPayments = monthFees.filter(f => f.studentId === student.id);
         const amountPaidThisMonth = studentPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+        // Calculate paid specifically in selected range (e.g. daily, weekly, monthly)
+        const studentPeriodTxns = txns.filter((t: any) => t.category === 'student_fee' && t.studentId === student.id);
+        const paidInPeriod = studentPeriodTxns.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+
         return {
           id: student.id,
           name: student.name,
@@ -145,17 +201,21 @@ export default function SuperAdminReportsPage() {
           course: student.course || '—',
           monthlyFee: Number(student.monthlyFee || 0),
           totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
+          paidInPeriod,
           amountPaidThisMonth,
           overallRemaining: Number(student.remaining ?? student.remainingBalance ?? 0)
         };
       });
 
-      const totalStudentFeesCollectedThisMonth = studentFeesBreakdown.reduce((sum, s) => sum + s.amountPaidThisMonth, 0);
+      const totalStudentFeesCollectedInPeriod = studentFeesBreakdown.reduce((sum, s) => sum + s.paidInPeriod, 0);
       const totalStudentOutstandingDues = studentFeesBreakdown.reduce((sum, s) => sum + s.overallRemaining, 0);
 
       setReportData({
-        txns, income, expense,
-        totalIncome, totalExpenses,
+        txns,
+        income,
+        expense,
+        totalIncome,
+        totalExpenses,
         netBalance: totalIncome - totalExpenses,
         incomeByCategory: byCategory(income),
         expenseByCategory: byCategory(expense),
@@ -165,9 +225,9 @@ export default function SuperAdminReportsPage() {
         totalActiveStudents,
         newAdmissions,
         studentFeesBreakdown,
-        totalStudentFeesCollectedThisMonth,
+        totalStudentFeesCollectedInPeriod,
         totalStudentOutstandingDues,
-        monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
+        reportLabel: label,
         generatedAt: new Date().toLocaleString(),
       });
       setGenerated(true);
@@ -178,6 +238,8 @@ export default function SuperAdminReportsPage() {
       setGenerating(false);
     }
   };
+
+  const handlePrint = () => window.print();
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -196,30 +258,96 @@ export default function SuperAdminReportsPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <FileBarChart className="w-6 h-6 text-purple-600" /> Super Admin Reports
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Comprehensive monthly report including staff payroll</p>
+            <p className="text-sm text-gray-500 mt-1">Comprehensive reports including student summaries and staff payroll</p>
           </div>
           {generated && (
-            <button onClick={() => window.print()} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors">
+            <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors">
               <Printer className="w-4 h-4" /> Print / Save PDF
             </button>
           )}
         </div>
 
         {/* Controls */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-500" /> Select Period</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-500" /> Select Period</h2>
+            {/* View Toggle */}
+            <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+              {(['daily', 'weekly', 'monthly'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setReportType(t)}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                    reportType === t ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-755'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="flex-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
-              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500">
-                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
-              <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} min={2020} max={2100} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500" />
-            </div>
-            <button onClick={handleGenerate} disabled={generating} className="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+            {reportType === 'daily' && (
+              <div className="flex-1 w-full">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                />
+              </div>
+            )}
+
+            {reportType === 'weekly' && (
+              <div className="w-full sm:w-1/4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Week</label>
+                <select
+                  value={selectedWeek}
+                  onChange={e => setSelectedWeek(Number(e.target.value))}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                >
+                  <option value={1}>Week 1 (1st - 7th)</option>
+                  <option value={2}>Week 2 (8th - 14th)</option>
+                  <option value={3}>Week 3 (15th - 21st)</option>
+                  <option value={4}>Week 4 (22nd - 28th)</option>
+                  <option value={5}>Week 5 (29th - End)</option>
+                </select>
+              </div>
+            )}
+
+            {reportType !== 'daily' && (
+              <>
+                <div className="flex-1 w-full">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
+                  <select
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(Number(e.target.value))}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                  >
+                    {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1 w-full">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
+                  <input
+                    type="number"
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(Number(e.target.value))}
+                    min={2020}
+                    max={2100}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                  />
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
               Generate Report
             </button>
@@ -228,12 +356,12 @@ export default function SuperAdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="spims-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
+          <div id="spims-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
               <h2 className="text-2xl font-black text-gray-900">SPIMS Medical Institute — Super Admin Report</h2>
-              <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
+              <p className="text-lg font-bold text-purple-700 mt-1">{reportData.reportLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
@@ -257,7 +385,7 @@ export default function SuperAdminReportsPage() {
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <div className="text-3xl font-black text-blue-800">{reportData.newAdmissions}</div>
-                  <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">New Admissions</div>
+                  <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">New Admissions (Selected Period)</div>
                 </div>
               </div>
             </div>
@@ -285,7 +413,7 @@ export default function SuperAdminReportsPage() {
             </div>
 
             {reportData.txns.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-500">No approved transactions found for {reportData.monthLabel}.</div>
+              <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-500">No approved transactions found for the selected period.</div>
             ) : (
               <>
                 {/* Income Breakdown */}
@@ -354,8 +482,8 @@ export default function SuperAdminReportsPage() {
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
-                        <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Month Collections</div>
-                        <div className="text-xl font-black text-teal-800">{formatPKR(reportData.totalStudentFeesCollectedThisMonth)}</div>
+                        <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Period Collections</div>
+                        <div className="text-xl font-black text-teal-800">{formatPKR(reportData.totalStudentFeesCollectedInPeriod)}</div>
                       </div>
                       <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
                         <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Balances</div>
@@ -369,8 +497,9 @@ export default function SuperAdminReportsPage() {
                             <th className="border border-gray-200 px-3 py-3 text-left font-bold">Student Name</th>
                             <th className="border border-gray-200 px-3 py-3 text-left font-bold">Roll No / Course</th>
                             <th className="border border-gray-200 px-3 py-3 text-right font-bold">Total Package</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold text-teal-800">Paid in Period</th>
                             <th className="border border-gray-200 px-3 py-3 text-right font-bold">Paid in Month</th>
-                            <th className="border border-gray-200 px-3 py-3 text-right font-bold">Overall Remaining</th>
+                            <th className="border border-gray-200 px-3 py-3 text-right font-bold text-rose-600">Overall Remaining</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-150">
@@ -379,8 +508,9 @@ export default function SuperAdminReportsPage() {
                               <td className="border border-gray-200 px-3 py-2 text-gray-800 font-medium">{s.name}</td>
                               <td className="border border-gray-200 px-3 py-2 text-gray-500">{s.rollNo} / {s.course}</td>
                               <td className="border border-gray-200 px-3 py-2 text-right text-gray-900">{formatPKR(s.totalPackage)}</td>
-                              <td className="border border-gray-200 px-3 py-2 text-right text-teal-700 font-black">{formatPKR(s.amountPaidThisMonth)}</td>
-                              <td className="border border-gray-200 px-3 py-2 text-right text-rose-600 font-black">{formatPKR(s.overallRemaining)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-teal-700 font-black bg-teal-50/20">{formatPKR(s.paidInPeriod)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-gray-850">{formatPKR(s.amountPaidThisMonth)}</td>
+                              <td className="border border-gray-200 px-3 py-2 text-right text-rose-600 font-black bg-rose-50/20">{formatPKR(s.overallRemaining)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -407,12 +537,12 @@ export default function SuperAdminReportsPage() {
                       <tbody>
                         {reportData.txns.map((t: any) => (
                           <tr key={t.id} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-3 py-2 text-gray-600">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
                             <td className="border border-gray-200 px-3 py-2">
                               <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
-                            <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[180px] truncate">{t.description || '—'}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-gray-650 max-w-[180px] truncate" title={t.description}>{t.description || '—'}</td>
                             <td className="border border-gray-200 px-3 py-2 text-right font-medium text-gray-900">{formatPKR(t.amount)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-500 font-mono text-[10px]">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>
@@ -427,7 +557,7 @@ export default function SuperAdminReportsPage() {
             {/* Staff Salary Summary */}
             {reportData.staffSalaries.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary ({reportData.reportLabel.split('—')[1]?.trim() || reportData.reportLabel})</h3>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm border-collapse min-w-[600px]">
                     <thead className="bg-purple-50">

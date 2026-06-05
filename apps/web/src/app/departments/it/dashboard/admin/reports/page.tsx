@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { formatDateDMY } from '@/lib/utils';
 import {
-  FileBarChart, Download, Printer, Calendar,
+  FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
@@ -20,7 +20,21 @@ function formatPKR(n: number) {
   return `Rs. ${n.toLocaleString('en-PK')}`;
 }
 
+const CATEGORIES: Record<string, string> = {
+  domain_hosting: 'Domains & Hosting',
+  software_license: 'Software & Licenses',
+  marketing_ads: 'Marketing & Ads',
+  client_fee: 'Client Project Milestones',
+  staff_salary: 'Staff Salary Disbursements',
+  utilities: 'Utility Bills',
+  rent: 'Rent & Lease Payments',
+  office_supplies: 'Office Supplies',
+  repairs_maintenance: 'Repairs & Maintenance',
+  miscellaneous: 'Miscellaneous Expenses'
+};
+
 function formatCat(cat: string) {
+  if (CATEGORIES[cat]) return CATEGORIES[cat];
   return cat?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || cat;
 }
 
@@ -29,6 +43,9 @@ export default function ITAdminReportsPage() {
   const [session, setSession] = useState<any>(null);
 
   const now = new Date();
+  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [selectedDate, setSelectedDate] = useState(now.toISOString().split('T')[0]); // YYYY-MM-DD
+  const [selectedWeek, setSelectedWeek] = useState(1); // 1-5
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
@@ -53,8 +70,30 @@ export default function ITAdminReportsPage() {
       setGenerating(true);
       setGenerated(false);
 
-      const firstDay = new Date(selectedYear, selectedMonth, 1);
-      const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+      let firstDay: Date;
+      let lastDay: Date;
+      let label: string;
+
+      if (reportType === 'daily') {
+        const parts = selectedDate.split('-');
+        const y = parseInt(parts[0]);
+        const m = parseInt(parts[1]) - 1;
+        const d = parseInt(parts[2]);
+        firstDay = new Date(y, m, d, 0, 0, 0);
+        lastDay = new Date(y, m, d, 23, 59, 59);
+        label = `Daily Report — ${d} ${MONTHS[m]} ${y}`;
+      } else if (reportType === 'weekly') {
+        const startDay = (selectedWeek - 1) * 7 + 1;
+        const endOfPeriod = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const endDay = selectedWeek === 5 ? endOfPeriod : Math.min(selectedWeek * 7, endOfPeriod);
+        firstDay = new Date(selectedYear, selectedMonth, startDay, 0, 0, 0);
+        lastDay = new Date(selectedYear, selectedMonth, endDay, 23, 59, 59);
+        label = `Weekly Report — Week ${selectedWeek} (${startDay} ${MONTHS[selectedMonth]} - ${endDay} ${MONTHS[selectedMonth]} ${selectedYear})`;
+      } else {
+        firstDay = new Date(selectedYear, selectedMonth, 1, 0, 0, 0);
+        lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+        label = `Monthly Report — ${MONTHS[selectedMonth]} ${selectedYear}`;
+      }
 
       const q = query(
         collection(db, 'it_transactions'),
@@ -90,7 +129,7 @@ export default function ITAdminReportsPage() {
         netBalance: totalIncome - totalExpenses,
         incomeByCategory: byCategory(income),
         expenseByCategory: byCategory(expense),
-        monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
+        reportLabel: label,
         generatedAt: new Date().toLocaleString(),
       });
 
@@ -106,7 +145,7 @@ export default function ITAdminReportsPage() {
   const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] p-4 md:p-8 space-y-8">
+    <div className="min-h-screen bg-[#FDFCFB] p-4 md:p-8 space-y-8 text-black">
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -131,7 +170,7 @@ export default function ITAdminReportsPage() {
               <FileBarChart className="w-10 h-10 text-indigo-600" />
               IT Financial Reports
             </h1>
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-2">Generate monthly approved transaction reports</p>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-2">Generate approved transaction reports for any day, week, or month</p>
           </div>
           {generated && (
             <div className="flex gap-4">
@@ -144,34 +183,85 @@ export default function ITAdminReportsPage() {
         </div>
 
         {/* Controls */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-black/5 p-8">
-          <h2 className="text-sm font-black text-black uppercase tracking-widest mb-6 flex items-center gap-3"><Calendar className="w-5 h-5 text-indigo-500" /> Select Period</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Month</label>
-              <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(Number(e.target.value))}
-                className="w-full bg-gray-50 border border-black/5 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all appearance-none"
-              >
-                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-black/5 p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-sm font-black text-black uppercase tracking-widest flex items-center gap-3"><Calendar className="w-5 h-5 text-indigo-500" /> Select Period</h2>
+            {/* View Toggle */}
+            <div className="flex bg-gray-150 p-1 rounded-xl w-full sm:w-auto">
+              {(['daily', 'weekly', 'monthly'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setReportType(t)}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                    reportType === t ? 'bg-white shadow-sm text-indigo-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Year</label>
-              <input
-                type="number"
-                value={selectedYear}
-                onChange={e => setSelectedYear(Number(e.target.value))}
-                min={2020}
-                max={2100}
-                className="w-full bg-gray-50 border border-black/5 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all"
-              />
-            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            {reportType === 'daily' && (
+              <div className="flex-1 w-full">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 block mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  className="w-full bg-gray-50 border border-black/5 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all text-black"
+                />
+              </div>
+            )}
+
+            {reportType === 'weekly' && (
+              <div className="w-full sm:w-1/4">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 block mb-1.5">Week</label>
+                <select
+                  value={selectedWeek}
+                  onChange={e => setSelectedWeek(Number(e.target.value))}
+                  className="w-full bg-gray-50 border border-black/5 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all text-black"
+                >
+                  <option value={1}>Week 1 (1st - 7th)</option>
+                  <option value={2}>Week 2 (8th - 14th)</option>
+                  <option value={3}>Week 3 (15th - 21st)</option>
+                  <option value={4}>Week 4 (22nd - 28th)</option>
+                  <option value={5}>Week 5 (29th - End)</option>
+                </select>
+              </div>
+            )}
+
+            {reportType !== 'daily' && (
+              <>
+                <div className="flex-1 w-full">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Month</label>
+                  <select
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(Number(e.target.value))}
+                    className="w-full bg-gray-50 border border-black/5 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all text-black"
+                  >
+                    {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1 w-full">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Year</label>
+                  <input
+                    type="number"
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(Number(e.target.value))}
+                    min={2020}
+                    max={2100}
+                    className="w-full bg-gray-50 border border-black/5 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all text-black"
+                  />
+                </div>
+              </>
+            )}
+
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="bg-indigo-600 hover:bg-black text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all disabled:opacity-50 active:scale-95 shadow-xl shadow-indigo-100 h-[58px]"
+              className="bg-indigo-600 hover:bg-black text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all disabled:opacity-50 active:scale-95 shadow-xl shadow-indigo-100 h-[58px] w-full sm:w-auto"
             >
               {generating ? <Loader2 className="w-5 h-5 animate-spin" /> : <BarChart3 className="w-5 h-5" />}
               Generate Report
@@ -186,7 +276,7 @@ export default function ITAdminReportsPage() {
             {/* Report Header */}
             <div className="text-center border-b border-black/5 pb-10">
               <h2 className="text-4xl font-black text-black tracking-tighter">IT DEPARTMENT</h2>
-              <p className="text-xl font-black text-indigo-600 uppercase tracking-widest mt-4">Monthly Financial Report — {reportData.monthLabel}</p>
+              <p className="text-xl font-black text-indigo-600 uppercase tracking-widest mt-4">{reportData.reportLabel}</p>
               <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-2">Generated: {reportData.generatedAt}</p>
             </div>
 
@@ -211,7 +301,7 @@ export default function ITAdminReportsPage() {
 
             {reportData.txns.length === 0 ? (
               <div className="text-center py-20 border-2 border-dashed border-black/5 rounded-[2.5rem] text-gray-300 font-black uppercase tracking-widest text-xs">
-                No approved transactions found for {reportData.monthLabel}.
+                No approved transactions found for the selected period.
               </div>
             ) : (
               <>
@@ -277,7 +367,7 @@ export default function ITAdminReportsPage() {
                 <div className="space-y-6">
                   <h3 className="text-sm font-black text-black uppercase tracking-widest">Transaction Details</h3>
                   <div className="overflow-x-auto rounded-[2rem] border border-black/5">
-                    <table className="w-full text-[10px]">
+                    <table className="w-full text-[10px] text-black">
                       <thead className="bg-gray-50/50 border-b border-black/5">
                         <tr>
                           <th className="px-6 py-5 text-left font-black text-gray-400 uppercase tracking-widest">Date</th>
@@ -295,8 +385,8 @@ export default function ITAdminReportsPage() {
                             <td className="px-6 py-4">
                               <span className={`font-black uppercase text-[8px] px-2 py-1 rounded-lg ${t.type === 'income' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>{t.type}</span>
                             </td>
-                            <td className="px-6 py-4 text-gray-600 font-bold uppercase tracking-tight">{formatCat(t.category)}</td>
-                            <td className="px-6 py-4 text-gray-400 font-medium max-w-[200px] truncate">{t.description || '—'}</td>
+                            <td className="px-6 py-4 text-gray-650 font-bold uppercase tracking-tight">{formatCat(t.category)}</td>
+                            <td className="px-6 py-4 text-gray-400 font-medium max-w-[200px] truncate" title={t.description}>{t.description || '—'}</td>
                             <td className="px-6 py-4 text-right font-black text-black">{formatPKR(t.amount)}</td>
                             <td className="px-6 py-4 text-indigo-600 font-mono text-[9px] uppercase font-black">{t.cashierId || t.submittedBy || '—'}</td>
                           </tr>

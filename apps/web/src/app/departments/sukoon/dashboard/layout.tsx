@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
   CalendarDays, User, LogOut, ArrowLeft, Menu, X, Shield,
-  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText
+  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -24,6 +24,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview',      href: '/departments/sukoon/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
+  { label: 'Reports',       href: '/departments/sukoon/dashboard/admin/reports',  icon: <BarChart2 size={16}/>,       roles: ['admin'] },
+  { label: 'Reports',       href: '/departments/sukoon/dashboard/superadmin/reports', icon: <BarChart2 size={16}/>, roles: ['superadmin'] },
   { label: 'My Attendance', href: '/departments/sukoon/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Patient',    href: '/departments/sukoon/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
   { label: 'My Profile',    href: '/departments/sukoon/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },

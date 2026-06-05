@@ -7,7 +7,7 @@ import {
   Banknote, User, LogOut, ArrowLeft, Menu, X, 
   Monitor, Bell, Search, GraduationCap, Building2, TrendingUp,
   FileText, Shield, ExternalLink, ChevronLeft, ChevronRight,
-  CalendarDays, Laptop
+  CalendarDays, Laptop, BarChart2
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Clients',       href: '/departments/it/dashboard/admin/clients',  icon: <Building2 size={16}/>,       roles: ['admin', 'superadmin'] },
   { label: 'Staff Team',    href: '/departments/it/dashboard/admin/staff',    icon: <Users size={16}/>,           roles: ['admin', 'superadmin'] },
   { label: 'Finance',       href: '/departments/it/dashboard/admin/finance',  icon: <Banknote size={16}/>,        roles: ['admin', 'superadmin'] },
+  { label: 'Reports',       href: '/departments/it/dashboard/admin/reports',  icon: <BarChart2 size={16}/>,       roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/it/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'Student Portal', href: '/departments/it/dashboard/student',        icon: <Laptop size={16}/>,          roles: ['student'] },
   { label: 'Client Portal',  href: '/departments/it/dashboard/client',         icon: <Monitor size={16}/>,         roles: ['client'] },

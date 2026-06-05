@@ -28,6 +28,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin', 'superadmin'] },
+  { label: 'Reports', href: '/departments/spims/dashboard/admin/reports', icon: <BarChart2 size={16}/>, roles: ['admin'] },
+  { label: 'Reports', href: '/departments/spims/dashboard/superadmin/reports', icon: <BarChart2 size={16}/>, roles: ['superadmin'] },
   { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
   
   // Student Portal Tabs
