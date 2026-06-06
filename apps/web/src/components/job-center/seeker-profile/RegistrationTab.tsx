@@ -28,6 +28,9 @@ export default function RegistrationTab({
           [child]: value
         }
       }));
+    } else if (field === 'skills' || field === 'jobInterests') {
+      const arrayValue = typeof value === 'string' ? value.split(',').map(item => item.trim()) : value;
+      setForm(prev => ({ ...prev, [field]: arrayValue }));
     } else {
       setForm(prev => ({ ...prev, [field]: value }));
     }
@@ -213,7 +216,7 @@ export default function RegistrationTab({
         </SectionCard>
 
         <SectionCard title="3. Job Preferences" icon={Briefcase}>
-          <Field label="Job Interests" value={form.jobInterests?.join(', ')} fieldKey="jobInterests" />
+          <Field label="Job Interests (comma separated)" value={form.jobInterests?.join(', ')} fieldKey="jobInterests" />
           <Field label="Expected Salary" value={form.expectedSalary} fieldKey="expectedSalary" />
           <Field label="Availability" value={form.availability} type="select" options={['immediate', '1_week', '2_plus_weeks']} fieldKey="availability" />
         </SectionCard>

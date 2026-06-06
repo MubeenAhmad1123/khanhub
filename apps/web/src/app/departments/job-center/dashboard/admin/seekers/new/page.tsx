@@ -411,11 +411,14 @@ export default function RegisterSeekerPage() {
         address,
         photoUrl: photoUrl || null,
         phone,
+        contactNumber: phone, // ensure profile shows contact number
         cnic,
         skills,
         expectedSalary: expectedSalary || null,
         preferredJobTypes: preferredWorkType, // map for backwards compatibility
         preferredWorkType,
+        // map job category to jobInterests for profile view
+        jobInterests: jobCategory ? [jobCategory] : [],
         notes: notes || null,
         isActive: true,
         loginId: loginId.toUpperCase(),
