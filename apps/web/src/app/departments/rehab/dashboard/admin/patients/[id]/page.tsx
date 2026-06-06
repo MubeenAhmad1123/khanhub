@@ -3843,15 +3843,15 @@ export default function PatientDetailPage() {
       {/* Premium Rejoin Details Modal */}
       {showRejoinDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
-          <div className="bg-gradient-to-br from-white to-[#FAF8F5] rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl border border-orange-100/60">
+          <div className="bg-[#FAF8F5] rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl border border-orange-100/60">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-black text-teal-600 uppercase tracking-tight flex items-center gap-2">
+                  <h2 className="text-2xl font-black text-black uppercase tracking-tight flex items-center gap-2">
                     <Clock className="w-6 h-6" />
                     Patient Rejoin Details & Stay Setup
                   </h2>
-                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Setup the new stay parameters and log the initial family visit</p>
+                  <p className="text-black text-[10px] font-black uppercase tracking-widest mt-1">Setup the new stay parameters and log the initial family visit</p>
                 </div>
                 <button onClick={() => setShowRejoinDetailsModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
                   <X size={20} />

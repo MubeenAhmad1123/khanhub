@@ -91,6 +91,8 @@ export default function RegisterSeekerPage() {
   // Validation Errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
+  const isDraftLoaded = useRef(false);
+
   useEffect(() => {
     const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
@@ -147,6 +149,120 @@ export default function RegisterSeekerPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Load saved draft from localStorage
+  useEffect(() => {
+    if (loading) return;
+    if (isDraftLoaded.current) return;
+
+    const savedDraft = localStorage.getItem('jobcenter_seeker_draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.currentStep) setCurrentStep(draft.currentStep);
+        if (draft.loginId) setLoginId(draft.loginId);
+        if (draft.loginPassword) setLoginPassword(draft.loginPassword);
+        if (draft.name) setName(draft.name);
+        if (draft.fatherName) setFatherName(draft.fatherName);
+        if (draft.dateOfBirth) setDateOfBirth(draft.dateOfBirth);
+        if (draft.age) setAge(draft.age);
+        if (draft.gender) setGender(draft.gender);
+        if (draft.maritalStatus) setMaritalStatus(draft.maritalStatus);
+        if (draft.cnic) setCnic(draft.cnic);
+        if (draft.phone) setPhone(draft.phone);
+        if (draft.email) setEmail(draft.email);
+        if (draft.address) setAddress(draft.address);
+        if (draft.educationList) setEducationList(draft.educationList);
+        if (draft.experienceList) setExperienceList(draft.experienceList);
+        if (draft.jobCategory) setJobCategory(draft.jobCategory);
+        if (draft.expectedSalary) setExpectedSalary(draft.expectedSalary);
+        if (draft.skills) setSkills(draft.skills);
+        if (draft.preferredWorkType) setPreferredWorkType(draft.preferredWorkType);
+        if (draft.customChips) setCustomChips(draft.customChips);
+        if (draft.notes) setNotes(draft.notes);
+        if (draft.photoPreview) {
+          setPhotoPreview(draft.photoPreview);
+          try {
+            const arr = draft.photoPreview.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+              u8arr[n] = bstr.charCodeAt(n);
+            }
+            const file = new File([u8arr], 'profile_photo.webp', { type: mime });
+            setPhotoFile(file);
+          } catch (fileErr) {
+            console.error('Error recreating file from base64:', fileErr);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing saved seeker draft:', e);
+      }
+    }
+    isDraftLoaded.current = true;
+  }, [loading]);
+
+  // Save draft to localStorage
+  useEffect(() => {
+    if (!isDraftLoaded.current || loading) return;
+
+    const draft = {
+      currentStep,
+      loginId,
+      loginPassword,
+      name,
+      fatherName,
+      dateOfBirth,
+      age,
+      gender,
+      maritalStatus,
+      cnic,
+      phone,
+      email,
+      address,
+      educationList,
+      experienceList,
+      jobCategory,
+      expectedSalary,
+      skills,
+      preferredWorkType,
+      customChips,
+      notes,
+      photoPreview: photoPreview.startsWith('data:') ? photoPreview : '',
+    };
+
+    try {
+      localStorage.setItem('jobcenter_seeker_draft', JSON.stringify(draft));
+    } catch (e) {
+      console.error('Failed to save seeker draft to localStorage:', e);
+    }
+  }, [
+    loading,
+    currentStep,
+    loginId,
+    loginPassword,
+    name,
+    fatherName,
+    dateOfBirth,
+    age,
+    gender,
+    maritalStatus,
+    cnic,
+    phone,
+    email,
+    address,
+    educationList,
+    experienceList,
+    jobCategory,
+    expectedSalary,
+    skills,
+    preferredWorkType,
+    customChips,
+    notes,
+    photoPreview
+  ]);
 
   // Calculate age automatically from Date of Birth
   useEffect(() => {
@@ -456,6 +572,7 @@ export default function RegisterSeekerPage() {
       }
 
       setSuccessDocId(seekerRef.id);
+      localStorage.removeItem('jobcenter_seeker_draft');
       setCurrentStep(4);
       toast.success('Job Seeker registered successfully ✓');
     } catch (err: any) {
@@ -713,7 +830,11 @@ export default function RegisterSeekerPage() {
                           return;
                         }
                         setPhotoFile(file);
-                        setPhotoPreview(URL.createObjectURL(file));
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setPhotoPreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
                       }} />
                       <div className="text-left">
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Format: WEBP (Max 5MB)</p>
@@ -1117,6 +1238,7 @@ export default function RegisterSeekerPage() {
                   setPhotoPreview('');
                   setNotes('');
                   setSuccessDocId('');
+                  localStorage.removeItem('jobcenter_seeker_draft');
                   setCurrentStep(1);
                 }}
                 className="px-8 py-4 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-2xl text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all"

@@ -4,6 +4,7 @@ import { Edit3, Save, Loader2, User, Phone, Briefcase, GraduationCap, Clock } fr
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
+import { usePersistentForm } from '@/hooks/usePersistentForm';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
 // Helper function to format education history array for display/editing
@@ -166,9 +167,10 @@ export default function RegistrationTab({
   seeker: JobSeeker; 
   onUpdate: (updatedSeeker: Partial<JobSeeker>) => void 
 }) {
+  const { form, setForm, clearForm } = usePersistentForm<JobSeeker>(`seeker-form-${seeker.id}`, { ...seeker });
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Partial<JobSeeker>>({ ...seeker });
+  // form state now persisted via usePersistentForm
 
   const handleChange = (field: keyof JobSeeker | string, value: any) => {
     if (field.includes('.')) {
@@ -182,15 +184,15 @@ export default function RegistrationTab({
       }));
     } else if (field === 'skills' || field === 'jobInterests') {
       const arrayValue = typeof value === 'string' ? value.split(',').map(item => item.trim()) : value;
-      setForm(prev => ({ ...prev, [field]: arrayValue }));
+      setForm((prev: any) => ({ ...prev, [field]: arrayValue }));
     } else if (field === 'education') {
       const arrayValue = [{ degree: value, institution: '', year: '' }];
-      setForm(prev => ({ ...prev, education: arrayValue }));
+      setForm((prev: any) => ({ ...prev, education: arrayValue }));
     } else if (field === 'experience') {
       const arrayValue = [{ title: value, company: '', duration: '' }];
-      setForm(prev => ({ ...prev, experience: arrayValue }));
+      setForm((prev: any) => ({ ...prev, experience: arrayValue }));
     } else {
-      setForm(prev => ({ ...prev, [field]: value }));
+      setForm((prev: any) => ({ ...prev, [field]: value }));
     }
   };
 

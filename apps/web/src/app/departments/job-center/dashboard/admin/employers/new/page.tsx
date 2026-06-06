@@ -84,6 +84,8 @@ export default function RegisterEmployerPage() {
   // Inline Validation Errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
+  const isDraftLoaded = useRef(false);
+
   useEffect(() => {
     const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
@@ -140,6 +142,114 @@ export default function RegisterEmployerPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Load saved draft from localStorage
+  useEffect(() => {
+    if (loading) return;
+    if (isDraftLoaded.current) return;
+
+    const savedDraft = localStorage.getItem('jobcenter_employer_draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.currentStep) setCurrentStep(draft.currentStep);
+        if (draft.employerType) setEmployerType(draft.employerType);
+        if (draft.loginId) setLoginId(draft.loginId);
+        if (draft.loginPassword) setLoginPassword(draft.loginPassword);
+        if (draft.companyName) setCompanyName(draft.companyName);
+        if (draft.industry) setIndustry(draft.industry);
+        if (draft.companySize) setCompanySize(draft.companySize);
+        if (draft.companyEmail) setCompanyEmail(draft.companyEmail);
+        if (draft.website) setWebsite(draft.website);
+        if (draft.address) setAddress(draft.address);
+        if (draft.contactPersonName) setContactPersonName(draft.contactPersonName);
+        if (draft.contactPersonPosition) setContactPersonPosition(draft.contactPersonPosition);
+        if (draft.contactPhone) setContactPhone(draft.contactPhone);
+        if (draft.description) setDescription(draft.description);
+        if (draft.cnic) setCnic(draft.cnic);
+        if (draft.requirementTypes) setRequirementTypes(draft.requirementTypes);
+        if (draft.customChips) setCustomChips(draft.customChips);
+        if (draft.helpersCount) setHelpersCount(draft.helpersCount);
+        if (draft.preferredGender) setPreferredGender(draft.preferredGender);
+        if (draft.logoPreview) {
+          setLogoPreview(draft.logoPreview);
+          try {
+            const arr = draft.logoPreview.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+              u8arr[n] = bstr.charCodeAt(n);
+            }
+            const file = new File([u8arr], 'logo.webp', { type: mime });
+            setLogoFile(file);
+          } catch (fileErr) {
+            console.error('Error recreating logo file from base64:', fileErr);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing saved employer draft:', e);
+      }
+    }
+    isDraftLoaded.current = true;
+  }, [loading]);
+
+  // Save draft to localStorage
+  useEffect(() => {
+    if (!isDraftLoaded.current || loading) return;
+
+    const draft = {
+      currentStep,
+      employerType,
+      loginId,
+      loginPassword,
+      companyName,
+      industry,
+      companySize,
+      companyEmail,
+      website,
+      address,
+      contactPersonName,
+      contactPersonPosition,
+      contactPhone,
+      description,
+      cnic,
+      requirementTypes,
+      customChips,
+      helpersCount,
+      preferredGender,
+      logoPreview: logoPreview.startsWith('data:') ? logoPreview : '',
+    };
+
+    try {
+      localStorage.setItem('jobcenter_employer_draft', JSON.stringify(draft));
+    } catch (e) {
+      console.error('Failed to save employer draft to localStorage:', e);
+    }
+  }, [
+    loading,
+    currentStep,
+    employerType,
+    loginId,
+    loginPassword,
+    companyName,
+    industry,
+    companySize,
+    companyEmail,
+    website,
+    address,
+    contactPersonName,
+    contactPersonPosition,
+    contactPhone,
+    description,
+    cnic,
+    requirementTypes,
+    customChips,
+    helpersCount,
+    preferredGender,
+    logoPreview
+  ]);
 
   // Format CNIC: XXXXX-XXXXXXX-X
   const formatCnic = (val: string) => {
@@ -398,6 +508,7 @@ export default function RegisterEmployerPage() {
       }
 
       setSuccessDocId(employerRef.id);
+      localStorage.removeItem('jobcenter_employer_draft');
       setCurrentStep(3);
       toast.success('Employer registered successfully ✓');
     } catch (err: any) {
@@ -740,7 +851,11 @@ export default function RegisterEmployerPage() {
                                 return;
                               }
                               setLogoFile(file);
-                              setLogoPreview(URL.createObjectURL(file));
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setLogoPreview(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
                             }} />
                             <div className="text-left">
                               <p className="text-[10px] text-gray-400 font-bold uppercase">Format: WEBP (Max 5MB)</p>
@@ -798,15 +913,9 @@ export default function RegisterEmployerPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
                           <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Your Full Name *</label>
-                          <input 
-                            placeholder="Your Full Name" 
-                            className={inputStyle} 
-                            value={contactPersonName} 
-                            onChange={e => setContactPersonName(e.target.value)} 
-                          />
+                          <input placeholder="Full Name" className={inputStyle} value={contactPersonName} onChange={e => setContactPersonName(e.target.value)} />
                           {validationErrors.contactPersonName && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.contactPersonName}</p>}
                         </div>
-
                         <div className="space-y-1.5">
                           <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">CNIC Number * (Format: XXXXX-XXXXXXX-X)</label>
                           <input 
@@ -821,7 +930,7 @@ export default function RegisterEmployerPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
-                          <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Phone Number * (Pakistan Format: 03XX-XXXXXXX)</label>
+                          <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Contact Phone * (Pakistan Format: 03XX-XXXXXXX)</label>
                           <div className="relative">
                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <input 
@@ -835,16 +944,16 @@ export default function RegisterEmployerPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Personal Email (Optional)</label>
+                          <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Email Address (Optional)</label>
                           <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input type="email" placeholder="yourname@gmail.com" className={`${inputStyle} pl-11`} value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} />
+                            <input type="email" placeholder="name@example.com" className={`${inputStyle} pl-11`} value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} />
                           </div>
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Your Home Address *</label>
+                        <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Home Address *</label>
                         <textarea required rows={2} className={inputStyle} placeholder="Full residential address" value={address} onChange={e => setAddress(e.target.value)} />
                         {validationErrors.address && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.address}</p>}
                       </div>
@@ -871,7 +980,11 @@ export default function RegisterEmployerPage() {
                               return;
                             }
                             setLogoFile(file);
-                            setLogoPreview(URL.createObjectURL(file));
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setLogoPreview(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
                           }} />
                           <div className="text-left">
                             <p className="text-[10px] text-gray-400 font-bold uppercase">Format: WEBP (Max 5MB)</p>
@@ -1069,14 +1182,23 @@ export default function RegisterEmployerPage() {
                   setLoginPassword('');
                   setCompanyName('');
                   setIndustry('');
+                  setCompanySize('');
+                  setCompanyEmail('');
+                  setWebsite('');
                   setAddress('');
-                  setContactPersonName('');
-                  setContactPhone('');
-                  setRequirementTypes([]);
-                  setCustomChips([]);
                   setLogoFile(null);
                   setLogoPreview('');
+                  setContactPersonName('');
+                  setContactPersonPosition('');
+                  setContactPhone('');
+                  setDescription('');
+                  setCnic('');
+                  setRequirementTypes([]);
+                  setCustomChips([]);
+                  setHelpersCount('1');
+                  setPreferredGender('Any');
                   setSuccessDocId('');
+                  localStorage.removeItem('jobcenter_employer_draft');
                   setCurrentStep(1);
                 }}
                 className="px-8 py-4 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-2xl text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all"
