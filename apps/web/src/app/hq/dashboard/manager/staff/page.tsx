@@ -62,8 +62,7 @@ export default function ManagerStaffPage() {
   const [enriched, setEnriched] = useState(false);
   const [enriching, setEnriching] = useState(false);
 
-  // UI standard - forced light theme
-  const darkMode = false;
+
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -263,20 +262,20 @@ export default function ManagerStaffPage() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 pb-20 w-full overflow-x-hidden ${darkMode ? 'bg-[#0A0A0A]' : 'bg-[#FDFDFD]'}`}>
+    <div className="min-h-screen transition-colors duration-500 pb-20 w-full overflow-x-hidden bg-[#FDFDFD]">
       {/* Header */}
-      <div className={`sticky top-0 z-20 border-b transition-all ${darkMode ? 'bg-[#0A0A0A]/80 border-white/5 backdrop-blur-xl' : 'bg-white/80 border-gray-100 backdrop-blur-xl'}`}>
+      <div className="sticky top-0 z-20 border-b transition-all bg-white/80 border-gray-100 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-5 min-w-0">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all ${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-900 shadow-gray-200/50'}`}>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-2xl transition-all bg-gray-900 shadow-gray-200/50">
                 <Users size={28} />
               </div>
               <div className="min-w-0">
-                <h1 className={`text-2xl md:text-3xl font-black tracking-tight truncate ${darkMode ? 'text-white' : 'text-gray-900'} uppercase`}>Staff List</h1>
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight truncate text-gray-900 uppercase">Staff List</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-[10px] font-black uppercase tracking-[0.2em]`}>All staff members</p>
+                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">All staff members</p>
                 </div>
               </div>
             </div>
@@ -340,23 +339,21 @@ export default function ManagerStaffPage() {
             Enriching dossiers with efficiency metrics & historical logs...
           </div>
         )}
-        <div className={`p-6 rounded-[2rem] shadow-xl border flex flex-col gap-6 mb-10 transition-all ${darkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-gray-200/30'}`}>
+        <div className="p-6 rounded-[2rem] shadow-xl border border-gray-100 shadow-gray-200/30 bg-white flex flex-col gap-6 mb-10 transition-all">
           <div className="flex flex-col sm:flex-row gap-4 w-full">
             <div className="flex-1 w-full relative group">
-              <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-600 group-focus-within:text-blue-500' : 'text-gray-400 group-focus-within:text-gray-900'}`} size={18} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 transition-colors text-gray-400 group-focus-within:text-gray-900" size={18} />
               <input
                 type="text"
                 placeholder="Search by name or department..."
-                className={`w-full pl-14 pr-6 py-4 border-none rounded-2xl text-sm font-bold outline-none transition-all ${darkMode ? 'bg-white/5 text-white placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:bg-white shadow-inner'
-                  }`}
+                className="w-full pl-14 pr-6 py-4 border-none rounded-2xl text-sm font-bold outline-none transition-all bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:bg-white shadow-inner"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
             <div className="flex gap-3 w-full sm:w-auto">
               <select
-                className={`border-none rounded-2xl px-4 sm:px-6 py-4 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-1 sm:flex-initial w-1/2 sm:w-auto text-center sm:text-left ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
-                  }`}
+                className="border-none rounded-2xl px-4 sm:px-6 py-4 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-1 sm:flex-initial w-1/2 sm:w-auto text-center sm:text-left bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm"
                 value={deptFilter}
                 onChange={e => setDeptFilter(e.target.value)}
               >
@@ -372,8 +369,7 @@ export default function ManagerStaffPage() {
                 <option value="it">Digital Node</option>
               </select>
               <select
-                className={`border-none rounded-2xl px-4 sm:px-6 py-4 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-1 sm:flex-initial w-1/2 sm:w-auto text-center sm:text-left ${darkMode ? 'bg-white/5 text-slate-300 focus:ring-1 focus:ring-blue-500/50' : 'bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm'
-                  }`}
+                className="border-none rounded-2xl px-4 sm:px-6 py-4 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-1 sm:flex-initial w-1/2 sm:w-auto text-center sm:text-left bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm"
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as any)}
               >
@@ -636,12 +632,12 @@ export default function ManagerStaffPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className={`rounded-[3rem] py-32 border-2 border-dashed flex flex-col items-center justify-center text-center transition-all ${darkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200 shadow-inner'}`}>
-            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 transition-all ${darkMode ? 'bg-white/5 text-slate-700 shadow-2xl' : 'bg-white text-gray-300 shadow-xl'}`}>
+          <div className="rounded-[3rem] py-32 border-2 border-dashed flex flex-col items-center justify-center text-center transition-all bg-gray-50 border-gray-200 shadow-inner">
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 transition-all bg-white text-gray-300 shadow-xl">
               <Users size={40} strokeWidth={1.5} />
             </div>
-            <h4 className={`text-xl font-black mb-2 transition-colors ${darkMode ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>No Nodes Found</h4>
-            <p className={`${darkMode ? 'text-slate-500' : 'text-gray-400'} text-xs font-bold uppercase tracking-widest max-w-xs mx-auto`}>Zero records matching current marking parameters.</p>
+            <h4 className="text-xl font-black mb-2 transition-colors text-gray-900 uppercase tracking-tight">No Nodes Found</h4>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest max-w-xs mx-auto">Zero records matching current marking parameters.</p>
           </div>
         )}
       </div>

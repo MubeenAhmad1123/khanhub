@@ -189,7 +189,7 @@ export default function HqSuperadminPage() {
       {
         title: 'Departmental Velocity',
         value: '94%',
-        subtitle: 'Global compliance',
+        subtitle: 'Overall Compliance',
         icon: TrendingUp,
         tone: 'primary' as const,
       },
@@ -252,7 +252,7 @@ export default function HqSuperadminPage() {
               <div>
                 <h1 className="text-5xl font-black tracking-tight text-gray-900 uppercase leading-none">Governance</h1>
                 <p className="mt-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.5em]">
-                  Operational Matrix • Institutional Hub
+                  Daily Operations • Head Office
                 </p>
               </div>
             </div>
@@ -311,20 +311,20 @@ export default function HqSuperadminPage() {
                   <ShieldCheck size={40} strokeWidth={2} />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Institutional Control</h2>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mt-2">System Config • Global Synchronization</p>
+                  <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">System Settings</h2>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mt-2">Settings & Data Sync</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-emerald-100">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                Live Sync Active
+                Live Update: On
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
               {[
                 { label: 'Personnel',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, tone: 'rehab', desc: 'Staff registry & compliance' },
-                { label: 'Analytics',   href: '/hq/dashboard/superadmin/analytics',   icon: Activity, tone: 'spims', desc: 'Real-time data matrix' },
+                { label: 'Analytics',   href: '/hq/dashboard/superadmin/analytics',   icon: Activity, tone: 'spims', desc: 'Real-time data overview' },
                 { label: 'Departments', href: '/hq/dashboard/superadmin/departments', icon: Building2, tone: 'hq', desc: 'Institutional structure' },
                 { label: 'Finance',     href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, tone: 'primary', desc: 'Global financial ledger' },
                 { label: 'Manager Panel', href: '/hq/dashboard/manager',              icon: Users2, tone: 'manager', desc: 'Manage roster, attendance & salary' },

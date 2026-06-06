@@ -133,7 +133,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
           </div>
           <div className="text-left">
             <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", accent.text)}>
-              {dept.deptId.toUpperCase()} MATRIX
+              {dept.deptId.toUpperCase()} OVERVIEW
             </p>
             <p className="text-2xl font-black text-gray-900 tracking-tight leading-none">{dept.deptName}</p>
           </div>
@@ -147,7 +147,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
           </div>
           {dept.expense > 0 && (
             <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-1">Matrix Expense</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-1">Overview Expense</p>
               <p className="text-2xl font-black text-rose-600 tracking-tighter leading-none">
                 Rs. {dept.expense.toLocaleString()}
               </p>
@@ -181,7 +181,7 @@ function DeptDayCard({ dept, expanded, onToggle }: {
                 <div className="flex flex-col items-center justify-center py-12 gap-4 opacity-40">
                   <Receipt className="w-12 h-12" />
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-center">
-                    Zero Activity Detected In Matrix Registry
+                    Zero Activity Detected In Overview Registry
                   </span>
                 </div>
               ) : (
@@ -426,7 +426,7 @@ export default function SuperadminFinancePage() {
             Oversight Protocol
           </div>
           <h1 className="text-5xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-            Financial <span className="text-indigo-600 italic font-[1000]">Matrix</span>
+            Financial <span className="text-indigo-600 italic font-[1000]">Overview</span>
           </h1>
         </div>
 
@@ -495,7 +495,7 @@ export default function SuperadminFinancePage() {
                {summary?.pendingCountToday} QUEUED
              </div>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-2 block">Matrix Pending</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-2 block">Overview Pending</span>
           <div className="text-4xl font-black tracking-tighter text-gray-900 leading-none">
             Rs. {summary?.pendingAmountToday.toLocaleString()}
           </div>
@@ -765,7 +765,7 @@ export default function SuperadminFinancePage() {
                 <div className="space-y-10">
                   <div className="relative">
                     <h2 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none mb-4">
-                      Pulse Velocity <span className="text-indigo-600 italic">Matrix</span>
+                      Pulse Velocity <span className="text-indigo-600 italic">Overview</span>
                     </h2>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">Departmental Stream Analysis</p>
                   </div>
@@ -808,7 +808,7 @@ export default function SuperadminFinancePage() {
               <div className="relative p-20 border-2 border-dashed border-gray-200 rounded-[4rem] group hover:border-indigo-600 transition-all duration-1000 bg-gray-50 flex flex-col items-center justify-center overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-full bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                 <Sparkles className="w-32 h-32 text-gray-200 group-hover:text-indigo-600 transition-all duration-1000 mb-10 scale-90 group-hover:scale-110 relative z-10" />
-                <h3 className="text-4xl font-black text-gray-900 uppercase tracking-tighter mb-4 relative z-10">Low-Level Matrix Access</h3>
+                <h3 className="text-4xl font-black text-gray-900 uppercase tracking-tighter mb-4 relative z-10">Low-Level Overview Access</h3>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mb-16 relative z-10">Deep Operational Data Drilling</p>
                 <button
                   onClick={() => setViewMode('visual')}

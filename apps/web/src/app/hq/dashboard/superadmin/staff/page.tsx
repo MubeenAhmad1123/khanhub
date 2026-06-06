@@ -384,7 +384,7 @@ export default function SuperadminStaffPage() {
                   <Sparkles size={20} className="text-indigo-500 animate-pulse" />
                 </div>
                 <p className="mt-3 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.5em] italic pl-1">
-                  Global HQ Staff Registry Matrix
+                  Global HQ Staff Registry Overview
                 </p>
               </div>
             </div>
@@ -482,7 +482,7 @@ export default function SuperadminStaffPage() {
                 )}
               >
                 <div className={cn("w-2 h-2 rounded-full", status === 'active' ? 'bg-white animate-pulse' : 'bg-emerald-500')} />
-                <span>Active Matrix</span>
+                <span>Active Staff</span>
               </button>
 
               <button
@@ -585,13 +585,13 @@ export default function SuperadminStaffPage() {
                     </div>
                     <div>
                       <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-2">Total staff</h2>
-                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Global personnel status matrix</p>
+                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Global personnel status overview</p>
                     </div>
                     <div className="text-6xl font-black text-indigo-600 dark:text-indigo-400 leading-none">
                       {filtered.length}
                     </div>
                     <button className="px-8 py-4 bg-gray-900 dark:bg-slate-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] group-hover:bg-indigo-600 transition-colors shadow-md shadow-indigo-600/5">
-                      Enter Drill-down Matrix
+                      Enter Drill-down Overview
                     </button>
                   </div>
                 </div>
@@ -602,7 +602,7 @@ export default function SuperadminStaffPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tight">Analytics Sync</h3>
-                    <p className="text-[10px] font-medium text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">Personnel growth matrix active</p>
+                    <p className="text-[10px] font-medium text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">Personnel growth overview active</p>
                   </div>
                 </div>
               </div>
