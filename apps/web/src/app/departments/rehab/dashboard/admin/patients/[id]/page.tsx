@@ -1593,15 +1593,15 @@ export default function PatientDetailPage() {
         .filter(p => p.id !== patientId);
 
       setRejoinForm({
-        duration: '',
+        duration: patient?.duration || '',
         totalFee: String(patient?.monthlyPackage || patient?.packageAmount || ''),
         familyVisit: '',
         admissionDate: new Date().toISOString().split('T')[0],
         dischargeDate: '',
-        visitorName: '',
-        visitorRelation: '',
-        visitorPhone: '',
-        visitorCnic: '',
+        visitorName: patient?.guardianName || '',
+        visitorRelation: patient?.guardianRelation || '',
+        visitorPhone: patient?.guardianPhone || '',
+        visitorCnic: patient?.guardianCnic || '',
         visitorNotes: '',
         visitDate: new Date().toISOString().split('T')[0]
       });
@@ -3840,19 +3840,20 @@ export default function PatientDetailPage() {
         </div>
       )}
       {/* Premium Rejoin Details Modal */}
+      {/* Premium Rejoin Details Modal */}
       {showRejoinDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-950 rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5">
+          <div className="bg-gradient-to-br from-white to-[#FAF8F5] rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl border border-orange-100/60">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-black text-teal-600 dark:text-teal-400 uppercase tracking-tight flex items-center gap-2">
+                  <h2 className="text-2xl font-black text-teal-600 uppercase tracking-tight flex items-center gap-2">
                     <Clock className="w-6 h-6" />
                     Patient Rejoin Details & Stay Setup
                   </h2>
-                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Setup the new stay parameters and log the initial family visit</p>
+                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Setup the new stay parameters and log the initial family visit</p>
                 </div>
-                <button onClick={() => setShowRejoinDetailsModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full text-gray-400 transition-colors">
+                <button onClick={() => setShowRejoinDetailsModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -3860,14 +3861,14 @@ export default function PatientDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Column 1: Stay & Financial Details */}
                 <div className="space-y-4">
-                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 text-xs font-bold text-amber-700 dark:text-amber-400">
+                  <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-xs font-bold text-amber-700">
                     <p className="uppercase tracking-widest text-[9px] mb-1 opacity-70">Previous Stay Summary</p>
                     <p>Last Duration: <span className="font-black">{patient?.durationFormatted || `${patient?.daysAdmitted || 0} Days`}</span></p>
                     <p>Last Active Package: <span className="font-black">PKR {(patient?.monthlyPackage || patient?.packageAmount || 0).toLocaleString()} / Month</span></p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1 flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-teal-500" />
                       Admission Date <span className="text-red-500">*</span>
                     </label>
@@ -3876,12 +3877,12 @@ export default function PatientDetailPage() {
                       required
                       value={rejoinForm.admissionDate}
                       onChange={(e) => setRejoinForm({ ...rejoinForm, admissionDate: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1 flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-rose-500" />
                       Discharge Date <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
@@ -3889,12 +3890,12 @@ export default function PatientDetailPage() {
                       type="date"
                       value={rejoinForm.dischargeDate}
                       onChange={(e) => setRejoinForm({ ...rejoinForm, dischargeDate: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1 flex items-center gap-1">
                       <DollarSign className="w-3.5 h-3.5 text-teal-500" />
                       Decided Monthly Package Fee (PKR) <span className="text-red-500">*</span>
                     </label>
@@ -3906,13 +3907,13 @@ export default function PatientDetailPage() {
                         value={rejoinForm.totalFee}
                         onChange={(e) => setRejoinForm({ ...rejoinForm, totalFee: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                        className="w-full bg-gray-50 border border-gray-150 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 flex items-center gap-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1 flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-teal-500" />
                       Stay Duration <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
@@ -3921,76 +3922,76 @@ export default function PatientDetailPage() {
                       value={rejoinForm.duration}
                       onChange={(e) => setRejoinForm({ ...rejoinForm, duration: e.target.value })}
                       placeholder="E.g. 3 Months"
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                     />
                   </div>
                 </div>
 
                 {/* Column 2: Family Visit Information */}
                 <div className="space-y-4">
-                  <div className="bg-teal-50 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/30 rounded-2xl p-4 text-xs font-bold text-teal-700 dark:text-teal-400">
+                  <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 text-xs font-bold text-teal-700">
                     <p className="uppercase tracking-widest text-[9px] mb-1 opacity-70">Readmission Family Visit Log</p>
                     <p>Enter guardian/visitor details to automatically log their stay-opening visit record.</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Visitor Name</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1">Visitor Name</label>
                       <input
                         type="text"
                         value={rejoinForm.visitorName}
                         onChange={(e) => setRejoinForm({ ...rejoinForm, visitorName: e.target.value })}
                         placeholder="E.g. Muhammad Ahmad"
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                        className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Relation</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1">Relation</label>
                       <input
                         type="text"
                         value={rejoinForm.visitorRelation}
                         onChange={(e) => setRejoinForm({ ...rejoinForm, visitorRelation: e.target.value })}
                         placeholder="E.g. Father"
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                        className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone Number</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1">Phone Number</label>
                       <input
                         type="text"
                         value={rejoinForm.visitorPhone}
                         onChange={(e) => setRejoinForm({ ...rejoinForm, visitorPhone: e.target.value })}
                         placeholder="03001234567"
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                        className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">CNIC (Optional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1">CNIC (Optional)</label>
                       <input
                         type="text"
                         value={rejoinForm.visitorCnic}
                         onChange={(e) => setRejoinForm({ ...rejoinForm, visitorCnic: e.target.value })}
                         placeholder="35201-XXXXXXX-X"
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                        className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Visit Date</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1">Visit Date</label>
                     <input
                       type="date"
                       value={rejoinForm.visitDate}
                       onChange={(e) => setRejoinForm({ ...rejoinForm, visitDate: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900 dark:text-white"
+                      className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all text-gray-900"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Visit Notes / Family Policy</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-450 ml-1">Visit Notes / Family Policy</label>
                     <textarea
                       value={rejoinForm.visitorNotes}
                       onChange={(e) => {
@@ -3998,17 +3999,17 @@ export default function PatientDetailPage() {
                         setRejoinForm(prev => ({ ...prev, visitorNotes: val, familyVisit: val }));
                       }}
                       placeholder="Details about family visit policy, agreement or history during this stay..."
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all min-h-[90px] resize-none text-gray-900 dark:text-white"
+                      className="w-full bg-gray-50 border border-gray-150 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all min-h-[90px] resize-none text-gray-900"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-6 border-t border-gray-100 dark:border-white/5 mt-6 justify-end">
+              <div className="flex gap-4 pt-6 border-t border-gray-100 mt-6 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowRejoinDetailsModal(false)}
-                  className="px-6 py-4 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                  className="px-6 py-4 rounded-2xl border border-gray-150 text-gray-450 font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
