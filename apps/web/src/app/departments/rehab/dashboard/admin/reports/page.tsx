@@ -215,8 +215,7 @@ export default function AdminReportsPage() {
         const patientFeeRecord = monthFees.find(f => f.patientId === patient.id);
         const amountPaidThisMonth = patientFeeRecord ? Number(patientFeeRecord.amountPaid || 0) : 0;
         const expectedFee = Number(patient.packageAmount || 60000);
-        const overallRemaining = patientFeeRecord ? Number(patientFeeRecord.amountRemaining || 0) : expectedFee;
-
+        
         // Calculate paid specifically in selected range (e.g. daily, weekly, monthly)
         const patientPeriodTxns = txns.filter((t: any) => {
           if (t.patientId !== patient.id) return false;
@@ -237,7 +236,7 @@ export default function AdminReportsPage() {
           expectedFee,
           paidInPeriod,
           amountPaidThisMonth,
-          overallRemaining
+          overallRemaining: Math.max(expectedFee - paidInPeriod, 0)
         };
       });
 
