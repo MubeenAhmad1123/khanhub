@@ -150,7 +150,9 @@ export default function SeekerPortalPage() {
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Education</p>
               <p className="text-lg font-bold text-white leading-tight flex items-center gap-2">
                 <GraduationCap size={16} className="text-orange-500" />
-                {seeker.education || 'N/A'}
+                {Array.isArray(seeker.education)
+                  ? (seeker.education.map((edu: any) => edu.degree).join(', ') || 'N/A')
+                  : (seeker.education || 'N/A')}
               </p>
             </div>
             <div className="space-y-1">
@@ -161,7 +163,11 @@ export default function SeekerPortalPage() {
             </div>
             <div className="space-y-1 md:text-right md:ml-auto">
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Experience</p>
-              <p className="text-lg font-bold text-white">{seeker.experience || 'N/A'}</p>
+              <p className="text-lg font-bold text-white">
+                {Array.isArray(seeker.experience)
+                  ? (seeker.experience.map((exp: any) => exp.title).join(', ') || 'N/A')
+                  : (seeker.experience || 'N/A')}
+              </p>
             </div>
             <div className="space-y-1 md:text-right">
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Wallet Balance</p>
