@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, getDoc } from 'firebase/firestore';
+import { approveTransaction } from '@/lib/hq/superadmin/finance';
 import { db } from '@/lib/firebase';
 import { 
   CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, 
@@ -41,19 +42,18 @@ export default function ApprovalsPage() {
   // Realtime listener for pending transactions
   useEffect(() => {
     if (!session) return;
-
-    // No orderBy — avoids index requirement
-    const q = query(
-      collection(db, 'spims_transactions'),
-      where('status', '==', 'pending')
-    )
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const pending = snapshot.docs
-        .map(d => {
-          const data = d.data()
-          return {
+    const fetchPending = async () => {
+      try {
+        const [txSnap, feeSnap] = await Promise.all([
+          getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))),
+          getDocs(query(collection(db, 'spims_fees'), where('status', '==', 'pending')))
+        ]);
+        const pending = [];
+        txSnap.docs.forEach(d => {
+          const data = d.data();
+          pending.push({
             id: d.id,
+            _collection: 'spims_transactions',
             type: data.type || '',
             category: data.category || '',
             description: data.description || '',
@@ -63,80 +63,100 @@ export default function ApprovalsPage() {
             studentId: data.studentId || null,
             patientId: data.patientId || null,
             patientName: data.patientName || null,
-            date: data.date,  // keep as Firestore Timestamp for display
+            date: data.date,
             createdAt: data.createdAt,
-          }
-        })
-        // Sort newest first client-side
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.()?.getTime() 
-            || new Date(a.createdAt || 0).getTime()
-          const bTime = b.createdAt?.toDate?.()?.getTime() 
-            || new Date(b.createdAt || 0).getTime()
-          return bTime - aTime
-        })
-      setPendingTransactions(pending)
-    }, (err) => {
-      console.error('Pending listener error:', err?.message)
-    })
-
-    return () => unsubscribe()
+          });
+        });
+        feeSnap.docs.forEach(d => {
+          const data = d.data();
+          pending.push({
+            id: d.id,
+            _collection: 'spims_fees',
+            type: data.type || '',
+            category: data.category || '',
+            description: data.description || '',
+            amount: Number(data.amount || data.amountPaid) || 0,
+            status: data.status || 'pending',
+            cashierId: data.cashierId || '',
+            studentId: data.studentId || null,
+            patientId: data.patientId || null,
+            patientName: data.patientName || null,
+            date: data.date,
+            createdAt: data.createdAt,
+          });
+        });
+        pending.sort((a, b) => {
+          const aTime = a.createdAt?.toDate?.()?.getTime() || new Date(a.createdAt || 0).getTime();
+          const bTime = b.createdAt?.toDate?.()?.getTime() || new Date(b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+        setPendingTransactions(pending);
+      } catch (e) {
+        console.error('Error fetching pending transactions:', e);
+      }
+    };
+    fetchPending();
   }, [session])
 
   const fetchHistory = async () => {
     try {
-      // No orderBy — avoids composite index requirement
-      const snap = await getDocs(
-        query(
-          collection(db, 'spims_transactions'),
-          where('status', 'in', ['approved', 'rejected'])
-        )
-      )
-
-      const history = snap.docs
-        .map(d => {
-          const data = d.data()
-          const createdAt = data.createdAt?.toDate?.()
-            ? data.createdAt.toDate()
-            : data.createdAt
-              ? new Date(data.createdAt)
-              : new Date()
-          const approvedAt = data.approvedAt?.toDate?.()
-            ? data.approvedAt.toDate()
-            : data.approvedAt
-              ? new Date(data.approvedAt)
-              : null
-          const txDate = data.date?.toDate?.()
-            ? data.date.toDate()
-            : data.date
-              ? new Date(data.date)
-              : new Date()
-
-          return {
-            id: d.id,
-            type: data.type || '',
-            category: data.category || '',
-            description: data.description || '',
-            amount: Number(data.amount) || 0,
-            status: data.status || '',
-            cashierId: data.cashierId || '',
-            approvedBy: data.approvedBy || '',
-            rejectedBy: data.rejectedBy || '',
-            rejectReason: data.rejectReason || '',
-            studentId: data.studentId || null,
-            patientId: data.patientId || null,
-            patientName: data.patientName || null,
-            createdAt,
-            approvedAt,
-            date: txDate,
-          }
-        })
-        // Sort newest first client-side
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        // Limit to 30
-        .slice(0, 30)
-
-      setHistoryTransactions(history)
+      const [txSnap, feeSnap] = await Promise.all([
+        getDocs(query(collection(db, 'spims_transactions'), where('status', 'in', ['approved', 'rejected']))),
+        getDocs(query(collection(db, 'spims_fees'), where('status', 'in', ['approved', 'rejected'])))
+      ]);
+      const history = [];
+      txSnap.docs.forEach(d => {
+        const data = d.data();
+        const createdAt = data.createdAt?.toDate?.() ? data.createdAt.toDate() : data.createdAt ? new Date(data.createdAt) : new Date();
+        const approvedAt = data.approvedAt?.toDate?.() ? data.approvedAt.toDate() : data.approvedAt ? new Date(data.approvedAt) : null;
+        const txDate = data.date?.toDate?.() ? data.date.toDate() : data.date ? new Date(data.date) : new Date();
+        history.push({
+          id: d.id,
+          _collection: 'spims_transactions',
+          type: data.type || '',
+          category: data.category || '',
+          description: data.description || '',
+          amount: Number(data.amount) || 0,
+          status: data.status || '',
+          cashierId: data.cashierId || '',
+          approvedBy: data.approvedBy || '',
+          rejectedBy: data.rejectedBy || '',
+          rejectReason: data.rejectReason || '',
+          studentId: data.studentId || null,
+          patientId: data.patientId || null,
+          patientName: data.patientName || null,
+          createdAt,
+          approvedAt,
+          date: txDate,
+        });
+      });
+      feeSnap.docs.forEach(d => {
+        const data = d.data();
+        const createdAt = data.createdAt?.toDate?.() ? data.createdAt.toDate() : data.createdAt ? new Date(data.createdAt) : new Date();
+        const approvedAt = data.approvedAt?.toDate?.() ? data.approvedAt.toDate() : data.approvedAt ? new Date(data.approvedAt) : null;
+        const txDate = data.date?.toDate?.() ? data.date.toDate() : data.date ? new Date(data.date) : new Date();
+        history.push({
+          id: d.id,
+          _collection: 'spims_fees',
+          type: data.type || '',
+          category: data.category || '',
+          description: data.description || '',
+          amount: Number(data.amount || data.amountPaid) || 0,
+          status: data.status || '',
+          cashierId: data.cashierId || '',
+          approvedBy: data.approvedBy || '',
+          rejectedBy: data.rejectedBy || '',
+          rejectReason: data.rejectReason || '',
+          studentId: data.studentId || null,
+          patientId: data.patientId || null,
+          patientName: data.patientName || null,
+          createdAt,
+          approvedAt,
+          date: txDate,
+        });
+      });
+      history.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      setHistoryTransactions(history.slice(0, 30));
     } catch (err: any) {
       console.error('History fetch error:', err?.message)
     }
@@ -152,14 +172,13 @@ export default function ApprovalsPage() {
     try {
       setActionLoading(txId);
 
-      await updateDoc(doc(db, 'spims_transactions', txId), {
-        status: 'approved',
-        approvedBy: session.uid,
-        approvedAt: Timestamp.now(),
-      });
+      // Use unified finance approval which handles both transactions and fees
+      const deptId = (session && session.dept) ? session.dept : 'spims';
+      await approveTransaction(deptId, txId);
 
-      const txSnap = await getDoc(doc(db, 'spims_transactions', txId));
-      if (txSnap.exists()) {
+      // No further sync needed here as approveTransaction handles fee sync
+      // Continue to refresh UI
+
         const raw = txSnap.data() as Record<string, unknown>;
         const feePaymentId = raw.feePaymentId as string | undefined;
         const studentEntityId = (raw.studentId || raw.patientId) as string | undefined;
