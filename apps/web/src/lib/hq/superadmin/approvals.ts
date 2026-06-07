@@ -461,6 +461,24 @@ export function subscribeEntityTransactions({
   } else if (entity.dept === 'spims') {
     attach('spims', 'studentId', entity.id);
     attach('spims', 'patientId', entity.id);
+    // Also fetch SPIMS fees for this student
+    const feeCol = 'spims_fees';
+    const feeQuery = query(
+      collection(db, feeCol),
+      where('studentId', '==', entity.id),
+      orderBy('createdAt', 'desc'),
+      limit(200)
+    );
+    const feeUnsub = onSnapshot(
+      feeQuery,
+      (snap) => {
+        const chunk = snap.docs.map((d) => normalizeTx('spims', d.id, d.data() as Record<string, unknown>));
+        buffers[`spims_fees_${entity.id}`] = chunk;
+        bump();
+      },
+      (e) => onError?.(e)
+    );
+    unsub.push(feeUnsub);
   } else if (entity.dept === 'job-center') {
     attach('job-center', 'seekerId', entity.id);
   } else if (DEPT_TX_MAP[entity.dept]) {
