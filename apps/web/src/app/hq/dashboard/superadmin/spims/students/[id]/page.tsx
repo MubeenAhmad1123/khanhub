@@ -101,19 +101,42 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
     loadData();
   }, [session, studentId]);
 
-  const totals = useMemo(() => {
-    // Primary source: spims_fees (cashier payments)
-    const approvedFees = fees.filter(f => String(f.status) === 'approved');
-    const totalApproved = approvedFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+  // Merged, deduplicated list of all payment entries (spims_fees + spims_transactions)
+  const mergedPayments = useMemo(() => {
+    // Build a set of fee IDs and linked transaction IDs from spims_fees
+    const feeIds = new Set(fees.map(f => f.id));
+    const linkedTxIds = new Set(fees.map(f => f.linkedTransactionId).filter(Boolean));
+    const feePaymentIds = new Set(fees.map(f => f.feePaymentId).filter(Boolean));
 
-    const pendingFees = fees.filter(f =>
+    // Only include txs that are NOT already represented in spims_fees
+    const extraTxs = txs.filter(t => {
+      if (feeIds.has(t.id)) return false;
+      if (linkedTxIds.has(t.id)) return false;
+      if (t.feePaymentId && feePaymentIds.has(t.feePaymentId)) return false;
+      // Only include fee-related transactions
+      const cat = String(t.category || t.type || '').toLowerCase();
+      return cat.includes('fee') || cat.includes('admission') || !!t.feePaymentId;
+    });
+
+    return [...fees, ...extraTxs].sort((a: any, b: any) => {
+      const tA = toDate(a.createdAt || a.date).getTime();
+      const tB = toDate(b.createdAt || b.date).getTime();
+      return tB - tA;
+    });
+  }, [fees, txs]);
+
+  const totals = useMemo(() => {
+    const approvedEntries = mergedPayments.filter(f => String(f.status) === 'approved');
+    const totalApproved = approvedEntries.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+
+    const pendingEntries = mergedPayments.filter(f =>
       String(f.status) === 'pending' || String(f.status) === 'pending_cashier'
     );
-    const pendingAmount = pendingFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
-    const pendingCount = pendingFees.length;
+    const pendingAmount = pendingEntries.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+    const pendingCount = pendingEntries.length;
 
     return { totalApproved, pendingCount, pendingAmount };
-  }, [fees]);
+  }, [mergedPayments]);
 
   const remaining = useMemo(() => {
     if (student?.totalPackage !== undefined) {
@@ -387,7 +410,7 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
               </div>
             </div>
 
-            {fees.length === 0 ? (
+            {mergedPayments.length === 0 ? (
               <div className="bg-gray-50 border border-dashed border-gray-200 rounded-[2rem] p-16 text-center">
                 <Banknote size={40} className="text-gray-200 mx-auto mb-4" />
                 <p className="text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">
@@ -409,7 +432,7 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                 {/* Running balance calc from oldest to newest */}
                 {(() => {
                   // Compute running balance (oldest first)
-                  const sorted = [...fees].sort((a, b) =>
+                  const sorted = [...mergedPayments].sort((a, b) =>
                     toDate(a.createdAt || a.date).getTime() - toDate(b.createdAt || b.date).getTime()
                   );
                   const totalPkg = Number(student.totalPackage) || 0;
@@ -429,10 +452,13 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                     const ss = getStatusStyle(f.status);
                     const StatusIcon = ss.icon;
                     const isApproved = String(f.status) === 'approved';
+                    const isPending = String(f.status) === 'pending' || String(f.status) === 'pending_cashier';
                     return (
                       <div
                         key={f.id}
-                        className={`grid grid-cols-12 gap-2 px-6 py-4 border-b border-gray-50 last:border-0 transition-colors hover:bg-indigo-50/30 ${isApproved ? '' : 'opacity-75'}`}
+                        className={`grid grid-cols-12 gap-2 px-6 py-4 border-b border-gray-50 last:border-0 transition-colors hover:bg-indigo-50/30 ${
+                          isPending ? 'bg-amber-50/40' : ''
+                        }`}
                       >
                         <div className="col-span-1 flex items-center justify-center">
                           <span className="text-[10px] font-black text-gray-300">#{f._index}</span>
@@ -449,12 +475,15 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
                           <span className="text-[11px] font-black text-gray-900 uppercase">
                             {getFeeTypeLabel(f.type || f.transactionType || f.category || 'other')}
                           </span>
-                          {f.note && (
-                            <span className="text-[9px] text-gray-400 font-bold mt-0.5 line-clamp-1">{f.note}</span>
+                          {(f.note || f.description) && (
+                            <span className="text-[9px] text-gray-400 font-bold mt-0.5 line-clamp-1">{f.note || f.description}</span>
+                          )}
+                          {f._source === 'spims_transactions' && (
+                            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mt-0.5">via transactions</span>
                           )}
                         </div>
                         <div className="col-span-2 flex items-center justify-end">
-                          <span className={`text-sm font-black tracking-tight ${isApproved ? 'text-emerald-700' : 'text-gray-500'}`}>
+                          <span className={`text-sm font-black tracking-tight ${isApproved ? 'text-emerald-700' : isPending ? 'text-amber-700' : 'text-gray-500'}`}>
                             {formatPKR(Number(f.amount) || 0)}
                           </span>
                         </div>
@@ -480,10 +509,15 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
 
                 {/* Summary Footer */}
                 <div className="grid grid-cols-12 gap-2 px-6 py-4 bg-gray-50 border-t border-gray-200">
-                  <div className="col-span-6 flex items-center">
+                  <div className="col-span-6 flex items-center gap-4">
                     <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                      Total Payments: {fees.length} entries
+                      Total: {mergedPayments.length} entries
                     </span>
+                    {totals.pendingCount > 0 && (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">
+                        {totals.pendingCount} pending approval
+                      </span>
+                    )}
                   </div>
                   <div className="col-span-2 flex items-center justify-end">
                     <span className="text-sm font-black text-emerald-700">
