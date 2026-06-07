@@ -84,7 +84,10 @@ export default function FeeRecordTab({
 
         // Filter for fee-related entries and map to SpimsFeePayment type
         const feeRecords = list
-          .filter(tx => tx.category === 'fee' || tx.feePaymentId)
+          .filter(tx => {
+            const cat = String(tx.category || '').toLowerCase();
+            return cat.includes('fee') || cat.includes('admission') || !!tx.feePaymentId;
+          })
           .map(tx => ({
             id: tx.id,
             studentId: tx.studentId || tx.patientId,

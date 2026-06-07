@@ -26,13 +26,14 @@ const FeeRecordTab = dynamic(() => import('@/components/spims/student-profile/Fe
 const ExamRecordTab = dynamic(() => import('@/components/spims/student-profile/ExamRecordTab'), { ssr: false }) as any;
 const DocumentsTab = dynamic(() => import('@/components/spims/student-profile/DocumentsTab'), { ssr: false }) as any;
 const FinanceSummaryTab = dynamic(() => import('@/components/spims/student-profile/FinanceSummaryTab'), { ssr: false }) as any;
+const BankStatementTab = dynamic(() => import('@/components/spims/student-profile/BankStatementTab'), { ssr: false }) as any;
 const TestsTab = dynamic(() => import('@/components/spims/student-profile/TestsTab'), { ssr: false }) as any;
 const AttendanceTab = dynamic(() => import('@/components/spims/student-profile/AttendanceTab'), { ssr: false }) as any;
 const ProfileHeader = dynamic(() => import('@/components/spims/student-profile/ProfileHeader'), { ssr: false }) as any;
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
 
-type Tab = 'tasks' | 'lessons' | 'progress' | 'tracking' | 'fees' | 'finance' | 'tests' | 'attendance' | 'exam' | 'admission' | 'documents';
+type Tab = 'tasks' | 'lessons' | 'progress' | 'tracking' | 'fees' | 'finance' | 'statement' | 'tests' | 'attendance' | 'exam' | 'admission' | 'documents';
 
 export default function AdminStudentProfilePage() {
   const router = useRouter();
@@ -215,7 +216,8 @@ export default function AdminStudentProfilePage() {
           const txId = txData.id;
           
           // Only process fee-related transactions
-          const isFee = txData.category === 'fee' || txData.feePaymentId;
+          const cat = String(txData.category || '').toLowerCase();
+          const isFee = cat.includes('fee') || cat.includes('admission') || !!txData.feePaymentId;
           if (!isFee) return;
 
           const isApproved = txData.status === 'approved';
@@ -351,6 +353,7 @@ export default function AdminStudentProfilePage() {
     { id: 'tracking', label: 'Academic Tracking' },
     { id: 'fees', label: 'Fee record' },
     { id: 'finance', label: 'Finance summary' },
+    { id: 'statement', label: 'Bank Statement' },
     { id: 'tests', label: 'Tests' },
     { id: 'attendance', label: 'Attendance' },
     { id: 'exam', label: 'Exam record' },
@@ -535,6 +538,14 @@ export default function AdminStudentProfilePage() {
                 <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Finance Summary</h2>
               </div>
               <FinanceSummaryTab student={student} />
+            </div>
+
+            <div id="section-statement" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                <FileText className="w-6 h-6 text-[#1D9E75]" />
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Bank Statement</h2>
+              </div>
+              <BankStatementTab student={student} />
             </div>
 
             <div id="section-tests" className="scroll-mt-24 bg-white border border-gray-100 rounded-[2.5rem] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-200/50 w-full">

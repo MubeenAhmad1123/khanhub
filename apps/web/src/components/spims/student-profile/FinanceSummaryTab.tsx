@@ -57,7 +57,10 @@ export default function FinanceSummaryTab({
 
         // Map transactions to SpimsFeePayment type for summary calculations
         const feeRecords = list
-          .filter(tx => tx.category === 'fee' || tx.feePaymentId)
+          .filter(tx => {
+            const cat = String(tx.category || '').toLowerCase();
+            return cat.includes('fee') || cat.includes('admission') || !!tx.feePaymentId;
+          })
           .map(tx => ({
             id: tx.id,
             amount: tx.amount,

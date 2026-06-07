@@ -27,11 +27,12 @@ const FeeRecordTab = dynamic(() => import('@/components/spims/student-profile/Fe
 const ExamRecordTab = dynamic(() => import('@/components/spims/student-profile/ExamRecordTab'), { ssr: false }) as any;
 const DocumentsTab = dynamic(() => import('@/components/spims/student-profile/DocumentsTab'), { ssr: false }) as any;
 const FinanceSummaryTab = dynamic(() => import('@/components/spims/student-profile/FinanceSummaryTab'), { ssr: false }) as any;
+const BankStatementTab = dynamic(() => import('@/components/spims/student-profile/BankStatementTab'), { ssr: false }) as any;
 const TestsTab = dynamic(() => import('@/components/spims/student-profile/TestsTab'), { ssr: false }) as any;
 const AttendanceTab = dynamic(() => import('@/components/spims/student-profile/AttendanceTab'), { ssr: false }) as any;
 const ProfileHeader = dynamic(() => import('@/components/spims/student-profile/ProfileHeader'), { ssr: false }) as any;
 
-type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance' | 'tests' | 'attendance' | 'tasks' | 'lessons' | 'progress' | 'tracking';
+type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance' | 'statement' | 'tests' | 'attendance' | 'tasks' | 'lessons' | 'progress' | 'tracking';
 
 export default function StudentSelfServicePage() {
   const router = useRouter();
@@ -162,7 +163,7 @@ export default function StudentSelfServicePage() {
   // Sync state tab dynamically with URL search query param tab
   useEffect(() => {
     const queryTab = searchParams?.get('tab') as Tab | null;
-    if (queryTab && ['admission', 'fees', 'exam', 'documents', 'finance', 'tests', 'attendance', 'tasks', 'lessons', 'progress', 'tracking'].includes(queryTab)) {
+    if (queryTab && ['admission', 'fees', 'exam', 'documents', 'finance', 'statement', 'tests', 'attendance', 'tasks', 'lessons', 'progress', 'tracking'].includes(queryTab)) {
       setTab(queryTab);
     }
   }, [searchParams]);
@@ -185,6 +186,7 @@ export default function StudentSelfServicePage() {
       tracking: true,
       fees: sections.feeRecord !== false,
       finance: sections.feeRecord !== false,
+      statement: sections.feeRecord !== false,
       tests: sections.examRecords !== false,
       attendance: sections.attendance !== false,
       exam: sections.examRecords !== false,
@@ -250,7 +252,8 @@ export default function StudentSelfServicePage() {
 
         mergedTxDocs.forEach(txData => {
           const txId = txData.id;
-          const isFee = txData.category === 'fee' || txData.feePaymentId;
+          const cat = String(txData.category || '').toLowerCase();
+          const isFee = cat.includes('fee') || cat.includes('admission') || !!txData.feePaymentId;
           if (!isFee) return;
 
           const isApproved = txData.status === 'approved';
@@ -346,6 +349,7 @@ export default function StudentSelfServicePage() {
     { id: 'tracking', label: 'Academic Tracking', visible: true },
     { id: 'fees', label: 'Fee record', visible: sections.feeRecord !== false },
     { id: 'finance', label: 'Finance summary', visible: sections.feeRecord !== false },
+    { id: 'statement', label: 'Bank Statement', visible: sections.feeRecord !== false },
     { id: 'tests', label: 'Tests', visible: sections.examRecords !== false },
     { id: 'attendance', label: 'Attendance', visible: sections.attendance !== false },
     { id: 'exam', label: 'Exam record', visible: sections.examRecords !== false },
@@ -390,6 +394,7 @@ export default function StudentSelfServicePage() {
           {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
           {tab === 'documents' && <DocumentsTab studentId={student.id} session={session} />}
           {tab === 'finance' && <FinanceSummaryTab student={student} />}
+          {tab === 'statement' && <BankStatementTab student={student} />}
           {tab === 'tasks' && <StudentTasksView student={student} tasks={categorizedData.tasks} />}
           {tab === 'lessons' && <StudentLessonsView student={student} lessons={categorizedData.lessons} />}
           {tab === 'progress' && <StudentProgressView student={student} exams={categorizedData.exams} attendanceRecords={attendanceRecords} />}

@@ -98,61 +98,26 @@ export async function fetchTodayTxAmount(): Promise<number> {
   }
 }
 
+import { listStaffCards } from './staff';
+
 export async function fetchActiveStaffCount(): Promise<number> {
   const cacheKey = 'hq_superadmin_active_staff';
   const cached = getCached<number>(cacheKey);
   if (cached !== undefined && cached !== null) return cached;
 
-  const targetDepts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
-  
-  const base = await Promise.all(
-    targetDepts.map(async (d) => {
-      let col = '';
-      if (d === 'hq') col = 'hq_users';
-      else if (d === 'job-center') col = 'jobcenter_users';
-      else if (d === 'social-media') col = 'media_users';
-      else {
-        const slug = d.replace('-', '_');
-        col = `${slug}_users`;
-      }
-      const snap = await getDocs(query(collection(db, col), limit(200))).catch(() => ({ docs: [] } as any));
-      return snap.docs.map((docSnap: any) => docSnap.data());
-    })
-  );
-
-  const activeStaff = base.flat().filter((s: any) => {
-    // 1. Exclude system accounts (super, network)
-    const n = String(s.name || s.displayName || '').toLowerCase();
-    const e = String(s.email || '').toLowerCase();
-    if (n.includes('super') || n.includes('network') || e.includes('super') || e.includes('network')) {
-      return false;
-    }
-
-    // 2. Strict Active Check
-    const statusStr = String(s.status || '').toLowerCase();
-    const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'active_vacancy';
-    
-    if (!isActuallyActive || statusStr === 'active_vacancy') return false;
-
-    // 3. Role validation - ensure only valid staff roles are counted (exclude other, student, superadmin)
-    const r = String(s.role || '').toLowerCase();
-    let normalizedRole = 'other';
-    if (r.includes('internee')) normalizedRole = 'internee';
-    else if (r.includes('trial')) normalizedRole = 'trial';
-    else if (r.includes('contract')) normalizedRole = 'contract';
-    else if (r.includes('worker') || r.includes('junior')) normalizedRole = 'worker';
-    else {
-      const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor', 'personnel', 'worker', 'internee', 'trial', 'contract', 'volunteer', 'supervisor', 'executive'];
-      if (STAFF_WHITELIST.includes(r)) normalizedRole = r;
-    }
-
-    if (normalizedRole === 'superadmin') return false;
-    if (normalizedRole === 'other' || normalizedRole === 'student') return false;
-
-    return true;
-  });
-
-  const total = activeStaff.length;
-  setCached(cacheKey, total, 1800); // 30 minutes for staff
-  return total;
+  try {
+    const list = await listStaffCards({
+      dept: 'all',
+      status: 'active',
+      role: 'personnel',
+      fullEnrichment: false,
+      includeTodayStats: false,
+    });
+    const total = list.length;
+    setCached(cacheKey, total, 1800); // 30 minutes for staff
+    return total;
+  } catch (err) {
+    console.error('[Stats] fetchActiveStaffCount error:', err);
+    return 0;
+  }
 }
