@@ -249,10 +249,29 @@ export default function AdminStudentProfilePage() {
           }
         });
 
+        // Calculate pending amount from aggregated payments (spims_fees)
         let pendingAmount = 0;
+        const countedPendingIds = new Set<string>();
         aggregatedPayments.forEach(p => {
           if (p.status === 'pending' || p.status === 'pending_cashier') {
             pendingAmount += Number(p.amount || 0);
+            countedPendingIds.add(p.id);
+            if (p.linkedTransactionId) countedPendingIds.add(p.linkedTransactionId);
+          }
+        });
+
+        // Also count pending transactions from spims_transactions that weren't already counted
+        mergedTxDocs.forEach(txData => {
+          const txId = txData.id;
+          if (countedPendingIds.has(txId)) return; // already counted
+          if (txData.feePaymentId && countedPendingIds.has(txData.feePaymentId)) return; // already counted via fee
+
+          const cat = String(txData.category || '').toLowerCase();
+          const isFee = cat.includes('fee') || cat.includes('admission') || !!txData.feePaymentId;
+          if (!isFee) return;
+
+          if (txData.status === 'pending' || txData.status === 'pending_cashier') {
+            pendingAmount += Number(txData.amount || 0);
           }
         });
 
