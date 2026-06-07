@@ -385,22 +385,24 @@ export function subscribeApprovalsFeed(
       return;
     }
 
-    const col = DEPT_TX_MAP[dept];
-    if (!col) return;
+    const cols = [DEPT_TX_MAP[dept]];
+    if (dept === 'spims') cols.push('spims_fees');
 
-    const queries = buildQueriesForTab(tab, col);
-
-    queries.forEach((q) => {
-      const u = onSnapshot(
-        q,
-        (snap: QuerySnapshot<DocumentData>) => {
-          const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
-          buffers[dept] = chunk;
-          apply();
-        },
-        (err: unknown) => onError?.(err)
-      );
-      unsub.push(u);
+    cols.forEach(col => {
+      if (!col) return;
+      const queries = buildQueriesForTab(tab, col);
+      queries.forEach(q => {
+        const u = onSnapshot(
+          q,
+          (snap: QuerySnapshot<DocumentData>) => {
+            const chunk = snap.docs.map(d => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
+            buffers[dept] = [...(buffers[dept] || []), ...chunk];
+            apply();
+          },
+          (err) => onError?.(err)
+        );
+        unsub.push(u);
+      });
     });
   });
 
