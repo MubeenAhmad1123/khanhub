@@ -626,7 +626,22 @@ export async function approveTransaction(deptId: string, txId: string) {
   else col = 'cashierTransactions';
 
   const docRef = doc(db, col, txId);
-  const snap = await getDoc(docRef);
+  let snap = await getDoc(docRef);
+  // If not found and dept is spims, try the spims_fees collection as well
+  if (!snap.exists() && deptId === 'spims') {
+    const feeRef = doc(db, 'spims_fees', txId);
+    snap = await getDoc(feeRef);
+    if (snap.exists()) {
+      await updateDoc(feeRef, {
+        status: 'approved',
+        approvedAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      invalidateCache('finance');
+      return;
+    }
+  }
+
   if (!snap.exists()) throw new Error('Transaction not found');
 
   await updateDoc(docRef, {

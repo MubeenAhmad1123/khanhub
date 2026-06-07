@@ -448,7 +448,8 @@ export function subscribeEntityTransactions({
       q,
       (snap) => {
         const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
-        buffers[`${dept}_${field}`] = chunk;
+        const existing = buffers[`${dept}_${field}`] || [];
+        buffers[`${dept}_${field}`] = [...existing, ...chunk];
         bump();
       },
       (e) => onError?.(e)
@@ -466,8 +467,7 @@ export function subscribeEntityTransactions({
     const feeQuery = query(
       collection(db, feeCol),
       where('studentId', '==', entity.id),
-      orderBy('createdAt', 'desc'),
-      limit(200)
+      orderBy('createdAt', 'desc')
     );
     const feeUnsub = onSnapshot(
       feeQuery,
