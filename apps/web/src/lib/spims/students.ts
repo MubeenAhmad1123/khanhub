@@ -322,6 +322,38 @@ export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayme
   return fees;
 }
 
+// Sync fee records and store summary for quick access
+export async function syncSpimsFeeRecords(studentId: string): Promise<void> {
+  // 1. Fetch all fee documents for the given student
+  const feeQuery = query(collection(db, 'spims_fees'), where('studentId', '==', studentId));
+  const feeSnap = await getDocs(feeQuery);
+  const fees = feeSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+  // 2. Filter approved fees and calculate total approved amount
+  const approvedFees = fees.filter((f: any) => f.status === 'approved');
+  const totalApproved = approvedFees.reduce((sum: number, f: any) => sum + (Number(f.amount) || 0), 0);
+
+  // 3. Fetch student to get total package
+  const studentSnap = await getDoc(doc(db, 'spims_students', studentId));
+  const totalPackage = studentSnap.exists() ? Number((studentSnap.data() as any).totalPackage) || 0 : 0;
+  const remaining = Math.max(0, totalPackage - totalApproved);
+
+  // 4. Update student document with received and remaining balances
+  await updateDoc(doc(db, 'spims_students', studentId), {
+    totalReceived: totalApproved,
+    remaining: remaining,
+    updatedAt: serverTimestamp(),
+  });
+
+  // 5. Write/update summary document under student record for quick access
+  const summaryRef = doc(db, 'spims_students', studentId, 'feeSummary', 'latest');
+  await setDoc(summaryRef, {
+    totalApproved,
+    feeCount: approvedFees.length,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
 
 export function buildFeeTrackerRecord(
   student: SpimsStudent,

@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import type { SpimsStudent } from '@/types/spims';
 import { SPIMS_COURSES } from '@/types/spims';
-import { updateStudent } from '@/lib/spims/students';
+import { updateStudent, syncSpimsFeeRecords } from '@/lib/spims/students';
 import { Timestamp } from 'firebase/firestore';
 
 export type SpimsSessionLike = {
@@ -106,6 +106,8 @@ export default function AdmissionTab({
             : Number(form.referralSheetAmount),
       });
       toast.success('Admission record saved');
+      // Ensure fee summary is up‑to‑date after any changes
+      await syncSpimsFeeRecords(student.id);
       onSaved?.();
     } catch (e) {
       console.error(e);
