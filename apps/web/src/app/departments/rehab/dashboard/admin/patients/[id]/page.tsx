@@ -249,8 +249,8 @@ export default function PatientDetailPage() {
   const [vCnic, setVCnic] = useState('');
   const [vNotes, setVNotes] = useState('');
   const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
-  const [visitFocusedField, setVisitFocusedField] = useState<string | null>(null);
-  const visitFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
+
+
   const [isEditing, setIsEditing] = useState(false);
   const isEditingRef = useRef(false);
   useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
@@ -3456,9 +3456,9 @@ export default function PatientDetailPage() {
                     required 
                     value={vName} 
                     onChange={e => setVName(e.target.value)} 
-                    ref={el => { visitFormRefs.current['vName'] = el; }}
-                    onFocus={() => setVisitFocusedField('vName')}
-                    onBlur={() => setVisitFocusedField(null)}
+
+
+
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="Full Name" 
                   />
@@ -3469,9 +3469,9 @@ export default function PatientDetailPage() {
                     required 
                     value={vRelation} 
                     onChange={e => setVRelation(e.target.value)} 
-                    ref={el => { visitFormRefs.current['vRelation'] = el; }}
-                    onFocus={() => setVisitFocusedField('vRelation')}
-                    onBlur={() => setVisitFocusedField(null)}
+
+
+
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="e.g. Father" 
                   />
@@ -3484,9 +3484,9 @@ export default function PatientDetailPage() {
                     required 
                     value={vPhone} 
                     onChange={e => setVPhone(e.target.value)} 
-                    ref={el => { visitFormRefs.current['vPhone'] = el; }}
-                    onFocus={() => setVisitFocusedField('vPhone')}
-                    onBlur={() => setVisitFocusedField(null)}
+
+
+
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="+92..." 
                   />
@@ -3496,9 +3496,9 @@ export default function PatientDetailPage() {
                   <input 
                     value={vCnic} 
                     onChange={e => setVCnic(e.target.value)} 
-                    ref={el => { visitFormRefs.current['vCnic'] = el; }}
-                    onFocus={() => setVisitFocusedField('vCnic')}
-                    onBlur={() => setVisitFocusedField(null)}
+
+
+
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="XXXXX-XXXXXXX-X" 
                   />
@@ -3517,9 +3517,6 @@ export default function PatientDetailPage() {
                   rows={2} 
                   value={vNotes} 
                   onChange={e => setVNotes(e.target.value)} 
-                  ref={el => { visitFormRefs.current['vNotes'] = el; }}
-                  onFocus={() => setVisitFocusedField('vNotes')}
-                  onBlur={() => setVisitFocusedField(null)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
                   placeholder="What was discussed? items brought?"
                 ></textarea>
@@ -3553,9 +3550,6 @@ export default function PatientDetailPage() {
                     required 
                     value={vName} 
                     onChange={e => setVName(e.target.value)} 
-                    ref={el => { visitFormRefs.current['editVName'] = el; }}
-                    onFocus={() => setVisitFocusedField('editVName')}
-                    onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="Full Name" 
                   />
@@ -3566,9 +3560,6 @@ export default function PatientDetailPage() {
                     required 
                     value={vRelation} 
                     onChange={e => setVRelation(e.target.value)} 
-                    ref={el => { visitFormRefs.current['editVRelation'] = el; }}
-                    onFocus={() => setVisitFocusedField('editVRelation')}
-                    onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="e.g. Father" 
                   />
@@ -3581,9 +3572,6 @@ export default function PatientDetailPage() {
                     required 
                     value={vPhone} 
                     onChange={e => setVPhone(e.target.value)} 
-                    ref={el => { visitFormRefs.current['editVPhone'] = el; }}
-                    onFocus={() => setVisitFocusedField('editVPhone')}
-                    onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="+92..." 
                   />
@@ -3593,9 +3581,6 @@ export default function PatientDetailPage() {
                   <input 
                     value={vCnic} 
                     onChange={e => setVCnic(e.target.value)} 
-                    ref={el => { visitFormRefs.current['editVCnic'] = el; }}
-                    onFocus={() => setVisitFocusedField('editVCnic')}
-                    onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                     placeholder="XXXXX-XXXXXXX-X" 
                   />
@@ -3612,10 +3597,7 @@ export default function PatientDetailPage() {
                   onBlur={e => {
                     const parsed = parseDateDMY(e.target.value);
                     if (parsed) setVDate(parsed.toISOString().split('T')[0]);
-                    setVisitFocusedField(null);
                   }}
-                  ref={el => { visitFormRefs.current['editVDate'] = el; }}
-                  onFocus={() => setVisitFocusedField('editVDate')}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                 />
               </div>
@@ -3625,9 +3607,6 @@ export default function PatientDetailPage() {
                   rows={2} 
                   value={vNotes} 
                   onChange={e => setVNotes(e.target.value)} 
-                  ref={el => { visitFormRefs.current['editVNotes'] = el; }}
-                  onFocus={() => setVisitFocusedField('editVNotes')}
-                  onBlur={() => setVisitFocusedField(null)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
                   placeholder="What was discussed? items brought?"
                 ></textarea>
