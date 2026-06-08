@@ -20,6 +20,7 @@ const SectionCard = React.memo(({ title, icon: Icon, children }: any) => (
     </div>
   </div>
 ));
+SectionCard.displayName = 'SectionCard';
 
 const Field = React.memo(({ label, value, type = "text", fieldKey, options, isEditing, onFieldChange }: {
   label: string;
@@ -126,6 +127,7 @@ const Field = React.memo(({ label, value, type = "text", fieldKey, options, isEd
     </div>
   );
 });
+Field.displayName = 'Field';
 
 export default function AdmissionTab({
   patient,
