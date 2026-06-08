@@ -316,16 +316,24 @@ export function subscribeApprovalsFeed(
   tabTimePreset: TabTimePreset = 'all'
 ) {
   const unsub: Array<() => void> = [];
+  // Key buffers by COLLECTION NAME (not dept) so multiple collections per dept don't overwrite each other
   const buffers: Record<string, UnifiedTx[]> = {};
-  ALL_DEPTS.forEach(d => buffers[d] = []);
 
   const { from, to } = pickRange(filters);
 
   const apply = () => {
-    let all: UnifiedTx[] = [];
-    ALL_DEPTS.forEach(d => {
-      if (buffers[d]) all = all.concat(buffers[d]);
+    // Merge all collection buffers and deduplicate by tx id
+    const txMap = new Map<string, UnifiedTx>();
+    Object.values(buffers).forEach(list => {
+      list.forEach(tx => {
+        // If same id appears in both spims_transactions and spims_fees, prefer spims_fees entry
+        const existing = txMap.get(tx.id);
+        if (!existing || tx._collection === 'spims_fees') {
+          txMap.set(tx.id, tx);
+        }
+      });
     });
+    const all = Array.from(txMap.values());
 
     const amtOk = getAmountBucketPredicate(filters.amountBucket);
     const proofOk = (tx: UnifiedTx) => {
@@ -381,7 +389,10 @@ export function subscribeApprovalsFeed(
 
   ALL_DEPTS.forEach((dept) => {
     if (!wantsDept(dept)) {
-      buffers[dept] = [];
+      // Clear any stale buffers for collections belonging to this dept
+      const cols = [DEPT_TX_MAP[dept]];
+      if (dept === 'spims') cols.push('spims_fees');
+      cols.forEach(col => { if (col) buffers[col] = []; });
       apply();
       return;
     }
@@ -391,13 +402,15 @@ export function subscribeApprovalsFeed(
 
     cols.forEach(col => {
       if (!col) return;
+      // Initialize buffer for this collection
+      buffers[col] = [];
       const queries = buildQueriesForTab(tab, col);
       queries.forEach(q => {
         const u = onSnapshot(
           q,
           (snap: QuerySnapshot<DocumentData>) => {
-            const chunk = snap.docs.map(d => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
-            buffers[dept] = [...(buffers[dept] || []), ...chunk];
+            // Replace (not append) buffer for this specific collection on every snapshot
+            buffers[col] = snap.docs.map(d => normalizeTx(dept, d.id, d.data() as Record<string, unknown>, col));
             apply();
           },
           (err) => onError?.(err)
@@ -409,6 +422,7 @@ export function subscribeApprovalsFeed(
 
   return () => unsub.forEach((u) => u());
 }
+
 
 /** All transactions for one entity (both statuses). */
 export function subscribeEntityTransactions({
@@ -426,7 +440,13 @@ export function subscribeEntityTransactions({
   const bump = () => {
     const map = new Map<string, UnifiedTx>();
     Object.values(buffers).forEach(list => {
-      list.forEach(tx => map.set(`${tx.dept}_${tx.id}`, tx));
+      list.forEach(tx => {
+        const existing = map.get(tx.id);
+        // Prefer spims_fees entries over spims_transactions for the same doc id
+        if (!existing || tx._collection === 'spims_fees') {
+          map.set(tx.id, tx);
+        }
+      });
     });
     onData(Array.from(map.values()).sort(sortComparator('newest')));
   };

@@ -530,8 +530,20 @@ export async function decideTransaction(params: {
     const adminDb = getFirestore(app);
 
     const col = txCollection(params.dept, params._collection);
-    const ref = adminDb.collection(col).doc(params.txId);
-    const snap = await ref.get();
+    let ref = adminDb.collection(col).doc(params.txId);
+    let snap = await ref.get();
+
+    // SPIMS fallback: if not found in the expected collection, try the other one
+    if (!snap.exists && params.dept === 'spims') {
+      const altCol = col === 'spims_transactions' ? 'spims_fees' : 'spims_transactions';
+      const altRef = adminDb.collection(altCol).doc(params.txId);
+      const altSnap = await altRef.get();
+      if (altSnap.exists) {
+        ref = altRef;
+        snap = altSnap;
+      }
+    }
+
     if (!snap.exists) return { success: false, error: 'Transaction not found.' };
 
     const data = snap.data() as any;
