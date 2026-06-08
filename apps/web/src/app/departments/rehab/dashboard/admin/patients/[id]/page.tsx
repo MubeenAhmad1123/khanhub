@@ -3615,10 +3615,10 @@ export default function PatientDetailPage() {
                   onBlur={e => {
                     const parsed = parseDateDMY(e.target.value);
                     if (parsed) setVDate(parsed.toISOString().split('T')[0]);
+                    setVisitFocusedField(null);
                   }}
                   ref={el => visitFormRefs.current['editVDate'] = el}
                   onFocus={() => setVisitFocusedField('editVDate')}
-                  onBlur={() => setVisitFocusedField(null)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                 />
               </div>
