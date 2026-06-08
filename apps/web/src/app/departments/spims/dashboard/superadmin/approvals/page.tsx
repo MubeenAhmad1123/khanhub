@@ -172,54 +172,8 @@ export default function ApprovalsPage() {
     try {
       setActionLoading(txId);
 
-      // Use unified finance approval which handles both transactions and fees
       const deptId = (session && session.dept) ? session.dept : 'spims';
       await approveTransaction(deptId, txId);
-
-      // No further sync needed here as approveTransaction handles fee sync
-      // Continue to refresh UI
-
-        const raw = txSnap.data() as Record<string, unknown>;
-        const feePaymentId = raw.feePaymentId as string | undefined;
-        const studentEntityId = (raw.studentId || raw.patientId) as string | undefined;
-        if (feePaymentId && studentEntityId) {
-          try {
-            await updateDoc(doc(db, 'spims_fees', feePaymentId), { status: 'approved' });
-            const studentRef = doc(db, 'spims_students', studentEntityId);
-            const stSnap = await getDoc(studentRef);
-            if (stSnap.exists()) {
-              const pkg = Number((stSnap.data() as { totalPackage?: number }).totalPackage) || 0;
-              const feesSnap = await getDocs(
-                query(collection(db, 'spims_fees'), where('studentId', '==', studentEntityId))
-              );
-              const approvedRows = feesSnap.docs
-                .map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>))
-                .filter((r) => r.status === 'approved');
-              const feeTime = (row: Record<string, unknown>) => {
-                const d = row.date as { toMillis?: () => number; seconds?: number } | undefined;
-                if (!d) return 0;
-                if (typeof d.toMillis === 'function') return d.toMillis();
-                if (typeof d.seconds === 'number') return d.seconds * 1000;
-                return 0;
-              };
-              approvedRows.sort((a, b) => feeTime(a) - feeTime(b));
-              let bal = pkg;
-              for (const r of approvedRows) {
-                bal -= Number(r.amount) || 0;
-                await updateDoc(doc(db, 'spims_fees', r.id as string), { remaining: Math.max(0, bal) });
-              }
-              const remainingBal = Math.max(0, bal);
-              await updateDoc(studentRef, {
-                totalReceived: pkg - remainingBal,
-                remaining: remainingBal,
-                updatedAt: serverTimestamp(),
-              });
-            }
-          } catch (syncErr) {
-            console.error('SPIMS fee sync (local superadmin):', syncErr);
-          }
-        }
-      }
 
       toast.success('Approved ✓');
       fetchHistory();
@@ -230,6 +184,7 @@ export default function ApprovalsPage() {
       setActionLoading(null);
     }
   };
+
 
   const handleReject = async (txId: string) => {
     if (rejectId !== txId) {

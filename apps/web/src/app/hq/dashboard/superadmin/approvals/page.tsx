@@ -1553,7 +1553,6 @@ export default function HqApprovalsPage() {
       
       addToast('Transaction edited successfully ✓', 'green');
       
-      const txAny = editTx as any;
       const entityIdVal = txAny.patientId || txAny.studentId || txAny.seekerId || txAny.donorId;
       if (entityIdVal) {
         const k = `${editTx.dept}_${entityIdVal}`;
