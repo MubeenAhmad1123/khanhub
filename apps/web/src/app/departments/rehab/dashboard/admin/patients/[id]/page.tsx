@@ -56,7 +56,7 @@ const formatStayDuration = (days: number) => {
   return `${days} ${days === 1 ? 'Day' : 'Days'}`;
 };
 
-function PatientEditForm({ initialData, patientIsActive, onSave, onCancel }: {
+const PatientEditForm = React.memo(function PatientEditForm({ initialData, patientIsActive, onSave, onCancel }: {
   initialData: {
     name: string;
     patientId: string;
@@ -215,7 +215,7 @@ function PatientEditForm({ initialData, patientIsActive, onSave, onCancel }: {
       </div>
     </>
   );
-}
+});
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -1435,7 +1435,7 @@ export default function PatientDetailPage() {
     }
   };
 
-  const handleSaveFromForm = async (form: {
+  const handleSaveFromForm = useCallback(async (form: {
     name: string;
     patientId: string;
     diagnosis: string;
@@ -1524,7 +1524,26 @@ export default function PatientDetailPage() {
       toast.error('Failed to update profile');
       throw error;
     }
-  };
+  }, [patientId]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
+  const handleSaveEdit = useCallback(async (
+    form: {
+      name: string;
+      patientId: string;
+      diagnosis: string;
+      packageAmount: number;
+      photoUrl: string;
+      admissionDate: string;
+      dischargeDate: string;
+    },
+    photoFile: File | null
+  ) => {
+    await handleSaveFromForm(form, photoFile);
+  }, [handleSaveFromForm]);
 
   const handleSaveStay = async () => {
     try {
@@ -2333,8 +2352,8 @@ export default function PatientDetailPage() {
                 <PatientEditForm
                   initialData={editForm}
                   patientIsActive={patient.isActive}
-                  onSave={handleSaveFromForm}
-                  onCancel={() => setIsEditing(false)}
+                  onSave={handleSaveEdit}
+                  onCancel={handleCancelEdit}
                 />
               ) : (
                 <>
