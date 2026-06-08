@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -112,15 +112,33 @@ export default function PatientDetailPage() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // Form key increments each time user opens edit, so uncontrolled inputs reset
-  const [formKey, setFormKey] = useState(0);
-  const isEditingRef = useRef(false);
-  isEditingRef.current = isEditing;
+  // Focus management for form inputs - prevents focus loss on typing
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const editFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
 
-  // Stable ref callbacks for visit form (still needs focus tracking for modals)
+  // Stable ref callbacks - only called on mount/unmount, NOT on every re-render
+  const setEditFormRef = useCallback((key: string) => (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+    editFormRefs.current[key] = el;
+  }, []);
   const setVisitFormRef = useCallback((key: string) => (el: HTMLInputElement | HTMLTextAreaElement | null) => {
     visitFormRefs.current[key] = el;
   }, []);
+
+  // Restore focus synchronously before paint
+  useLayoutEffect(() => {
+    if (focusedField && editFormRefs.current[focusedField]) {
+      const el = editFormRefs.current[focusedField];
+      if (el && document.activeElement !== el) {
+        el.focus();
+      }
+    }
+    if (visitFocusedField && visitFormRefs.current[visitFocusedField]) {
+      const el = visitFormRefs.current[visitFocusedField];
+      if (el && document.activeElement !== el) {
+        el.focus();
+      }
+    }
+  });
 
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -889,18 +907,16 @@ export default function PatientDetailPage() {
         billableMonths,
       });
 
-      if (!isEditingRef.current) {
-        setEditForm(prev => ({
-          ...prev,
-          name: currentPatientData.name || '',
-          patientId: currentPatientData.patientId || '',
-          diagnosis: currentPatientData.diagnosis || '',
-          packageAmount: currentPatientData.packageAmount || currentPatientData.monthlyPackage || 0,
-          photoUrl: currentPatientData.photoUrl || '',
-          admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
-          dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
-        }));
-      }
+      setEditForm(prev => ({
+        ...prev,
+        name: currentPatientData.name || '',
+        patientId: currentPatientData.patientId || '',
+        diagnosis: currentPatientData.diagnosis || '',
+        packageAmount: currentPatientData.packageAmount || currentPatientData.monthlyPackage || 0,
+        photoUrl: currentPatientData.photoUrl || '',
+        admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
+        dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
+      }));
       setPhotoPreview(currentPatientData.photoUrl || '');
     };
 
@@ -2048,7 +2064,6 @@ export default function PatientDetailPage() {
                   <button
                     onClick={() => {
                       setActiveTab('profile');
-                      setFormKey(k => k + 1);
                       setIsEditing(true);
                     }}
                     className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition-all border border-slate-200/50 active:scale-90"
@@ -2177,7 +2192,7 @@ export default function PatientDetailPage() {
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
                 {!isEditing ? (
-                  <button onClick={() => { setFormKey(k => k + 1); setIsEditing(true); }} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                  <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
                     <Edit3 className="w-4 h-4" /> Edit
                   </button>
                 ) : (
@@ -2193,13 +2208,16 @@ export default function PatientDetailPage() {
               </div>
 
               {isEditing ? (
-                <div key={formKey} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                     <input 
                       type="text" 
-                      defaultValue={editForm.name} 
+                      value={editForm.name} 
                       onChange={e => setEditForm({ ...editForm, name: e.target.value })} 
+                      ref={setEditFormRef('editName')}
+                      onFocus={() => setFocusedField('editName')}
+                      onBlur={() => setFocusedField(null)}
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
                     />
                   </div>
@@ -2207,8 +2225,11 @@ export default function PatientDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patient ID</label>
                     <input 
                       type="text" 
-                      defaultValue={editForm.patientId} 
+                      value={editForm.patientId} 
                       onChange={e => setEditForm({ ...editForm, patientId: e.target.value })} 
+                      ref={setEditFormRef('editPatientId')}
+                      onFocus={() => setFocusedField('editPatientId')}
+                      onBlur={() => setFocusedField(null)}
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
                     />
                   </div>
@@ -2287,8 +2308,11 @@ export default function PatientDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Package (PKR)</label>
                     <input
                       type="number"
-                      defaultValue={editForm.packageAmount}
+                      value={editForm.packageAmount}
                       onChange={e => setEditForm({ ...editForm, packageAmount: Number(e.target.value) })}
+                      ref={setEditFormRef('editPackageAmount')}
+                      onFocus={() => setFocusedField('editPackageAmount')}
+                      onBlur={() => setFocusedField(null)}
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
@@ -2312,8 +2336,11 @@ export default function PatientDetailPage() {
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
                     <textarea 
-                      defaultValue={editForm.diagnosis} 
+                      value={editForm.diagnosis} 
                       onChange={e => setEditForm({ ...editForm, diagnosis: e.target.value })} 
+                      ref={setEditFormRef('editDiagnosis')}
+                      onFocus={() => setFocusedField('editDiagnosis')}
+                      onBlur={() => setFocusedField(null)}
                       rows={3} 
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" 
                     />
