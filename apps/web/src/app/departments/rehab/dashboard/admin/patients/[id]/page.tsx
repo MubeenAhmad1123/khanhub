@@ -269,15 +269,6 @@ export default function PatientDetailPage() {
   const [matchingPatients, setMatchingPatients] = useState<any[]>([]);
   const [photoPreview, setPhotoPreview] = useState('');
 
-  // Restore focus for visit form after re-renders
-  useEffect(() => {
-    if (visitFocusedField && visitFormRefs.current[visitFocusedField]) {
-      const el = visitFormRefs.current[visitFocusedField];
-      if (el && document.activeElement !== el) {
-        el.focus();
-      }
-    }
-  });
 
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
