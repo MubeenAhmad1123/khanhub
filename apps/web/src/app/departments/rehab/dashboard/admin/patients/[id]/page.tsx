@@ -1545,6 +1545,16 @@ export default function PatientDetailPage() {
     await handleSaveFromForm(form, photoFile);
   }, [handleSaveFromForm]);
 
+  // Freeze editForm at the moment editing starts so Firestore
+  // onSnapshot re-renders don't push new object references into
+  // the form while the user is typing (which would cause React.memo
+  // to see changed props and remount the form, losing focus).
+  const frozenEditForm = useRef(editForm);
+  const handleStartEdit = useCallback(() => {
+    frozenEditForm.current = editForm;
+    setIsEditing(true);
+  }, [editForm]);
+
   const handleSaveStay = async () => {
     try {
       setSavingStay(true);
@@ -2223,7 +2233,7 @@ export default function PatientDetailPage() {
                   <button
                     onClick={() => {
                       setActiveTab('profile');
-                      setIsEditing(true);
+                      handleStartEdit();
                     }}
                     className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition-all border border-slate-200/50 active:scale-90"
                     title="Edit Profile"
@@ -2350,7 +2360,7 @@ export default function PatientDetailPage() {
             <div className="space-y-8 w-full">
               {isEditing ? (
                 <PatientEditForm
-                  initialData={editForm}
+                  initialData={frozenEditForm.current}
                   patientIsActive={patient.isActive}
                   onSave={handleSaveEdit}
                   onCancel={handleCancelEdit}
@@ -2359,7 +2369,7 @@ export default function PatientDetailPage() {
                 <>
                   <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                     <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
-                    <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                    <button onClick={handleStartEdit} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
                       <Edit3 className="w-4 h-4" /> Edit
                     </button>
                   </div>
