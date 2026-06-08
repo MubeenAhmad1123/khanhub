@@ -88,6 +88,8 @@ export default function PatientDetailPage() {
   const [vCnic, setVCnic] = useState('');
   const [vNotes, setVNotes] = useState('');
   const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
+  const [visitFocusedField, setVisitFocusedField] = useState<string | null>(null);
+  const visitFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -109,6 +111,26 @@ export default function PatientDetailPage() {
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus management for form inputs - prevents focus loss on typing
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const editFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
+
+  // Restore focus after re-renders
+  useEffect(() => {
+    if (focusedField && editFormRefs.current[focusedField]) {
+      const el = editFormRefs.current[focusedField];
+      if (el && document.activeElement !== el) {
+        el.focus();
+      }
+    }
+    if (visitFocusedField && visitFormRefs.current[visitFocusedField]) {
+      const el = visitFormRefs.current[visitFocusedField];
+      if (el && document.activeElement !== el) {
+        el.focus();
+      }
+    }
+  });
 
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -2181,11 +2203,27 @@ export default function PatientDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
+                    <input 
+                      type="text" 
+                      value={editForm.name} 
+                      onChange={e => setEditForm({ ...editForm, name: e.target.value })} 
+                      ref={el => editFormRefs.current['editName'] = el}
+                      onFocus={() => setFocusedField('editName')}
+                      onBlur={() => setFocusedField(null)}
+                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patient ID</label>
-                    <input type="text" value={editForm.patientId} onChange={e => setEditForm({ ...editForm, patientId: e.target.value })} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
+                    <input 
+                      type="text" 
+                      value={editForm.patientId} 
+                      onChange={e => setEditForm({ ...editForm, patientId: e.target.value })} 
+                      ref={el => editFormRefs.current['editPatientId'] = el}
+                      onFocus={() => setFocusedField('editPatientId')}
+                      onBlur={() => setFocusedField(null)}
+                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -2264,6 +2302,9 @@ export default function PatientDetailPage() {
                       type="number"
                       value={editForm.packageAmount}
                       onChange={e => setEditForm({ ...editForm, packageAmount: Number(e.target.value) })}
+                      ref={el => editFormRefs.current['editPackageAmount'] = el}
+                      onFocus={() => setFocusedField('editPackageAmount')}
+                      onBlur={() => setFocusedField(null)}
                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
@@ -2286,7 +2327,15 @@ export default function PatientDetailPage() {
                   )}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
-                    <textarea value={editForm.diagnosis} onChange={e => setEditForm({ ...editForm, diagnosis: e.target.value })} rows={3} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" />
+                    <textarea 
+                      value={editForm.diagnosis} 
+                      onChange={e => setEditForm({ ...editForm, diagnosis: e.target.value })} 
+                      ref={el => editFormRefs.current['editDiagnosis'] = el}
+                      onFocus={() => setFocusedField('editDiagnosis')}
+                      onBlur={() => setFocusedField(null)}
+                      rows={3} 
+                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" 
+                    />
                   </div>
                 </div>
               ) : (
@@ -3399,21 +3448,56 @@ export default function PatientDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
-                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />
+                  <input 
+                    required 
+                    value={vName} 
+                    onChange={e => setVName(e.target.value)} 
+                    ref={el => visitFormRefs.current['vName'] = el}
+                    onFocus={() => setVisitFocusedField('vName')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="Full Name" 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
-                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
+                  <input 
+                    required 
+                    value={vRelation} 
+                    onChange={e => setVRelation(e.target.value)} 
+                    ref={el => visitFormRefs.current['vRelation'] = el}
+                    onFocus={() => setVisitFocusedField('vRelation')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="e.g. Father" 
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
-                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
+                  <input 
+                    required 
+                    value={vPhone} 
+                    onChange={e => setVPhone(e.target.value)} 
+                    ref={el => visitFormRefs.current['vPhone'] = el}
+                    onFocus={() => setVisitFocusedField('vPhone')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="+92..." 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
-                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
+                  <input 
+                    value={vCnic} 
+                    onChange={e => setVCnic(e.target.value)} 
+                    ref={el => visitFormRefs.current['vCnic'] = el}
+                    onFocus={() => setVisitFocusedField('vCnic')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="XXXXX-XXXXXXX-X" 
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -3425,7 +3509,16 @@ export default function PatientDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
-                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
+                <textarea 
+                  rows={2} 
+                  value={vNotes} 
+                  onChange={e => setVNotes(e.target.value)} 
+                  ref={el => visitFormRefs.current['vNotes'] = el}
+                  onFocus={() => setVisitFocusedField('vNotes')}
+                  onBlur={() => setVisitFocusedField(null)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
+                  placeholder="What was discussed? items brought?"
+                ></textarea>
               </div>
               <button type="submit" disabled={isSavingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
                 {isSavingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
@@ -3452,26 +3545,63 @@ export default function PatientDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
-                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />
+                  <input 
+                    required 
+                    value={vName} 
+                    onChange={e => setVName(e.target.value)} 
+                    ref={el => visitFormRefs.current['editVName'] = el}
+                    onFocus={() => setVisitFocusedField('editVName')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="Full Name" 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
-                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
+                  <input 
+                    required 
+                    value={vRelation} 
+                    onChange={e => setVRelation(e.target.value)} 
+                    ref={el => visitFormRefs.current['editVRelation'] = el}
+                    onFocus={() => setVisitFocusedField('editVRelation')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="e.g. Father" 
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
-                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
+                  <input 
+                    required 
+                    value={vPhone} 
+                    onChange={e => setVPhone(e.target.value)} 
+                    ref={el => visitFormRefs.current['editVPhone'] = el}
+                    onFocus={() => setVisitFocusedField('editVPhone')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="+92..." 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
-                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
+                  <input 
+                    value={vCnic} 
+                    onChange={e => setVCnic(e.target.value)} 
+                    ref={el => visitFormRefs.current['editVCnic'] = el}
+                    onFocus={() => setVisitFocusedField('editVCnic')}
+                    onBlur={() => setVisitFocusedField(null)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                    placeholder="XXXXX-XXXXXXX-X" 
+                  />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="text"
+                <input 
+                  required 
+                  type="text"
                   placeholder="DD MM YYYY"
                   value={formatDateDMY(vDate)}
                   onChange={e => setVDate(e.target.value)}
@@ -3479,11 +3609,24 @@ export default function PatientDetailPage() {
                     const parsed = parseDateDMY(e.target.value);
                     if (parsed) setVDate(parsed.toISOString().split('T')[0]);
                   }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  ref={el => visitFormRefs.current['editVDate'] = el}
+                  onFocus={() => setVisitFocusedField('editVDate')}
+                  onBlur={() => setVisitFocusedField(null)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
-                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
+                <textarea 
+                  rows={2} 
+                  value={vNotes} 
+                  onChange={e => setVNotes(e.target.value)} 
+                  ref={el => visitFormRefs.current['editVNotes'] = el}
+                  onFocus={() => setVisitFocusedField('editVNotes')}
+                  onBlur={() => setVisitFocusedField(null)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
+                  placeholder="What was discussed? items brought?"
+                ></textarea>
               </div>
               <button type="submit" disabled={isUpdatingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
                 {isUpdatingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
