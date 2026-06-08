@@ -1341,7 +1341,7 @@ export default function HqApprovalsPage() {
   // Cards can be selected on pending + history tabs
   const isSelectableTab = (tab === 'pending' || tab === 'history') && !selectedEntity;
   // Approve/reject action buttons show whenever the tx itself is pending (any tab)
-  const canActOnTx = !selectedEntity && (tab === 'pending' || tab === 'history');
+  const canActOnTx = selectedEntity ? true : (tab === 'pending' || tab === 'history');
 
   const cashierNames = useMemo(() => {
     const src = selectedEntity ? entityRows : rows;
@@ -1413,7 +1413,13 @@ export default function HqApprovalsPage() {
 
   const handleApprove = async (tx: UnifiedTx) => {
     setBusyId(tx.id);
-    const res = await decideTransaction({ dept: tx.dept as Dept, txId: tx.id, decision: 'approved' });
+    const txAny = tx as any;
+    const res = await decideTransaction({ 
+      dept: tx.dept as Dept, 
+      txId: tx.id, 
+      decision: 'approved',
+      _collection: txAny._collection,
+    });
     setBusyId(null);
     if (res.success) {
       setCardPhase({ ...cardPhase, [tx.id]: 'success' });
@@ -1444,11 +1450,13 @@ export default function HqApprovalsPage() {
   const handleRemove = async (tx: UnifiedTx) => {
     if (busyId) return;
     setBusyId(tx.id);
+    const txAny = tx as any;
     const res = await decideTransaction({ 
       dept: tx.dept as Dept, 
       txId: tx.id, 
       decision: 'rejected', 
-      rejectReason: 'Removed by Superadmin (Quick Action)' 
+      rejectReason: 'Removed by Superadmin (Quick Action)',
+      _collection: txAny._collection,
     });
     setBusyId(null);
     if (res.success) {
@@ -1474,8 +1482,14 @@ export default function HqApprovalsPage() {
   const runReject = async (tx: UnifiedTx, reason: string) => {
     setRejectBusy(true);
     try {
-      const dept = tx.dept;
-      const res = await decideTransaction({ dept: dept as Dept, txId: tx.id, decision: 'rejected', rejectReason: reason });
+      const txAny = tx as any;
+      const res = await decideTransaction({ 
+        dept: tx.dept as Dept, 
+        txId: tx.id, 
+        decision: 'rejected', 
+        rejectReason: reason,
+        _collection: txAny._collection,
+      });
       if (!res.success) throw new Error(res.error ?? 'Failed');
       setRejectTx(null);
       setCardPhase((p) => ({ ...p, [tx.id]: 'fail' }));
@@ -1520,6 +1534,7 @@ export default function HqApprovalsPage() {
     if (!editTx) return;
     setEditSaving(true);
     try {
+      const txAny = editTx as any;
       const res = await editApprovedTransaction({
         dept: editTx.dept as Dept,
         txId: editTx.id,
@@ -1532,6 +1547,7 @@ export default function HqApprovalsPage() {
         discount,
         returnAmount,
         stayDurationIndex,
+        _collection: txAny._collection,
       });
       if (!res.success) throw new Error(res.error ?? 'Failed to edit transaction');
       

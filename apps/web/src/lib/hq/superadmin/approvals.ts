@@ -73,7 +73,7 @@ const DEPT_TX_MAP: Record<string, string> = {
   welfare: 'welfare_transactions'
 };
 
-function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>): UnifiedTx {
+function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>, overrideCollection?: string): UnifiedTx {
   const patientId = data.patientId != null ? String(data.patientId) : undefined;
   const studentId = data.studentId != null ? String(data.studentId) : undefined;
   const seekerId = data.seekerId != null ? String(data.seekerId) : undefined;
@@ -118,6 +118,7 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
     rejectedAt: data.rejectedAt,
     rejectedReason: rejectionReason,
     rejectionReason,
+    _collection: overrideCollection || (DEPT_TX_MAP[dept] as string | undefined),
   };
 }
 
@@ -444,12 +445,12 @@ export function subscribeEntityTransactions({
       orderBy('createdAt', 'desc'),
       limit(200)
     );
+    const key = `${dept}_${field}`;
     const u = onSnapshot(
       q,
       (snap) => {
-        const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
-        const existing = buffers[`${dept}_${field}`] || [];
-        buffers[`${dept}_${field}`] = [...existing, ...chunk];
+        // Replace (not append) the buffer on every snapshot to avoid duplicates
+        buffers[key] = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>, col));
         bump();
       },
       (e) => onError?.(e)
@@ -462,7 +463,7 @@ export function subscribeEntityTransactions({
   } else if (entity.dept === 'spims') {
     attach('spims', 'studentId', entity.id);
     attach('spims', 'patientId', entity.id);
-    // Also fetch SPIMS fees for this student
+    // Also fetch SPIMS fees for this student — tag with 'spims_fees' collection
     const feeCol = 'spims_fees';
     const feeQuery = query(
       collection(db, feeCol),
@@ -472,8 +473,10 @@ export function subscribeEntityTransactions({
     const feeUnsub = onSnapshot(
       feeQuery,
       (snap) => {
-        const chunk = snap.docs.map((d) => normalizeTx('spims', d.id, d.data() as Record<string, unknown>));
-        buffers[`spims_fees_${entity.id}`] = chunk;
+        // Replace buffer on every snapshot — never accumulate
+        buffers[`spims_fees_${entity.id}`] = snap.docs.map((d) =>
+          normalizeTx('spims', d.id, d.data() as Record<string, unknown>, 'spims_fees')
+        );
         bump();
       },
       (e) => onError?.(e)

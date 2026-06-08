@@ -28,7 +28,9 @@ function getAdminApp(): App {
   );
 }
 
-function txCollection(dept: Dept) {
+function txCollection(dept: Dept, collectionOverride?: string) {
+  // If the caller explicitly tells us which collection this tx lives in, use it.
+  if (collectionOverride) return collectionOverride;
   if (dept === 'rehab') return 'rehab_transactions';
   if (dept === 'spims') return 'spims_transactions';
   if (dept === 'job-center') return 'job_center_transactions';
@@ -519,13 +521,15 @@ export async function decideTransaction(params: {
   txId: string;
   decision: Decision;
   rejectReason?: string;
+  /** Optional: override which Firestore collection to look in (e.g. 'spims_fees') */
+  _collection?: string;
 }): Promise<{ success: boolean; error?: string }> {
   const caller = await requireHqSuperadmin();
   try {
     const app = getAdminApp();
     const adminDb = getFirestore(app);
 
-    const col = txCollection(params.dept);
+    const col = txCollection(params.dept, params._collection);
     const ref = adminDb.collection(col).doc(params.txId);
     const snap = await ref.get();
     if (!snap.exists) return { success: false, error: 'Transaction not found.' };
@@ -729,13 +733,15 @@ export async function editApprovedTransaction(params: {
   discount?: number;
   returnAmount?: number;
   stayDurationIndex?: number;
+  /** Optional: override which Firestore collection to look in (e.g. 'spims_fees') */
+  _collection?: string;
 }): Promise<{ success: boolean; error?: string }> {
   const caller = await requireHqSuperadmin();
   try {
     const app = getAdminApp();
     const adminDb = getFirestore(app);
 
-    const col = txCollection(params.dept);
+    const col = txCollection(params.dept, params._collection);
     const ref = adminDb.collection(col).doc(params.txId);
     const snap = await ref.get();
     if (!snap.exists) return { success: false, error: 'Transaction not found.' };

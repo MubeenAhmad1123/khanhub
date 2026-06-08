@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
+import { collection, updateDoc, doc, query, where, onSnapshot, getDocs, serverTimestamp, addDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { approveTransaction } from '@/lib/hq/superadmin/finance';
 import { db } from '@/lib/firebase';
 import { 
   CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, 
@@ -151,11 +152,11 @@ export default function ApprovalsPage() {
       setActionLoading(txId);
       
       // 1. Update the transaction status first
-      await updateDoc(doc(db, 'hospital_transactions', txId), {
-        status: 'approved',
-        approvedBy: session.uid,
-        approvedAt: Timestamp.now()
-      });
+      // Use the unified finance approval function which handles department-specific collections
+      // Determine the department for this transaction; fall back to 'hospital' if unknown
+      const deptId = (session && session.dept) ? session.dept : 'hospital';
+      await approveTransaction(deptId, txId);
+
 
       // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
       const allTransactions = [...pendingTransactions, ...historyTransactions];
