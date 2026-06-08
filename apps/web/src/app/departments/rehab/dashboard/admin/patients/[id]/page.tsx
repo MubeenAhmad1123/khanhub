@@ -3459,7 +3459,7 @@ export default function PatientDetailPage() {
                     required 
                     value={vName} 
                     onChange={e => setVName(e.target.value)} 
-                    ref={el => visitFormRefs.current['vName'] = el}
+                    ref={el => { visitFormRefs.current['vName'] = el; }}
                     onFocus={() => setVisitFocusedField('vName')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3472,7 +3472,7 @@ export default function PatientDetailPage() {
                     required 
                     value={vRelation} 
                     onChange={e => setVRelation(e.target.value)} 
-                    ref={el => visitFormRefs.current['vRelation'] = el}
+                    ref={el => { visitFormRefs.current['vRelation'] = el; }}
                     onFocus={() => setVisitFocusedField('vRelation')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3487,7 +3487,7 @@ export default function PatientDetailPage() {
                     required 
                     value={vPhone} 
                     onChange={e => setVPhone(e.target.value)} 
-                    ref={el => visitFormRefs.current['vPhone'] = el}
+                    ref={el => { visitFormRefs.current['vPhone'] = el; }}
                     onFocus={() => setVisitFocusedField('vPhone')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3499,7 +3499,7 @@ export default function PatientDetailPage() {
                   <input 
                     value={vCnic} 
                     onChange={e => setVCnic(e.target.value)} 
-                    ref={el => visitFormRefs.current['vCnic'] = el}
+                    ref={el => { visitFormRefs.current['vCnic'] = el; }}
                     onFocus={() => setVisitFocusedField('vCnic')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3520,7 +3520,7 @@ export default function PatientDetailPage() {
                   rows={2} 
                   value={vNotes} 
                   onChange={e => setVNotes(e.target.value)} 
-                  ref={el => visitFormRefs.current['vNotes'] = el}
+                  ref={el => { visitFormRefs.current['vNotes'] = el; }}
                   onFocus={() => setVisitFocusedField('vNotes')}
                   onBlur={() => setVisitFocusedField(null)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
@@ -3556,7 +3556,7 @@ export default function PatientDetailPage() {
                     required 
                     value={vName} 
                     onChange={e => setVName(e.target.value)} 
-                    ref={el => visitFormRefs.current['editVName'] = el}
+                    ref={el => { visitFormRefs.current['editVName'] = el; }}
                     onFocus={() => setVisitFocusedField('editVName')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3569,7 +3569,7 @@ export default function PatientDetailPage() {
                     required 
                     value={vRelation} 
                     onChange={e => setVRelation(e.target.value)} 
-                    ref={el => visitFormRefs.current['editVRelation'] = el}
+                    ref={el => { visitFormRefs.current['editVRelation'] = el; }}
                     onFocus={() => setVisitFocusedField('editVRelation')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3584,7 +3584,7 @@ export default function PatientDetailPage() {
                     required 
                     value={vPhone} 
                     onChange={e => setVPhone(e.target.value)} 
-                    ref={el => visitFormRefs.current['editVPhone'] = el}
+                    ref={el => { visitFormRefs.current['editVPhone'] = el; }}
                     onFocus={() => setVisitFocusedField('editVPhone')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3596,7 +3596,7 @@ export default function PatientDetailPage() {
                   <input 
                     value={vCnic} 
                     onChange={e => setVCnic(e.target.value)} 
-                    ref={el => visitFormRefs.current['editVCnic'] = el}
+                    ref={el => { visitFormRefs.current['editVCnic'] = el; }}
                     onFocus={() => setVisitFocusedField('editVCnic')}
                     onBlur={() => setVisitFocusedField(null)}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
@@ -3617,7 +3617,7 @@ export default function PatientDetailPage() {
                     if (parsed) setVDate(parsed.toISOString().split('T')[0]);
                     setVisitFocusedField(null);
                   }}
-                  ref={el => visitFormRefs.current['editVDate'] = el}
+                  ref={el => { visitFormRefs.current['editVDate'] = el; }}
                   onFocus={() => setVisitFocusedField('editVDate')}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
                 />
@@ -3628,7 +3628,7 @@ export default function PatientDetailPage() {
                   rows={2} 
                   value={vNotes} 
                   onChange={e => setVNotes(e.target.value)} 
-                  ref={el => visitFormRefs.current['editVNotes'] = el}
+                  ref={el => { visitFormRefs.current['editVNotes'] = el; }}
                   onFocus={() => setVisitFocusedField('editVNotes')}
                   onBlur={() => setVisitFocusedField(null)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
