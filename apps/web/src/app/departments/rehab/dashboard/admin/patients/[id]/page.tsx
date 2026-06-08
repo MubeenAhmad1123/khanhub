@@ -267,8 +267,12 @@ export default function PatientDetailPage() {
   const [deactivating, setDeactivating] = useState(false);
   const [showRejoinCheckModal, setShowRejoinCheckModal] = useState(false);
   const [matchingPatients, setMatchingPatients] = useState<any[]>([]);
-  const [photoPreview, setPhotoPreview] = useState('');
 
+  // Photo Upload State
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -471,6 +475,10 @@ export default function PatientDetailPage() {
     };
   }, [videoStates]);
 
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
+
   const isScrollingRef = useRef(false);
 
   const scrollToSection = (id: string) => {
@@ -605,11 +613,11 @@ export default function PatientDetailPage() {
         txSnap.docs.forEach(doc => {
           const txData = doc.data();
           const txId = doc.id;
-          
+
           const isApproved = txData.status === 'approved';
           const isSynced = syncedTxIds.has(txId);
           const isMedicineCharge = txData.category === 'medicine_charge';
-          
+
           if (isMedicineCharge) {
             if (isApproved) {
               totalMedicineCharges += Number(txData.amount || 0);
@@ -836,7 +844,7 @@ export default function PatientDetailPage() {
 
     // 1. Patient Real-time Listener
     const patientRef = doc(db, 'rehab_patients', patientId);
-    
+
     let currentPatientData: any = null;
     let currentFeesDocs: any[] = [];
     let currentTxDocs: any[] = [];
@@ -895,11 +903,11 @@ export default function PatientDetailPage() {
       currentTxDocs.forEach(d => {
         const txData = d.data();
         const txId = d.id;
-        
+
         const isApproved = txData.status === 'approved';
         const isSynced = syncedTxIds.has(txId);
         const isMedicineCharge = txData.category === 'medicine_charge';
-        
+
         if (isMedicineCharge) {
           if (isApproved) {
             totalMedicineCharges += Number(txData.amount || 0);
@@ -1213,10 +1221,10 @@ export default function PatientDetailPage() {
             const mm = String(txDate.getMonth() + 1).padStart(2, '0');
             const month = `${year}-${mm}`;
 
-            const isFeeCategory = 
+            const isFeeCategory =
               tx.type === 'income' ||
-              tx.category === 'patient_fee' || 
-              tx.category === 'fee' || 
+              tx.category === 'patient_fee' ||
+              tx.category === 'fee' ||
               String(tx.category || '').toLowerCase().includes('fee') ||
               String(tx.categoryName || '').toLowerCase().includes('fee') ||
               String(tx.categoryName || '').toLowerCase().includes('admission');
@@ -2237,7 +2245,7 @@ export default function PatientDetailPage() {
 
         {/* Tabs Navigation - Premium Sticky Glass Header */}
         <div className="w-full sticky top-0 z-40 bg-[#FCFAF2]/80 backdrop-blur-md py-2 no-print">
-          <div 
+          <div
             className="w-full overflow-x-auto px-2 sm:px-0 [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
@@ -2280,8 +2288,8 @@ export default function PatientDetailPage() {
                 <button
                   onClick={() => setSelectedStayIndex(-1)}
                   className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${selectedStayIndex === -1
-                      ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
-                      : 'bg-white/60 border border-gray-100 text-gray-600 hover:bg-white hover:text-teal-600 active:scale-95'
+                    ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
+                    : 'bg-white/60 border border-gray-100 text-gray-600 hover:bg-white hover:text-teal-600 active:scale-95'
                     }`}
                 >
                   Current Stay
@@ -2291,8 +2299,8 @@ export default function PatientDetailPage() {
                     key={idx}
                     onClick={() => setSelectedStayIndex(idx)}
                     className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${selectedStayIndex === idx
-                        ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
-                        : 'bg-white/60 border border-gray-100 text-gray-600 hover:bg-white hover:text-teal-600 active:scale-95'
+                      ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 active:scale-95'
+                      : 'bg-white/60 border border-gray-100 text-gray-600 hover:bg-white hover:text-teal-600 active:scale-95'
                       }`}
                   >
                     Stay #{patient.rejoinHistory.length - idx}
@@ -2733,13 +2741,12 @@ export default function PatientDetailPage() {
                             </div>
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
                               <span className="text-gray-500 dark:text-gray-400">Method: {p.method || 'Cash'}</span>
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider ${
-                                p.status === 'approved' 
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider ${p.status === 'approved'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                   : p.status === 'rejected' || p.status === 'rejected_cashier'
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                              }`}>
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                }`}>
                                 {String(p.status || 'pending').toUpperCase()}
                               </span>
                             </div>
@@ -2819,13 +2826,12 @@ export default function PatientDetailPage() {
                                 </td>
                                 <td className="py-5 font-bold text-xs text-gray-500 dark:text-gray-400">{p.method || 'Cash'}</td>
                                 <td className="py-5">
-                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${
-                                    p.status === 'approved' 
-                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${p.status === 'approved'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                       : p.status === 'rejected' || p.status === 'rejected_cashier'
-                                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                      : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                  }`}>
+                                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                    }`}>
                                     {String(p.status || 'pending').toUpperCase()}
                                   </span>
                                 </td>
@@ -3059,7 +3065,7 @@ export default function PatientDetailPage() {
                               Are you sure you want to delete this file?
                             </p>
                             <div className="flex gap-2">
-                              <button 
+                              <button
                                 onClick={() => {
                                   let currentSeconds = 6;
                                   const intervalId = setInterval(() => {
@@ -3108,7 +3114,7 @@ export default function PatientDetailPage() {
                               >
                                 Yes, Delete
                               </button>
-                              <button 
+                              <button
                                 onClick={() => {
                                   setVideoStates(prev => ({ ...prev, [vid.id]: { status: 'normal', timeLeft: 0 } }));
                                 }}
@@ -4352,9 +4358,9 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
     dischargeDate: patient.dischargeDate ? formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate) : '',
     status: patient.isActive === false ? 'discharged' : 'active',
     fatherName: patient.fatherName || '',
-    guardianName: patient.guardianName 
-      ? (patient.guardianRelation || patient.guardianRelationship 
-        ? `${patient.guardianName} (${patient.guardianRelation || patient.guardianRelationship})` 
+    guardianName: patient.guardianName
+      ? (patient.guardianRelation || patient.guardianRelationship
+        ? `${patient.guardianName} (${patient.guardianRelation || patient.guardianRelationship})`
         : patient.guardianName)
       : '',
     contactNumber: patient.contactNumber || '',
@@ -4565,18 +4571,18 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
             <div>
               {/* Report Header */}
               <div className="flex justify-between items-start border-b-4 border-gray-900 pb-5 mb-6">
-              <div className="space-y-1">
-                <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Financial</h1>
-                <h1 className="text-4xl font-black uppercase tracking-tighter text-teal-600 leading-none">Statement</h1>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">Khan Hub Rehabilitation Center</p>
-              </div>
-              <div className="text-right">
-                <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
-                  Official Report
+                <div className="space-y-1">
+                  <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900 leading-none">Financial</h1>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter text-teal-600 leading-none">Statement</h1>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-4">Khan Hub Rehabilitation Center</p>
                 </div>
-                <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
+                <div className="text-right">
+                  <div className="bg-gray-900 text-white px-4 py-2 rounded-lg inline-block font-black text-xs uppercase tracking-widest">
+                    Official Report
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 mt-4 uppercase">Date: {new Date().toLocaleDateString('en-GB')}</p>
+                </div>
               </div>
-            </div>
 
               {/* Patient Details Section */}
               <div className="grid grid-cols-2 gap-6 mb-6">
@@ -4689,7 +4695,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                   <DollarSign className="w-3 h-3" />
                   Financial Parameter Configuration
                 </h3>
-                
+
                 <div className="grid grid-cols-3 gap-6">
                   <div className="relative pr-4">
                     <label className="text-[9px] font-black uppercase text-gray-500 block mb-1.5">Base Monthly Package</label>
@@ -4743,7 +4749,7 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
                       <label className="text-[9px] font-black uppercase text-amber-600 flex items-center gap-1">
                         <span>💊</span> Medicine / Extra Treatment
                       </label>
-                      <button 
+                      <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
@@ -4821,40 +4827,40 @@ const ReportModal = ({ patient, allPayments, onClose }: { patient: any, allPayme
               {/* Transaction Log Table */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4 border-b-2 border-gray-100 pb-2">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Payment Transaction Log</h3>
-                <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
-              </div>
-              <div className="overflow-x-auto w-full no-scrollbar">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
-                      <th className="py-4 px-2">Date</th>
-                      <th className="py-4 px-2">Description / Note</th>
-                      <th className="py-4 px-2 text-right">Amount Received</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {reportData.transactions.map((p, idx) => (
-                      <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
-                        <td className="py-2.5 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
-                        <td className="py-2.5 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
-                        <td className="py-2.5 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Payment Transaction Log</h3>
+                  <div className="text-[9px] font-black text-gray-400 uppercase">{reportData.transactions.length} Entries</div>
+                </div>
+                <div className="overflow-x-auto w-full no-scrollbar">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="text-gray-400 uppercase text-[9px] font-black tracking-widest border-b border-gray-100">
+                        <th className="py-4 px-2">Date</th>
+                        <th className="py-4 px-2">Description / Note</th>
+                        <th className="py-4 px-2 text-right">Amount Received</th>
                       </tr>
-                    ))}
-                    {reportData.transactions.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {reportData.transactions.map((p, idx) => (
+                        <tr key={idx} className="font-bold text-gray-700 hover:bg-gray-50/50 transition-colors">
+                          <td className="py-2.5 px-2 whitespace-nowrap text-xs">{formatDateDMY(p.date)}</td>
+                          <td className="py-2.5 px-2 text-[11px] text-gray-500 uppercase tracking-tight">{p.note || 'Monthly Fee Payment'}</td>
+                          <td className="py-2.5 px-2 text-right text-teal-600 font-black tracking-tighter">PKR {Number(p.amount).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {reportData.transactions.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="py-16 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest italic">No payment records found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-4 border-gray-900 font-black text-gray-900">
+                        <td colSpan={2} className="py-4 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
+                        <td className="py-4 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
                       </tr>
-                    )}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-4 border-gray-900 font-black text-gray-900">
-                      <td colSpan={2} className="py-4 px-2 uppercase tracking-[0.2em] text-[10px]">Total Consolidated Received</td>
-                      <td className="py-4 px-2 text-right text-xl tracking-tighter">PKR {reportData.receivedAmount.toLocaleString()}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             </div>
 
