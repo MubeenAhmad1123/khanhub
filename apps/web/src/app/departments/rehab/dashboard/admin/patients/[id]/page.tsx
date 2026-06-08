@@ -56,6 +56,167 @@ const formatStayDuration = (days: number) => {
   return `${days} ${days === 1 ? 'Day' : 'Days'}`;
 };
 
+function PatientEditForm({ initialData, patientIsActive, onSave, onCancel }: {
+  initialData: {
+    name: string;
+    patientId: string;
+    diagnosis: string;
+    packageAmount: number;
+    photoUrl: string;
+    admissionDate: string;
+    dischargeDate: string;
+  };
+  patientIsActive: boolean;
+  onSave: (data: {
+    name: string;
+    patientId: string;
+    diagnosis: string;
+    packageAmount: number;
+    photoUrl: string;
+    admissionDate: string;
+    dischargeDate: string;
+  }, photoFile: File | null) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState({ ...initialData });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState(initialData.photoUrl);
+  const [saving, setSaving] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(form, photoFile);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
+        <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg text-sm font-medium transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+          <input
+            type="text"
+            value={form.name}
+            onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+            className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patient ID</label>
+          <input
+            type="text"
+            value={form.patientId}
+            onChange={e => setForm(prev => ({ ...prev, patientId: e.target.value }))}
+            className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photo</label>
+          <div className="flex items-center gap-4">
+            <div
+              onClick={() => photoInputRef.current?.click()}
+              className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all overflow-hidden flex-shrink-0"
+            >
+              {photoPreview ? (
+                <img src={photoPreview} className="w-full h-full object-cover" alt="Preview" />
+              ) : (
+                <>
+                  <Camera size={20} className="text-gray-400 mb-1" />
+                  <span className="text-[9px] text-gray-400 font-bold text-center leading-tight px-1">Upload</span>
+                </>
+              )}
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/webp"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.type !== 'image/webp') {
+                  toast.error('Only WebP images are allowed');
+                  return;
+                }
+                setPhotoFile(file);
+                setPhotoPreview(URL.createObjectURL(file));
+              }}
+            />
+            <div>
+              {photoFile ? (
+                <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">✓ New photo selected</p>
+              ) : photoPreview ? (
+                <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">Current photo</p>
+              ) : (
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Click to upload a photo</p>
+              )}
+              <p className="text-[10px] text-gray-400">WebP up to 5MB</p>
+              {photoPreview && (
+                <button
+                  type="button"
+                  onClick={() => { setPhotoFile(null); setPhotoPreview(''); setForm(prev => ({ ...prev, photoUrl: '' })); }}
+                  className="text-[10px] text-red-400 hover:text-red-500 mt-1 font-semibold"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="md:col-span-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Package (PKR)</label>
+          <input
+            type="number"
+            value={form.packageAmount}
+            onChange={e => setForm(prev => ({ ...prev, packageAmount: Number(e.target.value) }))}
+            className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <BrutalistCalendar
+            label="Admission Date"
+            value={form.admissionDate}
+            onChange={iso => setForm(prev => ({ ...prev, admissionDate: iso }))}
+          />
+        </div>
+        {!patientIsActive && (
+          <div className="md:col-span-2">
+            <BrutalistCalendar
+              label="Discharge Date"
+              value={form.dischargeDate}
+              onChange={iso => setForm(prev => ({ ...prev, dischargeDate: iso }))}
+            />
+          </div>
+        )}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
+          <textarea
+            value={form.diagnosis}
+            onChange={e => setForm(prev => ({ ...prev, diagnosis: e.target.value }))}
+            rows={3}
+            className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white"
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function PatientDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -91,6 +252,9 @@ export default function PatientDetailPage() {
   const [visitFocusedField, setVisitFocusedField] = useState<string | null>(null);
   const visitFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
+  const handleStartEditing = () => { isEditingRef.current = true; setIsEditing(true); };
+  const handleStopEditing = () => { isEditingRef.current = false; setIsEditing(false); };
   const [editForm, setEditForm] = useState({
     name: '',
     patientId: '',
@@ -100,30 +264,13 @@ export default function PatientDetailPage() {
     admissionDate: new Date().toISOString().split('T')[0],
     dischargeDate: ''
   });
-  const [savingEdit, setSavingEdit] = useState(false);
   const [directApproveLoading, setDirectApproveLoading] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [showRejoinCheckModal, setShowRejoinCheckModal] = useState(false);
   const [matchingPatients, setMatchingPatients] = useState<any[]>([]);
 
-  // Photo Upload State
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string>('');
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-
-  // Focus management for form inputs - prevents focus loss on typing
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const editFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
-
-  // Restore focus after re-renders
+  // Restore focus for visit form after re-renders
   useEffect(() => {
-    if (focusedField && editFormRefs.current[focusedField]) {
-      const el = editFormRefs.current[focusedField];
-      if (el && document.activeElement !== el) {
-        el.focus();
-      }
-    }
     if (visitFocusedField && visitFormRefs.current[visitFocusedField]) {
       const el = visitFormRefs.current[visitFocusedField];
       if (el && document.activeElement !== el) {
@@ -619,7 +766,6 @@ export default function PatientDetailPage() {
         admissionDate: toDate(data.admissionDate).toISOString().split('T')[0],
         dischargeDate: data.dischargeDate ? toDate(data.dischargeDate).toISOString().split('T')[0] : ''
       });
-      setPhotoPreview(data.photoUrl || '');
 
       const now = new Date();
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -899,17 +1045,19 @@ export default function PatientDetailPage() {
         billableMonths,
       });
 
-      setEditForm(prev => ({
-        ...prev,
-        name: currentPatientData.name || '',
-        patientId: currentPatientData.patientId || '',
-        diagnosis: currentPatientData.diagnosis || '',
-        packageAmount: currentPatientData.packageAmount || currentPatientData.monthlyPackage || 0,
-        photoUrl: currentPatientData.photoUrl || '',
-        admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
-        dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
-      }));
-      setPhotoPreview(currentPatientData.photoUrl || '');
+      setEditForm(prev => {
+        if (isEditingRef.current) return prev;
+        return {
+          ...prev,
+          name: currentPatientData.name || '',
+          patientId: currentPatientData.patientId || '',
+          diagnosis: currentPatientData.diagnosis || '',
+          packageAmount: currentPatientData.packageAmount || currentPatientData.monthlyPackage || 0,
+          photoUrl: currentPatientData.photoUrl || '',
+          admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
+          dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
+        };
+      });
     };
 
     const unsubPatient = onSnapshot(patientRef, (snap) => {
@@ -1288,15 +1436,19 @@ export default function PatientDetailPage() {
     }
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveFromForm = async (form: {
+    name: string;
+    patientId: string;
+    diagnosis: string;
+    packageAmount: number;
+    photoUrl: string;
+    admissionDate: string;
+    dischargeDate: string;
+  }, photoFile: File | null) => {
     try {
-      setSavingEdit(true);
+      let photoUrl = form.photoUrl;
 
-      let photoUrl = editForm.photoUrl;
-
-      // Upload new photo if selected
       if (photoFile) {
-        setPhotoUploading(true);
         try {
           const url = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
           photoUrl = url;
@@ -1304,24 +1456,23 @@ export default function PatientDetailPage() {
           console.error("Photo upload failed", err);
           toast.error('Photo upload failed, keeping old photo');
         }
-        setPhotoUploading(false);
       }
 
-      const monthlyPkg = Number(editForm.packageAmount);
+      const monthlyPkg = Number(form.packageAmount);
 
       await updateDoc(doc(db, 'rehab_patients', patientId), {
-        name: editForm.name,
-        patientId: editForm.patientId || null,
-        diagnosis: editForm.diagnosis,
+        name: form.name,
+        patientId: form.patientId || null,
+        diagnosis: form.diagnosis,
         packageAmount: monthlyPkg,
         monthlyPackage: monthlyPkg,
-        admissionDate: Timestamp.fromDate(new Date(editForm.admissionDate)),
-        dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null,
+        admissionDate: Timestamp.fromDate(new Date(form.admissionDate)),
+        dischargeDate: form.dischargeDate ? Timestamp.fromDate(new Date(form.dischargeDate)) : null,
         photoUrl: photoUrl || null
       });
 
       setPatient((prev: any) => {
-        const admission = new Date(editForm.admissionDate);
+        const admission = new Date(form.admissionDate);
         const endDate = prev.isActive === false && prev.dischargeDate
           ? toDate(prev.dischargeDate)
           : new Date();
@@ -1351,9 +1502,9 @@ export default function PatientDetailPage() {
 
         return {
           ...prev,
-          name: editForm.name,
-          patientId: editForm.patientId || null,
-          diagnosis: editForm.diagnosis,
+          name: form.name,
+          patientId: form.patientId || null,
+          diagnosis: form.diagnosis,
           packageAmount: monthlyPkg,
           monthlyPackage: monthlyPkg,
           daysAdmitted,
@@ -1363,18 +1514,16 @@ export default function PatientDetailPage() {
           billableMonths,
           overallRemaining: (dueTillDate + Number(prev.medicineCharges || 0)) - (prev.overallReceived || 0),
           photoUrl: photoUrl,
-          dischargeDate: editForm.dischargeDate ? Timestamp.fromDate(new Date(editForm.dischargeDate)) : null
+          dischargeDate: form.dischargeDate ? Timestamp.fromDate(new Date(form.dischargeDate)) : null
         };
       });
       setEditForm(prev => ({ ...prev, photoUrl }));
-      setPhotoFile(null);
-      setIsEditing(false);
+      handleStopEditing();
       toast.success('Profile updated');
     } catch (error) {
       console.error("Save error", error);
       toast.error('Failed to update profile');
-    } finally {
-      setSavingEdit(false);
+      throw error;
     }
   };
 
@@ -2056,7 +2205,7 @@ export default function PatientDetailPage() {
                   <button
                     onClick={() => {
                       setActiveTab('profile');
-                      setIsEditing(true);
+                      handleStartEditing();
                     }}
                     className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition-all border border-slate-200/50 active:scale-90"
                     title="Edit Profile"
@@ -2181,223 +2330,81 @@ export default function PatientDetailPage() {
               />
             )}
             <div className="space-y-8 w-full">
-              <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
-                <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
-                {!isEditing ? (
-                  <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
-                    <Edit3 className="w-4 h-4" /> Edit
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button onClick={() => setIsEditing(false)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg text-sm font-medium transition-colors">
-                      Cancel
-                    </button>
-                    <button onClick={handleSaveEdit} disabled={savingEdit} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm">
-                      {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
-                    </button>
-                  </div>
-                )}
-              </div>
-
               {isEditing ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                    <input 
-                      type="text" 
-                      value={editForm.name} 
-                      onChange={e => setEditForm({ ...editForm, name: e.target.value })} 
-                      ref={el => editFormRefs.current['editName'] = el}
-                      onFocus={() => setFocusedField('editName')}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Patient ID</label>
-                    <input 
-                      type="text" 
-                      value={editForm.patientId} 
-                      onChange={e => setEditForm({ ...editForm, patientId: e.target.value })} 
-                      ref={el => editFormRefs.current['editPatientId'] = el}
-                      onFocus={() => setFocusedField('editPatientId')}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Photo
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <div
-                        onClick={() => photoInputRef.current?.click()}
-                        className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all overflow-hidden flex-shrink-0"
-                      >
-                        {photoPreview ? (
-                          <img
-                            src={photoPreview}
-                            className="w-full h-full object-cover"
-                            alt="Preview"
-                          />
-                        ) : (
-                          <>
-                            <Camera size={20} className="text-gray-400 mb-1" />
-                            <span className="text-[9px] text-gray-400 font-bold text-center leading-tight px-1">
-                              Upload
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <input
-                        ref={photoInputRef}
-                        type="file"
-                        accept="image/webp"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          if (file.type !== 'image/webp') {
-                            toast.error('Only WebP images are allowed');
-                            return;
-                          }
-                          setPhotoFile(file);
-                          setPhotoPreview(URL.createObjectURL(file));
-                        }}
-                      />
-                      <div>
-                        {photoFile ? (
-                          <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">
-                            ✓ New photo selected
-                          </p>
-                        ) : photoPreview ? (
-                          <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">
-                            Current photo
-                          </p>
-                        ) : (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            Click to upload a photo
-                          </p>
-                        )}
-                        <p className="text-[10px] text-gray-400">JPG, PNG up to 5MB</p>
-                        {photoPreview && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPhotoFile(null);
-                              setPhotoPreview('');
-                              setEditForm(prev => ({ ...prev, photoUrl: '' }));
-                            }}
-                            className="text-[10px] text-red-400 hover:text-red-500 mt-1 font-semibold"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Package (PKR)</label>
-                    <input
-                      type="number"
-                      value={editForm.packageAmount}
-                      onChange={e => setEditForm({ ...editForm, packageAmount: Number(e.target.value) })}
-                      ref={el => editFormRefs.current['editPackageAmount'] = el}
-                      onFocus={() => setFocusedField('editPackageAmount')}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <BrutalistCalendar
-                      label="Admission Date"
-                      value={editForm.admissionDate}
-                      onChange={iso => setEditForm({ ...editForm, admissionDate: iso })}
-                    />
-                  </div>
-
-                  {!patient.isActive && (
-                    <div className="md:col-span-2">
-                      <BrutalistCalendar
-                        label="Discharge Date"
-                        value={editForm.dischargeDate}
-                        onChange={iso => setEditForm({ ...editForm, dischargeDate: iso })}
-                      />
-                    </div>
-                  )}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
-                    <textarea 
-                      value={editForm.diagnosis} 
-                      onChange={e => setEditForm({ ...editForm, diagnosis: e.target.value })} 
-                      ref={el => editFormRefs.current['editDiagnosis'] = el}
-                      onFocus={() => setFocusedField('editDiagnosis')}
-                      onBlur={() => setFocusedField(null)}
-                      rows={3} 
-                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" 
-                    />
-                  </div>
-                </div>
+                <PatientEditForm
+                  initialData={editForm}
+                  patientIsActive={patient.isActive}
+                  onSave={handleSaveFromForm}
+                  onCancel={handleStopEditing}
+                />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
-                  <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-800/50 w-full p-6 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2 shadow-sm">
-                    <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Total Stay Duration</p>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-teal-700 dark:text-teal-300">
-                      {patient.daysAdmitted || 0} Days
-                    </p>
-                    <p className="text-xs font-bold text-teal-500 dark:text-teal-400/80 mt-1 italic">
-                      {patient.durationFormatted}
-                    </p>
-                    {!patient.isActive && patient.dischargeDate && (
-                      <div className="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-teal-200/30 dark:border-teal-800/30">
-                        <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Discharged On</p>
-                        <p className="text-xl font-black text-teal-700 dark:text-teal-300">
-                          {formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate)}
-                        </p>
-                      </div>
-                    )}
-                    {patient.isActive && (
-                      <button
-                        type="button"
-                        onClick={handleDischarge}
-                        disabled={deactivating}
-                        className="mt-6 bg-white dark:bg-gray-800 border border-teal-200 dark:border-teal-700 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-60"
-                      >
-                        {deactivating ? 'Discharging...' : 'Discharge Patient'}
-                      </button>
-                    )}
+                <>
+                  <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
+                    <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
+                    <button onClick={handleStartEditing} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                      <Edit3 className="w-4 h-4" /> Edit
+                    </button>
                   </div>
-                  <div className="w-full min-w-0">
-                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Current Balance Due</span>
-                    <span className="font-black text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-1.5 rounded-lg inline-block text-sm max-w-full break-all">
-                      PKR {patient.overallRemaining?.toLocaleString()}
-                    </span>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 space-y-1 max-w-full break-words">
-                      <p className="leading-tight">Package Due: PKR {patient.dueTillDate?.toLocaleString()}</p>
-                      {Number(patient.medicineCharges || 0) > 0 && (
-                        <p className="font-bold text-amber-600 dark:text-amber-400 leading-tight">Medicine / Extra Treatment: PKR {patient.medicineCharges?.toLocaleString()}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
+                    <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-800/50 w-full p-6 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2 shadow-sm">
+                      <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Total Stay Duration</p>
+                      <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-teal-700 dark:text-teal-300">
+                        {patient.daysAdmitted || 0} Days
+                      </p>
+                      <p className="text-xs font-bold text-teal-500 dark:text-teal-400/80 mt-1 italic">
+                        {patient.durationFormatted}
+                      </p>
+                      {!patient.isActive && patient.dischargeDate && (
+                        <div className="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-teal-200/30 dark:border-teal-800/30">
+                          <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Discharged On</p>
+                          <p className="text-xl font-black text-teal-700 dark:text-teal-300">
+                            {formatDateDMY(patient.dischargeDate?.toDate?.() || patient.dischargeDate)}
+                          </p>
+                        </div>
+                      )}
+                      {patient.isActive && (
+                        <button
+                          type="button"
+                          onClick={handleDischarge}
+                          disabled={deactivating}
+                          className="mt-6 bg-white dark:bg-gray-800 border border-teal-200 dark:border-teal-700 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-60"
+                        >
+                          {deactivating ? 'Discharging...' : 'Discharge Patient'}
+                        </button>
                       )}
                     </div>
-                  </div>
-                  <div className="w-full min-w-0">
-                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
-                    <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5 max-w-full break-all">
-                      {patient.assignedStaffId || 'None'}
-                    </span>
-                  </div>
-                  <div className="w-full min-w-0">
-                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient ID</span>
-                    <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5 max-w-full break-all">
-                      {patient.patientId || 'None'}
-                    </span>
-                  </div>
-                  <div className="sm:col-span-2 pt-2 w-full min-w-0">
-                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
-                    <div className="text-xs sm:text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-white/5 w-full break-all">
-                      {patient.id}
+                    <div className="w-full min-w-0">
+                      <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Current Balance Due</span>
+                      <span className="font-black text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-1.5 rounded-lg inline-block text-sm max-w-full break-all">
+                        PKR {patient.overallRemaining?.toLocaleString()}
+                      </span>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 space-y-1 max-w-full break-words">
+                        <p className="leading-tight">Package Due: PKR {patient.dueTillDate?.toLocaleString()}</p>
+                        {Number(patient.medicineCharges || 0) > 0 && (
+                          <p className="font-bold text-amber-600 dark:text-amber-400 leading-tight">Medicine / Extra Treatment: PKR {patient.medicineCharges?.toLocaleString()}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full min-w-0">
+                      <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
+                      <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5 max-w-full break-all">
+                        {patient.assignedStaffId || 'None'}
+                      </span>
+                    </div>
+                    <div className="w-full min-w-0">
+                      <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient ID</span>
+                      <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5 max-w-full break-all">
+                        {patient.patientId || 'None'}
+                      </span>
+                    </div>
+                    <div className="sm:col-span-2 pt-2 w-full min-w-0">
+                      <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
+                      <div className="text-xs sm:text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-white/5 w-full break-all">
+                        {patient.id}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </>
               )}
 
               <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full flex flex-col gap-4">
