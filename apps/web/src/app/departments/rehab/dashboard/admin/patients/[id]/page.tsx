@@ -253,8 +253,7 @@ export default function PatientDetailPage() {
   const visitFormRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
   const [isEditing, setIsEditing] = useState(false);
   const isEditingRef = useRef(false);
-  const handleStartEditing = () => { isEditingRef.current = true; setIsEditing(true); };
-  const handleStopEditing = () => { isEditingRef.current = false; setIsEditing(false); };
+  useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
   const [editForm, setEditForm] = useState({
     name: '',
     patientId: '',
@@ -1045,9 +1044,8 @@ export default function PatientDetailPage() {
         billableMonths,
       });
 
-      setEditForm(prev => {
-        if (isEditingRef.current) return prev;
-        return {
+      if (!isEditingRef.current) {
+        setEditForm(prev => ({
           ...prev,
           name: currentPatientData.name || '',
           patientId: currentPatientData.patientId || '',
@@ -1056,8 +1054,8 @@ export default function PatientDetailPage() {
           photoUrl: currentPatientData.photoUrl || '',
           admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
           dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
-        };
-      });
+        }));
+      }
     };
 
     const unsubPatient = onSnapshot(patientRef, (snap) => {
@@ -1518,7 +1516,7 @@ export default function PatientDetailPage() {
         };
       });
       setEditForm(prev => ({ ...prev, photoUrl }));
-      handleStopEditing();
+      setIsEditing(false);
       toast.success('Profile updated');
     } catch (error) {
       console.error("Save error", error);
@@ -2205,7 +2203,7 @@ export default function PatientDetailPage() {
                   <button
                     onClick={() => {
                       setActiveTab('profile');
-                      handleStartEditing();
+                      setIsEditing(true);
                     }}
                     className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition-all border border-slate-200/50 active:scale-90"
                     title="Edit Profile"
@@ -2335,13 +2333,13 @@ export default function PatientDetailPage() {
                   initialData={editForm}
                   patientIsActive={patient.isActive}
                   onSave={handleSaveFromForm}
-                  onCancel={handleStopEditing}
+                  onCancel={() => setIsEditing(false)}
                 />
               ) : (
                 <>
                   <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                     <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
-                    <button onClick={handleStartEditing} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                    <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
                       <Edit3 className="w-4 h-4" /> Edit
                     </button>
                   </div>
