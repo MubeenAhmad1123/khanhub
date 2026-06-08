@@ -48,7 +48,21 @@ export default function ApprovalsPage() {
           getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))),
           getDocs(query(collection(db, 'spims_fees'), where('status', '==', 'pending')))
         ]);
-        const pending = [];
+        const pending: Array<{
+          id: string;
+          _collection: string;
+          type: string;
+          category: string;
+          description: string;
+          amount: number;
+          status: string;
+          cashierId: string;
+          studentId: string | null;
+          patientId: string | null;
+          patientName: string | null;
+          date: any;
+          createdAt: any;
+        }> = [];
         txSnap.docs.forEach(d => {
           const data = d.data();
           pending.push({
@@ -104,7 +118,25 @@ export default function ApprovalsPage() {
         getDocs(query(collection(db, 'spims_transactions'), where('status', 'in', ['approved', 'rejected']))),
         getDocs(query(collection(db, 'spims_fees'), where('status', 'in', ['approved', 'rejected'])))
       ]);
-      const history = [];
+      const history: Array<{
+        id: string;
+        _collection: string;
+        type: string;
+        category: string;
+        description: string;
+        amount: number;
+        status: string;
+        cashierId: string;
+        approvedBy: string;
+        rejectedBy: string;
+        rejectReason: string;
+        studentId: string | null;
+        patientId: string | null;
+        patientName: string | null;
+        createdAt: Date;
+        approvedAt: Date | null;
+        date: Date;
+      }> = [];
       txSnap.docs.forEach(d => {
         const data = d.data();
         const createdAt = data.createdAt?.toDate?.() ? data.createdAt.toDate() : data.createdAt ? new Date(data.createdAt) : new Date();
