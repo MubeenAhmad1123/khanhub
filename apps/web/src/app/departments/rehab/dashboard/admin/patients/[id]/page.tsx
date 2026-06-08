@@ -267,6 +267,7 @@ export default function PatientDetailPage() {
   const [deactivating, setDeactivating] = useState(false);
   const [showRejoinCheckModal, setShowRejoinCheckModal] = useState(false);
   const [matchingPatients, setMatchingPatients] = useState<any[]>([]);
+  const [photoPreview, setPhotoPreview] = useState('');
 
   // Restore focus for visit form after re-renders
   useEffect(() => {
@@ -1055,6 +1056,7 @@ export default function PatientDetailPage() {
           admissionDate: toDate(currentPatientData.admissionDate).toISOString().split('T')[0],
           dischargeDate: currentPatientData.dischargeDate ? toDate(currentPatientData.dischargeDate).toISOString().split('T')[0] : ''
         }));
+        setPhotoPreview(currentPatientData.photoUrl || '');
       }
     };
 
