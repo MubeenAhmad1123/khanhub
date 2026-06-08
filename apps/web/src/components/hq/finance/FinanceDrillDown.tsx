@@ -81,7 +81,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, selectedDate,
       let col = '';
       if (dept.deptId === 'rehab') col = 'rehab_transactions';
       else if (dept.deptId === 'spims') col = 'spims_transactions';
-      else if (dept.deptId === 'job-center') col = 'job_center_transactions';
+      else if (dept.deptId === 'job-center') col = 'jobcenter_transactions';
       else if (dept.deptId === 'hospital') col = 'hospital_transactions';
       else col = 'cashierTransactions';
 
@@ -117,7 +117,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, selectedDate,
       let col = '';
       if (dept.deptId === 'rehab') col = 'rehab_transactions';
       else if (dept.deptId === 'spims') col = 'spims_transactions';
-      else if (dept.deptId === 'job-center') col = 'job_center_transactions';
+      else if (dept.deptId === 'job-center') col = 'jobcenter_transactions';
       else if (dept.deptId === 'hospital') col = 'hospital_transactions';
       else col = 'cashierTransactions';
 

@@ -67,7 +67,7 @@ const ALL_DEPTS: DeptFilter[] = ['rehab', 'spims', 'job-center', 'hospital', 'su
 const DEPT_TX_MAP: Record<string, string> = {
   rehab: 'rehab_transactions',
   spims: 'spims_transactions',
-  'job-center': 'job_center_transactions',
+  'job-center': 'jobcenter_transactions',
   hospital: 'hospital_transactions',
   'sukoon-center': 'sukoon_transactions',
   welfare: 'welfare_transactions'

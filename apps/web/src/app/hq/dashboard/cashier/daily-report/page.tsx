@@ -50,7 +50,7 @@ const DEPARTMENTS = [
   { code: 'hospital', label: 'Khan Hospital', txCollection: 'hospital_transactions' },
   { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions' },
   { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions' },
-  { code: 'job-center', label: 'Job Center', txCollection: 'job_center_transactions' },
+  { code: 'job-center', label: 'Job Center', txCollection: 'jobcenter_transactions' },
 ];
 
 type Transaction = {

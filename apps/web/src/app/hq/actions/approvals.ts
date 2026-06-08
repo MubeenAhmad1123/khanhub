@@ -33,7 +33,7 @@ function txCollection(dept: Dept, collectionOverride?: string) {
   if (collectionOverride) return collectionOverride;
   if (dept === 'rehab') return 'rehab_transactions';
   if (dept === 'spims') return 'spims_transactions';
-  if (dept === 'job-center') return 'job_center_transactions';
+  if (dept === 'job-center') return 'jobcenter_transactions';
   if (dept === 'hospital') return 'hospital_transactions';
   if (dept === 'sukoon-center') return 'sukoon_transactions';
   return 'welfare_transactions';
