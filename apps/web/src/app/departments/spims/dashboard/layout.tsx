@@ -455,7 +455,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
           </div>
         </header>
 
-        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <main className={`flex-1 p-6 lg:p-12 transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-7xl mx-auto relative">{children}</div>
           {user?.uid && <NotificationRegister userId={user.uid} userName={user.displayName} />}
         </main>
