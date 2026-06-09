@@ -33,6 +33,7 @@ const DEPARTMENTS = [
 
 const BASE_CATEGORIES = [
   { id: 'fee', name: 'Admission Fee', appliesTo: 'income' },
+  { id: 'monthly_fee', name: 'Monthly Fee', appliesTo: 'income' },
   { id: 'medicine_charge', name: 'Medicine / Treatment', appliesTo: 'income' },
   { id: 'donation', name: 'Donation', appliesTo: 'income' },
   { id: 'canteen', name: 'Canteen', appliesTo: 'both' },
@@ -2420,13 +2421,20 @@ function EntityProfileModal({
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set());
 
+  const todayIso = new Date().toISOString().split('T')[0];
+  const yesterdayIso = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  })();
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newTx, setNewTx] = useState({
     amount: '',
     category: 'fee',
-    categoryName: 'Admission / Fees',
-    date: new Date().toISOString().split('T')[0],
+    categoryName: 'Admission Fee',
+    date: todayIso,
     description: '',
     discount: '',
     returnAmount: '',
@@ -2561,7 +2569,23 @@ function EntityProfileModal({
       setLocalTxns(prev => [freshDoc, ...prev]);
       
       setShowAddForm(false);
-      setNewTx({ amount: '', category: 'fee', categoryName: 'Admission / Fees', date: new Date().toISOString().split('T')[0], description: '', discount: '', returnAmount: '', stayDurationIndex: '' });
+      
+      const nextHasPaidAdmission = [...localTxns, freshDoc].some(t => {
+        const cat = (t.category || '').toLowerCase();
+        const name = (t.categoryName || '').toLowerCase();
+        return cat === 'fee' || name.includes('admission');
+      }) || newTx.category === 'fee';
+
+      setNewTx({
+        amount: '',
+        category: nextHasPaidAdmission ? 'monthly_fee' : 'fee',
+        categoryName: nextHasPaidAdmission ? 'Monthly Fee' : 'Admission Fee',
+        date: todayIso,
+        description: '',
+        discount: '',
+        returnAmount: '',
+        stayDurationIndex: ''
+      });
       toast.success('Transaction added successfully ✓');
       if (onRefetch) onRefetch();
     } catch (err: any) {
@@ -2947,7 +2971,22 @@ function EntityProfileModal({
             </button>
 
             <button
-              onClick={() => setShowAddForm(!showAddForm)}
+              onClick={() => {
+                const isOpening = !showAddForm;
+                if (isOpening) {
+                  const hasPaidAdmission = localTxns.some(t => {
+                    const cat = (t.category || '').toLowerCase();
+                    const name = (t.categoryName || '').toLowerCase();
+                    return cat === 'fee' || name.includes('admission');
+                  });
+                  setNewTx(prev => ({
+                    ...prev,
+                    category: hasPaidAdmission ? 'monthly_fee' : 'fee',
+                    categoryName: hasPaidAdmission ? 'Monthly Fee' : 'Admission Fee'
+                  }));
+                }
+                setShowAddForm(isOpening);
+              }}
               className={cn(
                 "flex-1 md:flex-none px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
                 showAddForm ? "bg-rose-100 text-rose-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
@@ -2963,11 +3002,39 @@ function EntityProfileModal({
           <div className="p-6 bg-indigo-50 border-b border-indigo-100 animate-in slide-in-from-top-4 duration-500">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
               <div className="space-y-2">
-                <BrutalistCalendar
-                  label="Date"
+                <label className="text-[9px] font-black uppercase text-indigo-400">Date</label>
+                <input
+                  type="date"
                   value={newTx.date}
-                  onChange={(iso: string) => setNewTx({...newTx, date: iso})}
+                  onChange={(e) => setNewTx({...newTx, date: e.target.value})}
+                  className="w-full h-12 bg-white border border-indigo-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-indigo-400"
                 />
+                <div className="flex gap-1.5 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setNewTx({...newTx, date: todayIso})}
+                    className={cn(
+                      "px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border",
+                      newTx.date === todayIso 
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/20" 
+                        : "bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300"
+                    )}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewTx({...newTx, date: yesterdayIso})}
+                    className={cn(
+                      "px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border",
+                      newTx.date === yesterdayIso 
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/20" 
+                        : "bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300"
+                    )}
+                  >
+                    Yesterday
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
