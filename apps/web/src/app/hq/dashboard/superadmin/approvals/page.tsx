@@ -52,7 +52,7 @@ import {
 } from '@/lib/hq/superadmin/approvals';
 import { ErrorState } from '@/components/hq/superadmin/DataState';
 import { debounce, toDate } from '@/lib/utils';
-import { decideTransaction, bulkDecideTransactions, editApprovedTransaction, type Dept } from '@/app/hq/actions/approvals';
+import { decideTransaction, bulkDecideTransactions, editApprovedTransaction, deleteTransactionServer, bulkDeleteTransactionsServer, type Dept } from '@/app/hq/actions/approvals';
 import type { UnifiedTx, DeptFilter } from '@/lib/hq/superadmin/types';
 import { db } from '@/lib/firebase';
 import { typeLabel, mapTxToTypeOption } from '@/lib/hq/superadmin/approvals';
@@ -616,6 +616,68 @@ function BulkConfirmModal({
   );
 }
 
+function BulkDeleteConfirmModal({
+  selected,
+  txMap,
+  onClose,
+  onConfirm,
+  busy,
+}: {
+  selected: string[];
+  txMap: Map<string, UnifiedTx>;
+  onClose: () => void;
+  onConfirm: () => void;
+  busy: boolean;
+}) {
+  const items = selected.map((id) => txMap.get(id)).filter(Boolean) as UnifiedTx[];
+  const total = items.reduce((s, t) => s + (t.amount || 0), 0);
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-black rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-lg mx-auto p-8 shadow-2xl z-10 max-h-[85vh] overflow-y-auto animate-in zoom-in-95 border border-gray-100 dark:border-white/10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-rose-600 dark:text-rose-500 uppercase tracking-tight">Batch Permanent Deletion</h2>
+          <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+            <X className="w-5 h-5 text-black dark:text-white" />
+          </button>
+        </div>
+        <p className="text-xs font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider mb-4">
+          WARNING: Deleting these transactions will remove them permanently from all databases and ledger files. This cannot be undone.
+        </p>
+        <ul className="space-y-3 mb-6 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
+          {items.map((tx) => (
+            <li key={tx.id} className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-white/5 gap-3 group">
+              <div className="min-w-0">
+                <div className="text-sm font-black text-black dark:text-white truncate group-hover:text-rose-500 transition-colors">{entityName(tx)}</div>
+                <div className="text-[10px] font-bold text-black dark:text-gray-400 uppercase tracking-widest truncate">{typeLabel(tx)} ({tx.dept})</div>
+              </div>
+              <div className="text-sm font-black text-rose-600 dark:text-rose-500 shrink-0 font-mono">{fmtPKR(tx.amount)}</div>
+            </li>
+          ))}
+        </ul>
+        <div className="p-10 rounded-[2.5rem] bg-rose-50 dark:bg-rose-950/20 text-rose-750 dark:text-rose-400 mb-8 flex items-center justify-between gap-6 shadow-2xl relative overflow-hidden group">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70 block mb-2">Aggregate Value to Delete</span>
+            <span className="text-4xl font-black tracking-tighter">{fmtPKR(total)}</span>
+          </div>
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform text-rose-600">
+            <Trash2 size={80} />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={busy}
+          className="w-full h-16 rounded-2xl bg-rose-600 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-750 transition-all disabled:opacity-30 inline-flex items-center justify-center gap-3 shadow-xl active:scale-95 shadow-rose-600/20"
+        >
+          {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+          PERMANENTLY DELETE BATCH
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[180]">
@@ -959,8 +1021,8 @@ function TxCard({
                 disabled={isDisabled}
                 className="h-14 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-600 hover:text-white transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95 border border-rose-100"
               >
-                <Minus size={16} strokeWidth={3} />
-                Remove
+                <Trash2 size={16} />
+                Delete
               </button>
               <button
                 type="button"
@@ -1006,6 +1068,8 @@ export default function HqApprovalsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [bulkDeleteBusy, setBulkDeleteBusy] = useState(false);
 
   const [rejectTx, setRejectTx] = useState<UnifiedTx | null>(null);
   const [rejectBusy, setRejectBusy] = useState(false);
@@ -1448,20 +1512,19 @@ export default function HqApprovalsPage() {
   };
 
   const handleRemove = async (tx: UnifiedTx) => {
+    if (!window.confirm(`Are you sure you want to permanently delete this transaction? This will remove it from everywhere.`)) return;
     if (busyId) return;
     setBusyId(tx.id);
     const txAny = tx as any;
-    const res = await decideTransaction({ 
+    const res = await deleteTransactionServer({ 
       dept: tx.dept as Dept, 
       txId: tx.id, 
-      decision: 'rejected', 
-      rejectReason: 'Removed by Superadmin (Quick Action)',
       _collection: txAny._collection,
     });
     setBusyId(null);
     if (res.success) {
       setCardPhase({ ...cardPhase, [tx.id]: 'fail' });
-      addToast(`Transaction Removed`, 'green');
+      addToast(`Transaction Deleted Permanently`, 'green');
       
       const eid = entityId(tx);
       if (eid) {
@@ -1475,7 +1538,7 @@ export default function HqApprovalsPage() {
       
       setTimeout(() => setDismissed((prev) => new Set([...prev, tx.id])), 800);
     } else {
-      addToast(res.error || 'Removal failed', 'red');
+      addToast(res.error || 'Deletion failed', 'red');
     }
   };
 
@@ -1610,6 +1673,48 @@ export default function HqApprovalsPage() {
       addToast(`Error: ${(e as Error)?.message ?? 'Bulk approve failed'}`, 'red');
     } finally {
       setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleteBusy(true);
+    try {
+      const ids = [...selected];
+      const rehabIds = ids.filter((id) => txMap.get(id)?.dept === 'rehab');
+      const spimsIds = ids.filter((id) => txMap.get(id)?.dept === 'spims');
+      const jobcenterIds = ids.filter((id) => txMap.get(id)?.dept === 'job-center');
+      const results = await Promise.all([
+        rehabIds.length ? bulkDeleteTransactionsServer({ dept: 'rehab', txIds: rehabIds }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
+        spimsIds.length ? bulkDeleteTransactionsServer({ dept: 'spims', txIds: spimsIds }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
+        jobcenterIds.length ? bulkDeleteTransactionsServer({ dept: 'job-center', txIds: jobcenterIds }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
+      ]);
+      const ok = results.every((r) => r.success !== false);
+      if (!ok) {
+        const failed = results.find((r) => !r.success);
+        throw new Error(failed?.error || 'Bulk delete failed');
+      }
+
+      // Clear cache for all processed transactions
+      ids.forEach((id) => {
+        const tx = txMap.get(id);
+        if (tx) {
+          const eid = entityId(tx);
+          if (eid) {
+            delete enriched[`${tx.dept}_${eid}`];
+          }
+        }
+      });
+      setEnriched({ ...enriched });
+
+      setDismissed((prev) => new Set([...prev, ...selected]));
+      setSelected(new Set());
+      setShowBulkDeleteConfirm(false);
+      const totalProc = results.reduce((s, r) => s + (r?.processed ?? 0), 0);
+      addToast(`✓ Permanently deleted ${totalProc} transactions`, 'green');
+    } catch (e: unknown) {
+      addToast(`Error: ${(e as Error)?.message ?? 'Bulk delete failed'}`, 'red');
+    } finally {
+      setBulkDeleteBusy(false);
     }
   };
 
@@ -2231,14 +2336,24 @@ export default function HqApprovalsPage() {
                 Clear Selection
               </button>
               {isPendingTab && (
-                <button
-                  type="button"
-                  onClick={() => setShowBulkConfirm(true)}
-                  className="h-12 px-6 rounded-2xl bg-green-600 text-white text-sm font-black hover:bg-green-700 inline-flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Approve Selected
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkConfirm(true)}
+                    className="h-12 px-6 rounded-2xl bg-green-600 text-white text-sm font-black hover:bg-green-700 inline-flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Approve Selected
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    className="h-12 px-6 rounded-2xl bg-rose-600 text-white text-sm font-black hover:bg-rose-700 inline-flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Selected
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -2271,6 +2386,16 @@ export default function HqApprovalsPage() {
           onClose={() => setShowBulkConfirm(false)}
           onConfirm={handleBulkApprove}
           busy={bulkBusy}
+        />
+      ) : null}
+
+      {showBulkDeleteConfirm ? (
+        <BulkDeleteConfirmModal
+          selected={[...selected]}
+          txMap={txMap}
+          onClose={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={handleBulkDelete}
+          busy={bulkDeleteBusy}
         />
       ) : null}
 

@@ -1011,3 +1011,268 @@ export async function syncDirectApprovedTransaction(params: {
     return { success: false, error: err?.message || 'Failed to sync totals.' };
   }
 }
+
+async function reverseEntityTotalsServer(
+  adminDb: FirebaseFirestore.Firestore,
+  dept: Dept,
+  txData: any
+) {
+  const entityId = txData.patientId || txData.studentId || txData.seekerId || txData.donorId || txData.clientId;
+  if (!entityId) return;
+
+  if (dept === 'rehab') {
+    await syncPatientFinance(adminDb, entityId);
+    return;
+  }
+  
+  let col = '';
+  if (dept === 'spims') col = 'spims_students';
+  else if (dept === 'job-center') col = 'job_center_seekers';
+  else if (dept === 'hospital') col = 'hospital_patients';
+  else if (dept === 'sukoon-center') col = 'sukoon_clients';
+  else if (dept === 'welfare') col = 'welfare_donors';
+  else return;
+
+  const ref = adminDb.collection(col).doc(entityId);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+
+  const amount = Number(txData.amount) || 0;
+  const discount = Number(txData.discount) || 0;
+  const returnAmount = Number(txData.returnAmount || txData.return || 0);
+  const isIncome = txData.type === 'income' || txData.type === undefined;
+  const netAmount = amount - returnAmount;
+  const diff = isIncome ? -netAmount : netAmount;
+
+  const update: Record<string, any> = {};
+  update.totalReceived = FieldValue.increment(diff);
+  update.totalDiscount = FieldValue.increment(isIncome ? -discount : discount);
+
+  if (dept === 'spims' && isIncome && txData.category !== 'medicine_charge') {
+    const subtype = txData.spimsFeeSubtype;
+    if (subtype === 'admission') update.admissionPaid = FieldValue.increment(-amount);
+    if (subtype === 'registration') update.registrationPaid = FieldValue.increment(-amount);
+    if (subtype === 'examination') update.examinationPaid = FieldValue.increment(-amount);
+  }
+
+  await ref.update(update);
+
+  // Re-read to sync 'remaining' balance field
+  const updatedSnap = await ref.get();
+  const updatedData = updatedSnap.data() as any;
+  const medCharges = Number(updatedData?.medicineCharges) || 0;
+  const received = Number(updatedData?.totalReceived) || 0;
+  const totalDiscount = Number(updatedData?.totalDiscount) || 0;
+  
+  const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+  const totalObligation = pkg + medCharges;
+  
+  await ref.update({
+    remaining: Math.max(0, totalObligation - received - totalDiscount),
+    remainingBalance: Math.max(0, totalObligation - received - totalDiscount),
+  });
+}
+
+async function syncSpimsDeletedFee(
+  adminDb: FirebaseFirestore.Firestore,
+  studentId: string
+) {
+  try {
+    const studentRef = adminDb.collection('spims_students').doc(studentId);
+    const studentSnap = await studentRef.get();
+    if (studentSnap.exists) {
+      const studentData = studentSnap.data() as any;
+      const pkg = Number(studentData?.totalPackage || studentData?.totalPackageAmount) || 0;
+
+      const feesSnap = await adminDb.collection('spims_fees')
+        .where('studentId', '==', studentId)
+        .get();
+
+      const approvedRows = feesSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(r => r.status === 'approved');
+
+      approvedRows.sort((a, b) => {
+        const tA = toDate(a.date || a.createdAt).getTime();
+        const tB = toDate(b.date || b.createdAt).getTime();
+        return tA - tB;
+      });
+
+      let bal = pkg;
+      for (const r of approvedRows) {
+        bal -= Number(r.amount) || 0;
+        await adminDb.collection('spims_fees').doc(r.id).set({
+          remaining: Math.max(0, bal)
+        }, { merge: true });
+      }
+
+      const remainingBal = Math.max(0, bal);
+      await studentRef.update({
+        totalReceived: pkg - remainingBal,
+        remaining: remainingBal,
+        remainingBalance: remainingBal,
+        updatedAt: new Date(),
+      });
+    }
+  } catch (err) {
+    console.error('[syncSpimsDeletedFee] Error:', err);
+  }
+}
+
+export async function deleteTransactionServer(params: {
+  dept: Dept;
+  txId: string;
+  _collection?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const caller = await requireHqSuperadmin();
+  try {
+    const app = getAdminApp();
+    const adminDb = getFirestore(app);
+
+    const col = txCollection(params.dept, params._collection);
+    let ref = adminDb.collection(col).doc(params.txId);
+    let snap = await ref.get();
+
+    // SPIMS fallback
+    if (!snap.exists && params.dept === 'spims') {
+      const altCol = col === 'spims_transactions' ? 'spims_fees' : 'spims_transactions';
+      const altRef = adminDb.collection(altCol).doc(params.txId);
+      const altSnap = await altRef.get();
+      if (altSnap.exists) {
+        ref = altRef;
+        snap = altSnap;
+      }
+    }
+
+    if (!snap.exists) return { success: false, error: 'Transaction not found.' };
+
+    const data = snap.data() as any;
+    
+    // 1. If approved, reverse entity totals
+    if (data.status === 'approved') {
+      await reverseEntityTotalsServer(adminDb, params.dept, data);
+    }
+
+    // 2. If SPIMS and has feePaymentId, delete corresponding fee payment doc
+    if (params.dept === 'spims' && data.feePaymentId) {
+      await adminDb.collection('spims_fees').doc(data.feePaymentId).delete();
+    }
+
+    // 3. Delete the transaction itself
+    await ref.delete();
+
+    // 4. If Rehab or SPIMS, sync finance
+    const entityId = data.patientId || data.studentId || data.seekerId || data.donorId || data.clientId;
+    if (entityId) {
+      if (params.dept === 'rehab') {
+        await syncPatientFinance(adminDb, entityId);
+      } else if (params.dept === 'spims') {
+        await syncSpimsDeletedFee(adminDb, entityId);
+      }
+    }
+
+    // 5. Add audit log
+    await adminDb.collection('hq_audit').add({
+      action: 'tx_deleted',
+      actorId: caller.uid,
+      actorName: caller.name,
+      dept: params.dept,
+      entityId: entityId || null,
+      entityLabel: data.patientName || data.studentName || data.seekerName || data.staffName || null,
+      message: `Permanently deleted ${params.dept} transaction`,
+      details: {
+        txId: params.txId,
+        amount: data.amount ?? null,
+        category: data.category ?? null,
+      },
+      createdAt: new Date(),
+      performedBy: 'hq_superadmin',
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to delete.' };
+  }
+}
+
+export async function bulkDeleteTransactionsServer(params: {
+  dept: Dept;
+  txIds: string[];
+}): Promise<{ success: boolean; processed: number; error?: string }> {
+  const caller = await requireHqSuperadmin();
+  try {
+    const app = getAdminApp();
+    const adminDb = getFirestore(app);
+    const col = txCollection(params.dept);
+
+    const ids = Array.from(new Set(params.txIds || [])).filter(Boolean);
+    if (!ids.length) return { success: true, processed: 0 };
+
+    let processed = 0;
+    const entityIdsToSync = new Set<string>();
+
+    for (const id of ids) {
+      let ref = adminDb.collection(col).doc(id);
+      let snap = await ref.get();
+
+      // SPIMS fallback
+      if (!snap.exists && params.dept === 'spims') {
+        const altCol = col === 'spims_transactions' ? 'spims_fees' : 'spims_transactions';
+        const altRef = adminDb.collection(altCol).doc(id);
+        const altSnap = await altRef.get();
+        if (altSnap.exists) {
+          ref = altRef;
+          snap = altSnap;
+        }
+      }
+
+      if (!snap.exists) continue;
+
+      const data = snap.data() as any;
+      const entityId = data.patientId || data.studentId || data.seekerId || data.donorId || data.clientId;
+
+      // 1. If approved, reverse entity totals
+      if (data.status === 'approved') {
+        await reverseEntityTotalsServer(adminDb, params.dept, data);
+      }
+
+      // 2. If SPIMS and has feePaymentId, delete fee payment
+      if (params.dept === 'spims' && data.feePaymentId) {
+        await adminDb.collection('spims_fees').doc(data.feePaymentId).delete();
+      }
+
+      // 3. Delete transaction doc
+      await ref.delete();
+
+      if (entityId) {
+        entityIdsToSync.add(entityId);
+      }
+      processed++;
+    }
+
+    // 4. Sync client/student records
+    for (const entityId of Array.from(entityIdsToSync)) {
+      if (params.dept === 'rehab') {
+        await syncPatientFinance(adminDb, entityId);
+      } else if (params.dept === 'spims') {
+        await syncSpimsDeletedFee(adminDb, entityId);
+      }
+    }
+
+    // 5. Add audit log
+    await adminDb.collection('hq_audit').add({
+      action: 'tx_bulk_deleted',
+      actorId: caller.uid,
+      actorName: caller.name,
+      dept: params.dept,
+      message: `Bulk permanently deleted ${processed} ${params.dept} transactions`,
+      details: { count: processed },
+      createdAt: new Date(),
+      performedBy: 'hq_superadmin',
+    });
+
+    return { success: true, processed };
+  } catch (err: any) {
+    return { success: false, processed: 0, error: err?.message || 'Failed.' };
+  }
+}

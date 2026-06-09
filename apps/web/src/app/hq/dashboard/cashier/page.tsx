@@ -2417,6 +2417,8 @@ function EntityProfileModal({
   const [editForm, setEditForm] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved'>('all');
   const [profileSortConfig, setProfileSortConfig] = useState<{ key: 'date' | 'amount'; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set());
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -2604,101 +2606,107 @@ function EntityProfileModal({
     }
   };
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const entityId = entity.id;
-        const deptCode = entity._deptCode || 'rehab';
-        const dept = DEPARTMENTS.find(d => d.code === deptCode);
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const entityId = entity.id;
+      const deptCode = entity._deptCode || 'rehab';
+      const dept = DEPARTMENTS.find(d => d.code === deptCode);
+      
+      if (!dept) { setLoading(false); return; }
+
+      const results: any[] = [];
+
+      if (deptCode === 'spims') {
+        const visualId = entity.studentId || entity.rollNumber || entity.customId;
         
-        if (!dept) { setLoading(false); return; }
+        const [txSnap, txSnapAlt, feesSnap, feesSnapAlt] = await Promise.all([
+          getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', entityId), limit(200))),
+          visualId ? getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] }),
+          getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', entityId), limit(200))),
+          visualId ? getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] })
+        ]);
 
-        const results: any[] = [];
-
-        if (deptCode === 'spims') {
-          const visualId = entity.studentId || entity.rollNumber || entity.customId;
-          
-          const [txSnap, txSnapAlt, feesSnap, feesSnapAlt] = await Promise.all([
-            getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', entityId), limit(200))),
-            visualId ? getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] }),
-            getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', entityId), limit(200))),
-            visualId ? getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] })
-          ]);
-
-          const [txSnapPat, txSnapPatAlt] = await Promise.all([
-            getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', entityId), limit(200))),
-            visualId ? getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] })
-          ]);
-          
-          const txMap = new Map<string, any>();
-          [...txSnap.docs, ...txSnapAlt.docs, ...txSnapPat.docs, ...txSnapPatAlt.docs].forEach(d => {
-            txMap.set(d.id, { id: d.id, ...d.data(), _collection: 'spims_transactions' });
-          });
-          
-          results.push(...Array.from(txMap.values()));
-          
-          const feeMap = new Map<string, any>();
-          [...feesSnap.docs, ...feesSnapAlt.docs].forEach(d => {
-            feeMap.set(d.id, { id: d.id, ...d.data() });
-          });
-
-          feeMap.forEach((feeData, feeId) => {
-            const linkedId = feeData.linkedTransactionId;
-            if (!linkedId || !txMap.has(linkedId)) {
-              results.push({
-                id: feeId,
-                ...feeData,
-                _collection: 'spims_fees',
-                type: 'income',
-                categoryName: `Fee — ${feeData.type || 'Monthly'}`,
-                status: feeData.status || 'pending',
-                patientName: feeData.studentName,
-              });
-            }
-          });
-        } else {
-          const idFieldMap: Record<string, string> = {
-            'rehab': 'patientId',
-            'hospital': 'patientId',
-            'sukoon-center': 'clientId',
-            'welfare': 'donorId',
-            'job-center': 'seekerId',
-          };
-          const idField = idFieldMap[deptCode] || 'patientId';
-          
-          const snap = await getDocs(query(
-            collection(db, dept.txCollection),
-            where(idField, '==', entityId),
-            limit(200)
-          ));
-          snap.docs.forEach(d => {
-            results.push({ 
-              id: d.id, 
-              ...d.data(), 
-              _collection: dept.txCollection 
-            });
-          });
-        }
-
-        results.sort((a, b) => {
-          const tA = toDate(a.transactionDate || a.date || a.createdAt).getTime();
-          const tB = toDate(b.transactionDate || b.date || b.createdAt).getTime();
-          return tB - tA;
+        const [txSnapPat, txSnapPatAlt] = await Promise.all([
+          getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', entityId), limit(200))),
+          visualId ? getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', visualId), limit(200))) : Promise.resolve({ docs: [] })
+        ]);
+        
+        const txMap = new Map<string, any>();
+        [...txSnap.docs, ...txSnapAlt.docs, ...txSnapPat.docs, ...txSnapPatAlt.docs].forEach(d => {
+          txMap.set(d.id, { id: d.id, ...d.data(), _collection: 'spims_transactions' });
+        });
+        
+        results.push(...Array.from(txMap.values()));
+        
+        const feeMap = new Map<string, any>();
+        [...feesSnap.docs, ...feesSnapAlt.docs].forEach(d => {
+          feeMap.set(d.id, { id: d.id, ...d.data() });
         });
 
-        setLocalTxns(results);
-      } catch (err) {
-        console.error('[EntityProfileModal] fetch error:', err);
-      } finally {
-        setLoading(false);
+        feeMap.forEach((feeData, feeId) => {
+          const linkedId = feeData.linkedTransactionId;
+          if (!linkedId || !txMap.has(linkedId)) {
+            results.push({
+              id: feeId,
+              ...feeData,
+              _collection: 'spims_fees',
+              type: 'income',
+              categoryName: `Fee — ${feeData.type || 'Monthly'}`,
+              status: feeData.status || 'pending',
+              patientName: feeData.studentName,
+            });
+          }
+        });
+      } else {
+        const idFieldMap: Record<string, string> = {
+          'rehab': 'patientId',
+          'hospital': 'patientId',
+          'sukoon-center': 'clientId',
+          'welfare': 'donorId',
+          'job-center': 'seekerId',
+        };
+        const idField = idFieldMap[deptCode] || 'patientId';
+        
+        const snap = await getDocs(query(
+          collection(db, dept.txCollection),
+          where(idField, '==', entityId),
+          limit(200)
+        ));
+        snap.docs.forEach(d => {
+          results.push({ 
+            id: d.id, 
+            ...d.data(), 
+            _collection: dept.txCollection 
+          });
+        });
       }
-    };
 
-    fetchAll();
+      results.sort((a, b) => {
+        const tA = toDate(a.transactionDate || a.date || a.createdAt).getTime();
+        const tB = toDate(b.transactionDate || b.date || b.createdAt).getTime();
+        return tB - tA;
+      });
+
+      setLocalTxns(results);
+    } catch (err) {
+      console.error('[EntityProfileModal] fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [entity]);
 
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
   const handleDelete = async (tx: any) => {
+    const isProcessed = tx.status === 'approved' || tx.status === 'rejected' || tx.status === 'rejected_cashier';
+    if (session?.role !== 'superadmin' && isProcessed) {
+      toast.error('Processed transactions can only be deleted by the Super Admin.');
+      return;
+    }
+
     if (!window.confirm(`Delete this ${tx.status} transaction of Rs ${Number(tx.amount).toLocaleString()}? This cannot be undone.`)) return;
     
     let targetCollection = tx._collection;
@@ -2727,6 +2735,18 @@ function EntityProfileModal({
         await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
       }
 
+      if (deptCode === 'rehab') {
+        const patientId = tx.patientId || tx.studentId || tx.seekerId || entity?.id;
+        if (patientId) {
+          try {
+            const { syncRehabPatientFinance } = await import('@/app/hq/actions/approvals');
+            await syncRehabPatientFinance(patientId);
+          } catch (syncErr) {
+            console.error('[HQ Cashier] Failed to sync patient finance after delete:', syncErr);
+          }
+        }
+      }
+
       setLocalTxns(prev => prev.filter(t => t.id !== tx.id));
       toast.success('Transaction deleted ✓');
       if (onRefetch) onRefetch();
@@ -2734,6 +2754,79 @@ function EntityProfileModal({
       toast.error('Delete failed: ' + (err.message || 'Unknown error'));
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedTxIds.size;
+    if (count === 0) return;
+    
+    const hasProcessed = Array.from(selectedTxIds).some(id => {
+      const tx = localTxns.find(t => t.id === id);
+      return tx && (tx.status === 'approved' || tx.status === 'rejected' || tx.status === 'rejected_cashier');
+    });
+
+    if (session?.role !== 'superadmin' && hasProcessed) {
+      toast.error('Processed transactions can only be deleted by the Super Admin.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to permanently delete the ${count} selected transaction(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const ids = Array.from(selectedTxIds);
+      let rehabPatientId = null;
+      for (const id of ids) {
+        const tx = localTxns.find(t => t.id === id);
+        if (!tx) continue;
+        
+        let targetCollection = tx._collection;
+        const deptCode = tx.departmentCode || entity?._deptCode;
+        if (!targetCollection) {
+          const dept = DEPARTMENTS.find(d => d.code === deptCode);
+          if (dept) targetCollection = dept.txCollection;
+        }
+        
+        if (!targetCollection) continue;
+        
+        if (tx.status === 'approved') {
+          await reverseEntityTotals(db, deptCode, tx).catch((err) => {
+            console.error('[Cashier Profile Modal Bulk] Failed to reverse totals:', err);
+          });
+        }
+        
+        await deleteDoc(doc(db, targetCollection, tx.id));
+        
+        if (deptCode === 'spims' && tx.feePaymentId) {
+          await deleteDoc(doc(db, 'spims_fees', tx.feePaymentId)).catch(() => {});
+        }
+
+        if (deptCode === 'rehab') {
+          rehabPatientId = tx.patientId || tx.studentId || tx.seekerId || entity?.id;
+        }
+      }
+
+      if (rehabPatientId) {
+        try {
+          const { syncRehabPatientFinance } = await import('@/app/hq/actions/approvals');
+          await syncRehabPatientFinance(rehabPatientId);
+        } catch (syncErr) {
+          console.warn('[Cashier Profile Modal Bulk] syncRehabPatientFinance failed:', syncErr);
+        }
+      }
+
+      toast.success(`${count} transaction(s) deleted ✓`);
+      setSelectedTxIds(new Set());
+      setIsSelectMode(false);
+      if (onRefetch) onRefetch();
+      await fetchAll();
+    } catch (err: any) {
+      toast.error('Bulk deletion failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2838,16 +2931,32 @@ function EntityProfileModal({
             ))}
           </div>
 
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className={cn(
-              "w-full md:w-auto px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-              showAddForm ? "bg-rose-100 text-rose-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-            )}
-          >
-            {showAddForm ? <X size={14} /> : <Plus size={14} />}
-            {showAddForm ? "Dismiss Panel" : "Quick Entry"}
-          </button>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={() => {
+                setIsSelectMode(!isSelectMode);
+                setSelectedTxIds(new Set());
+              }}
+              className={cn(
+                "flex-1 md:flex-none px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest border transition-all flex items-center justify-center gap-2",
+                isSelectMode ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400"
+              )}
+            >
+              <CheckCircle2 size={14} />
+              {isSelectMode ? "Exit Select" : "Select"}
+            </button>
+
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className={cn(
+                "flex-1 md:flex-none px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                showAddForm ? "bg-rose-100 text-rose-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+              )}
+            >
+              {showAddForm ? <X size={14} /> : <Plus size={14} />}
+              {showAddForm ? "Dismiss Panel" : "Quick Entry"}
+            </button>
+          </div>
         </div>
 
         {showAddForm && (
@@ -2980,6 +3089,22 @@ function EntityProfileModal({
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-zinc-50 border-b border-zinc-100">
+                      {isSelectMode && (
+                        <th className="px-6 py-4 text-center w-12">
+                          <input 
+                            type="checkbox"
+                            checked={filtered.length > 0 && filtered.every(tx => selectedTxIds.has(tx.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTxIds(new Set(filtered.map(tx => tx.id)));
+                              } else {
+                                setSelectedTxIds(new Set());
+                              }
+                            }}
+                            className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                          />
+                        </th>
+                      )}
                       <th 
                         className="px-6 py-4 text-left cursor-pointer hover:bg-zinc-100 transition-colors"
                         onClick={() => setProfileSortConfig({ key: 'date', direction: profileSortConfig.key === 'date' && profileSortConfig.direction === 'desc' ? 'asc' : 'desc' })}
@@ -3016,6 +3141,24 @@ function EntityProfileModal({
                       const isEditing = editingId === tx.id;
                       return (
                         <tr key={tx.id} className={cn("hover:bg-zinc-50 transition-colors group", isEditing && "bg-indigo-50/50")}>
+                          {isSelectMode && (
+                            <td className="px-6 py-4 text-center">
+                              <input 
+                                type="checkbox"
+                                checked={selectedTxIds.has(tx.id)}
+                                onChange={(e) => {
+                                  const next = new Set(selectedTxIds);
+                                  if (e.target.checked) {
+                                    next.add(tx.id);
+                                  } else {
+                                    next.delete(tx.id);
+                                  }
+                                  setSelectedTxIds(next);
+                                }}
+                                className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4">
                             {isEditing ? (
                               <BrutalistCalendar
@@ -3347,6 +3490,22 @@ function EntityProfileModal({
                         <>
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
+                              {isSelectMode && (
+                                <input 
+                                  type="checkbox"
+                                  checked={selectedTxIds.has(tx.id)}
+                                  onChange={(e) => {
+                                    const next = new Set(selectedTxIds);
+                                    if (e.target.checked) {
+                                      next.add(tx.id);
+                                    } else {
+                                      next.delete(tx.id);
+                                    }
+                                    setSelectedTxIds(next);
+                                  }}
+                                  className="w-5 h-5 accent-indigo-600 rounded cursor-pointer flex-shrink-0"
+                                />
+                              )}
                               <div className={cn(
                                 'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
                                 tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
@@ -3434,6 +3593,35 @@ function EntityProfileModal({
                   );
                 })}
               </div>
+
+              {/* Floating Bulk Actions Bar - shared across desktop and mobile */}
+              {isSelectMode && selectedTxIds.size > 0 && (
+                <div className="sticky bottom-0 left-0 right-0 z-30 mt-4 px-4 pb-3">
+                  <div className="bg-zinc-900 text-white rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-2xl shadow-zinc-900/40 animate-in slide-in-from-bottom-4 duration-300">
+                    <span className="text-xs font-black uppercase tracking-widest">
+                      {selectedTxIds.size} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedTxIds(new Set(filtered.map(tx => tx.id)));
+                        }}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={handleBulkDelete}
+                        disabled={loading}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {loading ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                        Delete Selected
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
