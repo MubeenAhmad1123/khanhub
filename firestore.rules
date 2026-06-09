@@ -597,6 +597,12 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create, update: if isSpimsAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
+
+      match /feeSummary/{docId} {
+        allow read: if isAuth();
+        allow create, update: if isSpimsAdminOrAbove() || isHqSuperOrManager();
+        allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
+      }
     }
 
     match /spims_fees/{docId} {
