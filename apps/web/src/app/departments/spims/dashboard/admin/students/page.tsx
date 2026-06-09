@@ -18,6 +18,7 @@ export default function SpimsStudentsListPage() {
   const [selectedCourse, setSelectedCourse] = useState('all');
   const [selectedSession, setSelectedSession] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedActivity, setSelectedActivity] = useState('all');
 
   useEffect(() => {
     let sessionData = localStorage.getItem('spims_session');
@@ -63,7 +64,22 @@ export default function SpimsStudentsListPage() {
 
   const allCourses = useMemo(() => Array.from(new Set(students.map(s => s.course))).sort(), [students]);
   const allSessions = useMemo(() => Array.from(new Set(students.map(s => s.session))).sort(), [students]);
-  const allStatuses = ['Active', 'Pass', '1st Year Supply', '2nd Year Supply', 'Fail', 'Left'];
+  const allActivities = ['Active', 'Inactive'];
+  const allStatuses = [
+    'Pass',
+    'Fail',
+    '1st Year Supply',
+    '2nd Year Supply',
+    'First Year Pass',
+    'Second Year Pass',
+    'First Year Fail',
+    'Second Year Fail',
+    'First Year Supply',
+    'Second Year Supply',
+    'Overall Pass',
+    'Overall Fail',
+    'Left'
+  ];
 
   const filtered = useMemo(() => {
     let list = students;
@@ -78,9 +94,14 @@ export default function SpimsStudentsListPage() {
       list = list.filter(st => st.session === selectedSession);
     }
 
+    // Filter by Activity
+    if (selectedActivity !== 'all') {
+      list = list.filter(st => (st.activity || 'Active') === selectedActivity);
+    }
+
     // Filter by Status
     if (selectedStatus !== 'all') {
-      list = list.filter(st => (st.status || 'Active') === selectedStatus);
+      list = list.filter(st => (st.status || '') === selectedStatus);
     }
 
     // Search Query
@@ -100,7 +121,7 @@ export default function SpimsStudentsListPage() {
     }
 
     return list;
-  }, [students, q, selectedCourse, selectedSession, selectedStatus]);
+  }, [students, q, selectedCourse, selectedSession, selectedStatus, selectedActivity]);
 
   if (!session || loading) {
     return (
@@ -144,7 +165,7 @@ export default function SpimsStudentsListPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
            <div className="relative">
               <select
                 className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
@@ -165,6 +186,18 @@ export default function SpimsStudentsListPage() {
               >
                 <option value="all">All Sessions</option>
                 {allSessions.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+           </div>
+
+           <div className="relative">
+              <select
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                value={selectedActivity}
+                onChange={(e) => setSelectedActivity(e.target.value)}
+              >
+                <option value="all">All Activity</option>
+                {allActivities.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
               <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
            </div>
@@ -214,11 +247,19 @@ export default function SpimsStudentsListPage() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-gray-900 leading-none mb-1 flex items-center gap-2">
+                        <span className="text-sm font-black text-gray-900 leading-none mb-1 flex items-center gap-2 flex-wrap">
                           {st.name}
                           {st.isVirtual && (
                             <span className="text-[8px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md border border-amber-200 uppercase">
                               Login Only
+                            </span>
+                          )}
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-md border uppercase font-black ${(st.activity || 'Active') === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                            {st.activity || 'Active'}
+                          </span>
+                          {st.status && st.status !== 'Active' && st.status !== 'Inactive' && (
+                            <span className="text-[8px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md border border-blue-200 uppercase font-black">
+                              {st.status}
                             </span>
                           )}
                         </span>
@@ -275,7 +316,9 @@ export default function SpimsStudentsListPage() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-500">{st.session}</span>
                     <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />
-                    <span className="text-[8px] font-black text-[#1D9E75] uppercase">{st.status || 'Active'}</span>
+                    <span className="text-[8px] font-black text-gray-400 uppercase">
+                      {(st.activity || 'Active')} {st.status && st.status !== 'Active' && st.status !== 'Inactive' ? `• ${st.status}` : ''}
+                    </span>
                     <span className="text-[8px] font-black text-gray-400 font-mono">{st.contact || (st as any).phone || 'N/A'}</span>
                   </div>
                 </div>

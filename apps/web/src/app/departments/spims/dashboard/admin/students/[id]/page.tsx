@@ -10,12 +10,12 @@ import {
   CheckCircle2, Clock, BarChart2, Activity, ChevronRight, Calendar, Play, 
   Download, ExternalLink, Check, CheckSquare, ListTodo 
 } from 'lucide-react';
-import { getUnifiedStudent, fetchStudentFees } from '@/lib/spims/students';
-import { doc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { getUnifiedStudent, fetchStudentFees, updateStudentStatus } from '@/lib/spims/students';
+import { doc, deleteDoc, query, collection, where, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY, toDate, downloadElementAsPng } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
-import type { SpimsStudent } from '@/types/spims';
+import type { SpimsStudent, SpimsStudentActivity } from '@/types/spims';
 import dynamic from 'next/dynamic';
 
 import { subscribeStudentTests, type SpimsTest } from '@/lib/spims/tests';
@@ -48,6 +48,9 @@ export default function AdminStudentProfilePage() {
   const [showReportModal, setShowReportModal] = useState(false);
 
   // Student deletion state
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusSelect, setStatusSelect] = useState(student?.status || 'Active');
+  const [activitySelect, setActivitySelect] = useState<SpimsStudentActivity>(student?.activity || 'Active');
   const [showDeleteStudentModal, setShowDeleteStudentModal] = useState(false);
   const [deleteStudentConfirmName, setDeleteStudentConfirmName] = useState('');
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
@@ -294,6 +297,21 @@ export default function AdminStudentProfilePage() {
     }
   }, [studentId]);
 
+  const handleStatusUpdate = async () => {
+    try {
+      await updateStudentStatus(studentId, statusSelect);
+      const studentDocRef = doc(db, 'spims_students', studentId);
+      await updateDoc(studentDocRef, { activity: activitySelect });
+      toast.success('Student status updated');
+      await load();
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to update status');
+    } finally {
+      setShowStatusModal(false);
+    }
+  };
+
   const handleDeleteStudent = async () => {
     if (deleteStudentConfirmName.trim() !== student?.name?.trim()) {
       toast.error("The typed name does not match the student's name.");
@@ -451,6 +469,80 @@ export default function AdminStudentProfilePage() {
           student={student}
           onGenerateReport={() => setShowReportModal(true)}
         />
+        {/* Edit Status Button */}
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              setStatusSelect(student?.status || 'Active');
+              setActivitySelect(student?.activity || 'Active');
+              setShowStatusModal(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#1D9E75]/10 text-[#1D9E75] px-5 py-2 text-sm font-black uppercase tracking-widest shadow-sm hover:bg-[#1D9E75]/20 transition-all"
+          >
+            Edit Status
+          </button>
+        </div>
+
+        {/* Status Edit Modal */}
+        {showStatusModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-gray-100">
+              <h2 className="text-xl font-black mb-6 text-gray-900 uppercase tracking-tight">Edit Student Status</h2>
+              
+              <div className="space-y-5">
+                {/* Activity Status */}
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Activity Status</label>
+                  <div className="relative">
+                    <select
+                      value={activitySelect}
+                      onChange={e => setActivitySelect(e.target.value as SpimsStudentActivity)}
+                      className="w-full appearance-none bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                    >
+                      {['Active', 'Inactive'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+                  </div>
+                  <p className="text-[9px] text-gray-400 mt-1.5 ml-1">Whether the student is currently attending classes</p>
+                </div>
+
+                {/* Academic / Outcome Status */}
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Academic Status</label>
+                  <div className="relative">
+                    <select
+                      value={statusSelect}
+                      onChange={e => setStatusSelect(e.target.value)}
+                      className="w-full appearance-none bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold text-gray-900 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                    >
+                      {['Active', 'Pass', 'Fail', 'Left', '1st Year Supply', '2nd Year Supply', 'First Year Pass', 'Second Year Pass', 'First Year Fail', 'Second Year Fail', 'First Year Supply', 'Second Year Supply', 'Overall Pass', 'Overall Fail'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+                  </div>
+                  <p className="text-[9px] text-gray-400 mt-1.5 ml-1">Academic outcome: pass, fail, supply, or left</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setShowStatusModal(false)}
+                  className="flex-1 px-5 py-3 rounded-2xl border border-gray-100 text-gray-400 font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                >Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleStatusUpdate}
+                  className="flex-[2] px-5 py-3 bg-[#1D9E75] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#1D9E75]/20 hover:bg-[#15805D] transition-all active:scale-95"
+                >Save Changes</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {student.isVirtual && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500 w-full">

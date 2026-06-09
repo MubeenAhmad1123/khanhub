@@ -42,9 +42,14 @@ export default function ProfileHeader({ student, onGenerateReport }: ProfileHead
           <div className="flex-1 space-y-4 w-full">
             <div className="flex flex-col items-center md:items-start">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
-                <span className="px-3 py-1 bg-[#1D9E75]/10 text-[#1D9E75] text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-full">
-                  {student.status || 'Active'}
+                <span className={`px-3 py-1 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-full ${(student.activity || 'Active') === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                  {student.activity || 'Active'}
                 </span>
+                {student.status && student.status !== 'Active' && student.status !== 'Inactive' && (
+                  <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-full">
+                    {student.status}
+                  </span>
+                )}
                 <span className="px-3 py-1 bg-gray-100 text-gray-500 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-full">
                   {student.course}
                 </span>

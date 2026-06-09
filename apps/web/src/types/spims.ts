@@ -21,15 +21,25 @@ export interface SpimsUser {
   createdAt?: Timestamp | Date;
 }
 
-// ─── SPIMS STUDENT (College admission record) ────────────────────────────────
+export type SpimsStudentActivity = 'Active' | 'Inactive';
 
 export type SpimsStudentStatus =
   | 'Active'
+  | 'Inactive'
   | 'Pass'
+  | 'Fail'
+  | 'Left'
   | '1st Year Supply'
   | '2nd Year Supply'
-  | 'Fail'
-  | 'Left';
+  | 'First Year Pass'
+  | 'Second Year Pass'
+  | 'First Year Fail'
+  | 'Second Year Fail'
+  | 'First Year Supply'
+  | 'Second Year Supply'
+  | 'Overall Pass'
+  | 'Overall Fail';
+
 
 export type SpimsAnnualResult = 'Pass' | 'Fail' | 'Supply';
 
@@ -116,6 +126,7 @@ export interface SpimsStudent {
   session: string;
   admissionDate: Timestamp | Date;
   status: SpimsStudentStatus;
+  activity?: SpimsStudentActivity;
 
   // Fee structure (set at admission)
   totalPackage: number;
