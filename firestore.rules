@@ -1,3 +1,4 @@
+// firestore.rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -667,6 +668,7 @@ service cloud.firestore {
       allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager() || (isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId());
     }
 
+    // staff profiles
     match /spims_staff/{staffId} {
       allow read: if isSpimsAdminOrAbove()
         || isSpimsRole('cashier')
@@ -809,6 +811,7 @@ service cloud.firestore {
       return hqRole() == role; 
     } 
 
+    // check role
     function isHqSuperAdmin() { 
       return hqRole() == 'superadmin'; 
     } 
@@ -1165,167 +1168,6 @@ service cloud.firestore {
 
 
     // ═══════════════════════════════════════════════════════════
-    //  HOSPITAL PORTAL HELPERS
-    // ═══════════════════════════════════════════════════════════
-
-    function isHospitalAuth() {
-      return request.auth != null && (
-        exists(/databases/$(database)/documents/hospital_users/$(request.auth.uid))
-        || isHqTier1()
-      );
-    }
-    function hospitalRole() {
-      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('role', '') : '';
-    }
-    function isHospitalRole(role) {
-      return isHospitalAuth() && hospitalRole() == role;
-    }
-    function isHospitalAdminOrAbove() {
-      let role = hospitalRole();
-      return isHospitalAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
-    }
-    function isHospitalSuperAdmin() {
-      return isHospitalRole('superadmin');
-    }
-    function hospitalPatientId() {
-      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('patientId', null) : null;
-    }
-    function hospitalStaffId() {
-      let path = /databases/$(database)/documents/hospital_users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('staffId', null) : null;
-    }
-    function isOwnHospitalStaffRecord(staffId) {
-      return isHospitalRole('staff') && (staffId == request.auth.uid || staffId == hospitalStaffId());
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  HOSPITAL PORTAL COLLECTIONS
-    // ═══════════════════════════════════════════════════════════
-
-    match /hospital_meta/{doc} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    match /hospital_users/{uid} {
-      allow read: if (request.auth != null
-        && (request.auth.uid == uid || isHospitalAdminOrAbove()))
-        || isHqSuperOrManager()
-        || isDiscoveryQuery();
-      allow create: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-      allow update: if (request.auth != null
-        && request.auth.uid == uid
-        && request.resource.data.diff(resource.data)
-            .affectedKeys()
-            .hasOnly(['photoUrl', 'displayName', 'phone']))
-        || isHqSuperOrManager();
-      allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_patients/{patientId} {
-      allow read: if isHospitalAdminOrAbove()
-        || isHospitalRole('cashier')
-        || (isHospitalRole('patient') && hospitalPatientId() == patientId)
-        || isHqTier1();
-      allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_fees/{docId} {
-      allow read: if isHospitalAdminOrAbove()
-        || (isHospitalRole('cashier'))
-        || (isHospitalRole('patient') && hospitalPatientId() == resource.data.patientId)
-        || isHqTier1();
-      allow write: if isHospitalRole('cashier') || isHospitalAdminOrAbove()
-        || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
-    }
-
-    match /hospital_transactions/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHospitalRole('cashier') || isHqTier1();
-      allow create: if isHospitalRole('cashier')
-        || isHospitalAdminOrAbove()
-        || isHqCashier()
-        || (isHospitalAdminOrAbove() && request.resource.data.status == 'pending_cashier');
-      allow update: if isHospitalAdminOrAbove() || isHqSuperOrManager()
-        || (
-          (isHospitalRole('cashier') || isHqCashier())
-          && resource.data.status == 'pending_cashier'
-          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status',
-            'proofUrl',
-            'proofMissingReason',
-            'proofRequired',
-            'cashierForwardedAt',
-            'cashierForwardedBy',
-            'cashierForwardedByName',
-            'cashierRejectedAt',
-            'cashierRejectedBy',
-            'cashierRejectedByName',
-            'cashierRejectReason'
-          ])
-        );
-      allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
-    }
-
-    match /hospital_staff/{staffId} {
-      allow read: if isHospitalAdminOrAbove()
-        || isHospitalRole('cashier')
-        || (isHospitalRole('staff') && hospitalStaffId() == staffId)
-        || isHqTier1();
-      allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_attendance/{docId} {
-      allow read: if isHospitalAdminOrAbove()
-        || isHospitalRole('cashier')
-        || isHospitalRole('staff')
-        || isHqSuperOrManager();
-      allow create, update: if isHospitalRole('staff') || isHospitalAdminOrAbove() || isHqSuperOrManager();
-      allow delete: if false;
-    }
-
-    match /hospital_dress_logs/{logId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
-      allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_duty_logs/{logId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
-      allow create, update: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_growth_points/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
-      allow create, update, delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_fines/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
-      allow create, update, delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_special_tasks/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager() || isOwnHospitalStaffRecord(resource.data.staffId);
-      allow create, update, delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    match /hospital_audit/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-      allow create: if isHospitalAuth();
-      allow update, delete: if false;
-    }
-
-    match /hospital_salary_records/{docId} {
-      allow read: if isHospitalAdminOrAbove() || isHqTier1() || isOwnHospitalStaffRecord(resource.data.staffId);
-      allow write: if isHospitalAdminOrAbove() || isHqTier1();
-      allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
-    }
-
-    // ═══════════════════════════════════════════════════════════
     //  SUKOON PORTAL HELPERS
     // ═══════════════════════════════════════════════════════════
 
@@ -1367,6 +1209,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // users
     match /sukoon_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isSukoonAdminOrAbove()))
@@ -1469,6 +1312,7 @@ service cloud.firestore {
       allow write: if isSukoonAdminOrAbove() || isHqTier1();
       allow delete: if isSukoonAdminOrAbove() || isHqSuperOrManager();
     }
+
 
     // ═══════════════════════════════════════════════════════════
     //  WELFARE PORTAL HELPERS
@@ -1654,6 +1498,7 @@ service cloud.firestore {
       allow create, update: if isWelfareAdminOrAbove();
       allow delete: if isWelfareAdminOrAbove();
     }
+
 
     // ═══════════════════════════════════════════════════════════
     //  JOB CENTER PORTAL HELPERS
@@ -2017,8 +1862,10 @@ service cloud.firestore {
         || (isHqCashier() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
 
+    // ── Site Block Settings ──────────────────────────
+    match /settings/siteBlock {
+      allow read, write: if request.auth != null && request.auth.token.email == 'mubeenahma1123@gmail.com';
+    }
+
   }
 }
-
-
-

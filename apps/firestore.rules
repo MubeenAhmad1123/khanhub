@@ -1,3 +1,4 @@
+// apps/firestore.rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -465,6 +466,7 @@ service cloud.firestore {
       allow delete: if isJobCenterAdmin();
     }
 
+    // Rules for jobs list
     match /jobcenter_jobs/{jobId} {
       allow read: if true; // Public or seeker access
       allow create, update: if isJobCenterAdmin() || (isJobCenterAuth() && jobCenterUserDoc().role == 'employer');
@@ -519,6 +521,11 @@ service cloud.firestore {
     }
     match /job_center_custom_options/{docId} {
       allow read, write: if isJobCenterAdmin() || isHqAdmin();
+    }
+
+    // ── Site Block Settings ──────────────────────────
+    match /settings/siteBlock {
+      allow read, write: if request.auth != null && request.auth.token.email == 'mubeenahma1123@gmail.com';
     }
 
   }
