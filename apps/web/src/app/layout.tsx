@@ -137,6 +137,7 @@ export const metadata: Metadata = {
 }
 
 import { AuthProvider } from '@/components/providers/AuthProvider'
+import SiteBlockGate from '@/components/shared/SiteBlockGate'
 
 // ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout({
@@ -148,9 +149,11 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased selection:bg-primary-100 selection:text-primary-900">
         <AuthProvider>
-          <ConditionalShell>
-            {children}
-          </ConditionalShell>
+          <SiteBlockGate>
+            <ConditionalShell>
+              {children}
+            </ConditionalShell>
+          </SiteBlockGate>
         </AuthProvider>
         <Toaster position="bottom-right" />
       </body>
