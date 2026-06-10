@@ -758,6 +758,7 @@ export default function SeekerDetailPage() {
           <div className="relative z-10 flex-1 text-center">
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">{seeker.name}</h1>
             <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">{seeker.jobTitle || 'Active Job Seeker'}</p>
+            <p className="text-orange-600 font-mono text-[11px] font-black tracking-wider mt-1">{seeker.seekerNumber || `#${seeker.serialNumber}`}</p>
             
             <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
               <button 

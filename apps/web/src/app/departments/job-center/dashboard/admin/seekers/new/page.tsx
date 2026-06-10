@@ -56,6 +56,8 @@ export default function RegisterSeekerPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // SECTION 2: Personal Information
+  const [seekerNumber, setSeekerNumber] = useState('');
+  const [serialNumber, setSerialNumber] = useState<number>(0);
   const [name, setName] = useState('');
   const [fatherName, setFatherName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -162,6 +164,8 @@ export default function RegisterSeekerPage() {
         if (draft.currentStep) setCurrentStep(draft.currentStep);
         if (draft.loginId) setLoginId(draft.loginId);
         if (draft.loginPassword) setLoginPassword(draft.loginPassword);
+        if (draft.seekerNumber) setSeekerNumber(draft.seekerNumber);
+        if (draft.serialNumber) setSerialNumber(draft.serialNumber);
         if (draft.name) setName(draft.name);
         if (draft.fatherName) setFatherName(draft.fatherName);
         if (draft.dateOfBirth) setDateOfBirth(draft.dateOfBirth);
@@ -231,6 +235,8 @@ export default function RegisterSeekerPage() {
       customChips,
       notes,
       photoPreview: photoPreview.startsWith('data:') ? photoPreview : '',
+      seekerNumber,
+      serialNumber,
     };
 
     try {
@@ -261,8 +267,29 @@ export default function RegisterSeekerPage() {
     preferredWorkType,
     customChips,
     notes,
-    photoPreview
+    photoPreview,
+    seekerNumber,
+    serialNumber
   ]);
+
+  // Fetch next serial number automatically when Step 2 is opened and not already set
+  useEffect(() => {
+    if (currentStep === 2 && !seekerNumber && !loading) {
+      const fetchNextSerial = async () => {
+        try {
+          const seekersQuery = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(1));
+          const seekersSnap = await getDocs(seekersQuery);
+          const lastSeeker = seekersSnap.docs[0]?.data();
+          const nextSerial = (lastSeeker?.serialNumber || 0) + 1;
+          setSerialNumber(nextSerial);
+          setSeekerNumber(`JC-S-${String(nextSerial).padStart(3, '0')}`);
+        } catch (e) {
+          console.error("Error fetching next serial number:", e);
+        }
+      };
+      fetchNextSerial();
+    }
+  }, [currentStep, seekerNumber, loading]);
 
   // Calculate age automatically from Date of Birth
   useEffect(() => {
@@ -448,6 +475,7 @@ export default function RegisterSeekerPage() {
 
   const validateStep2 = () => {
     const errors: Record<string, string> = {};
+    if (!seekerNumber.trim()) errors.seekerNumber = 'Serial Number / Seeker ID is required';
     if (!name.trim()) errors.name = 'Full name is required';
     if (!fatherName.trim()) errors.fatherName = "Father's name is required";
     if (!dateOfBirth) errors.dateOfBirth = 'Date of birth is required';
@@ -506,12 +534,9 @@ export default function RegisterSeekerPage() {
         photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/jobcenter/seekers');
       }
 
-      // 2. Generate Seeker Number
-      const seekersQuery = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(1));
-      const seekersSnap = await getDocs(seekersQuery);
-      const lastSeeker = seekersSnap.docs[0]?.data();
-      const nextSerial = (lastSeeker?.serialNumber || 0) + 1;
-      const seekerNumber = `JC-S-${String(nextSerial).padStart(3, '0')}`;
+      // 2. Determine Seeker Number & Serial Number
+      const finalSeekerNumber = seekerNumber.trim();
+      const finalSerialNumber = Number(serialNumber) || 1;
 
       // 3. Create seeker document payload
       const seekerData = {
@@ -538,8 +563,8 @@ export default function RegisterSeekerPage() {
         notes: notes || null,
         isActive: true,
         loginId: loginId.toUpperCase(),
-        seekerNumber,
-        serialNumber: nextSerial,
+        seekerNumber: finalSeekerNumber,
+        serialNumber: finalSerialNumber,
         createdAt: Timestamp.now(),
         tsjobCategory: jobCategory,
       };
@@ -717,18 +742,36 @@ export default function RegisterSeekerPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
+                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Serial Number / Seeker ID *</label>
+                      <input 
+                        placeholder="e.g. JC-S-001" 
+                        className={inputStyle} 
+                        value={seekerNumber} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          setSeekerNumber(val);
+                          const match = val.match(/\d+/g);
+                          if (match) {
+                            const num = Number(match[match.length - 1]);
+                            if (!isNaN(num)) setSerialNumber(num);
+                          }
+                        }} 
+                      />
+                      {validationErrors.seekerNumber && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.seekerNumber}</p>}
+                    </div>
+                    <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Full Name *</label>
                       <input placeholder="Full Name" className={inputStyle} value={name} onChange={e => setName(e.target.value)} />
                       {validationErrors.name && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.name}</p>}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Father's Name *</label>
                       <input placeholder="Father's Name" className={inputStyle} value={fatherName} onChange={e => setFatherName(e.target.value)} />
                       {validationErrors.fatherName && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.fatherName}</p>}
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <BrutalistCalendar
                         label="Date of Birth *"
@@ -737,14 +780,14 @@ export default function RegisterSeekerPage() {
                       />
                       {validationErrors.dateOfBirth && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.dateOfBirth}</p>}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Age * (Auto-calculated)</label>
                       <input required readOnly placeholder="Age" className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 bg-gray-50 focus:outline-none text-sm transition-all shadow-sm cursor-not-allowed font-black" value={age} />
                       {validationErrors.age && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.age}</p>}
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Gender *</label>
                       <select required className={inputStyle} value={gender} onChange={e => setGender(e.target.value)}>
@@ -755,6 +798,9 @@ export default function RegisterSeekerPage() {
                       </select>
                       {validationErrors.gender && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.gender}</p>}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Marital Status *</label>
                       <select required className={inputStyle} value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)}>
@@ -766,9 +812,6 @@ export default function RegisterSeekerPage() {
                       </select>
                       {validationErrors.maritalStatus && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.maritalStatus}</p>}
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">CNIC Number * (Format: XXXXX-XXXXXXX-X)</label>
                       <input 
@@ -779,6 +822,9 @@ export default function RegisterSeekerPage() {
                       />
                       {validationErrors.cnic && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.cnic}</p>}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Phone Number * (Format: 03XX-XXXXXXX)</label>
                       <div className="relative">
@@ -792,13 +838,12 @@ export default function RegisterSeekerPage() {
                       </div>
                       {validationErrors.phone && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.phone}</p>}
                     </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Email Address (Optional)</label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input type="email" placeholder="name@example.com" className={`${inputStyle} pl-11`} value={email} onChange={e => setEmail(e.target.value)} />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Email Address (Optional)</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input type="email" placeholder="name@example.com" className={`${inputStyle} pl-11`} value={email} onChange={e => setEmail(e.target.value)} />
+                      </div>
                     </div>
                   </div>
 
@@ -855,7 +900,7 @@ export default function RegisterSeekerPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={!name || !fatherName || !dateOfBirth || !gender || !maritalStatus || !cnic || !phone || !address}
+                      disabled={!seekerNumber || !name || !fatherName || !dateOfBirth || !gender || !maritalStatus || !cnic || !phone || !address}
                       onClick={() => {
                         if (validateStep2()) setCurrentStep(3);
                       }}
@@ -1238,6 +1283,8 @@ export default function RegisterSeekerPage() {
                   setPhotoPreview('');
                   setNotes('');
                   setSuccessDocId('');
+                  setSeekerNumber('');
+                  setSerialNumber(0);
                   localStorage.removeItem('jobcenter_seeker_draft');
                   setCurrentStep(1);
                 }}

@@ -191,6 +191,19 @@ export default function RegistrationTab({
     } else if (field === 'experience') {
       const arrayValue = [{ title: value, company: '', duration: '' }];
       setForm((prev: any) => ({ ...prev, experience: arrayValue }));
+    } else if (field === 'seekerNumber') {
+      const val = value;
+      let extractedSerial = 0;
+      const match = val.match(/\d+/g);
+      if (match) {
+        const num = Number(match[match.length - 1]);
+        if (!isNaN(num)) extractedSerial = num;
+      }
+      setForm((prev: any) => ({ 
+        ...prev, 
+        seekerNumber: val,
+        serialNumber: extractedSerial 
+      }));
     } else {
       setForm((prev: any) => ({ ...prev, [field]: value }));
     }
@@ -249,7 +262,7 @@ export default function RegistrationTab({
 
       <div className="space-y-6">
         <SectionCard title="1. Personal Information" icon={User}>
-          <Field label="Seeker ID" value={form.seekerNumber} fieldKey="seekerNumber" isEditing={isEditing} onChange={handleChange} />
+          <Field label="Serial Number / Seeker ID" value={form.seekerNumber} fieldKey="seekerNumber" isEditing={isEditing} onChange={handleChange} />
           <Field label="Full Name" value={form.name} fieldKey="name" isEditing={isEditing} onChange={handleChange} />
           <Field label="Father/Husband Name" value={form.fatherName} fieldKey="fatherName" isEditing={isEditing} onChange={handleChange} />
           <Field label="Date of Birth" value={form.dateOfBirth} type="date" fieldKey="dateOfBirth" isEditing={isEditing} onChange={handleChange} />
