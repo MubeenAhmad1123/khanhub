@@ -152,16 +152,16 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
     toast.success('Form reset to live settings.');
   };
 
-  // Auth Loading Screen
+  // Auth Loading Screen (Light)
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950 font-sans">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-12 h-12">
-            <div className="absolute inset-0 border-4 border-teal-500/20 rounded-full" />
-            <div className="absolute inset-0 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
+            <div className="absolute inset-0 border-4 border-teal-200 rounded-full" />
+            <div className="absolute inset-0 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
           </div>
-          <p className="text-neutral-400 font-semibold text-sm tracking-wide animate-pulse">
+          <p className="text-slate-500 font-semibold text-sm tracking-wide animate-pulse">
             Checking credentials...
           </p>
         </div>
@@ -169,28 +169,28 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
     );
   }
 
-  // Not Logged In screen
+  // Not Logged In screen (Light)
   if (!user) {
     return (
-      <div className="min-h-screen w-full relative flex items-center justify-center bg-neutral-950 overflow-hidden font-sans">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none" />
+      <div className="min-h-screen w-full relative flex items-center justify-center bg-slate-50 overflow-hidden font-sans">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50 pointer-events-none" />
         <div className="relative z-10 max-w-md w-full mx-4">
-          <div className="backdrop-blur-2xl bg-neutral-900/80 border border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 text-center shadow-2xl border-t-4 border-t-red-500 flex flex-col items-center">
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 text-center shadow-xl border-t-4 border-t-red-500 flex flex-col items-center">
             <div className="relative mb-6">
-              <div className="absolute inset-0 bg-red-500/20 rounded-2xl blur-xl scale-125 animate-pulse" />
-              <div className="relative w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+              <div className="absolute inset-0 bg-red-100 rounded-2xl blur-xl scale-125 animate-pulse" />
+              <div className="relative w-16 h-16 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center">
                 <Lock className="w-8 h-8 text-red-500" />
               </div>
             </div>
-            <h1 className="text-2xl font-black text-neutral-50 tracking-tight">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
               Access Denied
             </h1>
-            <p className="text-neutral-400 text-sm mt-3 leading-relaxed">
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed">
               This environment is restricted. You must be signed in as the developer to access this page.
             </p>
             <button
               onClick={() => signInWithGoogle().catch(() => {})}
-              className="mt-8 w-full py-3 bg-neutral-100 hover:bg-white text-neutral-950 font-bold rounded-2xl shadow-lg transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2"
+              className="mt-8 w-full py-3 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl shadow-lg transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2"
             >
               Sign In with Google
             </button>
@@ -200,28 +200,28 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
     );
   }
 
-  // Logged in but NOT developer screen
+  // Logged in but NOT developer screen (Light)
   if (user.email !== developerEmail) {
     return (
-      <div className="min-h-screen w-full relative flex items-center justify-center bg-neutral-950 overflow-hidden font-sans">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none" />
+      <div className="min-h-screen w-full relative flex items-center justify-center bg-slate-50 overflow-hidden font-sans">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50 pointer-events-none" />
         <div className="relative z-10 max-w-md w-full mx-4">
-          <div className="backdrop-blur-2xl bg-neutral-900/80 border border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 text-center shadow-2xl border-t-4 border-t-red-500 flex flex-col items-center">
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 text-center shadow-xl border-t-4 border-t-red-500 flex flex-col items-center">
             <div className="relative mb-6">
-              <div className="absolute inset-0 bg-red-500/20 rounded-2xl blur-xl scale-125" />
-              <div className="relative w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+              <div className="absolute inset-0 bg-red-100 rounded-2xl blur-xl scale-125" />
+              <div className="relative w-16 h-16 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center">
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
             </div>
-            <h1 className="text-2xl font-black text-neutral-50 tracking-tight">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
               Unauthorized Account
             </h1>
-            <p className="text-neutral-400 text-sm mt-3 leading-relaxed">
-              The account <span className="text-red-400 font-semibold">{user.email}</span> does not have developer privileges.
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed">
+              The account <span className="text-red-500 font-semibold">{user.email}</span> does not have developer privileges.
             </p>
             <button
               onClick={() => signOut().catch(() => {})}
-              className="mt-8 w-full py-3 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white font-bold rounded-2xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              className="mt-8 w-full py-3 bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-bold rounded-2xl shadow-md transition-all duration-300 flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               Sign Out & Switch Account
@@ -232,35 +232,35 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
     );
   }
 
-  // Active Control Panel Screen
+  // Active Control Panel Screen (Light Theme)
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans select-none pb-12">
-      {/* Dynamic Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-15 pointer-events-none" />
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans select-none pb-12">
+      {/* Background grids */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur sticky top-0 z-40 px-6 py-4">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-40 px-6 py-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/20">
-              <Sliders className="w-5 h-5 text-neutral-950 font-black" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-md">
+              <Sliders className="w-5 h-5 text-white font-black" />
             </div>
             <div>
-              <h1 className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+              <h1 className="font-extrabold text-lg tracking-tight text-slate-900">
                 KhanHub Developer Console
               </h1>
-              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">
-                Site-Wide Interception Panel
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                Site-Wide Block Control Panel
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-neutral-400 font-medium">
-              Signed in as: <span className="text-teal-400 font-semibold">{user.email}</span>
+            <span className="text-xs text-slate-500 font-medium">
+              Signed in as: <span className="text-teal-600 font-semibold">{user.email}</span>
             </span>
             <button
               onClick={() => signOut().catch(() => {})}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-neutral-900 border border-neutral-800 text-xs font-bold text-neutral-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 rounded-xl transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 hover:text-red-500 hover:bg-red-50 hover:border-red-100 rounded-xl transition-all"
             >
               <LogOut className="w-3.5 h-3.5" />
               Sign Out
@@ -273,8 +273,8 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
       {dataLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <RefreshCw className="w-8 h-8 text-teal-400 animate-spin" />
-            <p className="text-neutral-500 font-bold text-xs tracking-widest uppercase animate-pulse">
+            <RefreshCw className="w-8 h-8 text-teal-500 animate-spin" />
+            <p className="text-slate-400 font-bold text-xs tracking-widest uppercase animate-pulse">
               Syncing settings...
             </p>
           </div>
@@ -286,23 +286,23 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
           <div className="lg:col-span-7 space-y-6">
             
             {/* Live Database Status Indicator Card */}
-            <div className="backdrop-blur bg-neutral-900/40 border border-neutral-900 rounded-3xl p-6 flex items-center justify-between">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 flex items-center justify-between shadow-sm">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-400">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">
                   Live System Status
                 </h2>
-                <p className="text-xs text-neutral-600 font-medium mt-1">
+                <p className="text-xs text-slate-500 font-medium mt-1">
                   Active database configuration status
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 {liveIsBlocked ? (
-                  <span className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 font-extrabold text-xs tracking-widest uppercase rounded-full inline-flex items-center gap-1.5 shadow-lg shadow-red-500/5 animate-pulse">
+                  <span className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 font-extrabold text-xs tracking-widest uppercase rounded-full inline-flex items-center gap-1.5 shadow-sm animate-pulse">
                     <span className="w-2 h-2 rounded-full bg-red-500" />
                     SITE BLOCKED
                   </span>
                 ) : (
-                  <span className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-xs tracking-widest uppercase rounded-full inline-flex items-center gap-1.5 shadow-lg shadow-emerald-500/5">
+                  <span className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-600 font-extrabold text-xs tracking-widest uppercase rounded-full inline-flex items-center gap-1.5 shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     SITE LIVE
                   </span>
@@ -311,15 +311,15 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
             </div>
 
             {/* Controls Form */}
-            <form onSubmit={handleSave} className="backdrop-blur bg-neutral-900/60 border border-neutral-900 rounded-[2rem] p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleSave} className="bg-white border border-slate-200 rounded-[2rem] p-6 sm:p-8 space-y-6 shadow-sm">
               
               {/* Block Toggle Switch */}
-              <div className="p-4 bg-neutral-950/60 border border-neutral-900 rounded-2xl flex items-center justify-between">
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between">
                 <div>
-                  <label htmlFor="block-toggle" className="text-sm font-extrabold text-neutral-200">
-                    Interception Toggle
+                  <label htmlFor="block-toggle" className="text-sm font-extrabold text-slate-700">
+                    Site Block Toggle
                   </label>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-slate-400 mt-0.5">
                     Toggle block page across all paths immediately
                   </p>
                 </div>
@@ -328,11 +328,11 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                   id="block-toggle"
                   onClick={() => setFormIsBlocked(!formIsBlocked)}
                   className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none ${
-                    formIsBlocked ? 'bg-red-600' : 'bg-neutral-800'
+                    formIsBlocked ? 'bg-red-500' : 'bg-slate-200'
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${
                       formIsBlocked ? 'translate-x-7' : 'translate-x-0'
                     }`}
                   />
@@ -341,7 +341,7 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
 
               {/* Heading Input */}
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                   Block Heading
                 </label>
                 <input
@@ -350,13 +350,13 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                   value={formHeading}
                   onChange={(e) => setFormHeading(e.target.value)}
                   placeholder="e.g. Site Maintenance"
-                  className="w-full px-4 py-3 bg-neutral-950 border border-neutral-900 focus:border-teal-500/60 rounded-xl text-sm text-neutral-200 placeholder-neutral-700 outline-none transition-all"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-teal-500 rounded-xl text-sm text-slate-800 placeholder-slate-300 outline-none transition-all"
                 />
               </div>
 
               {/* Message Input */}
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                   Block Message Text
                 </label>
                 <textarea
@@ -365,23 +365,23 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                   value={formMessage}
                   onChange={(e) => setFormMessage(e.target.value)}
                   placeholder="e.g. We are performing emergency database optimizations. Please check back later."
-                  className="w-full px-4 py-3 bg-neutral-950 border border-neutral-900 focus:border-teal-500/60 rounded-xl text-sm text-neutral-200 placeholder-neutral-700 outline-none transition-all resize-none leading-relaxed"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-teal-500 rounded-xl text-sm text-slate-800 placeholder-slate-300 outline-none transition-all resize-none leading-relaxed"
                 />
               </div>
 
               {/* Scheduled Unblock Datetime */}
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                   Scheduled Unblock Time (Optional)
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+                    <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="datetime-local"
                       value={formScheduledUnblock}
                       onChange={(e) => setFormScheduledUnblock(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-neutral-950 border border-neutral-900 focus:border-teal-500/60 rounded-xl text-sm text-neutral-200 outline-none transition-all [color-scheme:dark]"
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 focus:border-teal-500 rounded-xl text-sm text-slate-800 outline-none transition-all [color-scheme:light]"
                     />
                   </div>
                   {formScheduledUnblock && (
@@ -391,14 +391,14 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                         setFormScheduledUnblock('');
                         toast.success('Scheduled unblock time cleared.');
                       }}
-                      className="px-4 bg-neutral-950 border border-neutral-900 hover:border-red-500/30 text-neutral-500 hover:text-red-400 rounded-xl transition-all"
+                      className="px-4 bg-white border border-slate-200 hover:border-red-500 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                       title="Clear schedule"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
                   If set, the block will automatically deactivate when the server registers a request after this date/time.
                 </p>
               </div>
@@ -408,19 +408,19 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-3.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-neutral-950 font-black rounded-2xl shadow-lg shadow-teal-500/10 hover:shadow-teal-500/20 transition-all duration-300 hover:scale-[1.01] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                  className="flex-1 py-3.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-black rounded-2xl shadow-md hover:scale-[1.01] transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {saving ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  Save & Update System
+                  Save Site Block Settings
                 </button>
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className="px-6 py-3.5 bg-neutral-950 hover:bg-neutral-900 border border-neutral-900 text-sm font-bold text-neutral-400 hover:text-neutral-200 rounded-2xl transition-all"
+                  className="px-6 py-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-sm font-bold text-slate-500 hover:text-slate-700 rounded-2xl transition-all"
                 >
                   Reset Form
                 </button>
@@ -432,17 +432,17 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
           {/* RIGHT COLUMN: Live Block Page Preview (5 cols) */}
           <div className="lg:col-span-5 flex flex-col h-full">
             <div className="flex items-center gap-1.5 mb-4 pl-1">
-              <Eye className="w-4 h-4 text-teal-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              <Eye className="w-4 h-4 text-teal-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Live Visitor Screen Preview
               </h3>
             </div>
 
             {/* Scaled Preview Frame */}
-            <div className="flex-1 border border-neutral-900 rounded-[2rem] bg-neutral-950 overflow-hidden relative min-h-[450px] flex items-center justify-center p-6 shadow-inner">
+            <div className="flex-1 border border-slate-200 rounded-[2rem] bg-slate-100 overflow-hidden relative min-h-[450px] flex items-center justify-center p-6 shadow-inner">
               
               {/* Badge Preview Status */}
-              <div className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-neutral-900/80 border border-neutral-800 backdrop-blur rounded-full text-[9px] font-bold tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+              <div className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-white/95 border border-slate-200 backdrop-blur rounded-full text-[9px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5 shadow-sm">
                 <span className={`w-1.5 h-1.5 rounded-full ${formIsBlocked ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
                 {formIsBlocked ? 'Preview: Blocked View' : 'Preview: Normal Site View'}
               </div>
@@ -451,7 +451,7 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                 /* Blocked UI Preview */
                 <div className="relative max-w-sm w-full mx-auto select-none pointer-events-none animate-fade-in scale-95 sm:scale-100">
                   <div className="absolute inset-0 bg-teal-500/5 rounded-full blur-[80px] -z-10" />
-                  <div className="backdrop-blur-xl bg-neutral-900/90 border border-neutral-800/80 rounded-3xl p-6 text-center shadow-2xl border-t-2 border-t-teal-500 flex flex-col items-center">
+                  <div className="backdrop-blur-xl bg-neutral-900/95 border border-neutral-800 rounded-3xl p-6 text-center shadow-2xl border-t-2 border-t-teal-500 flex flex-col items-center">
                     
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 border border-teal-500/30 flex items-center justify-center mb-4">
                       <ShieldAlert className="w-6 h-6 text-teal-400" />
@@ -479,10 +479,10 @@ export default function DeveloperDashboardClient({ developerEmail }: DeveloperDa
                 /* Normal UI Preview */
                 <div className="text-center max-w-xs space-y-4 pointer-events-none">
                   <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
-                  <h4 className="text-sm font-bold text-neutral-200">
+                  <h4 className="text-sm font-bold text-slate-800">
                     Site is Operational
                   </h4>
-                  <p className="text-xs text-neutral-500 leading-relaxed max-w-[240px]">
+                  <p className="text-xs text-slate-400 leading-relaxed max-w-[240px]">
                     Site block is OFF. Visitors are navigating your KhanHub platform normally.
                   </p>
                 </div>
