@@ -45,46 +45,13 @@ export async function createSpimsUserServer(
     const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
-      const existingUser = await adminAuth.getUserByEmail(email);
-      const existingProfileSnap = await adminDb.collection(userCollection).doc(existingUser.uid).get();
-      const nextStudentId = studentId || null;
-
-      if (!existingProfileSnap.exists) {
-        await adminDb.collection(userCollection).doc(existingUser.uid).set({
-          customId,
-          role,
-          displayName,
-          password,
-          studentId: nextStudentId,
-          isActive: true,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-        return { success: true, uid: existingUser.uid };
-      }
-
-      const existingProfile = existingProfileSnap.data() as any;
-
-      if (existingProfile?.role && existingProfile.role !== role) {
-        return {
-          success: false,
-          error: `Login ID already exists for a different account type.`,
-        };
-      }
-
-      await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        {
-          customId,
-          role,
-          displayName,
-          password,
-          studentId: nextStudentId,
-          isActive: true,
-        },
-        { merge: true }
-      );
-
-      return { success: true, uid: existingUser.uid };
+      await adminAuth.getUserByEmail(email);
+      return {
+        success: false,
+        error: 'Login ID already exists. Please choose a different Login ID.',
+      };
     } catch {
+      // User doesn't exist — continue normally.
     }
 
     const userRecord = await adminAuth.createUser({ email, password, displayName });

@@ -24,8 +24,6 @@ export async function createRehabUserServer(
     const adminDb = getFirestore(app);
 
     // Guardrails: family login IDs must never collide with reserved master IDs.
-    // Even if reserved master users were deleted from Auth by mistake, this prevents
-    // patient admissions from overwriting them later.
     if (role === 'family') {
       try {
         const setupSnap = await adminDb.collection('rehab_meta').doc('setup').get();
@@ -49,70 +47,11 @@ export async function createRehabUserServer(
     const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
-      const existingUser = await adminAuth.getUserByEmail(email);
-      // If the user exists, fail instead of deleting/recreating.
-      // Deleting/recreating can overwrite existing admin/cashier accounts if a patient
-      // login ID accidentally collides with a master account ID.
-      const existingProfileSnap = await adminDb.collection(userCollection).doc(existingUser.uid).get();
-      const nextPatientId = patientId || null;
-
-      // If Auth exists but Firestore profile is missing, "repair" the Firestore doc.
-      // This does NOT change Firebase Auth password.
-      if (!existingProfileSnap.exists) {
-        // For family accounts, do not guess/repair role into Firestore when Auth user exists.
-        // Otherwise an admin/cashier Auth user with a deleted Firestore profile could be
-        // accidentally converted into a family user.
-        if (role === 'family') {
-          return {
-            success: false,
-            error: 'Login ID already exists. Please use a different Patient Login ID.',
-          };
-        }
-
-        await adminDb.collection(userCollection).doc(existingUser.uid).set({
-          customId,
-          role,
-          displayName,
-          password,
-          patientId: nextPatientId,
-          isActive: true,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-        return { success: true, uid: existingUser.uid };
-      }
-
-      const existingProfile = existingProfileSnap.data() as any;
-
-      // Prevent role hijacking (ex: admin auth user accidentally being used as patient family).
-      if (existingProfile?.role && existingProfile.role !== role) {
-        return {
-          success: false,
-          error: `Login ID already exists for a different account type. Please use the correct Login ID.`,
-        };
-      }
-
-      // For family users, prevent reassigning the same login ID to a different patient.
-      if (role === 'family' && existingProfile?.patientId && existingProfile.patientId !== nextPatientId) {
-        return {
-          success: false,
-          error: `This Patient Login ID is already assigned to another patient.`,
-        };
-      }
-
-      // Role matches (and assignment is safe): update Firestore profile fields.
-      await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        {
-          customId,
-          role,
-          displayName,
-          password,
-          patientId: nextPatientId,
-          isActive: true,
-        },
-        { merge: true }
-      );
-
-      return { success: true, uid: existingUser.uid };
+      await adminAuth.getUserByEmail(email);
+      return {
+        success: false,
+        error: 'Login ID already exists. Please choose a different Login ID.',
+      };
     } catch {
       // User doesn't exist — continue normally.
     }
@@ -181,49 +120,11 @@ export async function createSpimsStudentUserServer(
     const email = `${customId.toLowerCase()}${SPIMS_DOMAIN}`;
 
     try {
-      const existingUser = await adminAuth.getUserByEmail(email);
-      const existingProfileSnap = await adminDb.collection('spims_users').doc(existingUser.uid).get();
-      const nextStudentId = studentId || null;
-
-      if (!existingProfileSnap.exists) {
-        await adminDb.collection('spims_users').doc(existingUser.uid).set({
-          customId,
-          role: 'student',
-          displayName,
-          password,
-          studentId: nextStudentId,
-          isActive: true,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-        return { success: true, uid: existingUser.uid };
-      }
-
-      const existingProfile = existingProfileSnap.data() as any;
-      if (existingProfile?.role && existingProfile.role !== 'student') {
-        return {
-          success: false,
-          error: `Login ID already exists for a different account type.`,
-        };
-      }
-      if (existingProfile?.studentId && existingProfile.studentId !== nextStudentId && !isReadmission) {
-        return {
-          success: false,
-          error: `This Student Login ID is already assigned to another student.`,
-        };
-      }
-
-      await adminDb.collection('spims_users').doc(existingUser.uid).set(
-        {
-          customId,
-          role: 'student',
-          displayName,
-          password,
-          studentId: nextStudentId,
-          isActive: true,
-        },
-        { merge: true }
-      );
-      return { success: true, uid: existingUser.uid };
+      await adminAuth.getUserByEmail(email);
+      return {
+        success: false,
+        error: 'Login ID already exists. Please choose a different Student Login ID.',
+      };
     } catch {
       // User doesn't exist — continue
     }
@@ -378,9 +279,7 @@ export async function createStaffMemberServer(
     const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
-      const existingUser = await adminAuth.getUserByEmail(email);
-      // If the user exists, fail instead of deleting/recreating.
-      // This prevents accidental overwrite of admin/staff/cashier accounts.
+      await adminAuth.getUserByEmail(email);
       return {
         success: false,
         error: `Login ID already exists. Choose a different Staff Login ID.`,

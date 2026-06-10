@@ -50,76 +50,11 @@ export async function createJobCenterUserServer(
     const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
-      const existingUser = await adminAuth.getUserByEmail(email);
-      const existingProfileSnap = await adminDb.collection(userCollection).doc(existingUser.uid).get();
-      const nextSeekerId = seekerId || null;
-
-      if (!existingProfileSnap.exists) {
-        if (role === 'seeker' || role === 'employer') {
-          return {
-            success: false,
-            error: `Login ID already exists. Please use a different ${role === 'seeker' ? 'Seeker' : 'Employer'} Login ID.`,
-          };
-        }
-
-        await adminDb.collection(userCollection).doc(existingUser.uid).set({
-          customId,
-          role,
-          displayName,
-          password,
-          seekerId: nextSeekerId,
-          employerId: employerId || null,
-          isActive: true,
-          createdAt: FieldValue.serverTimestamp(),
-          employerType: employerType || null,
-          tsemployerType: employerType || null,
-          jobCategory: jobCategory || null,
-          tsjobCategory: jobCategory || null,
-        });
-        return { success: true, uid: existingUser.uid };
-      }
-
-      const existingProfile = existingProfileSnap.data() as any;
-
-      if (existingProfile?.role && existingProfile.role !== role) {
-        return {
-          success: false,
-          error: `Login ID already exists for a different account type. Please use the correct Login ID.`,
-        };
-      }
-
-      if (role === 'seeker' && existingProfile?.seekerId && existingProfile.seekerId !== nextSeekerId) {
-        return {
-          success: false,
-          error: `This Seeker Login ID is already assigned to another seeker.`,
-        };
-      }
-
-      if (role === 'employer' && existingProfile?.employerId && existingProfile.employerId !== employerId) {
-        return {
-          success: false,
-          error: `This Employer Login ID is already assigned to another company.`,
-        };
-      }
-
-      await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        {
-          customId,
-          role,
-          displayName,
-          password,
-          seekerId: nextSeekerId,
-          employerId: employerId || null,
-          isActive: true,
-          employerType: employerType || null,
-          tsemployerType: employerType || null,
-          jobCategory: jobCategory || null,
-          tsjobCategory: jobCategory || null,
-        },
-        { merge: true }
-      );
-
-      return { success: true, uid: existingUser.uid };
+      await adminAuth.getUserByEmail(email);
+      return {
+        success: false,
+        error: 'Login ID already exists. Please choose a different Login ID.',
+      };
     } catch {
       // User doesn't exist
     }
