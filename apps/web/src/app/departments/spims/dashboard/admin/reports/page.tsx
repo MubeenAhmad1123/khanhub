@@ -280,7 +280,39 @@ export default function AdminReportsPage() {
         @media print {
           body * { visibility: hidden; }
           #spims-report-print, #spims-report-print * { visibility: visible; }
-          #spims-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #spims-report-print {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 12px;
+            font-size: 10px;
+          }
+          @page {
+            size: A4;
+            margin: 10mm 8mm;
+          }
+          table {
+            page-break-inside: auto;
+            width: 100%;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          thead {
+            display: table-header-group;
+          }
+          #spims-report-print table td,
+          #spims-report-print table th {
+            padding: 3px 6px !important;
+          }
+          #spims-report-print .text-2xl {
+            font-size: 13px !important;
+          }
+          #spims-report-print .p-5 {
+            padding: 6px 10px !important;
+          }
         }
       `}</style>
 
