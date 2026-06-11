@@ -109,14 +109,14 @@ export default function SpimsStudentsListPage() {
     if (s) {
       list = list.filter(
         (st) =>
-          (st.name || '').toLowerCase().includes(s) ||
-          (st.rollNo || '').toLowerCase().includes(s) ||
-          (st.cnic || '').toLowerCase().includes(s) ||
-          (st.course || '').toLowerCase().includes(s) ||
-          (st.session || '').toLowerCase().includes(s) ||
-          (st.fatherName || '').toLowerCase().includes(s) ||
-          (st.studentId || '').toLowerCase().includes(s) ||
-          (st.id || '').toLowerCase().includes(s)
+          String(st.name || '').toLowerCase().includes(s) ||
+          String(st.rollNo || '').toLowerCase().includes(s) ||
+          String(st.cnic || '').toLowerCase().includes(s) ||
+          String(st.course || '').toLowerCase().includes(s) ||
+          String(st.session || '').toLowerCase().includes(s) ||
+          String(st.fatherName || '').toLowerCase().includes(s) ||
+          String(st.studentId || '').toLowerCase().includes(s) ||
+          String(st.id || '').toLowerCase().includes(s)
       );
     }
 
@@ -158,7 +158,7 @@ export default function SpimsStudentsListPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#1D9E75]" />
             <input
               className="w-full rounded-2xl border border-gray-100 bg-white/80 backdrop-blur-xl pl-12 pr-4 py-4 text-sm font-semibold text-gray-900 shadow-sm focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75] outline-none transition-all"
-              placeholder="Search name, roll, CNIC, course…"
+              placeholder="Search name, roll, ID, CNIC, course…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -223,7 +223,7 @@ export default function SpimsStudentsListPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white border-b border-gray-100">
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Roll No</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Roll No / Student ID</th>
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Student Name</th>
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Course</th>
                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Session</th>
@@ -242,7 +242,7 @@ export default function SpimsStudentsListPage() {
                   <tr key={st.id} className="bg-white hover:bg-gray-50/80 transition-all group">
                     <td className="px-6 py-5">
                       <span className="text-[10px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-3 py-1 rounded-lg">
-                        {st.rollNo}
+                        {st.rollNo || '—'} / {st.studentId || '—'}
                       </span>
                     </td>
                     <td className="px-6 py-5">
@@ -302,7 +302,9 @@ export default function SpimsStudentsListPage() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[9px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-2 py-0.5 rounded-md">{st.rollNo}</span>
+                    <span className="text-[9px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-2 py-0.5 rounded-md">
+                      {st.rollNo || '—'} / {st.studentId || '—'}
+                    </span>
                     <span className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{st.course}</span>
                   </div>
                   <h3 className="text-sm font-black text-gray-900 truncate mb-1 flex items-center gap-2">
