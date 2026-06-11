@@ -107,17 +107,73 @@ export default function SpimsStudentsListPage() {
     // Search Query
     const s = q.trim().toLowerCase();
     if (s) {
-      list = list.filter(
-        (st) =>
-          String(st.name || '').toLowerCase().includes(s) ||
-          String(st.rollNo || '').toLowerCase().includes(s) ||
-          String(st.cnic || '').toLowerCase().includes(s) ||
-          String(st.course || '').toLowerCase().includes(s) ||
-          String(st.session || '').toLowerCase().includes(s) ||
-          String(st.fatherName || '').toLowerCase().includes(s) ||
-          String(st.studentId || '').toLowerCase().includes(s) ||
-          String(st.id || '').toLowerCase().includes(s)
-      );
+      const cleanS = s.replace(/[^0-9]/g, '');
+
+      list = list.filter((st) => {
+        const name = String(st.name || '').toLowerCase();
+        const rollNo = String(st.rollNo || '').toLowerCase();
+        const cnic = String(st.cnic || '').toLowerCase().replace(/[^0-9]/g, '');
+        const course = String(st.course || '').toLowerCase();
+        const session = String(st.session || '').toLowerCase();
+        const fatherName = String(st.fatherName || '').toLowerCase();
+        const studentId = String(st.studentId || '').toLowerCase();
+        const id = String(st.id || '').toLowerCase();
+        const contact = String(st.contact || (st as any).phone || '').toLowerCase().replace(/[^0-9]/g, '');
+
+        const matchesName = name.includes(s);
+        const matchesStudentId = studentId.includes(s);
+        const matchesRoll = rollNo.includes(s);
+        const matchesCourse = course.includes(s);
+        const matchesSession = session.includes(s);
+        const matchesFather = fatherName.includes(s);
+        const matchesId = id.includes(s);
+
+        // CNIC and Contact: match only if exact query or length of digits matched is >= 7
+        const matchesCnic = cnic && (cnic === cleanS || (cleanS.length >= 7 && cnic.includes(cleanS)));
+        const matchesContact = contact && (contact === cleanS || (cleanS.length >= 7 && contact.includes(cleanS)));
+
+        return (
+          matchesName ||
+          matchesStudentId ||
+          matchesRoll ||
+          matchesCourse ||
+          matchesSession ||
+          matchesFather ||
+          matchesId ||
+          matchesCnic ||
+          matchesContact
+        );
+      });
+
+      // Prioritize sorting: Exact/Start matches on Student ID, Name, Roll No
+      list = [...list].sort((a, b) => {
+        const getScore = (st: any) => {
+          const name = String(st.name || '').toLowerCase();
+          const studentId = String(st.studentId || '').toLowerCase();
+          const rollNo = String(st.rollNo || '').toLowerCase();
+
+          let score = 0;
+
+          // Student ID priority
+          if (studentId === s) score += 1000;
+          else if (studentId.startsWith(s)) score += 500;
+          else if (studentId.includes(s)) score += 100;
+
+          // Name priority
+          if (name === s) score += 800;
+          else if (name.startsWith(s)) score += 400;
+          else if (name.includes(s)) score += 80;
+
+          // Roll number priority
+          if (rollNo === s) score += 600;
+          else if (rollNo.startsWith(s)) score += 300;
+          else if (rollNo.includes(s)) score += 60;
+
+          return score;
+        };
+
+        return getScore(b) - getScore(a);
+      });
     }
 
     return list;
