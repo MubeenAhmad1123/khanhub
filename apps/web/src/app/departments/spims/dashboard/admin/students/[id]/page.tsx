@@ -1265,11 +1265,7 @@ const ReportModal = ({ student, allPayments, onClose }: { student: any, allPayme
     remainingAmount: student.remaining || 0,
     transactions: allPayments
       .filter(p => p.status === 'approved')
-      .sort((a, b) => {
-        const dateA = a.date instanceof Object ? a.date.toDate().getTime() : new Date(a.date).getTime();
-        const dateB = b.date instanceof Object ? b.date.toDate().getTime() : new Date(b.date).getTime();
-        return dateB - dateA;
-      })
+      .sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime())
   });
 
   const downloadReport = async () => {
