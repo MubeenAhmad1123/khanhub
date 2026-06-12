@@ -9,14 +9,16 @@ import {
   Timestamp,
   where,
   getCountFromServer,
-  limit
+  limit,
+  doc,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getCached, setCached } from '@/lib/queryCache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ClientDept = 'rehab' | 'spims' | 'job-center';
+export type ClientDept = 'rehab' | 'spims' | 'job-center' | 'hospital';
 
 export interface TodayClient {
   id: string;
@@ -147,6 +149,17 @@ const DEPT_CONFIG: Record<
     phoneField: ['phone', 'contactNumber', 'contact'],
     profileBase: '/departments/job-center/dashboard/seeker',
   },
+  hospital: {
+    label: 'Khan Hospital',
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-500/5',
+    borderColor: 'border-rose-500/20',
+    dotColor: 'bg-rose-500',
+    collections: [],
+    metaField: '',
+    phoneField: [],
+    profileBase: '/departments/hospital/dashboard/admin'
+  }
 };
 
 const COUNT_CACHE_TTL = 300; // 5 minutes for counts
@@ -164,6 +177,27 @@ export async function fetchTodayClientCounts(): Promise<TodayClientsResult> {
   const counts = await Promise.all(
     depts.map(async (dept) => {
       const cfg = DEPT_CONFIG[dept];
+      if (dept === 'hospital') {
+        const todayStr = pktDayKey(new Date());
+        let count = 0;
+        try {
+          const snap = await getDoc(doc(db, 'hospital_daily_stats', todayStr));
+          if (snap.exists()) {
+            const d = snap.data();
+            count = (Number(d.checkupCount) || 0) + (Number(d.usgCount) || 0) + (Number(d.operationsCount) || 0);
+          }
+        } catch {}
+        return {
+          dept,
+          label: cfg.label,
+          count,
+          color: cfg.color,
+          bgColor: cfg.bgColor,
+          borderColor: cfg.borderColor,
+          dotColor: cfg.dotColor,
+        } satisfies DeptClientCount;
+      }
+
       let count = 0;
       // Use getDocs instead of getCountFromServer to save aggregation quota on Spark plan
       for (const col of cfg.collections) {
@@ -201,6 +235,28 @@ export async function fetchTodayClientsByDept(
   const cacheKey = `hq_today_clients_${dept}`;
   const cached = getCached<TodayClient[]>(cacheKey);
   if (cached) return cached;
+
+  if (dept === 'hospital') {
+    const todayStr = pktDayKey(new Date());
+    const results: TodayClient[] = [];
+    try {
+      const snap = await getDoc(doc(db, 'hospital_daily_stats', todayStr));
+      if (snap.exists()) {
+        const d = snap.data();
+        if (Number(d.checkupCount) > 0) {
+          results.push({ id: 'checkup', name: 'Check-up Patients', meta: `${d.checkupCount} Patients`, dept: 'hospital', registeredAt: new Date(), profilePath: '/departments/hospital/dashboard/admin' });
+        }
+        if (Number(d.usgCount) > 0) {
+          results.push({ id: 'usg', name: 'USG Patients', meta: `${d.usgCount} Patients`, dept: 'hospital', registeredAt: new Date(), profilePath: '/departments/hospital/dashboard/admin' });
+        }
+        if (Number(d.operationsCount) > 0) {
+          results.push({ id: 'operation', name: 'Operated Patients', meta: `${d.operationsCount} Patients`, dept: 'hospital', registeredAt: new Date(), profilePath: '/departments/hospital/dashboard/admin' });
+        }
+      }
+    } catch {}
+    setCached(cacheKey, results, LIST_CACHE_TTL);
+    return results;
+  }
 
   const cfg = DEPT_CONFIG[dept];
   const from = Timestamp.fromDate(pktStartOfToday());

@@ -136,7 +136,7 @@ export default function CashierStationPage() {
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>('');
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [searchType, setSearchType] = useState<'patient' | 'student' | 'other'>('patient');
+  const [searchType, setSearchType] = useState<'patient' | 'student' | 'other' | 'staff' | 'job seeker' | 'company'>('patient');
 
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
@@ -189,6 +189,15 @@ export default function CashierStationPage() {
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
 
 
+  const [detailModalTx, setDetailModalTx] = useState<any | null>(null);
+  const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
+  const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
+  const [forwardProofReason, setForwardProofReason] = useState('');
+  const [forwardProofUploading, setForwardProofUploading] = useState(false);
+  const [rejectModalTx, setRejectModalTx] = useState<any | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
+  const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
 
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1003,20 +1012,6 @@ export default function CashierStationPage() {
       setCategorySearch('');
       setSearchQuery('');
       setEntityResults([]);
-      
-      setHospPatientName('');
-      setHospGuardian('');
-      setHospAge('');
-      setHospContact('');
-      setHospAddress('');
-      setHospReferredBy('');
-      setHospTestName('');
-      setHospTestReport('');
-      setHospTestExpense('');
-      setHospOpType('');
-      setHospAdmitDate('');
-      setHospDischargeDate('');
-      setHospVisitPurpose('');
 
       setProofUploading(false);
       await fetchHistory();

@@ -11,6 +11,7 @@ import {
 import {
   TrendingUp, TrendingDown, Users, Activity, Loader2,
   Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight, X, Calendar, BarChart3, Wallet, CheckCircle2
+} from 'lucide-react';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
