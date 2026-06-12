@@ -97,7 +97,7 @@ export default function ChildrenListPage() {
           durationMonths: data.durationMonths || 1,
           admissionNumber: data.admissionNumber || '',
           serialNumber: data.serialNumber || 0,
-          substanceOfAddiction: data.substanceOfAddiction || '',
+          category: data.category || data.substanceOfAddiction || '',
           isActive: data.isActive !== false,
           contactNumber: data.contactNumber || '',
           remaining,
@@ -146,18 +146,18 @@ export default function ChildrenListPage() {
 
   const filteredChildren = children.filter(p => {
     if (statusFilter === 'active' && !p.isActive) return false;
-    if (statusFilter === 'discharged' && p.isActive) return false;
+    if (statusFilter === 'departed' && p.isActive) return false;
     const s = searchQuery.toLowerCase();
     return (
       p.name.toLowerCase().includes(s) ||
       p.admissionNumber.toLowerCase().includes(s) ||
-      p.substanceOfAddiction.toLowerCase().includes(s) ||
+      p.category.toLowerCase().includes(s) ||
       p.fatherName.toLowerCase().includes(s)
     );
   });
 
   const totalActive = children.filter(p => p.isActive).length;
-  const totalDischarged = children.filter(p => !p.isActive).length;
+  const totalDeparted = children.filter(p => !p.isActive).length;
   const totalOutstanding = children.filter(p => p.isActive && p.remaining > 0).reduce((s, p) => s + p.remaining, 0);
 
   return (
@@ -191,7 +191,7 @@ export default function ChildrenListPage() {
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 flex-shrink-0"><Calendar className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Discharged</p><p className="text-xl font-black text-gray-900">{totalDischarged}</p></div>
+              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Departed</p><p className="text-xl font-black text-gray-900">{totalDeparted}</p></div>
             </div>
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -260,7 +260,7 @@ export default function ChildrenListPage() {
             )}
           </div>
           <div className="flex gap-2 overflow-x-auto scrollbar-none">
-            {['all', 'active', 'discharged'].map(f => (
+            {['all', 'active', 'departed'].map(f => (
               <button
                 key={f}
                 onClick={() => setStatusFilter(f)}
@@ -308,9 +308,9 @@ export default function ChildrenListPage() {
                     <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-black text-gray-900 truncate leading-tight">{child.name}</h3>
                         <p className="text-[10px] font-mono text-teal-600 font-bold">{child.admissionNumber || `#${child.serialNumber}`}</p>
-                        {child.substanceOfAddiction && (
+                        {child.category && (
                           <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-[9px] font-black uppercase tracking-wider">
-                            {child.substanceOfAddiction}
+                            {child.category}
                           </span>
                         )}
                     </div>

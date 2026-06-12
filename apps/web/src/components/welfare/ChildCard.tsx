@@ -18,7 +18,7 @@ export default function ChildCard({ child }: { child: Child }) {
       </div>
       <div className="flex-1">
         <h3 className="text-xl font-bold text-gray-900">{child.name}</h3>
-        <p className="text-gray-500 text-sm mb-2">{(child as any).diagnosis || 'Diagnosis not specified'}</p>
+        <p className="text-gray-500 text-sm mb-2">{(child as any).background || (child as any).diagnosis || 'Background not specified'}</p>
         <div className="flex gap-4 text-xs font-medium uppercase tracking-wider">
           <div className="flex flex-col">
             <span className="text-gray-400">Admitted</span>

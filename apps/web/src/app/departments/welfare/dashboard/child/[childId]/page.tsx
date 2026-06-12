@@ -160,7 +160,7 @@ export default function FamilyChildViewPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${child.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {child.isActive ? 'Active' : 'Discharged'}
+                {child.isActive ? 'Active' : 'Departed'}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest">
                 <Calendar size={10} /> {formatDateDMY(child.admissionDate)}
@@ -168,9 +168,9 @@ export default function FamilyChildViewPage() {
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
                 <Clock size={10} /> {(child.remainingDays || 0) > 0 ? child.remainingDays : (child.daysAdmitted || 0)} {(child.remainingDays || 0) > 0 ? 'days remaining' : 'days admitted'}
               </span>
-              {child.substanceOfAddiction && (
-                <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                  {child.substanceOfAddiction}
+              {child.category && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
+                  {child.category}
                 </span>
               )}
             </div>

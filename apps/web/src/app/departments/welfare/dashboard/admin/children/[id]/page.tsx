@@ -60,7 +60,7 @@ export default function ChildDetailPage() {
   const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '', diagnosis: '', packageAmount: 0, photoUrl: ''
+    name: '', background: '', packageAmount: 0, photoUrl: ''
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -150,7 +150,7 @@ export default function ChildDetailPage() {
       setChild({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
       setEditForm({
         name: data.name || '',
-        diagnosis: data.diagnosis || '',
+        background: data.background || data.diagnosis || '',
         packageAmount: data.packageAmount || 0,
         photoUrl: data.photoUrl || ''
       });
@@ -460,7 +460,7 @@ export default function ChildDetailPage() {
 
       await updateDoc(doc(db, 'welfare_children', childId), {
         name: editForm.name,
-        diagnosis: editForm.diagnosis,
+        background: editForm.background,
         packageAmount: Number(editForm.packageAmount),
         photoUrl: photoUrl || null
       });
@@ -468,7 +468,7 @@ export default function ChildDetailPage() {
       setChild((prev: any) => ({ 
         ...prev, 
         name: editForm.name,
-        diagnosis: editForm.diagnosis,
+        background: editForm.background,
         packageAmount: Number(editForm.packageAmount),
         photoUrl: photoUrl 
       }));
@@ -498,20 +498,20 @@ export default function ChildDetailPage() {
     }
   };
 
-  const handleDischarge = async () => {
-    if (!window.confirm("Are you sure you want to discharge this child?")) return;
+  const handleDeparture = async () => {
+    if (!window.confirm("Are you sure you want to mark this child as departed/completed?")) return;
     try {
       setDeactivating(true);
       await updateDoc(doc(db, 'welfare_children', childId), {
         isActive: false,
-        dischargeDate: Timestamp.now(),
-        dischargeReason: null
+        departureDate: Timestamp.now(),
+        departureReason: null
       });
-      toast.success('Child discharged');
+      toast.success('Child departed successfully');
       router.push('/departments/welfare/dashboard/admin/children');
     } catch (error) {
-      console.error("Discharge error", error);
-      toast.error('Discharge failed');
+      console.error("Departure error", error);
+      toast.error('Failed to mark as departed');
       setDeactivating(false);
     }
   };
@@ -718,10 +718,10 @@ export default function ChildDetailPage() {
                 ⏳ {child.remainingDays} Days Left
               </span>
             </div>
-            {child.diagnosis && (
+            {(child.background || child.diagnosis) && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
-                <span className="font-bold text-gray-800">Diagnosis/Notes:</span><br/>
-                {child.diagnosis}
+                <span className="font-bold text-gray-800">Background / Notes:</span><br/>
+                {child.background || child.diagnosis}
               </p>
             )}
           </div>
@@ -915,19 +915,19 @@ export default function ChildDetailPage() {
                     </div>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis / Notes</label>
-                    <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Background / Notes</label>
+                    <textarea value={editForm.background} onChange={e => setEditForm({...editForm, background: e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
                   <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
-                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
+                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Program Countdown</p>
                     <p className="text-4xl font-black text-orange-700">
                       {(child.remainingDays || 0) > 0 ? child.remainingDays : (child.daysAdmitted || 0)}
                     </p>
                     <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(child.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in welfare program'}
+                      {(child.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days enrolled in welfare program'}
                     </p>
                     <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
                       <div 
@@ -938,11 +938,11 @@ export default function ChildDetailPage() {
                     {child.isActive && (
                       <button
                         type="button"
-                        onClick={handleDischarge}
+                        onClick={handleDeparture}
                         disabled={deactivating}
                         className="mt-4 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-60"
                       >
-                        {deactivating ? 'Discharging...' : 'Discharge Child'}
+                        {deactivating ? 'Processing...' : 'Complete Program'}
                       </button>
                     )}
                   </div>
