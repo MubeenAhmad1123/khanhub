@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, Palette, BookOpen, Utensils
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -23,8 +23,9 @@ import dynamic from 'next/dynamic';
 
 const DailySheetTab = dynamic(() => import('@/components/welfare/child-profile/DailySheetTab'), { ssr: false }) as any;
 const ProgressTab = dynamic(() => import('@/components/welfare/child-profile/ProgressTab'), { ssr: false }) as any;
-const TherapyTab = dynamic(() => import('@/components/welfare/child-profile/TherapyTab'), { ssr: false }) as any;
-const MedicationTab = dynamic(() => import('@/components/welfare/child-profile/MedicationTab'), { ssr: false }) as any;
+const ActivitiesTab = dynamic(() => import('@/components/welfare/child-profile/ActivitiesTab'), { ssr: false }) as any;
+const EducationTab = dynamic(() => import('@/components/welfare/child-profile/EducationTab'), { ssr: false }) as any;
+const FoodTab = dynamic(() => import('@/components/welfare/child-profile/FoodTab'), { ssr: false }) as any;
 const AdmissionTab = dynamic(() => import('@/components/welfare/child-profile/AdmissionTab'), { ssr: false }) as any;
 
 export default function ChildDetailPage() {
@@ -43,7 +44,7 @@ export default function ChildDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'progress' | 'therapy' | 'meds' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'progress' | 'activities' | 'education' | 'food' | 'canteen' | 'videos' | 'visits'>('profile');
   const [visits, setVisits] = useState<any[]>([]);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [isSavingVisit, setIsSavingVisit] = useState(false);
@@ -711,7 +712,7 @@ export default function ChildDetailPage() {
                 Admitted: {formatDateDMY(child.admissionDate)}
               </span>
               <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
-                PKR {child.packageAmount?.toLocaleString()} / m
+                <Heart className="w-4 h-4" /> Needs Sponsorship
               </span>
               <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
                 ⏳ {child.remainingDays} Days Left
@@ -762,28 +763,28 @@ export default function ChildDetailPage() {
             <TrendingUp className="w-4 h-4" /> Progress
           </button>
           <button
-            onClick={() => setActiveTab('therapy')}
+            onClick={() => setActiveTab('activities')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'therapy' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'activities' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Brain className="w-4 h-4" /> Therapy
+            <Palette className="w-4 h-4" /> Activities
           </button>
           <button
-            onClick={() => setActiveTab('meds')}
+            onClick={() => setActiveTab('education')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'meds' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'education' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Pill className="w-4 h-4" /> Medication
+            <BookOpen className="w-4 h-4" /> Education
           </button>
           <button
-            onClick={() => setActiveTab('fees')}
+            onClick={() => setActiveTab('food')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'fees' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'food' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <DollarSign className="w-4 h-4" /> Fees
+            <Utensils className="w-4 h-4" /> Food
           </button>
           <button
             onClick={() => setActiveTab('canteen')}
@@ -946,9 +947,9 @@ export default function ChildDetailPage() {
                     )}
                   </div>
                   <div className="w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Sponsorship Status</span>
                     <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
-                      PKR {child.packageAmount?.toLocaleString()}
+                      Awaiting Donor
                     </span>
                   </div>
                   <div className="w-full">
@@ -995,146 +996,19 @@ export default function ChildDetailPage() {
             <ProgressTab childId={childId} session={session} />
           )}
 
-          {/* TAB: THERAPY */}
-          {activeTab === 'therapy' && (
-            <TherapyTab childId={childId} session={session} />
+          {/* TAB: ACTIVITIES */}
+          {activeTab === 'activities' && (
+            <ActivitiesTab childId={childId} session={session} />
           )}
 
-          {/* TAB: MEDICATION */}
-          {activeTab === 'meds' && (
-            <MedicationTab childId={childId} session={session} />
+          {/* TAB: EDUCATION */}
+          {activeTab === 'education' && (
+            <EducationTab childId={childId} session={session} />
           )}
 
-          {/* TAB: FEES */}
-          {activeTab === 'fees' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => changeMonth(-1)} 
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronLeft size={20} className="text-gray-400" />
-                  </button>
-                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
-                    {formatDateDMY(new Date(feeMonth + '-01'))}
-                  </span>
-                  <button onClick={() => changeMonth(1)}
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronRight size={20} className="text-gray-400" />
-                  </button>
-                </div>
-                {feeRecord && !isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPayAmt('');
-                      setPayDate(new Date().toISOString().split('T')[0]);
-                      setPayNote('');
-                      setShowAddPaymentModal(true);
-                    }}
-                    className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-teal-600 shadow-sm transition-all active:scale-95"
-                  >
-                    <Plus size={14} /> Add Payment
-                  </button>
-                )}
-              </div>
-              
-              {!feeRecord ? (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <DollarSign className="w-8 h-8 text-gray-300" />
-                  </div>
-                  <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    You can initialize a fee record manually with the child's base package amount.
-                  </p>
-                  {!isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPackageAmt(child.packageAmount?.toString() || '');
-                      setInitialPayment('');
-                      setPaymentNote('');
-                      setShowAddFeeModal(true);
-                    }}
-                    className="inline-flex items-center gap-2 bg-teal-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-teal-600 transition shadow-lg shadow-teal-100"
-                  >
-                    <Plus size={16} /> Initialize Fee Record
-                  </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-8 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div className="bg-white border border-gray-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Monthly Package</div>
-                      <div className="text-2xl font-black text-gray-900">PKR {feeRecord.packageAmount.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-green-50 border border-green-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">Total Paid</div>
-                      <div className="text-2xl font-black text-green-700">PKR {feeRecord.amountPaid.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-red-500 font-black uppercase tracking-widest mb-1">Remaining</div>
-                      <div className="text-2xl font-black text-red-700">PKR {feeRecord.amountRemaining.toLocaleString()}</div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-teal-500 h-full transition-all duration-700 ease-out"
-                      style={{ width: `${Math.min(100, Math.max(0, (feeRecord.amountPaid / feeRecord.packageAmount) * 100))}%` }}
-                    />
-                  </div>
-
-                  {feeRecord.amountRemaining <= 0 && (
-                     <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100 font-bold text-sm flex items-center gap-2">
-                       <Shield className="w-5 h-5" /> PAID IN FULL
-                     </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                      <h3 className="text-lg font-black text-gray-900">Payment History</h3>
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{feeRecord.payments?.length || 0} Entries</span>
-                    </div>
-                    
-                    {!feeRecord.payments || feeRecord.payments.length === 0 ? (
-                      <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                        <p className="text-gray-400 text-sm font-medium">No payments recorded for this month.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3">
-                        {feeRecord.payments
-                          ?.sort((a: any, b: any) => {
-                            const aT = toDate(a.date).getTime();
-                            const bT = toDate(b.date).getTime();
-                            return bT - aT;
-                          })
-                          .map((p: any) => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-teal-100 transition-colors">
-                            <div className="flex-1">
-                              <p className="font-black text-gray-900">
-                                PKR {Number(p.amount).toLocaleString('en-PK')}
-                              </p>
-                              {p.note && (
-                                <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
-                              )}
-                              <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Verified by {p.cashierId}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-700 font-bold">
-                                {formatDateDMY(p.date)}
-                              </p>
-                              <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
-                                APPROVED
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* TAB: FOOD */}
+          {activeTab === 'food' && (
+            <FoodTab childId={childId} session={session} />
           )}
 
           {/* TAB: CANTEEN */}
