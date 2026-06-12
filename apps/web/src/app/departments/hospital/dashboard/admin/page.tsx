@@ -10,8 +10,7 @@ import {
 } from 'firebase/firestore';
 import {
   TrendingUp, TrendingDown, Users, Activity, Loader2,
-  Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight, X, Calendar, BarChart3
-} from 'lucide-react';
+  Plus, FileText, UserCircle, LayoutDashboard, Receipt, ArrowUpRight, ArrowDownRight, X, Calendar, BarChart3, Wallet, CheckCircle2
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
@@ -59,9 +58,22 @@ export default function AdminDashboardPage() {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [submittingStats, setSubmittingStats] = useState(false);
   const [statsForm, setStatsForm] = useState({
-    patientsCount: '',
+    checkupCount: '',
+    usgCount: '',
     labTestsCount: '',
     operationsCount: ''
+  });
+
+  // Left Patients State
+  const [leftPatients, setLeftPatients] = useState<any[]>([]);
+  const [showLeftPatientModal, setShowLeftPatientModal] = useState(false);
+  const [addingLeftPatient, setAddingLeftPatient] = useState(false);
+  const [leftPatientForm, setLeftPatientForm] = useState({
+    fullName: '',
+    address: '',
+    phone: '',
+    remaining: '',
+    disease: ''
   });
 
   useEffect(() => {
@@ -155,18 +167,31 @@ export default function AdminDashboardPage() {
         const ds = dailyDocSnap.data();
         setDailyStats(ds);
         setStatsForm({
-          patientsCount: String(ds.patientsCount || 0),
+          checkupCount: String(ds.checkupCount || 0),
+          usgCount: String(ds.usgCount || 0),
           labTestsCount: String(ds.labTestsCount || 0),
           operationsCount: String(ds.operationsCount || 0)
         });
       } else {
         setDailyStats(null);
         setStatsForm({
-          patientsCount: String(opdCount),
+          checkupCount: String(opdCount),
+          usgCount: '0',
           labTestsCount: String(labCount),
           operationsCount: String(opCount)
         });
       }
+
+      // Fetch Left Patients (Outstanding Amounts)
+      const leftQuery = query(
+        collection(db, 'hospital_patients'),
+        where('remaining', '>', 0)
+      );
+      const leftSnap = await getDocs(leftQuery);
+      const leftList = leftSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a: any, b: any) => Number(b.remaining) - Number(a.remaining));
+      setLeftPatients(leftList);
 
       // Recent Transactions (Last 10)
       const recentQuery = query(
@@ -231,10 +256,16 @@ export default function AdminDashboardPage() {
       const todayStr = new Date().toISOString().split('T')[0];
       const dailyDocRef = doc(db, 'hospital_daily_stats', todayStr);
       
+      const checkupCount = Number(statsForm.checkupCount) || 0;
+      const usgCount = Number(statsForm.usgCount) || 0;
+      const operationsCount = Number(statsForm.operationsCount) || 0;
+      
       const dataToSave = {
-        patientsCount: Number(statsForm.patientsCount) || 0,
+        checkupCount,
+        usgCount,
+        patientsCount: checkupCount + usgCount + operationsCount,
         labTestsCount: Number(statsForm.labTestsCount) || 0,
-        operationsCount: Number(statsForm.operationsCount) || 0,
+        operationsCount,
         reportedBy: session.uid,
         reportedByName: session.displayName || session.name || 'Hospital Admin',
         reportedAt: Timestamp.now()
@@ -249,6 +280,67 @@ export default function AdminDashboardPage() {
       toast.error('Failed to save day-close stats');
     } finally {
       setSubmittingStats(false);
+    }
+  };
+
+  const handleAddLeftPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setAddingLeftPatient(true);
+      const remainingAmount = Number(leftPatientForm.remaining);
+      const newPatientRef = doc(collection(db, 'hospital_patients'));
+      await setDoc(newPatientRef, {
+        fullName: leftPatientForm.fullName,
+        address: leftPatientForm.address,
+        phone: leftPatientForm.phone,
+        disease: leftPatientForm.disease,
+        remaining: remainingAmount,
+        totalPackageAmount: remainingAmount,
+        totalReceived: 0,
+        createdAt: Timestamp.now(),
+        createdBy: session.uid,
+        isActive: true
+      });
+      toast.success('Left patient added successfully');
+      setShowLeftPatientModal(false);
+      setLeftPatientForm({ fullName: '', address: '', phone: '', remaining: '', disease: '' });
+      loadDashboard();
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to add left patient');
+    } finally {
+      setAddingLeftPatient(false);
+    }
+  };
+
+  const handleMarkAsPaid = async (patient: any) => {
+    const amountStr = window.prompt(`Enter amount paid by ${patient.fullName || patient.name || 'patient'} (Remaining: ₨ ${patient.remaining}):`, String(patient.remaining));
+    if (!amountStr) return;
+    const amount = Number(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Invalid amount entered');
+      return;
+    }
+    try {
+      const txRef = doc(collection(db, 'hospital_transactions'));
+      await setDoc(txRef, {
+        departmentCode: 'hospital',
+        type: 'income',
+        amount: amount,
+        category: 'other_income',
+        patientId: patient.id,
+        patientName: patient.fullName || patient.name || 'Unknown Patient',
+        description: `Payment for outstanding amount`,
+        date: Timestamp.now(),
+        createdAt: Timestamp.now(),
+        createdBy: session.uid,
+        createdByName: session.displayName || session.name,
+        status: 'pending_cashier'
+      });
+      toast.success('Payment submitted for cashier approval');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to submit payment');
     }
   };
 
@@ -335,18 +427,22 @@ export default function AdminDashboardPage() {
         </div>
 
         {dailyStats && (
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-700/50">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-700/50">
             <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified OPD</p>
-              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.patientsCount}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Check-ups</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.checkupCount || 0}</p>
             </div>
             <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Labs</p>
-              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.labTestsCount}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">USG</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.usgCount || 0}</p>
             </div>
             <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Operations</p>
-              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.operationsCount}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Operations</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.operationsCount || 0}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Labs</p>
+              <p className="text-lg md:text-xl font-black text-white mt-1">{dailyStats.labTestsCount || 0}</p>
             </div>
           </div>
         )}
@@ -578,6 +674,76 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Row 4: Left Patients (Outstanding Amounts) */}
+      <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden mt-6">
+        <div className="p-6 md:p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
+          <div>
+            <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
+              <Wallet className="w-5 h-5 text-rose-500" /> Left Patients / Outstanding Amounts
+            </h2>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Patients with remaining balances</p>
+          </div>
+          <button 
+            onClick={() => setShowLeftPatientModal(true)}
+            className="flex items-center gap-2 text-[10px] font-black text-white bg-rose-600 px-4 py-2 rounded-full uppercase tracking-widest hover:bg-rose-700 transition-colors shadow-md shadow-rose-200"
+          >
+            <Plus size={14} /> Add Left Patient
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 dark:bg-white/5">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Patient Details</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Contact Info</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-right">Outstanding</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+              {leftPatients.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400 text-sm font-medium">
+                    No patients with outstanding balances found.
+                  </td>
+                </tr>
+              ) : (
+                leftPatients.map((patient) => (
+                  <tr key={patient.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[200px]">
+                        {patient.fullName || patient.name || 'Unknown Patient'}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                        {patient.disease || 'No disease specified'}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-bold text-slate-700 dark:text-gray-300">{patient.phone || '—'}</p>
+                      <p className="text-[10px] font-bold text-gray-400 truncate max-w-[200px] mt-0.5">{patient.address || '—'}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="text-sm font-black text-rose-600 dark:text-rose-400">
+                        ₨ {Number(patient.remaining).toLocaleString()}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleMarkAsPaid(patient)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors border border-emerald-200"
+                      >
+                        <CheckCircle2 size={14} /> Mark as Paid
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Stats Input Modal */}
       {showStatsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -596,17 +762,31 @@ export default function AdminDashboardPage() {
             </div>
 
             <form onSubmit={handleSaveStats} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">OPD Patients Today *</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={statsForm.patientsCount}
-                  onChange={e => setStatsForm({ ...statsForm, patientsCount: e.target.value })}
-                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
-                  placeholder="e.g. 25"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Check-up Patients *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={statsForm.checkupCount}
+                    onChange={e => setStatsForm({ ...statsForm, checkupCount: e.target.value })}
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
+                    placeholder="e.g. 15"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">USG Patients *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={statsForm.usgCount}
+                    onChange={e => setStatsForm({ ...statsForm, usgCount: e.target.value })}
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
+                    placeholder="e.g. 10"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -650,6 +830,104 @@ export default function AdminDashboardPage() {
                 >
                   {submittingStats && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Save Stats
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Left Patient Modal */}
+      {showLeftPatientModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-rose-600 to-rose-700 text-white">
+              <h2 className="text-lg font-black flex items-center gap-2.5">
+                <Wallet className="w-5 h-5 text-white/80" />
+                Add Left Patient
+              </h2>
+              <button 
+                onClick={() => setShowLeftPatientModal(false)}
+                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddLeftPatient} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Full Name *</label>
+                <input
+                  type="text"
+                  value={leftPatientForm.fullName}
+                  onChange={e => setLeftPatientForm({ ...leftPatientForm, fullName: e.target.value })}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
+                  placeholder="Patient Name"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Phone</label>
+                  <input
+                    type="text"
+                    value={leftPatientForm.phone}
+                    onChange={e => setLeftPatientForm({ ...leftPatientForm, phone: e.target.value })}
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
+                    placeholder="Phone Number"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Remaining Amount *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={leftPatientForm.remaining}
+                    onChange={e => setLeftPatientForm({ ...leftPatientForm, remaining: e.target.value })}
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
+                    placeholder="₨ 0"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Disease</label>
+                <input
+                  type="text"
+                  value={leftPatientForm.disease}
+                  onChange={e => setLeftPatientForm({ ...leftPatientForm, disease: e.target.value })}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
+                  placeholder="Condition / Disease"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Address</label>
+                <textarea
+                  value={leftPatientForm.address}
+                  onChange={e => setLeftPatientForm({ ...leftPatientForm, address: e.target.value })}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all resize-none h-24"
+                  placeholder="Patient Address"
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLeftPatientModal(false)}
+                  className="px-5 py-3 text-xs font-black uppercase tracking-wider text-gray-500 hover:bg-gray-100 rounded-2xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingLeftPatient}
+                  className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-rose-200 transition-all"
+                >
+                  {addingLeftPatient && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Add Patient
                 </button>
               </div>
             </form>

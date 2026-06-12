@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 
 type Level = 'breakdown' | 'personList';
+type DeptType = 'rehab' | 'spims' | 'hospital';
 
 interface Props {
   open: boolean;
@@ -48,7 +49,7 @@ const fmtPKR = (v: number) => {
 export function RemainingFlowModal({ open, onClose }: Props) {
   const router = useRouter();
   const [level, setLevel] = useState<Level>('breakdown');
-  const [activeDept, setActiveDept] = useState<'rehab' | 'spims' | null>(null);
+  const [activeDept, setActiveDept] = useState<DeptType | null>(null);
   const [data, setData] = useState<RemainingDataResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
@@ -74,19 +75,21 @@ export function RemainingFlowModal({ open, onClose }: Props) {
     setSearchQuery('');
   }, []);
 
-  const drillIntoDept = useCallback((dept: 'rehab' | 'spims') => {
+  const drillIntoDept = useCallback((dept: DeptType) => {
     setDirection('forward');
     setActiveDept(dept);
     setLevel('personList');
   }, []);
 
   const openProfile = useCallback(
-    (item: RemainingItem, dept: 'rehab' | 'spims') => {
+    (item: RemainingItem, dept: DeptType) => {
       onClose();
       if (dept === 'rehab') {
         router.push(`/hq/dashboard/superadmin/rehab/patients/${item.id}`);
-      } else {
+      } else if (dept === 'spims') {
         router.push(`/hq/dashboard/superadmin/spims/students/${item.id}`);
+      } else {
+        router.push(`/departments/hospital/dashboard/admin`);
       }
     },
     [onClose, router]
@@ -95,7 +98,7 @@ export function RemainingFlowModal({ open, onClose }: Props) {
   // Filter list based on search
   const filteredList = useMemo(() => {
     if (!data || !activeDept) return [];
-    const rawList = activeDept === 'rehab' ? data.rehabList : data.spimsList;
+    const rawList = activeDept === 'rehab' ? data.rehabList : activeDept === 'spims' ? data.spimsList : data.hospitalList;
     if (!searchQuery.trim()) return rawList;
 
     const q = searchQuery.toLowerCase();
@@ -145,7 +148,7 @@ export function RemainingFlowModal({ open, onClose }: Props) {
             <div>
               <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">
                 <Wallet className="w-3 h-3 text-indigo-600 animate-pulse" />
-                {level === 'breakdown' ? 'Institution Debt Matrix' : activeDept === 'rehab' ? 'Rehab Center Debtors' : 'SPIMS Academy Debtors'}
+                {level === 'breakdown' ? 'Institution Debt Matrix' : activeDept === 'rehab' ? 'Rehab Center Debtors' : activeDept === 'spims' ? 'SPIMS Academy Debtors' : 'Khan Hospital Debtors'}
               </div>
               <p className="text-lg font-black text-gray-900 leading-tight">
                 {level === 'breakdown' ? (
@@ -238,6 +241,29 @@ export function RemainingFlowModal({ open, onClose }: Props) {
                   </div>
                   <ChevronRight className="w-5 h-5 text-purple-600 transition-transform group-hover:translate-x-1" />
                 </motion.button>
+
+                {/* Hospital Dept Card */}
+                <motion.button
+                  whileHover={{ x: 4 }}
+                  onClick={() => drillIntoDept('hospital')}
+                  className="w-full flex items-center justify-between p-5 rounded-3xl border border-blue-100 bg-blue-50/50 hover:bg-blue-50 transition-all group active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="w-3.5 h-3.5 rounded-full bg-blue-500 flex-shrink-0 animate-pulse" />
+                    <div className="text-left">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-0.5">
+                        Khan Hospital
+                      </p>
+                      <p className="text-2xl font-black text-blue-800 tabular-nums">
+                        {fmtPKR(data?.hospitalTotal ?? 0)}
+                      </p>
+                      <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">
+                        {data?.hospitalList.length ?? 0} outstanding accounts
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-blue-600 transition-transform group-hover:translate-x-1" />
+                </motion.button>
               </motion.div>
             ) : (
               <motion.div
@@ -296,11 +322,11 @@ export function RemainingFlowModal({ open, onClose }: Props) {
                               </p>
                               <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                                 <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
-                                  {activeDept === 'rehab' ? 'Rehab Inpatient' : 'SPIMS Student'}
+                                  {activeDept === 'rehab' ? 'Rehab Inpatient' : activeDept === 'spims' ? 'SPIMS Student' : 'Hospital Patient'}
                                 </span>
                                 <span className="text-[9px] font-bold text-gray-300">•</span>
                                 <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest">
-                                  ID: {item.patientId || item.rollNo}
+                                  ID: {item.patientId || item.rollNo || item.id}
                                 </span>
                               </div>
                             </div>
@@ -346,8 +372,8 @@ export function RemainingFlowModal({ open, onClose }: Props) {
             {level === 'personList' && activeDept && (
               <>
                 <ChevronRight className="w-3 h-3 text-gray-300" />
-                <span className={cn('font-extrabold', activeDept === 'rehab' ? 'text-teal-600' : 'text-purple-600')}>
-                  {activeDept === 'rehab' ? 'Rehab Center' : 'SPIMS Academy'}
+                <span className={cn('font-extrabold', activeDept === 'rehab' ? 'text-teal-600' : activeDept === 'spims' ? 'text-purple-600' : 'text-blue-600')}>
+                  {activeDept === 'rehab' ? 'Rehab Center' : activeDept === 'spims' ? 'SPIMS Academy' : 'Khan Hospital'}
                 </span>
               </>
             )}

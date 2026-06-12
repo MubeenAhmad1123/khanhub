@@ -10,21 +10,26 @@ export interface RemainingItem {
   remaining: number;
   course?: string;
   packageAmount?: number;
+  disease?: string;
+  phone?: string;
 }
 
 export interface RemainingDataResult {
   rehabTotal: number;
   spimsTotal: number;
+  hospitalTotal: number;
   total: number;
   rehabList: RemainingItem[];
   spimsList: RemainingItem[];
+  hospitalList: RemainingItem[];
 }
 
 export async function fetchRemainingBalances(): Promise<RemainingDataResult> {
   try {
-    const [rehabSnap, spimsSnap] = await Promise.all([
+    const [rehabSnap, spimsSnap, hospitalSnap] = await Promise.all([
       getDocs(collection(db, 'rehab_patients')),
       getDocs(collection(db, 'spims_students')),
+      getDocs(collection(db, 'hospital_patients')),
     ]);
 
     // 1. Process Rehab Patients
@@ -49,7 +54,6 @@ export async function fetchRemainingBalances(): Promise<RemainingDataResult> {
       }
     });
 
-    // Sort Rehab patients by remaining balance descending
     rehabList.sort((a, b) => b.remaining - a.remaining);
 
     // 2. Process SPIMS Students
@@ -58,7 +62,6 @@ export async function fetchRemainingBalances(): Promise<RemainingDataResult> {
 
     spimsSnap.docs.forEach((d) => {
       const data = d.data();
-      // Skip inactive/pass/left statuses
       const status = (data.status || '').toLowerCase();
       if (status === 'left' || status === 'pass' || status === 'fail' || status === 'terminated') return;
 
@@ -76,24 +79,49 @@ export async function fetchRemainingBalances(): Promise<RemainingDataResult> {
       }
     });
 
-    // Sort SPIMS students by remaining balance descending
     spimsList.sort((a, b) => b.remaining - a.remaining);
+
+    // 3. Process Hospital Left Patients
+    const hospitalList: RemainingItem[] = [];
+    let hospitalTotal = 0;
+
+    hospitalSnap.docs.forEach((d) => {
+      const data = d.data();
+      const rem = Number(data.remaining ?? data.remainingAmount ?? 0);
+      if (rem > 0) {
+        hospitalList.push({
+          id: d.id,
+          name: data.name || data.fullName || 'Anonymous Patient',
+          patientId: d.id,
+          remaining: rem,
+          disease: data.disease,
+          phone: data.phone,
+        });
+        hospitalTotal += rem;
+      }
+    });
+
+    hospitalList.sort((a, b) => b.remaining - a.remaining);
 
     return {
       rehabTotal,
       spimsTotal,
-      total: rehabTotal + spimsTotal,
+      hospitalTotal,
+      total: rehabTotal + spimsTotal + hospitalTotal,
       rehabList,
       spimsList,
+      hospitalList,
     };
   } catch (error) {
     console.error('Error fetching remaining balances:', error);
     return {
       rehabTotal: 0,
       spimsTotal: 0,
+      hospitalTotal: 0,
       total: 0,
       rehabList: [],
       spimsList: [],
+      hospitalList: [],
     };
   }
 }
