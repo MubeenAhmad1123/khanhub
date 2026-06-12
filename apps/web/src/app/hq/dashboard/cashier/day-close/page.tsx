@@ -287,7 +287,7 @@ export default function DayClosePage() {
                      
                      <div className="p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] bg-indigo-50/30 border border-indigo-100/30 flex flex-col justify-between hover:bg-white hover:shadow-xl hover:shadow-indigo-100/30 transition-all duration-500">
                         <div>
-                          <p className="text-[10px] font-black text-indigo-400 tracking-widest uppercase mb-2 italic">Net Money In</p>
+                          <p className="text-[10px] font-black text-indigo-400 tracking-widest uppercase mb-2 italic">Net Income</p>
                           <p className="text-xl sm:text-2xl font-black text-indigo-900 tracking-tight">PKR {stats.cashExpected.toLocaleString()}</p>
                         </div>
                         <div className="flex items-center gap-2 mt-6">

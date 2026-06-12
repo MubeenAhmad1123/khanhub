@@ -227,8 +227,8 @@ export default function CashierHistoryPage() {
       <main className="max-w-7xl mx-auto px-4 py-8 md:px-8 space-y-8">
          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total Money In', val: stats.income, color: 'text-emerald-600', border: 'border-emerald-100', bg: 'bg-emerald-50' },
-              { label: 'Total Money Out', val: stats.expense, color: 'text-rose-600', border: 'border-rose-100', bg: 'bg-rose-50' },
+              { label: 'Total Income', val: stats.income, color: 'text-emerald-600', border: 'border-emerald-100', bg: 'bg-emerald-50' },
+              { label: 'Total Expense', val: stats.expense, color: 'text-rose-600', border: 'border-rose-100', bg: 'bg-rose-50' },
               { label: 'Pending', val: stats.pending, color: 'text-amber-600', border: 'border-amber-100', bg: 'bg-amber-50', raw: true },
               { label: 'Net Balance', val: stats.net, color: 'text-indigo-600', border: 'border-indigo-100', bg: 'bg-indigo-50' }
             ].map((s, idx) => (

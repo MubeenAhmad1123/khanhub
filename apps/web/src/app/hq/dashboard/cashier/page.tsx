@@ -138,6 +138,16 @@ export default function CashierStationPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [searchType, setSearchType] = useState<'patient' | 'student' | 'other' | 'staff' | 'job seeker' | 'company'>('patient');
 
+  // Hospital Specific States
+  const [hospitalMode, setHospitalMode] = useState<'none' | 'day_close' | 'all_transactions'>('none');
+  const [hospitalTxForm, setHospitalTxForm] = useState({
+    serialNumber: '',
+    patientName: '',
+    fatherName: '',
+    category: 'Check-up Patient',
+    reason: '',
+  });
+
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
@@ -758,7 +768,14 @@ export default function CashierStationPage() {
         { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
         { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center' },
         { coll: 'jobcenter_employers', code: 'job-center', label: 'Company' },
-        { coll: 'hq_staff', code: 'hq', label: 'Staff' },
+        { coll: 'hq_staff', code: 'hq', label: 'HQ Staff' },
+        { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Staff' },
+        { coll: 'hospital_staff', code: 'hospital', label: 'Hospital Staff' },
+        { coll: 'it_staff', code: 'it', label: 'IT Staff' },
+        { coll: 'jobcenter_staff', code: 'job-center', label: 'Job Center Staff' },
+        { coll: 'spims_staff', code: 'spims', label: 'Spims Staff' },
+        { coll: 'sukoon_staff', code: 'sukoon-center', label: 'Sukoon Staff' },
+        { coll: 'welfare_staff', code: 'welfare', label: 'Welfare Staff' },
       ];
 
       for (const source of sources) {
@@ -911,12 +928,24 @@ export default function CashierStationPage() {
                 donationScope: selectedEntity?.donationScope || undefined,
                 donationType: selectedEntity?.donationType || undefined
               }
+            : departmentCode === 'hospital'
+              ? {
+                  patientId: hospitalMode === 'all_transactions' ? 'hospital-inline' : 'hospital-day-close',
+                  patientName: hospitalMode === 'all_transactions' ? (hospitalTxForm.patientName || 'Inline Patient') : 'Day Close Transaction',
+                  hospitalPatientDetails: hospitalMode === 'all_transactions' ? {
+                    serialNumber: hospitalTxForm.serialNumber,
+                    patientName: hospitalTxForm.patientName,
+                    fatherName: hospitalTxForm.fatherName,
+                    category: hospitalTxForm.category,
+                    reason: hospitalTxForm.reason
+                  } : null
+                }
             : { 
-                patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : `${departmentCode}-general`), 
+                patientId: selectedEntity?.id || `${departmentCode}-general`, 
                 studentId: departmentCode === 'spims' ? (selectedEntity?.id || 'spims-general') : undefined,
                 employerId: selectedEntity?._entityType === 'employer' ? selectedEntity?.id : undefined,
                 seekerId: selectedEntity?._entityType === 'seeker' ? selectedEntity?.id : undefined,
-                patientName: selectedEntity?.name || selectedEntity?.companyName || selectedEntity?.fullName || customTargetName.trim() || (departmentCode === 'hospital' ? 'General Hospital Account' : `General ${activeDepartment.label} Account`) 
+                patientName: selectedEntity?.name || selectedEntity?.companyName || selectedEntity?.fullName || customTargetName.trim() || `General ${activeDepartment.label} Account` 
               }),
         description,
         paymentMethod,
@@ -1140,7 +1169,7 @@ export default function CashierStationPage() {
                   )}
                 >
                   <TrendingUp className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money In</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Income</span>
                 </button>
                 <button
                   type="button"
@@ -1153,7 +1182,7 @@ export default function CashierStationPage() {
                   )}
                 >
                   <TrendingDown className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money Out</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Expense</span>
                 </button>
               </div>
             </div>
@@ -1187,6 +1216,7 @@ export default function CashierStationPage() {
             </div>
           </div>
 
+          {departmentCode !== 'hospital' ? (
           <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
             <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] group-hover/search:bg-indigo-600/10 transition-all duration-1000" />
             
@@ -1296,7 +1326,55 @@ export default function CashierStationPage() {
                 </div>
               )}
             </div>
-          </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] transition-all duration-1000" />
+              <div className="relative z-10 space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 md:w-16 md:h-16 bg-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-2xl">
+                      <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Hospital Cashier</h3>
+                      <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-0.5 sm:mt-1">Select Entry Mode</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setHospitalMode('day_close')}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 text-left transition-all",
+                      hospitalMode === 'day_close'
+                        ? "bg-indigo-50 border-indigo-600 shadow-xl shadow-indigo-600/20"
+                        : "bg-white border-zinc-100 hover:border-indigo-200"
+                    )}
+                  >
+                    <h4 className={cn("text-lg font-black uppercase tracking-tight", hospitalMode === 'day_close' ? "text-indigo-900" : "text-zinc-900")}>Day Close</h4>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">Enter final daily Income/Expense totals</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setHospitalMode('all_transactions')}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 text-left transition-all",
+                      hospitalMode === 'all_transactions'
+                        ? "bg-indigo-50 border-indigo-600 shadow-xl shadow-indigo-600/20"
+                        : "bg-white border-zinc-100 hover:border-indigo-200"
+                    )}
+                  >
+                    <h4 className={cn("text-lg font-black uppercase tracking-tight", hospitalMode === 'all_transactions' ? "text-indigo-900" : "text-zinc-900")}>Enter All Transactions</h4>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">Record individual patient transactions inline</p>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 overflow-hidden">
@@ -1427,7 +1505,7 @@ export default function CashierStationPage() {
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : departmentCode === 'hospital' ? null : (
                 <div className="p-20 md:p-32 rounded-[4rem] bg-zinc-50 border-4 border-dashed border-zinc-200 flex flex-col items-center justify-center text-center group/empty hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-1000">
                   <div className="relative">
                     <div className="absolute -inset-8 bg-white rounded-full blur-2xl opacity-0 group-hover/empty:opacity-100 transition-opacity" />
@@ -1440,6 +1518,7 @@ export default function CashierStationPage() {
                 </div>
               )}
 
+              {(departmentCode !== 'hospital' || hospitalMode !== 'none') && (
               <form onSubmit={submitTx} className="space-y-10 pt-10 border-t border-zinc-100">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
                   <div className="space-y-8">
@@ -1461,6 +1540,71 @@ export default function CashierStationPage() {
                             placeholder="e.g., General Welfare, Walk-in Seeker, Utility Bill payment, Rent..."
                             className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
                           />
+                        </div>
+                      </div>
+                    )}
+
+                    {departmentCode === 'hospital' && hospitalMode === 'all_transactions' && (
+                      <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
+                            <User size={16} />
+                          </div>
+                          <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Hospital Patient Entry</h4>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Serial Number</label>
+                              <input
+                                value={hospitalTxForm.serialNumber}
+                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, serialNumber: e.target.value})}
+                                placeholder="e.g. 104"
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Category</label>
+                              <select
+                                value={hospitalTxForm.category}
+                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, category: e.target.value})}
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                              >
+                                <option value="Check-up Patient">Check-up Patient</option>
+                                <option value="USG Patient">USG Patient</option>
+                                <option value="Operated Patient">Operated Patient</option>
+                                <option value="Lab Test">Lab Test</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
+                            <input
+                              value={hospitalTxForm.patientName}
+                              onChange={(e) => setHospitalTxForm({...hospitalTxForm, patientName: e.target.value})}
+                              placeholder="e.g. John Doe"
+                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Father/Husband Name</label>
+                            <input
+                              value={hospitalTxForm.fatherName}
+                              onChange={(e) => setHospitalTxForm({...hospitalTxForm, fatherName: e.target.value})}
+                              placeholder="e.g. Richard Doe"
+                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Symptoms</label>
+                            <input
+                              value={hospitalTxForm.reason}
+                              onChange={(e) => setHospitalTxForm({...hospitalTxForm, reason: e.target.value})}
+                              placeholder="e.g. Fever and Cough"
+                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1639,6 +1783,7 @@ export default function CashierStationPage() {
                   </div>
                 </div>
               </form>
+              )}
             </div>
           </div>
         </div>

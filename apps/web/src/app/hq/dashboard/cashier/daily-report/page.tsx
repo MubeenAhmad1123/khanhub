@@ -487,7 +487,7 @@ export default function DailyReportPage() {
                     <TrendingUp className="w-6 h-6 text-emerald-600" />
                    </div>
                 </div>
-                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Money In</h3>
+                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Income</h3>
                 <p className="text-3xl font-black text-zinc-900 tracking-tight">PKR {stats.totalIncome.toLocaleString()}</p>
                 <div className="mt-4 flex items-center gap-1.5">
                    <div className="h-1 w-full bg-zinc-50 rounded-full overflow-hidden">
@@ -502,7 +502,7 @@ export default function DailyReportPage() {
                     <TrendingDown className="w-6 h-6 text-rose-600" />
                    </div>
                 </div>
-                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Money Out</h3>
+                <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Expense</h3>
                 <p className="text-3xl font-black text-zinc-900 tracking-tight">PKR {stats.totalExpense.toLocaleString()}</p>
                 <div className="mt-4 flex items-center gap-1.5">
                    <div className="h-1 w-full bg-zinc-50 rounded-full overflow-hidden">
