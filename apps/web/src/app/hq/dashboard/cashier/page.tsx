@@ -122,18 +122,7 @@ export default function CashierStationPage() {
   const { session, loading: sessionLoading } = useHqSession();
   const [mounted, setMounted] = useState(false);
 
-  const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
-  const [incomingLoading, setIncomingLoading] = useState(false);
-  const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
-  const [incomingError, setIncomingError] = useState<string | null>(null);
-  const [detailModalTx, setDetailModalTx] = useState<any | null>(null);
-  const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
-  const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
-  const [forwardProofReason, setForwardProofReason] = useState('');
-  const [forwardProofUploading, setForwardProofUploading] = useState(false);
-  const [rejectModalTx, setRejectModalTx] = useState<any | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [rejecting, setRejecting] = useState(false);
+
   const [superadminRecipient, setSuperadminRecipient] = useState<{ id: string; customId: string }>({ id: '', customId: 'SUPERADMIN' });
 
   const [departmentCode, setDepartmentCode] = useState('rehab');
@@ -199,23 +188,7 @@ export default function CashierStationPage() {
   const [historyStats, setHistoryStats] = useState({ income: 0, expense: 0, count: 0, students: 0, patients: 0, clients: 0 });
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
 
-  // Hospital Meta States
-  const [hospCategory, setHospCategory] = useState<HospitalTxCategory>('opd_reception');
-  const [hospPatientName, setHospPatientName] = useState('');
-  const [hospGuardian, setHospGuardian] = useState('');
-  const [hospAge, setHospAge] = useState('');
-  const [hospContact, setHospContact] = useState('');
-  const [hospAddress, setHospAddress] = useState('');
-  const [hospReferredBy, setHospReferredBy] = useState('');
-  const [hospTestName, setHospTestName] = useState('');
-  const [hospTestReport, setHospTestReport] = useState('');
-  const [hospTestExpense, setHospTestExpense] = useState('');
-  const [hospOpType, setHospOpType] = useState('');
-  const [hospAdmitDate, setHospAdmitDate] = useState('');
-  const [hospDischargeDate, setHospDischargeDate] = useState('');
-  const [hospOpdShift, setHospOpdShift] = useState<'morning' | 'evening'>('morning');
-  const [hospVisitTime, setHospVisitTime] = useState('');
-  const [hospVisitPurpose, setHospVisitPurpose] = useState('');
+
 
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -243,7 +216,7 @@ export default function CashierStationPage() {
     return list;
   }, [departmentCode, selectedEntity]);
 
-  const isStaffMode = false; // Cashiers cannot manage staff details or salaries
+  const isStaffMode = selectedEntity?._entityType === 'staff';
   
   useEffect(() => {
     if (selectedCategoryId === 'medicine_charge') {
@@ -588,80 +561,6 @@ export default function CashierStationPage() {
     void fetchHistory();
   }, [sessionLoading, session, router, fetchHistory]);
 
-  const subscribeIncoming = useCallback(() => {
-    if (!session?.customId) return;
-    setIncomingLoading(true);
-    setIncomingError(null);
-    try {
-      const cashierCustomId = String(session.customId || '').trim().toUpperCase();
-      let rowsMap: Record<string, any[]> = {};
-      DEPARTMENTS.forEach(d => rowsMap[d.txCollection] = []);
-
-      const merge = () => {
-        const allTx = DEPARTMENTS.flatMap((dept) =>
-          rowsMap[dept.txCollection].map((tx: any) => ({ ...tx, _txCollection: dept.txCollection }))
-        );
-        
-        const visible = allTx.filter((tx: any) => {
-          const txCashier = String(tx.cashierId || '').trim().toUpperCase();
-          if (!txCashier || txCashier === 'CASHIER') return true;
-          return txCashier === cashierCustomId;
-        });
-
-        const createdMs = (row: any) => {
-          const c = row.createdAt;
-          if (!c) return 0;
-          if (typeof c.toMillis === 'function') return c.toMillis();
-          if (typeof c.seconds === 'number') return c.seconds * 1000;
-          return 0;
-        };
-        visible.sort((a: any, b: any) => createdMs(b) - createdMs(a));
-        setIncomingFeeReqs(visible);
-        setIncomingLoading(false);
-      };
-
-      const onErr = (err: unknown) => {
-        console.warn('[HQ Cashier] subscribeIncoming error:', err);
-        setIncomingError(
-          `${(err as any)?.code || 'error'}: ${(err as any)?.message || 'Failed to load incoming requests.'}`
-        );
-        setIncomingLoading(false);
-      };
-
-      const unsubs = DEPARTMENTS.map(dept => {
-        const qDept = query(
-          collection(db, dept.txCollection),
-          where('status', '==', 'pending_cashier'),
-          limit(50)
-        );
-        return onSnapshot(
-          qDept,
-          (snap) => {
-            rowsMap[dept.txCollection] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-            merge();
-          },
-          onErr
-        );
-      });
-
-      return () => {
-        unsubs.forEach(u => u());
-      };
-    } catch (err) {
-      console.error('[HQ Cashier] subscribeIncoming setup error:', err);
-      setIncomingError('Failed to load incoming requests.');
-      setIncomingLoading(false);
-    }
-  }, [session?.customId]);
-
-  useEffect(() => {
-    if (!session?.customId || sessionLoading) return;
-    const unsub = subscribeIncoming();
-    return () => {
-      if (typeof unsub === 'function') unsub();
-    };
-  }, [sessionLoading, session?.customId, subscribeIncoming]);
-
   function openForwardModal(tx: any) {
     setForwardModalTx(tx);
     setForwardProofFile(null);
@@ -849,6 +748,8 @@ export default function CashierStationPage() {
         { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon' },
         { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
         { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center' },
+        { coll: 'jobcenter_employers', code: 'job-center', label: 'Company' },
+        { coll: 'hq_staff', code: 'hq', label: 'Staff' },
       ];
 
       for (const source of sources) {
@@ -911,17 +812,26 @@ export default function CashierStationPage() {
         });
       }
 
-      const queryMatch = (p.name || p.fullName || p.fatherName || '').toLowerCase().includes(q) ||
+      const queryMatch = (p.name || p.fullName || p.companyName || p.fatherName || '').toLowerCase().includes(q) ||
         ids.some(id => id.toLowerCase().includes(q)) ||
         String(p.serialNumber || '').toLowerCase().includes(q);
       
       if (!queryMatch) return false;
 
       if (searchType === 'patient') {
-        return p._entityType === 'patient' || p._entityType === 'client' || p._entityType === 'seeker' || p._entityType === 'donor';
+        return p._entityType === 'patient' || p._entityType === 'client' || p._entityType === 'donor';
       }
       if (searchType === 'student') {
         return (p._entityType === 'student' || p._deptCode === 'spims') && (p._entityType !== 'staff');
+      }
+      if (searchType === 'job seeker') {
+        return p._entityType === 'seeker';
+      }
+      if (searchType === 'company') {
+        return p._entityType === 'employer' || p.companyName;
+      }
+      if (searchType === 'staff') {
+        return p._entityType === 'staff';
       }
       return true;
     });
@@ -995,7 +905,9 @@ export default function CashierStationPage() {
             : { 
                 patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : `${departmentCode}-general`), 
                 studentId: departmentCode === 'spims' ? (selectedEntity?.id || 'spims-general') : undefined,
-                patientName: selectedEntity?.name || selectedEntity?.fullName || customTargetName.trim() || (departmentCode === 'hospital' ? 'General Hospital Account' : `General ${activeDepartment.label} Account`) 
+                employerId: selectedEntity?._entityType === 'employer' ? selectedEntity?.id : undefined,
+                seekerId: selectedEntity?._entityType === 'seeker' ? selectedEntity?.id : undefined,
+                patientName: selectedEntity?.name || selectedEntity?.companyName || selectedEntity?.fullName || customTargetName.trim() || (departmentCode === 'hospital' ? 'General Hospital Account' : `General ${activeDepartment.label} Account`) 
               }),
         description,
         paymentMethod,
@@ -1023,47 +935,7 @@ export default function CashierStationPage() {
       const missingReason = proofReason.trim();
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
 
-      if (departmentCode === 'hospital') {
-        let hMeta: HospitalTxMeta | undefined;
-        if (hospCategory === 'opd_reception') {
-          hMeta = {
-            shift: hospOpdShift,
-            patientName: hospPatientName || 'Unknown',
-            guardianName: hospGuardian || undefined,
-            age: hospAge || undefined,
-            contactNo: hospContact || undefined,
-            address: hospAddress || undefined,
-            visitTime: hospVisitTime || undefined,
-            visitPurpose: hospVisitPurpose || undefined,
-          };
-        } else if (hospCategory === 'lab_test') {
-          hMeta = {
-            patientName: hospPatientName || 'Unknown',
-            testName: hospTestName || 'Unknown Test',
-            testReportResult: hospTestReport || undefined,
-            referredBy: hospReferredBy || undefined,
-            testCharges: Number(amount),
-            testExpense: hospTestExpense ? Number(hospTestExpense) : undefined,
-          };
-        } else if (hospCategory === 'operation' || hospCategory === 'operation_theater') {
-          hMeta = {
-            patientName: hospPatientName || 'Unknown',
-            operationType: hospOpType || 'Unknown Operation',
-            contactNo: hospContact || undefined,
-            referredBy: hospReferredBy || undefined,
-            admitDate: hospAdmitDate || undefined,
-            dischargeDate: hospDischargeDate || undefined,
-          };
-        }
-        if (hMeta) {
-          createPayload.hospitalMeta = hMeta;
-          createPayload.category = hospCategory;
-          createPayload.categoryName = hospCategory.replace('_', ' ').toUpperCase();
-        } else {
-          createPayload.category = selectedCategory.id;
-          createPayload.categoryName = selectedCategory.name;
-        }
-      }
+
 
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
 
@@ -1177,10 +1049,10 @@ export default function CashierStationPage() {
     setIntelStats({
       todayRevenue: revenue,
       todayExpense: expense,
-      pendingCount: incomingFeeReqs.length,
+      pendingCount: 0,
       topDept
     });
-  }, [historyTxns, incomingFeeReqs]);
+  }, [historyTxns]);
 
   const totals = useMemo(() => {
     if (historyStats.count > 0 && historyFiltered.length === historyTxns.length) {
@@ -1228,7 +1100,19 @@ export default function CashierStationPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <div className="px-6 py-4 bg-white border border-zinc-100 rounded-2xl shadow-xl flex items-center gap-4 group hover:border-indigo-200 transition-all">
+              <Link 
+                href="/hq/dashboard/cashier/pending"
+                className="px-6 py-4 bg-amber-100 border border-amber-200 rounded-2xl shadow-xl flex items-center gap-4 group hover:bg-amber-200 transition-all"
+              >
+                <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Approvals</p>
+                  <p className="text-sm font-black text-amber-900 tracking-tight">Pending Queue</p>
+                </div>
+              </Link>
+              <div className="hidden sm:flex px-6 py-4 bg-white border border-zinc-100 rounded-2xl shadow-xl items-center gap-4 group hover:border-indigo-200 transition-all">
                 <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                   <Activity size={18} />
                 </div>
@@ -1239,10 +1123,72 @@ export default function CashierStationPage() {
               </div>
               <button 
                 onClick={() => fetchHistory()}
-                className="w-16 h-16 bg-zinc-900 text-white rounded-[1.5rem] flex items-center justify-center hover:bg-indigo-600 transition-all active:scale-90 shadow-xl"
+                className="w-16 h-16 bg-zinc-900 text-white rounded-[1.5rem] flex items-center justify-center hover:bg-indigo-600 transition-all active:scale-90 shadow-xl flex-shrink-0"
               >
                 <RefreshCw size={24} className={cn(historyLoading && "animate-spin")} />
               </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-8">
+            <div className="bg-white rounded-3xl border border-zinc-100 p-6 md:p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.05)] space-y-6">
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Direction</label>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={() => setTxnType('income')}
+                  className={cn(
+                    "h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
+                    txnType === 'income' 
+                      ? "bg-emerald-600 border-emerald-500 text-white shadow-2xl shadow-emerald-500/30 -translate-y-1" 
+                      : "bg-white border-zinc-100 text-zinc-400 hover:border-emerald-200 hover:bg-emerald-50"
+                  )}
+                >
+                  <TrendingUp className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money In</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTxnType('expense')}
+                  className={cn(
+                    "h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
+                    txnType === 'expense' 
+                      ? "bg-rose-600 border-rose-500 text-white shadow-2xl shadow-rose-500/30 -translate-y-1" 
+                      : "bg-white border-zinc-100 text-zinc-400 hover:border-rose-200 hover:bg-rose-50"
+                  )}
+                >
+                  <TrendingDown className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money Out</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-zinc-100 p-6 md:p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.05)] space-y-6">
+              <div className="flex items-center justify-between px-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department</label>
+                <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {DEPARTMENTS.map((dept) => (
+                  <button
+                    key={dept.code}
+                    type="button"
+                    onClick={() => {
+                      setDepartmentCode(dept.code);
+                      setSelectedEntity(null);
+                      setAmount('');
+                    }}
+                    className={cn(
+                      "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all border-2 group/dept",
+                      departmentCode === dept.code 
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-2xl shadow-indigo-600/30 -translate-y-1" 
+                        : "bg-white border-zinc-100 text-zinc-400 hover:border-indigo-200 hover:text-zinc-600"
+                    )}
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest group-hover/dept:scale-110 transition-transform">{dept.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1261,18 +1207,18 @@ export default function CashierStationPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 p-1 bg-zinc-100 rounded-xl sm:rounded-2xl w-full sm:w-auto shrink-0">
-                  {(['patient', 'student', 'other'] as const).map((t) => (
+                  {(['patient', 'student', 'company', 'job seeker', 'staff', 'other'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setSearchType(t)}
                       className={cn(
-                        "py-2 sm:py-3 px-3 sm:px-8 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer text-center",
+                        "py-2 sm:py-3 px-3 sm:px-6 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer text-center",
                         searchType === t 
                           ? "bg-white text-indigo-600 shadow-xl" 
                           : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/30"
                       )}
                     >
-                      {t}s
+                      {t}
                     </button>
                   ))}
                 </div>
@@ -1318,7 +1264,7 @@ export default function CashierStationPage() {
                           <User size={28} />
                         </div>
                         <div>
-                          <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[180px]">{p.name || p.fullName || 'Unknown'}</h4>
+                          <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[180px]">{p.name || p.fullName || p.companyName || 'Unknown'}</h4>
                           <div className="flex flex-col gap-1 mt-2">
                             <div className="flex items-center gap-3">
                               <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest">{p._deptLabel}</span>
@@ -1358,102 +1304,21 @@ export default function CashierStationPage() {
           </div>
         </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 overflow-hidden">
-        <div className="lg:col-span-4 space-y-8 md:space-y-12 min-w-0 order-1 lg:order-1">
-          <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 border border-zinc-100 shadow-2xl shadow-zinc-200/50 h-full">
-            <div className="flex items-center justify-between mb-8 md:mb-10">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-600">
-                  <Clock size={20} className="md:w-6 md:h-6" />
-                </div>
-                <h3 className="text-xl md:text-2xl font-[1000] text-zinc-900 uppercase tracking-tight">Pending Requests</h3>
-              </div>
-              <div className="px-3 md:px-4 py-1.5 md:py-2 bg-amber-500 text-white rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest animate-pulse">
-                {incomingFeeReqs.length} Pending
-              </div>
-            </div>
-            
-            {incomingError ? (
-              <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-[10px] font-black uppercase tracking-widest">
-                {incomingError}
-              </div>
-            ) : null}
-
-            {incomingLoading ? (
-              <div className="py-20 flex items-center justify-center">
-                <Loader2 size={32} className="animate-spin text-gray-300" />
-              </div>
-            ) : incomingFeeReqs.length === 0 ? (
-              <div className="py-20 text-center space-y-6">
-                <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
-                  <FileText className="text-gray-300" size={32} />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Queue is clear</p>
-              </div>
-            ) : (
-              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                {incomingFeeReqs.map((req, index) => (
-                  <div 
-                    key={req.id} 
-                    onClick={() => setDetailModalTx(req)}
-                    className="group cursor-pointer bg-zinc-50 border border-transparent hover:border-indigo-200 rounded-[1.5rem] md:rounded-[2.5rem] p-5 md:p-8 transition-all hover:shadow-2xl hover:-translate-y-1"
-                  >
-                    <div className="flex justify-between items-start mb-4 md:mb-6">
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className={cn(
-                          "w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg",
-                          req.type === 'income' ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-rose-500 shadow-rose-500/20'
-                        )}>
-                          {req.type === 'income' ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-                        </div>
-                        <div>
-                          <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{req.departmentCode === 'spims' ? 'Request' : req.departmentCode}</p>
-                          <h4 className="text-base md:text-lg font-black text-zinc-900 uppercase tracking-tight mt-0.5 md:mt-1">{req.patientName || req.donorName || 'General Request'}</h4>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg md:text-xl font-[1000] text-zinc-900 tracking-tighter tabular-nums">Rs {Number(req.amount).toLocaleString()}</p>
-                        <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1 md:mt-2">{formatDateDMY(req.date || req.createdAt)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        type="button"
-                        disabled={incomingActionId === req.id}
-                        onClick={(e) => { e.stopPropagation(); openForwardModal(req); }}
-                        className="flex-1 h-10 md:h-12 rounded-xl md:rounded-[1.2rem] bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
-                      >
-                        {incomingActionId === req.id ? <Loader2 size={14} className="animate-spin" /> : 'Approve'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={incomingActionId === req.id}
-                        onClick={(e) => { e.stopPropagation(); openRejectModal(req); }}
-                        className="flex-1 h-10 md:h-12 rounded-xl md:rounded-[1.2rem] bg-rose-50 text-rose-600 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+      <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 overflow-hidden">
+        <div className="grid grid-cols-2 gap-4 md:gap-6">
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+            <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">Revenue Today</p>
+            <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.income.toLocaleString()}</h4>
           </div>
-
-          <div className="grid grid-cols-2 gap-4 md:gap-6">
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
-              <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">Revenue Today</p>
-              <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.income.toLocaleString()}</h4>
-            </div>
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
-              <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">Payouts Today</p>
-              <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.expense.toLocaleString()}</h4>
-            </div>
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+            <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">Payouts Today</p>
+            <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.expense.toLocaleString()}</h4>
           </div>
-        </div>        <div className="lg:col-span-8 min-w-0 overflow-hidden space-y-12 order-2 lg:order-2">
+        </div>
+        
+        <div className="min-w-0 overflow-hidden space-y-12">
           <div className="bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 p-4 sm:p-6 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/console">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
@@ -1480,7 +1345,7 @@ export default function CashierStationPage() {
                                 <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Active Protocol Target</p>
                               </div>
                             </div>
-                            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">{selectedEntity.name || selectedEntity.fullName}</h2>
+                            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">{selectedEntity.name || selectedEntity.fullName || selectedEntity.companyName || 'Unknown'}</h2>
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 md:gap-3">
                               <div className="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest truncate max-w-full">
                                 ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.id.slice(0, 8)}</span>
@@ -1583,116 +1448,7 @@ export default function CashierStationPage() {
               <form onSubmit={submitTx} className="space-y-10 pt-10 border-t border-zinc-100">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
                   <div className="space-y-8">
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Department</label>
-                        <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {DEPARTMENTS.map((dept) => (
-                          <button
-                            key={dept.code}
-                            type="button"
-                            onClick={() => {
-                              setDepartmentCode(dept.code);
-                              setSelectedEntity(null);
-                              setAmount('');
-                            }}
-                            className={cn(
-                              "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all border-2 group/dept",
-                              departmentCode === dept.code 
-                                ? "bg-indigo-600 border-indigo-600 text-white shadow-2xl shadow-indigo-600/30 -translate-y-1" 
-                                : "bg-white border-zinc-100 text-zinc-400 hover:border-indigo-200 hover:text-zinc-600"
-                            )}
-                          >
-                            <span className="text-[10px] font-black uppercase tracking-widest group-hover/dept:scale-110 transition-transform">{dept.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
- 
-                    <div className="space-y-6">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Direction</label>
-                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                        <button
-                          type="button"
-                          onClick={() => setTxnType('income')}
-                          className={cn(
-                            "h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
-                            txnType === 'income' 
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-2xl shadow-emerald-500/30 -translate-y-1" 
-                              : "bg-white border-zinc-100 text-zinc-400 hover:border-emerald-200 hover:bg-emerald-50"
-                          )}
-                        >
-                          <TrendingUp className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'income' && "scale-110")} />
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money In</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTxnType('expense')}
-                          className={cn(
-                            "h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1.5 sm:gap-2 md:gap-3 transition-all border-2 md:border-4 relative overflow-hidden group/flow",
-                            txnType === 'expense' 
-                              ? "bg-rose-600 border-rose-500 text-white shadow-2xl shadow-rose-500/30 -translate-y-1" 
-                              : "bg-white border-zinc-100 text-zinc-400 hover:border-rose-200 hover:bg-rose-50"
-                          )}
-                        >
-                          <TrendingDown className={cn("w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-transform group-hover/flow:scale-125", txnType === 'expense' && "scale-110")} />
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em]">Money Out</span>
-                        </button>
-                      </div>
-                    </div>
 
-                    {departmentCode === 'hospital' && (
-                      <div className="p-10 bg-zinc-50 rounded-[3rem] border-2 border-zinc-100 space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
-                            <Activity size={24} />
-                          </div>
-                          <h4 className="text-2xl font-[1000] text-zinc-900 uppercase tracking-tighter">Clinical Vector</h4>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          {([
-                            { id: 'opd_reception', label: 'OPD' },
-                            { id: 'lab_test', label: 'Lab' },
-                            { id: 'operation_theater', label: 'Surgery' },
-                            { id: 'indoor_patient', label: 'Indoor' }
-                          ] as const).map((cat) => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => setHospCategory(cat.id)}
-                              className={cn(
-                                "py-5 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                hospCategory === cat.id ? "bg-zinc-900 border-zinc-900 text-white shadow-xl" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
-                              )}
-                            >
-                              {cat.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="space-y-6 pt-6 border-t border-zinc-200">
-                          <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-3">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-4">Subject Identity</label>
-                              <input value={hospPatientName} onChange={(e) => setHospPatientName(e.target.value)} placeholder="Enter patient name..." className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                              <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-4">Phone / Contact</label>
-                                <input value={hospContact} onChange={(e) => setHospContact(e.target.value)} placeholder="03xx-xxxxxxx" className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner" />
-                              </div>
-                              <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-4">Subject Age</label>
-                                <input value={hospAge} onChange={(e) => setHospAge(e.target.value)} placeholder="Years" className="w-full h-16 bg-white border-2 border-zinc-100 rounded-[1.5rem] px-8 text-base font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {!selectedEntity && departmentCode !== 'hospital' && (
                       <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
