@@ -239,20 +239,6 @@
       ]
     },
     {
-      "collectionGroup": "rehab_weekly_progress",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "patientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "weekNumber",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "rehab_duty_logs",
       "queryScope": "COLLECTION",
       "fields": [

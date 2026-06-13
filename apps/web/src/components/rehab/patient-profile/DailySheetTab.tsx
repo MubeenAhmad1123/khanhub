@@ -157,6 +157,59 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
     }
   };
 
+  const handleBulkMarkDone = async (day: number) => {
+    if (readOnly) return;
+    const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
+    const keys = DAILY_ACTIVITIES.map(a => `${dateStr}-${a.id}`);
+    const isAnySaving = keys.some(k => pendingSaves.has(k));
+    if (isAnySaving) return;
+
+    const currentRecord = records[dateStr];
+    const currentActivities = currentRecord?.activities || [];
+
+    const newActivities = DAILY_ACTIVITIES.map(activity => {
+      const existing = currentActivities.find(a => a.activityId === activity.id);
+      return {
+        activityId: activity.id,
+        status: 'done' as ActivityStatus,
+        note: existing?.note || undefined
+      };
+    });
+
+    setRecords(prev => ({
+      ...prev,
+      [dateStr]: {
+        ...prev[dateStr],
+        date: dateStr,
+        patientId,
+        id: prev[dateStr]?.id || '',
+        activities: newActivities,
+        markedBy: session.uid,
+        createdAt: prev[dateStr]?.createdAt || new Date()
+      } as DailyActivityRecord
+    }));
+
+    try {
+      setPendingSaves(prev => {
+        const next = new Set(prev);
+        keys.forEach(k => next.add(k));
+        return next;
+      });
+      await saveDailyActivity(patientId, dateStr, newActivities, session.uid);
+      toast.success(`Marked all as done for ${formatDateDMY(`${dateStr}T00:00:00`)}`);
+    } catch (error) {
+      console.error("Bulk mark error", error);
+      toast.error('Failed to save daily activities');
+      fetchRecords();
+    } finally {
+      setPendingSaves(prev => {
+        const next = new Set(prev);
+        keys.forEach(k => next.delete(k));
+        return next;
+      });
+    }
+  };
+
   const getCellIcon = (status?: ActivityStatus, activityId?: number, dateStr?: string) => {
     if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-500" />;
     if (status === 'done') {
@@ -258,6 +311,16 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
             </button>
           </div>
 
+          {!readOnly && isDateInFilter(selectedDateStr) && (
+            <button
+              type="button"
+              onClick={() => handleBulkMarkDone(selectedDay)}
+              className="w-full bg-teal-50 hover:bg-teal-100/80 border border-teal-200/50 text-teal-700 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-sm"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Mark All Done for This Day
+            </button>
+          )}
+
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
             {DAILY_ACTIVITIES.map((activity) => {
               const existing = selectedDayActivities.find((a) => a.activityId === activity.id);
@@ -295,14 +358,35 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
 
         <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm hidden md:block w-full">
           <div className="overflow-x-auto w-full custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[1200px]">
+            <table className="w-full text-left border-collapse min-w-[1200px] table-fixed">
               <thead className="bg-gray-50 uppercase text-[9px] font-black text-gray-500 tracking-widest sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="px-5 py-4 border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-20 min-w-[200px]">Activity / Time</th>
-                  {daysArray.map(day => (
-                    <th key={day} className="px-2 py-4 border-b border-gray-200 text-center min-w-[44px]">{day}</th>
-                  ))}
-                  <th className="px-2 py-4 border-b border-gray-200 text-center min-w-[50px]">%</th>
+                  <th className="px-5 py-4 border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-20 w-[220px] min-w-[220px] max-w-[220px] select-none">Activity / Time</th>
+                  {daysArray.map(day => {
+                    const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
+                    const disabledByFilter = !isDateInFilter(dateStr);
+                    const canBulkMark = !readOnly && !disabledByFilter;
+                    return (
+                      <th key={day} className="px-1 py-2 border-b border-gray-200 text-center w-[44px] min-w-[44px] max-w-[44px] select-none align-top">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span className="font-black text-gray-750 text-xs">{day}</span>
+                          {canBulkMark ? (
+                            <button
+                              type="button"
+                              onClick={() => handleBulkMarkDone(day)}
+                              title={`Mark all as Done for Day ${day}`}
+                              className="p-1 rounded-md text-gray-400 hover:text-teal-600 hover:bg-gray-150 transition-all active:scale-90"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <div className="h-6 w-1" />
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
+                  <th className="px-2 py-4 border-b border-gray-200 text-center w-[50px] min-w-[50px] max-w-[50px] select-none">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
@@ -310,7 +394,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                   const pct = getRowCompletion(activity.id);
                   return (
                     <tr key={activity.id} className="hover:bg-teal-50/20 transition-colors group">
-                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-teal-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs">
+                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-teal-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs w-[220px] min-w-[220px] max-w-[220px] truncate">
                         <span className="text-[10px] text-teal-600 w-5 inline-block font-black">{activity.id}.</span> 
                         {activity.name}
                       </td>
@@ -323,8 +407,9 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                         
                         const disabledByFilter = !isDateInFilter(dateStr);
                         return (
-                          <td key={day} className={`border-r border-gray-50 last:border-r-0 ${disabledByFilter ? 'bg-gray-50/70' : ''}`}>
+                          <td key={day} className={`border-r border-gray-50 last:border-r-0 w-[44px] min-w-[44px] max-w-[44px] ${disabledByFilter ? 'bg-gray-50/70' : ''}`}>
                             <button
+                               type="button"
                                onClick={() => handleCellClick(day, activity.id)}
                                disabled={isSaving || readOnly || disabledByFilter}
                                className={`w-full h-full min-h-[44px] flex items-center justify-center transition-colors active:scale-90 disabled:opacity-50 ${
@@ -343,7 +428,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                           </td>
                         );
                       })}
-                      <td className="text-center">
+                      <td className="text-center w-[50px] min-w-[50px] max-w-[50px]">
                         {pct !== null && (
                           <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black ${completionColor(pct)}`}>
                             {pct}%
@@ -354,11 +439,11 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                   );
                 })}
                 <tr className="bg-gray-50 font-black text-[10px] text-gray-500 uppercase tracking-widest">
-                  <td className="px-5 py-3 border-r border-gray-200 sticky left-0 bg-gray-50 z-10">Daily %</td>
+                  <td className="px-5 py-3 border-r border-gray-200 sticky left-0 bg-gray-50 z-10 w-[220px] min-w-[220px] max-w-[220px]">Daily %</td>
                   {daysArray.map(day => {
                     const pct = getDayCompletion(day);
                     return (
-                      <td key={day} className="text-center">
+                      <td key={day} className="text-center w-[44px] min-w-[44px] max-w-[44px]">
                         {pct !== null && (
                           <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-black ${completionColor(pct)}`}>
                             {pct}%
@@ -367,7 +452,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                       </td>
                     );
                   })}
-                  <td></td>
+                  <td className="w-[50px] min-w-[50px] max-w-[50px]"></td>
                 </tr>
               </tbody>
             </table>

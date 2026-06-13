@@ -12,7 +12,6 @@ import {
 import Link from 'next/link';
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory from '@/components/patient/FinanceHistory';
-import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
@@ -34,7 +33,7 @@ export default function FamilyPatientViewPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'progress' | 'visits'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'visits'>('overview');
   const [payments, setPayments] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
 
@@ -49,7 +48,6 @@ export default function FamilyPatientViewPage() {
       visits: sections.familyContact !== false,
       therapy: sections.therapy !== false,
       meds: sections.medication !== false,
-      progress: sections.progressNotes !== false,
     };
     
     if (tabVisibility[activeTab] === false) {
@@ -295,7 +293,6 @@ export default function FamilyPatientViewPage() {
               { key: 'visits', label: 'Visits', icon: Clock, visible: sections.familyContact !== false },
               { key: 'therapy', label: 'Therapy', icon: Heart, visible: sections.therapy !== false },
               { key: 'meds', label: 'Meds', icon: Pill, visible: sections.medication !== false },
-              { key: 'progress', label: 'Progress', icon: TrendingUp, visible: sections.progressNotes !== false },
             ].filter(t => t.visible !== false).map(tab => (
               <button
                 key={tab.key}
@@ -474,12 +471,6 @@ export default function FamilyPatientViewPage() {
         {activeTab === 'meds' && session && (
           <div className="pointer-events-none mt-6">
             <MedicationTab patientId={patientId} session={session} />
-          </div>
-        )}
-
-        {activeTab === 'progress' && session && (
-          <div className="pointer-events-none mt-6">
-            <ProgressTab patientId={patientId} session={session} />
           </div>
         )}
       </div>

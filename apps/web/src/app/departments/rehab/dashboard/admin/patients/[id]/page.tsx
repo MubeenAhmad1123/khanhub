@@ -25,7 +25,6 @@ import dynamic from 'next/dynamic';
 
 const DailySheetTab = dynamic(() => import('@/components/rehab/patient-profile/DailySheetTab'), { ssr: false }) as any;
 const FinanceHistory = dynamic(() => import('@/components/rehab/patient-profile/FinanceHistory'), { ssr: false }) as any;
-const ProgressTab = dynamic(() => import('@/components/rehab/patient-profile/ProgressTab'), { ssr: false }) as any;
 const TherapyTab = dynamic(() => import('@/components/rehab/patient-profile/TherapyTab'), { ssr: false }) as any;
 const MedicationTab = dynamic(() => import('@/components/rehab/patient-profile/MedicationTab'), { ssr: false }) as any;
 const AdmissionTab = dynamic(() => import('@/components/rehab/patient-profile/AdmissionTab'), { ssr: false }) as any;
@@ -37,7 +36,6 @@ const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'admission', label: 'Admission', icon: FileText },
   { id: 'daily', label: 'Daily Sheets', icon: ClipboardList },
-  { id: 'progress', label: 'Progress', icon: TrendingUp },
   { id: 'therapy', label: 'Therapy', icon: Activity },
   { id: 'meds', label: 'Medication', icon: Pill },
   { id: 'fees', label: 'Financials', icon: DollarSign },
@@ -234,7 +232,7 @@ export default function PatientDetailPage() {
   const [videoStates, setVideoStates] = useState<Record<string, { status: 'normal' | 'confirm' | 'deleting'; timeLeft: number; intervalId?: any; timeoutId?: any }>>({});
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'progress' | 'therapy' | 'meds' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'therapy' | 'meds' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
   const [visits, setVisits] = useState<any[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
@@ -2642,15 +2640,6 @@ export default function PatientDetailPage() {
               <h2 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Daily Sheets Log</h2>
             </div>
             <DailySheetTab patientId={patientId} session={session} dateFilter={dateFilter} />
-          </div>
-
-          {/* TAB: PROGRESS */}
-          <div id="section-progress" className="scroll-mt-24 bg-white backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-gray-100 w-full p-4 sm:p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-300">
-            <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100">
-              <TrendingUp className="w-6 h-6 text-teal-600" />
-              <h2 className="text-xl font-bold text-gray-800 uppercase tracking-tight">Progress Chart & Details</h2>
-            </div>
-            <ProgressTab patientId={patientId} session={session} dateFilter={dateFilter} />
           </div>
 
           {/* TAB: THERAPY */}
