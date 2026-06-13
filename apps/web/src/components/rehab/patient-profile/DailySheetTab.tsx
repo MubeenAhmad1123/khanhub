@@ -169,11 +169,14 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
 
     const newActivities = DAILY_ACTIVITIES.map(activity => {
       const existing = currentActivities.find(a => a.activityId === activity.id);
-      return {
+      const item: any = {
         activityId: activity.id,
-        status: 'done' as ActivityStatus,
-        note: existing?.note || undefined
+        status: 'done' as ActivityStatus
       };
+      if (existing?.note !== undefined) {
+        item.note = existing.note;
+      }
+      return item;
     });
 
     setRecords(prev => ({
