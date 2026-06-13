@@ -397,6 +397,7 @@ export default function NewChildAdmissionPage() {
               </div>
             </div>
           </div>
+          </div>
         )}
 
         {/* Section 3: Guardian's Information */}
