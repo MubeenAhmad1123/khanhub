@@ -13,7 +13,8 @@ export async function createWelfareUserServer(
   displayName: string,
   childId?: string,
   emailDomain: string = DOMAIN,
-  userCollection: string = 'welfare_users'
+  userCollection: string = 'welfare_users',
+  donorId?: string
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -65,6 +66,7 @@ export async function createWelfareUserServer(
           displayName,
           password,
           childId: nextChildId,
+          donorId: donorId || null,
           isActive: true,
           createdAt: FieldValue.serverTimestamp(),
         });
@@ -91,7 +93,7 @@ export async function createWelfareUserServer(
 
       // Safe update.
       await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        { customId, role, displayName, password, childId: nextChildId, isActive: true },
+        { customId, role, displayName, password, childId: nextChildId, donorId: donorId || null, isActive: true },
         { merge: true }
       );
       return { success: true, uid: existingUser.uid };
@@ -106,6 +108,7 @@ export async function createWelfareUserServer(
       displayName,
       password,
       childId: childId || null,
+      donorId: donorId || null,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
     });

@@ -183,8 +183,10 @@ export default function RegisterDonorPage() {
           loginPassword,
           'donor',
           fullName,
-          undefined,
-          docRef.id
+          undefined, // childId
+          undefined, // emailDomain
+          undefined, // userCollection
+          docRef.id  // donorId
         );
 
         if (!result.success) {
