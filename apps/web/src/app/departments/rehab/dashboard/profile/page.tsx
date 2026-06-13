@@ -224,8 +224,12 @@ export default function ProfilePage() {
 
     days.forEach(day => {
       const att = attMap[day];
-      if (att?.status === 'present' || att?.status === 'late') {
-        attScore++;
+      if (att) {
+        const status = String(att.status || '').toLowerCase();
+        const isLate = att.isLate === true || status === 'late';
+        if (status === 'present' && !isLate) {
+          attScore++;
+        }
         if (att.arrivedOnTime !== false) punctScore++;
       }
 
@@ -252,34 +256,28 @@ export default function ProfilePage() {
       }
     });
 
-    let gpScore = 0;
-    days.forEach(day => {
-      const contrib = contributionsMap[day];
-      if (contrib) {
-        const status = String(contrib.status || '').toLowerCase();
-        if (status === 'yes' || contrib.isApproved === true) {
-          gpScore++;
-        }
-      }
-    });
-
     const extraPoints = growthHistory
       .filter(item => {
         const itemMonth = item.month || (item.date ? item.date.substring(0, 7) : '');
         return itemMonth === selectedMonth && item.category === 'Growth Point Bonus';
       })
       .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
-    gpScore += extraPoints;
+
+    const dailyPointsSum = attScore + uniScore + workScore;
+    const normalizedDaily = days.length > 0 ? Math.round((dailyPointsSum / (days.length * 3)) * 90) : 0;
+    const totalScore = Math.min(100, normalizedDaily + extraPoints);
 
     return {
       attendance: attScore,
       punctuality: punctScore,
       uniform: uniScore,
       working: workScore,
-      growthPoint: gpScore,
+      growthPoint: extraPoints,
+      normalizedDaily,
+      totalScore,
       workingDays: days.length
     };
-  }, [profile, attendance, dressLogs, duties, contributionsMap, growthHistory, selectedMonth, daysInMonth]);
+  }, [profile, attendance, dressLogs, duties, growthHistory, selectedMonth, daysInMonth]);
 
   const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
     try {
@@ -323,8 +321,7 @@ export default function ProfilePage() {
         taskSnap,
         fineSnap,
         growthSnap,
-        salarySnap,
-        contribSnap
+        salarySnap
       ] = await Promise.all([
         fetchForCandidates(`${prefix}_attendance`),
         fetchForCandidates(`${prefix}_duty_logs`),
@@ -332,8 +329,7 @@ export default function ProfilePage() {
         fetchForCandidates(`${prefix}_special_tasks`),
         fetchForCandidates(`${prefix}_fines`),
         fetchForCandidates(`${prefix}_growth_points`),
-        fetchForCandidates(`${prefix}_salary_records`),
-        fetchForCandidates(`${prefix}_contributions`)
+        fetchForCandidates(`${prefix}_salary_records`)
       ]);
 
       const mergeAndSort = (snap: any, dateField: string = 'date') => {
@@ -352,15 +348,6 @@ export default function ProfilePage() {
       setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
       setFines(mergeAndSort(fineSnap, 'date') as any);
 
-      const cMap: Record<string, any> = {};
-      contribSnap.docs.forEach((d: any) => {
-        const data = d.data();
-        if (data.date) {
-          cMap[data.date] = data;
-        }
-      });
-      setContributionsMap(cMap);
-
       const rawGrowth = mergeAndSort(growthSnap, 'date') as any;
       const extraRows: any[] = [];
       growthSnap.docs.forEach((d: any) => {
@@ -377,19 +364,7 @@ export default function ProfilePage() {
         }
       });
       
-      const contribRows = contribSnap.docs
-        .map((d: any) => d.data())
-        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
-        .map((item: any) => ({
-          id: item.date,
-          points: 1,
-          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
-          category: 'Growth Point',
-          date: item.date,
-          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
-        }));
-
-      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
+      const combinedGrowth = [...rawGrowth, ...extraRows];
       const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
         .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
       setGrowthHistory(uniqueGrowth as GrowthRecord[]);
@@ -663,7 +638,7 @@ export default function ProfilePage() {
              <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
                 <Award className="text-amber-500" size={16} />
                 <span className="text-xs font-bold text-gray-700">
-                  {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} Points
+                  {computedScores.totalScore} / 100 Points
                 </span>
              </div>
              <button 
@@ -1044,21 +1019,21 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-xl relative overflow-hidden">
                      <Sparkles className="absolute right-2 top-2 text-white opacity-10 w-20 h-20 -rotate-12" />
-                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total Growth Vault</p>
-                     <div className="text-3xl font-black text-amber-400">{computedScores.growthPoint}</div>
+                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Monthly Bonus Points</p>
+                     <div className="text-3xl font-black text-amber-400">{computedScores.growthPoint} / 10</div>
                   </div>
                   <div className="border border-gray-100 p-6 rounded-xl">
                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Punctuality Ratio</p>
                      <div className="text-2xl font-black text-gray-900">
                         {computedScores.workingDays > 0 
-                          ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
-                          : 0}%
+                           ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
+                           : 0}%
                      </div>
                   </div>
                   <div className="border border-gray-100 p-6 rounded-xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Score</p>
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Monthly Score</p>
                      <div className="text-2xl font-black text-gray-900">
-                       {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                       {computedScores.totalScore} / 100
                      </div>
                   </div>
                 </div>

@@ -53,21 +53,12 @@ export async function recalculateGrowthPoints(
   const dressSnap = await getDocs(dressQuery);
   const dressDocs = dressSnap.docs.filter(d => d.data().date?.startsWith(month));
 
-  // 4. Fetch Contributions
-  const contribQuery = query(
-    collection(db, `${p}contributions`),
-    where('staffId', '==', staffId)
-  );
-  const contribSnap = await getDocs(contribQuery);
-  const contribDocs = contribSnap.docs.filter(d => d.data().date?.startsWith(month));
-
   const [year, monthNum] = month.split('-').map(Number);
   const daysInMonth = new Date(year, monthNum, 0).getDate();
 
   let attendancePoints = 0;
   let dutyPoints = 0;
   let dressCodePoints = 0;
-  let contributionPoints = 0;
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayStr = `${month}-${String(day).padStart(2, '0')}`;
@@ -114,24 +105,16 @@ export async function recalculateGrowthPoints(
         if (allWearing) dressCodePoints++;
       }
     }
-
-    // Contribution
-    const contribDoc = contribDocs.find(d => d.data().date === dayStr);
-    if (contribDoc) {
-      const data = contribDoc.data();
-      if (data.isApproved === true || data.status === 'yes') {
-        contributionPoints += 1;
-      }
-    }
   }
 
   // 5. Existing Doc (to keep 'extra' points)
   const existingDoc = await getDocs(query(collection(db, `${p}growth_points`), where('id', '==', `${staffId}_${month}`)));
   const extra = !existingDoc.empty ? (existingDoc.docs[0].data().extra || 0) : 0;
 
-  const totalPossible = daysInMonth * 4; 
-  const total = attendancePoints + dutyPoints + dressCodePoints + contributionPoints + extra;
-  const percentage = Math.round((total / totalPossible) * 100);
+  const dailyPointsSum = attendancePoints + dutyPoints + dressCodePoints;
+  const normalizedDaily = Math.round((dailyPointsSum / (daysInMonth * 3)) * 90);
+  const total = Math.min(100, normalizedDaily + extra);
+  const percentage = total;
 
   const growthPoints: MonthlyGrowthPoints = {
     id: `${staffId}_${month}`,
@@ -141,10 +124,10 @@ export async function recalculateGrowthPoints(
     punctuality: 0,
     duties: dutyPoints,
     dressCode: dressCodePoints,
-    contributions: contributionPoints,
+    contributions: 0,
     extra,
     total,
-    totalPossible,
+    totalPossible: 100,
     percentage,
     lastCalculatedAt: new Date().toISOString()
   };

@@ -25,8 +25,6 @@ interface DailyReportRow {
   attendance: 'present' | 'absent' | 'late' | 'leave' | 'unmarked';
   uniformStatus: 'yes' | 'no' | 'incomplete' | 'na';
   dutyStatus: 'yes' | 'no' | 'incomplete' | 'na';
-  gpStatus: 'yes' | 'no' | 'invalid' | 'na';
-  gpLink?: string;
   dailyScore: number;
   totalScore?: number;
   fines: number;
@@ -139,8 +137,7 @@ export default function DailyReportPage() {
         attSnaps,
         dressSnaps,
         dutySnaps,
-        fineSnaps,
-        contribSnaps
+        fineSnaps
       ] = await Promise.all([
         listStaffCards({
           dept: 'all',
@@ -167,10 +164,6 @@ export default function DailyReportPage() {
 
         Promise.all(depts.map(d => 
           getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('date', '==', reportDate))).catch(handleQueryError)
-        )),
-
-        Promise.all(depts.map(d => 
-          getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate))).catch(handleQueryError)
         ))
       ]);
 
@@ -254,7 +247,6 @@ export default function DailyReportPage() {
       const dressMap = new Map();
       const dutyMap = new Map();
       const fineMap = new Map();
-      const contribMap = new Map();
 
       attSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
@@ -307,17 +299,6 @@ export default function DailyReportPage() {
         }
       }));
 
-      contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
-        const data = d.data();
-        let sid = data.staffId || d.id;
-        if (!data.staffId && sid.endsWith(`_${reportDate}`)) {
-          sid = sid.slice(0, -(reportDate.length + 1));
-        }
-        const simpleSid = getSimpleId(sid);
-        contribMap.set(sid, data);
-        contribMap.set(simpleSid, data);
-      }));
-
       // 3. Process Report Rows
       const rows: DailyReportRow[] = allStaff.map(s => {
         const timeToMinutes = (timeStr?: string) => {
@@ -342,8 +323,6 @@ export default function DailyReportPage() {
         const dress = dressMap.get(sid) || dressMap.get(simpleSid);
         const duty = dutyMap.get(sid) || dutyMap.get(simpleSid);
         const finesList = fineMap.get(sid) || fineMap.get(simpleSid) || [];
-        const contribRecord = contribMap.get(sid) || contribMap.get(simpleSid);
-
         const uniformConfig = s.dressCodeConfig && s.dressCodeConfig.length > 0 ? s.dressCodeConfig : [
           { key: 'uniform', label: 'Uniform' },
           { key: 'shoes', label: 'Polished Shoes' },
@@ -431,14 +410,11 @@ export default function DailyReportPage() {
               (dutiesPending.length === dutyConfig.length ? 'no' : 'incomplete')));
         }
 
-        const contribScore = (contribRecord && (contribRecord.status === 'yes' || contribRecord.isApproved === true)) ? 1 : 0;
-
         const attPoint = (attendanceStatus === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
         const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
-        const contribPoint = (!onLeave && contribScore > 0) ? 1 : 0;
 
-        const totalDailyPoints = attPoint + uniformPoint + dutyPoint + contribPoint;
+        const totalDailyPoints = attPoint + uniformPoint + dutyPoint;
 
         return {
           id: sid,
@@ -450,8 +426,6 @@ export default function DailyReportPage() {
           attendance: attendanceStatus,
           uniformStatus,
           dutyStatus,
-          gpStatus: onLeave ? 'na' : (contribRecord?.status || (contribScore > 0 ? 'yes' : 'no')),
-          gpLink: contribRecord?.link || '',
           dailyScore: totalDailyPoints,
           totalScore: s.growthPointsTotal || 0,
           fines: fineTotal,
@@ -579,7 +553,7 @@ export default function DailyReportPage() {
     return diff > 0 ? diff : 0;
   };
 
-  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'gpStatus' | 'fines' | 'fineReason' | 'gpLink', value: any) => {
+  const handleInlineUpdate = (id: string, field: 'attendance' | 'uniformStatus' | 'dutyStatus' | 'fines' | 'fineReason', value: any) => {
     setReportData(prev => prev.map(row => {
       if (row.id === id) {
         const updatedRow = {
@@ -592,16 +566,12 @@ export default function DailyReportPage() {
         if (field === 'fineReason' && !value) {
           updatedRow.fines = 0;
         }
-        if (field === 'gpLink' && !value) {
-          updatedRow.gpStatus = 'no';
-        }
 
         const attPoint = (updatedRow.attendance === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && updatedRow.uniformStatus === 'yes') ? 1 : 0;
         const dutyPoint = (!onLeave && updatedRow.dutyStatus === 'yes') ? 1 : 0;
-        const contribPoint = (!onLeave && updatedRow.gpStatus === 'yes') ? 1 : 0;
 
-        updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint + contribPoint;
+        updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint;
 
         if (field === 'attendance') {
           if (value === 'late') {
@@ -739,9 +709,8 @@ export default function DailyReportPage() {
         const attPoint = (updatedRow.attendance === 'present') ? 1 : 0;
         const uniformPoint = (!onLeave && updatedRow.uniformStatus === 'yes') ? 1 : 0;
         const dutyPoint = (!onLeave && updatedRow.dutyStatus === 'yes') ? 1 : 0;
-        const contribPoint = (!onLeave && updatedRow.gpStatus === 'yes') ? 1 : 0;
 
-        updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint + contribPoint;
+        updatedRow.dailyScore = attPoint + uniformPoint + dutyPoint;
 
         return updatedRow;
       }
@@ -793,19 +762,6 @@ export default function DailyReportPage() {
             date: reportDate,
             status: row.dutyStatus,
             duties: (row as any).dutyItems || [],
-            updatedAt: Timestamp.now(),
-            markedBy: session?.uid
-          }, { merge: true });
-        }
-
-        if (row.gpStatus !== 'na') {
-          const finalGpStatus = (row.gpStatus === 'yes' && !row.gpLink) ? 'no' : row.gpStatus;
-          await setDoc(doc(db, `${prefix}_contributions`, attId), {
-            staffId: simpleId,
-            date: reportDate,
-            status: finalGpStatus,
-            isApproved: finalGpStatus === 'yes',
-            link: row.gpLink || '',
             updatedAt: Timestamp.now(),
             markedBy: session?.uid
           }, { merge: true });
@@ -1230,10 +1186,10 @@ export default function DailyReportPage() {
               </div>
 
               <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-1">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational Index</p>
                 <div className="flex items-center gap-3">
                   <span className="text-3xl font-bold text-gray-900">
-                    {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
+                    {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 3) * 100).toFixed(0) : 0}%
                   </span>
                   <div className="p-2 bg-indigo-50 rounded-xl">
                     <CheckCircle size={20} className="text-indigo-500" />
@@ -1311,8 +1267,7 @@ export default function DailyReportPage() {
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">GP</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (4)</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (3)</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
                   </tr>
                 </thead>
@@ -1499,41 +1454,8 @@ export default function DailyReportPage() {
                       </td>
 
                       <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          <input
-                            type="text"
-                            value={row.gpLink || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              handleInlineUpdate(row.id, 'gpLink', val);
-                              if (!val) {
-                                handleInlineUpdate(row.id, 'gpStatus', 'no');
-                              }
-                            }}
-                            placeholder="GP Reason / Post"
-                            className="w-28 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
-                          />
-                          {row.gpLink ? (
-                            <select
-                              value={row.gpStatus}
-                              onChange={(e) => handleInlineUpdate(row.id, 'gpStatus', e.target.value)}
-                              className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center mt-1 ${
-                                row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                'bg-rose-50 text-rose-700 border-rose-100'
-                              }`}
-                            >
-                              <option value="no">No</option>
-                              <option value="yes">Yes</option>
-                            </select>
-                          ) : (
-                            <span className="text-[9px] text-gray-400 font-bold uppercase mt-1">Enter reason first</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 text-center">
-                        <span className={`text-sm font-bold ${row.dailyScore >= 3 ? 'text-emerald-600' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
-                          {row.dailyScore} / 4
+                        <span className={`text-sm font-bold ${row.dailyScore >= 2.5 ? 'text-emerald-600' : row.dailyScore >= 1.5 ? 'text-amber-500' : 'text-rose-500'}`}>
+                          {row.dailyScore} / 3
                         </span>
                       </td>
 
@@ -1812,49 +1734,6 @@ export default function DailyReportPage() {
                           </button>
                         </div>
                       )}
-                    </div>
-
-                    {/* Mobile GP Link */}
-                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Growth Points (GP)</label>
-                      <div className="flex flex-col gap-2 w-full">
-                        <input
-                          type="text"
-                          value={row.gpLink || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            handleInlineUpdate(row.id, 'gpLink', val);
-                            if (!val) {
-                              handleInlineUpdate(row.id, 'gpStatus', 'no');
-                            }
-                          }}
-                          placeholder="GP Reason / Post URL"
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
-                        />
-                        {row.gpLink ? (
-                          <div className="flex flex-wrap gap-1 mt-0.5 w-full">
-                            {[
-                              { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
-                              { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' }
-                            ].map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                disabled={row.attendance === 'leave'}
-                                onClick={() => handleInlineUpdate(row.id, 'gpStatus', opt.value)}
-                                className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
-                                  row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                                  row.gpStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                                }`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-gray-400 italic text-center">Enter reason first</span>
-                        )}
-                      </div>
                     </div>
 
                     {/* Mobile Fines & Penalty */}
@@ -2181,10 +2060,10 @@ export default function DailyReportPage() {
               </div>
 
               <div className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational GP Index</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Operational Index</p>
                 <div className="flex items-center gap-3">
                   <span className="text-3xl font-bold text-gray-900">
-                    {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 4) * 100).toFixed(0) : 0}%
+                    {filteredData.length > 0 ? (filteredData.reduce((acc, curr) => acc + curr.dailyScore, 0) / (filteredData.length * 3) * 100).toFixed(0) : 0}%
                   </span>
                   <div className="p-2 bg-indigo-50 rounded-xl">
                     <CheckCircle size={20} className="text-indigo-500" />
@@ -2202,8 +2081,7 @@ export default function DailyReportPage() {
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">GP</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (4)</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (3)</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
                   </tr>
                 </thead>
@@ -2300,22 +2178,8 @@ export default function DailyReportPage() {
                       </td>
 
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border select-none ${
-                          row.gpStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                          'bg-rose-50 text-rose-700 border-rose-100'
-                        }`}>
-                          {row.gpStatus === 'na' ? 'N/A' : row.gpStatus}
-                        </span>
-                        {row.gpStatus === 'yes' && row.gpLink && (
-                          <div className="text-[8px] text-gray-400 font-medium mt-1 truncate max-w-[100px] mx-auto leading-tight">
-                            {row.gpLink}
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4 text-center">
-                        <span className={`text-sm font-bold ${row.dailyScore >= 3 ? 'text-emerald-600' : row.dailyScore >= 2 ? 'text-amber-500' : 'text-rose-500'}`}>
-                          {row.dailyScore} / 4
+                        <span className={`text-sm font-bold ${row.dailyScore >= 2.5 ? 'text-emerald-600' : row.dailyScore >= 1.5 ? 'text-amber-500' : 'text-rose-500'}`}>
+                          {row.dailyScore} / 3
                         </span>
                       </td>
 

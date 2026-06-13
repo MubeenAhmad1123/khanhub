@@ -206,7 +206,7 @@ export default function ManagerReportsPage() {
         return { docs: [] } as any;
       };
 
-      const [attSnaps, dressSnaps, dutySnaps, contribSnaps, fineSnaps] = await Promise.all([
+      const [attSnaps, dressSnaps, dutySnaps, growthPointsSnaps, fineSnaps] = await Promise.all([
         Promise.all(depts.map(d => 
           getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '>=', startDate), where('date', '<=', endDate)))
             .catch(handleQueryError)
@@ -220,7 +220,7 @@ export default function ManagerReportsPage() {
             .catch(handleQueryError)
         )),
         Promise.all(depts.map(d => 
-          getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '>=', startDate), where('date', '<=', endDate)))
+          getDocs(query(collection(db, `${getDeptPrefix(d)}_growth_points`), where('month', '==', selectedMonth)))
             .catch(handleQueryError)
         )),
         Promise.all(depts.map(d => 
@@ -237,7 +237,7 @@ export default function ManagerReportsPage() {
       const attMap = new Map();
       const dressMap = new Map();
       const dutyMap = new Map();
-      const contribMap = new Map();
+      const growthPointsMap = new Map();
       const fineMap = new Map();
 
       attSnaps.forEach(snap => snap.docs.forEach((d: any) => {
@@ -273,15 +273,12 @@ export default function ManagerReportsPage() {
         dutyMap.set(`${simpleSid}_${date}`, data);
       }));
 
-      contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
+      growthPointsSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
-        let sid = data.staffId || d.id;
-        const date = data.date;
-        if (!data.staffId && sid.endsWith(`_${date}`)) {
-          sid = sid.slice(0, -(date.length + 1));
-        }
+        const sid = data.staffId;
         const simpleSid = getSimpleId(sid);
-        contribMap.set(`${simpleSid}_${date}`, data);
+        growthPointsMap.set(sid, data);
+        growthPointsMap.set(simpleSid, data);
       }));
 
       fineSnaps.forEach(snap => snap.docs.forEach((d: any) => {
@@ -298,7 +295,7 @@ export default function ManagerReportsPage() {
       }));
 
       setStaff(allStaff);
-      setLogs({ attMap, dressMap, dutyMap, contribMap, fineMap });
+      setLogs({ attMap, dressMap, dutyMap, growthPointsMap, fineMap });
     } catch (err) {
       console.error("Error fetching report data:", err);
       toast.error("Failed to fetch reports");
@@ -315,16 +312,18 @@ export default function ManagerReportsPage() {
   // Aggregate stats based on dynamic dateRange
   const getStaffStats = (member: HqStaff) => {
     if (!logs) return { 
-      attPct: 0, dressPct: 0, dutyPct: 0, gpPct: 0, 
+      attPct: 0, dressPct: 0, dutyPct: 0, extraPoints: 0, normalizedDaily: 0,
       totalPoints: 0, presents: 0, absents: 0, lates: 0, leaves: 0, unmarked: 0,
-      finesTotal: 0, maxPoints: 120, dailyBreakdown: [] 
+      finesTotal: 0, maxPoints: 100, dailyBreakdown: [] 
     };
 
-    const { attMap, dressMap, dutyMap, contribMap, fineMap } = logs;
+    const { attMap, dressMap, dutyMap, growthPointsMap, fineMap } = logs;
     const simpleSid = getSimpleId(member.id);
 
+    const gpDoc = growthPointsMap.get(simpleSid) || growthPointsMap.get(member.id);
+    const extraPoints = gpDoc ? Number(gpDoc.extra || 0) : 0;
+
     const daysToProcess = dateRange.days;
-    const maxPoints = daysToProcess.length * 4;
 
     let presents = 0;
     let absents = 0;
@@ -338,10 +337,7 @@ export default function ManagerReportsPage() {
     let dutyCompliantDays = 0;
     let dutyTotalDays = 0;
 
-    let gpApprovedDays = 0;
-    let gpTotalDays = 0;
-
-    let totalPoints = 0;
+    let totalDailyPointsSum = 0;
     let finesTotal = 0;
 
     const dailyBreakdown: any[] = [];
@@ -352,7 +348,6 @@ export default function ManagerReportsPage() {
       const att = attMap.get(logKey);
       const dress = dressMap.get(logKey);
       const duty = dutyMap.get(logKey);
-      const contrib = contribMap.get(logKey);
       const fines = fineMap.get(logKey) || [];
 
       // Day Fines
@@ -415,23 +410,15 @@ export default function ManagerReportsPage() {
         if (dutyStatus === 'yes') dutyCompliantDays++;
       }
 
-      // Growth Point (GP) compliance points
-      const contribScore = (contrib && (contrib.status === 'yes' || contrib.isApproved === true)) ? 1 : 0;
-      if (!onLeave) {
-        gpTotalDays++;
-        if (contribScore > 0) gpApprovedDays++;
-      }
-
       // Exact points rules
       const attPoint = (attendanceStatus === 'present') ? 1 : 0;
       const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
       const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
-      const contribPoint = (!onLeave && contribScore > 0) ? 1 : 0;
 
-      const dailyPoints = attPoint + uniformPoint + dutyPoint + contribPoint;
+      const dailyPoints = attPoint + uniformPoint + dutyPoint;
 
       if (!onLeave && attendanceStatus !== 'unmarked') {
-        totalPoints += dailyPoints;
+        totalDailyPointsSum += dailyPoints;
       }
 
       const dayNum = parseInt(date.split('-')[2], 10);
@@ -442,8 +429,6 @@ export default function ManagerReportsPage() {
         attendance: attendanceStatus,
         uniform: uniformStatus,
         duty: dutyStatus,
-        gp: contribScore > 0 ? 'yes' : (contrib ? 'pending' : 'no'),
-        gpLink: contrib?.link || '',
         score: dailyPoints,
         fines: dayFines,
         fineReasons: fines.map((f: any) => `${f.reason} (₨${f.amount})`).join(', '),
@@ -458,13 +443,18 @@ export default function ManagerReportsPage() {
     const attPct = totalLogged > 0 ? Math.round((presents / totalLogged) * 100) : 0;
     const dressPct = dressTotalDays > 0 ? Math.round((dressCompliantDays / dressTotalDays) * 100) : 0;
     const dutyPct = dutyTotalDays > 0 ? Math.round((dutyCompliantDays / dutyTotalDays) * 100) : 0;
-    const gpPct = gpTotalDays > 0 ? Math.round((gpApprovedDays / gpTotalDays) * 100) : 0;
+
+    const maxDailyPoints = daysToProcess.length * 3;
+    const normalizedDaily = maxDailyPoints > 0 ? Math.round((totalDailyPointsSum / maxDailyPoints) * 90) : 0;
+    const totalPoints = Math.min(100, normalizedDaily + extraPoints);
 
     return {
       attPct,
       dressPct,
       dutyPct,
-      gpPct,
+      gpPct: extraPoints * 10, // just map bonus percentage directly for generic visual representation (e.g. 7 bonus points = 70%)
+      extraPoints,
+      normalizedDaily,
       totalPoints,
       presents,
       absents,
@@ -472,7 +462,7 @@ export default function ManagerReportsPage() {
       leaves,
       unmarked,
       finesTotal,
-      maxPoints,
+      maxPoints: 100,
       dailyBreakdown
     };
   };
@@ -881,7 +871,7 @@ export default function ManagerReportsPage() {
                 <tr className="bg-slate-50/50 border-b border-slate-100">
                   <th className="sticky left-0 bg-slate-50/90 backdrop-blur-sm z-20 px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Rank</th>
                   <th className="sticky left-20 bg-slate-50/90 backdrop-blur-sm z-20 px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-r border-slate-100">Name</th>
-                  {['Department', 'Attendance', 'Dress Code', 'Duties Done', 'Contributions', 'Fines', 'Points Score'].map(h => (
+                  {['Department', 'Attendance', 'Dress Code', 'Duties Done', 'Bonus', 'Fines', 'Points Score'].map(h => (
                     <th key={h} className="px-6 py-4.5 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -931,7 +921,6 @@ export default function ManagerReportsPage() {
                         { val: stats.attPct, color: 'emerald' },
                         { val: stats.dressPct, color: 'blue' },
                         { val: stats.dutyPct, color: 'purple' },
-                        { val: stats.gpPct, color: 'pink' }
                       ].map((item, i) => (
                         <td key={i} className="px-6 py-4.5">
                           <div className="flex items-center gap-3.5">
@@ -949,6 +938,13 @@ export default function ManagerReportsPage() {
                           </div>
                         </td>
                       ))}
+
+                      {/* Bonus */}
+                      <td className="px-6 py-4.5">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50 border border-pink-100 text-pink-700 font-extrabold text-[10px] tracking-wide shrink-0">
+                          {stats.extraPoints} / 10
+                        </span>
+                      </td>
 
                       {/* Fines */}
                       <td className="px-6 py-4.5">
@@ -1016,26 +1012,34 @@ export default function ManagerReportsPage() {
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     {[
-                      { label: 'Attendance', val: stats.attPct },
-                      { label: 'Dress Code', val: stats.dressPct },
-                      { label: 'Duties Done', val: stats.dutyPct },
-                      { label: 'Contributions', val: stats.gpPct }
+                      { label: 'Attendance', val: stats.attPct, display: `${stats.attPct}%` },
+                      { label: 'Dress Code', val: stats.dressPct, display: `${stats.dressPct}%` },
+                      { label: 'Duties Done', val: stats.dutyPct, display: `${stats.dutyPct}%` },
+                      { label: 'Bonus', val: stats.extraPoints * 10, display: `${stats.extraPoints} / 10`, isBonus: true }
                     ].map((item, i) => (
                       <div key={i} className="bg-slate-50/50 border border-slate-100/50 rounded-2xl p-3">
                         <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5">{item.label}</p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-100">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                item.val >= 85 ? 'bg-emerald-500' : item.val >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                              }`} 
-                              style={{ width: `${item.val}%` }} 
-                            />
+                        {item.isBonus ? (
+                          <div className="pt-1">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-pink-50 border border-pink-100 text-pink-700 font-extrabold text-[10px] tracking-wide">
+                              {item.display}
+                            </span>
                           </div>
-                          <span className={`text-[10px] font-black shrink-0 ${
-                            item.val >= 85 ? 'text-emerald-600' : item.val >= 50 ? 'text-amber-600' : 'text-rose-600'
-                          }`}>{item.val}%</span>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-100">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  item.val >= 85 ? 'bg-emerald-500' : item.val >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                                }`} 
+                                style={{ width: `${item.val}%` }} 
+                              />
+                            </div>
+                            <span className={`text-[10px] font-black shrink-0 ${
+                              item.val >= 85 ? 'text-emerald-600' : item.val >= 50 ? 'text-amber-600' : 'text-rose-600'
+                            }`}>{item.display}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1141,8 +1145,8 @@ export default function ManagerReportsPage() {
                   
                   {/* Heatmap Legend */}
                   <div className="flex flex-wrap gap-2 text-[9px] font-extrabold uppercase tracking-wide">
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600 block shadow-sm" /> 4/4 Pts</div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-200 block" /> 2-3 Pts</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600 block shadow-sm" /> 3/3 Pts</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-200 block" /> 2 Pts</div>
                     <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-200 block" /> 1 Pt</div>
                     <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-rose-100 border border-rose-200 block" /> Absent</div>
                     <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-purple-100 border border-purple-200 block" /> Leave</div>
@@ -1189,10 +1193,10 @@ export default function ManagerReportsPage() {
                         cellText = 'text-slate-400 font-semibold';
                       } else {
                         // Numeric scores
-                        if (dayLog.score === 4) {
+                        if (dayLog.score === 3) {
                           cellBg = 'bg-emerald-600 hover:bg-emerald-700';
                           cellText = 'text-white font-black';
-                        } else if (dayLog.score >= 2) {
+                        } else if (dayLog.score === 2) {
                           cellBg = 'bg-emerald-100 hover:bg-emerald-200';
                           cellText = 'text-emerald-800 font-extrabold';
                           borderClass = 'border border-emerald-300';
@@ -1233,11 +1237,11 @@ export default function ManagerReportsPage() {
                       <p className="text-xs text-indigo-600 font-extrabold mt-0.5">Selected Date: {selectedDay.date}</p>
                     </div>
                     <span className="text-xs font-black bg-indigo-100 border border-indigo-200/50 text-indigo-700 px-3 py-1 rounded-xl">
-                      Score: {selectedDay.score} / 4 Pts
+                      Score: {selectedDay.score} / 3 Pts
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
                     {/* Attendance */}
                     <div className="bg-white border border-slate-100 rounded-2xl p-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
@@ -1291,28 +1295,6 @@ export default function ManagerReportsPage() {
                         </div>
                       )}
                     </div>
-
-                    {/* Contributions */}
-                    <div className="bg-white border border-slate-100 rounded-2xl p-4">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">4. Contributions / GP</p>
-                      <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.gp === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                        selectedDay.gp === 'pending' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-                        'bg-slate-100 border-slate-200 text-slate-400'
-                      }`}>
-                        {selectedDay.gp === 'yes' ? 'GP Approved' : selectedDay.gp === 'pending' ? 'GP Pending' : 'No Submission'}
-                      </span>
-                      {selectedDay.gpLink && (
-                        <a 
-                          href={selectedDay.gpLink} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="mt-2 text-[10px] font-black text-indigo-600 hover:underline flex items-center gap-1"
-                        >
-                          View Link <ExternalLink size={10} />
-                        </a>
-                      )}
-                    </div>
                   </div>
 
                   {/* Fines Subcard */}
@@ -1338,7 +1320,7 @@ export default function ManagerReportsPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-150">
-                        {['Date', 'Attendance', 'Uniform', 'Duties', 'GP Contribution', 'Fines', 'Daily Score'].map(h => (
+                        {['Date', 'Attendance', 'Uniform', 'Duties', 'Fines', 'Daily Score'].map(h => (
                           <th key={h} className="px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -1375,16 +1357,6 @@ export default function ManagerReportsPage() {
                               </span>
                             </td>
 
-                            <td className="px-5 py-3">
-                              {b.gpLink ? (
-                                <a href={b.gpLink} target="_blank" rel="noreferrer" className="text-indigo-600 font-extrabold hover:underline inline-flex items-center gap-0.5">
-                                  Link <ExternalLink size={10} />
-                                </a>
-                              ) : (
-                                <span className="text-slate-400 font-bold uppercase text-[9px]">{b.gp}</span>
-                              )}
-                            </td>
-
                             <td className="px-5 py-3 font-extrabold text-slate-800">
                               {b.fines > 0 ? (
                                 <span className="text-rose-600 font-black">₨{b.fines.toLocaleString()}</span>
@@ -1394,7 +1366,7 @@ export default function ManagerReportsPage() {
                             </td>
 
                             <td className="px-5 py-3 font-black text-slate-800">
-                              {isActive ? `${b.score} / 4` : <span className="text-slate-300 font-bold">—</span>}
+                              {isActive ? `${b.score} / 3` : <span className="text-slate-300 font-bold">—</span>}
                             </td>
                           </tr>
                         );

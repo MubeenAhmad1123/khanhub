@@ -196,6 +196,7 @@ export default function StaffProfilePage() {
   const [dressLogs, setDressLogs] = useState<any[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
   const [growthHistory, setGrowthHistory] = useState<any[]>([]);
+  const [bonusInput, setBonusInput] = useState<number>(0);
   const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [loadingScore, setLoadingScore] = useState(false);
@@ -477,7 +478,7 @@ export default function StaffProfilePage() {
 
 
   const computedScores = useMemo(() => {
-    if (!staff) return { attendance: 0, punctuality: 0, uniform: 0, working: 0, growthPoint: 0, workingDays: 0 };
+    if (!staff) return { attendance: 0, punctuality: 0, uniform: 0, working: 0, growthPoint: 0, normalizedDaily: 0, totalScore: 0, workingDays: 0 };
     
     const days = daysInMonth();
     let attScore = 0;
@@ -486,11 +487,14 @@ export default function StaffProfilePage() {
     let workScore = 0;
 
     days.forEach(day => {
-      // 1. Attendance: 1 point if present or late
+      // 1. Attendance: 1 point if present and NOT late (matching reports page)
       const att = attendanceMap[day];
-      if (att?.status === 'present' || att?.status === 'late') {
-        attScore++;
-        // 2. Punctuality: 1 point if arrived on time
+      if (att) {
+        const status = String(att.status || '').toLowerCase();
+        const isLate = att.isLate === true || status === 'late';
+        if (status === 'present' && !isLate) {
+          attScore++;
+        }
         if (att.arrivedOnTime) punctScore++;
       }
 
@@ -519,32 +523,30 @@ export default function StaffProfilePage() {
       }
     });
 
-    // 5. Growth Points: Total points from daily contributions maps
-    let gpScore = 0;
-    days.forEach(day => {
-      const contrib = contributionsMap[day];
-      if (contrib) {
-        const status = String(contrib.status || '').toLowerCase();
-        if (status === 'yes' || contrib.isApproved === true) {
-          gpScore++;
-        }
-      }
-    });
-    // Add extra monthly bonus/extra points
+    // 5. Monthly bonus points awarded manually by the manager
     const extraPoints = growthHistory
       .filter(item => item.month === selectedMonth && item.category === 'Growth Point Bonus')
       .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
-    gpScore += extraPoints;
+
+    const dailyPointsSum = attScore + uniScore + workScore;
+    const normalizedDaily = days.length > 0 ? Math.round((dailyPointsSum / (days.length * 3)) * 90) : 0;
+    const totalScore = Math.min(100, normalizedDaily + extraPoints);
 
     return {
       attendance: attScore,
       punctuality: punctScore,
       uniform: uniScore,
       working: workScore,
-      growthPoint: gpScore,
+      growthPoint: extraPoints,
+      normalizedDaily,
+      totalScore,
       workingDays: days.length
     };
-  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, contributionsMap, daysInMonth, selectedMonth]);
+  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth, selectedMonth]);
+
+  useEffect(() => {
+    setBonusInput(computedScores.growthPoint);
+  }, [computedScores.growthPoint]);
 
   const fetchData = useCallback(async () => {
     if (!staffId) return;
@@ -644,7 +646,6 @@ export default function StaffProfilePage() {
         attDocs,
         dressDocs,
         dutyDocs,
-        contribDocs,
         salarySnap,
         tasksDocs,
         fineDocs,
@@ -653,7 +654,6 @@ export default function StaffProfilePage() {
         fetchParallel(`${prefix}_attendance`),
         fetchParallel(`${prefix}_dress_logs`),
         fetchParallel(`${prefix}_duty_logs`),
-        fetchParallel(`${prefix}_contributions`),
         fetchParallel(`${prefix}_salary_records`),
         fetchParallel(`${prefix}_special_tasks`),
         fetchParallel(`${prefix}_fines`),
@@ -700,15 +700,6 @@ export default function StaffProfilePage() {
       });
       setDutyMap(duMap);
 
-      const cMap: Record<string, any> = {};
-      contribDocs.forEach((d: any) => {
-        const data = d.data();
-        if (data.date >= start && data.date <= end) {
-          cMap[data.date] = data;
-        }
-      });
-      setContributionsMap(cMap);
-
       // Populate array states for calculations and lists
       setAttendance(attDocs.map((d: any) => d.data()));
       setDressLogs(dressDocs.map((d: any) => d.data()));
@@ -720,17 +711,7 @@ export default function StaffProfilePage() {
       // Fetch growth history (all records)
       const monthlyGpDocs = (await fetchParallel(`${prefix}_growth_points`)).map((d: any) => d.data());
 
-      const contribRows = contribDocs
-        .map((d: any) => d.data())
-        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
-        .map((item: any) => ({
-          id: item.date,
-          points: 1,
-          note: item.link ? `Contribution Link: ${item.link}` : 'Daily Growth Contribution',
-          date: item.date,
-          month: item.date && typeof item.date === 'string' ? item.date.slice(0, 7) : '',
-          category: 'Growth Point'
-        }));
+      const contribRows: any[] = [];
 
       monthlyGpDocs.forEach((gpDoc: any) => {
         const extraPoints = Number(gpDoc.extra || 0);
@@ -1581,6 +1562,43 @@ export default function StaffProfilePage() {
     }
   };
 
+  const handleSaveBonus = async () => {
+    if (!staff) return;
+    try {
+      setSaving(true);
+      const val = Math.max(0, Math.min(10, Number(bonusInput) || 0));
+      const month = selectedMonth;
+      
+      let cleanPrefix: string = staff.dept;
+      if (cleanPrefix === 'job-center') cleanPrefix = 'jobcenter';
+      if (cleanPrefix === 'social-media') cleanPrefix = 'media';
+      const p = cleanPrefix ? `${cleanPrefix.replace('-', '_')}_` : 'rehab_';
+      
+      const docId = `${staff.staffId}_${month}`;
+      const docRef = doc(db, `${p}growth_points`, docId);
+      
+      await setDoc(docRef, {
+        id: docId,
+        staffId: staff.staffId,
+        month: month,
+        extra: val,
+        lastCalculatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      // Recalculate
+      const { recalculateGrowthPoints } = await import('@/lib/rehab/growthPoints');
+      await recalculateGrowthPoints(staff.staffId, month, staff.dept);
+      
+      toast.success("Bonus points saved and total score recalculated successfully!");
+      fetchData();
+    } catch (err) {
+      console.error("Error saving bonus points:", err);
+      toast.error("Failed to save bonus points");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleRecalculate = async () => {
     try {
       if (!staff) return;
@@ -1819,8 +1837,8 @@ export default function StaffProfilePage() {
             </button>
             <div className={`h-6 w-px bg-gray-100`} />
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] font-[1000] text-black uppercase tracking-widest leading-tight">Growth Points</p>
-              <p className="text-sm font-[1000] text-black">{computedScores.growthPoint}</p>
+              <p className="text-[10px] font-[1000] text-black uppercase tracking-widest leading-tight">Monthly Score</p>
+              <p className="text-sm font-[1000] text-black">{computedScores.totalScore} / 100</p>
             </div>
           </div>
         </div>
@@ -2479,43 +2497,7 @@ export default function StaffProfilePage() {
                   ))
                 )}
 
-                {/* Daily Contributions Sync */}
-                <div className={`p-8 rounded-[2.5rem] border-2 border-dashed bg-indigo-50/50 border-indigo-100`}>
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <Sparkles size={18} />
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-black uppercase tracking-widest text-black">Verified Contributions</h3>
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Growth Point Synchronization</p>
-                      </div>
-                    </div>
-                    <div className="px-4 py-2 bg-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
-                      +{growthHistory.filter(h => h.date === selectedDate).length} GP Today
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {growthHistory.filter(h => h.date === selectedDate).length === 0 ? (
-                      <div className="col-span-full py-12 text-center bg-white/50 rounded-3xl border border-black/5">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-30">No contribution points recorded for this date</p>
-                      </div>
-                    ) : (
-                      growthHistory.filter(h => h.date === selectedDate).map((item, idx) => (
-                        <div key={item.id || idx} className="p-4 bg-white rounded-2xl border-2 border-black/5 flex items-center justify-between group hover:border-black transition-all">
-                          <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center font-black text-[10px]">
-                              +{item.points || 1}
-                            </div>
-                            <p className="text-[10px] font-black uppercase tracking-tight text-black">{item.note || item.category || 'Approved Contrib'}</p>
-                          </div>
-                          <CheckCircle size={14} className="text-emerald-500" />
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
               </div>
             )}
 
@@ -3919,7 +3901,6 @@ export default function StaffProfilePage() {
               </div>
             )}
 
-            {/* Score History (Always show in Score tab) */}
             {activeTab === 'score' && (
               <div className="space-y-6">
                 {/* Score Breakdown Analysis */}
@@ -3933,9 +3914,9 @@ export default function StaffProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest bg-gray-900 text-white`}>
-                        Total Score: {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
+                        Total Score: {computedScores.totalScore} / 100 (Normalized Daily: {computedScores.normalizedDaily} + Bonus: {computedScores.growthPoint})
                       </span>
-                      <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                      <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-50 hover:text-white transition-all shadow-sm">
                         <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
                       </button>
                     </div>
@@ -3946,14 +3927,14 @@ export default function StaffProfilePage() {
                       { label: 'Attendance', score: computedScores.attendance, max: (computedScores.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-blue-500', bg: 'bg-blue-500/10' },
                       { label: 'Uniform', score: computedScores.uniform, max: (computedScores.workingDays || 0) * 1, icon: <Shield size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                       { label: 'Working', score: computedScores.working, max: (computedScores.workingDays || 0) * 1, icon: <ClipboardList size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
-                      { label: 'Growth Point', score: computedScores.growthPoint, max: (computedScores.workingDays || 0) * 1, icon: <TrendingUp size={18} />, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+                      { label: 'Bonus Points', score: computedScores.growthPoint, max: 10, icon: <TrendingUp size={18} />, color: 'text-orange-500', bg: 'bg-orange-500/10' },
                     ].map((stat, i) => (
                       <div key={i} className={`p-6 rounded-3xl border bg-gray-50 border-gray-200/50 flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
                           {stat.icon}
                         </div>
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-1">{stat.label}</h4>
-                        <p className={`text-xl font-black text-gray-900`}>{stat.score}</p>
+                        <p className={`text-xl font-black text-gray-900`}>{stat.score} <span className="text-xs text-gray-400 font-bold">/ {stat.max}</span></p>
                         <div className="w-full h-1 bg-zinc-700/20 rounded-full mt-4 overflow-hidden">
                           <div
                             className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`}
@@ -3961,7 +3942,7 @@ export default function StaffProfilePage() {
                           />
                         </div>
                         <p className="text-[9px] font-bold text-black uppercase tracking-widest mt-2">
-                          Efficiency: {Math.round((stat.score / (stat.max || 1)) * 100)}%
+                          {stat.label === 'Bonus Points' ? 'Score' : 'Efficiency'}: {Math.round((stat.score / (stat.max || 1)) * 100)}%
                         </p>
                       </div>
                     ))}
@@ -3972,12 +3953,38 @@ export default function StaffProfilePage() {
                       <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
                         <Sparkles size={14} />
                       </div>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Merits & Contributions</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Merits & Bonus Points</h4>
                     </div>
+
+                    {/* Award Bonus Points Form */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 p-4 bg-white rounded-2xl border border-indigo-100">
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-gray-900 uppercase">Award Monthly Bonus Points</p>
+                        <p className="text-[10px] font-bold text-slate-450 text-slate-400 uppercase tracking-wider">Manager can award 0 to 10 points at the end of the month.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={bonusInput}
+                          onChange={e => setBonusInput(Math.max(0, Math.min(10, parseInt(e.target.value, 10) || 0)))}
+                          className="w-20 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
+                        />
+                        <button
+                          onClick={handleSaveBonus}
+                          disabled={saving}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-between mb-6">
                       <div className="space-y-1">
-                        <p className={`text-sm font-black text-gray-900`}>Extra Points: {computedScores.growthPoint}</p>
-                        <p className="text-[10px] font-bold text-black uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
+                        <p className={`text-sm font-black text-gray-900`}>Bonus Points Awarded: {computedScores.growthPoint} / 10</p>
+                        <p className="text-[10px] font-bold text-black uppercase tracking-widest leading-relaxed">Bonus points are awarded manually by the manager at the end of the month.</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>

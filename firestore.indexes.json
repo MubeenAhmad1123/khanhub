@@ -280,20 +280,7 @@
         }
       ]
     },
-    {
-      "collectionGroup": "rehab_contributions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "isApproved",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
+
     {
       "collectionGroup": "spims_fees",
       "queryScope": "COLLECTION",
