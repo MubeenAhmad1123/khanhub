@@ -21,6 +21,9 @@ export default function NewChildAdmissionPage() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [session, setSession] = useState<any>(null);
 
+  // Admission Type State
+  const [admissionType, setAdmissionType] = useState<'orphan' | 'old_age' | null>(null);
+
   // Form State
   const [formData, setFormData] = useState({
     // Section 1: Child Basic
@@ -82,6 +85,9 @@ export default function NewChildAdmissionPage() {
     // Section 8: Status
     isActive: true,
     isApproved: false,
+    
+    // Type
+    admissionType: '', // 'orphan' or 'old_age'
   });
 
   useEffect(() => {
@@ -133,6 +139,7 @@ export default function NewChildAdmissionPage() {
       
       const docRef = await addDoc(collection(db, 'welfare_children'), {
         ...formData,
+        admissionType, // Include the selected type
         createdAt: serverTimestamp(),
         createdBy: session.uid,
         createdByName: session.displayName
@@ -178,15 +185,44 @@ export default function NewChildAdmissionPage() {
         </div>
       </div>
 
+      {!admissionType ? (
+        <div className="flex flex-col md:flex-row gap-6 mt-8 justify-center">
+          <button 
+            onClick={() => setAdmissionType('orphan')}
+            className="bg-white border-2 border-teal-100 hover:border-teal-500 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all hover:shadow-xl hover:-translate-y-1 group w-full md:w-1/2"
+          >
+            <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center group-hover:bg-teal-500 transition-colors">
+              <Baby size={40} className="text-teal-600 group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-black text-gray-900">Admit Orphan Child</h3>
+              <p className="text-gray-500 text-sm mt-2">Standard admission form for children requiring education, food, and sponsor support.</p>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => setAdmissionType('old_age')}
+            className="bg-white border-2 border-blue-100 hover:border-blue-500 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all hover:shadow-xl hover:-translate-y-1 group w-full md:w-1/2"
+          >
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+              <User size={40} className="text-blue-600 group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-black text-gray-900">Admit Old Age Person</h3>
+              <p className="text-gray-500 text-sm mt-2">Specialized admission form for elderly individuals requiring care and shelter.</p>
+            </div>
+          </button>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-8">
         
-        {/* Section 1: Child's Basic Information */}
+        {/* Section 1: Basic Information */}
         <div className={sectionClass}>
           <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8">
-            <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
-              <Baby size={20} />
+            <div className={`w-10 h-10 ${admissionType === 'orphan' ? 'bg-teal-50 text-teal-600' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center`}>
+              {admissionType === 'orphan' ? <Baby size={20} /> : <User size={20} />}
             </div>
-            <h2 className="text-xl font-black text-gray-900 tracking-tight">Child's Basic Information</h2>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">{admissionType === 'orphan' ? "Child's Basic Information" : "Person's Basic Information"}</h2>
           </div>
 
           <div className={gridClass}>
@@ -226,7 +262,7 @@ export default function NewChildAdmissionPage() {
               </select>
             </div>
             <div>
-              <label className={labelClass}>B-Form Number (NADRA)</label>
+              <label className={labelClass}>{admissionType === 'old_age' ? 'CNIC Number' : 'B-Form Number (NADRA)'}</label>
               <input 
                 name="bFormNumber" 
                 value={formData.bFormNumber} 
@@ -251,48 +287,53 @@ export default function NewChildAdmissionPage() {
                 <option value="Other">Other</option>
               </select>
             </div>
-            <div>
-              <label className={labelClass}>Class Requested</label>
-              <select name="admissionClassRequested" value={formData.admissionClassRequested} onChange={handleChange} className={inputClass}>
-                <option value="">Select Class</option>
-                {['Nursery', 'KG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div className="lg:col-span-1">
-              <label className={labelClass}>Previous School Name</label>
-              <input 
-                name="previousSchoolName" 
-                value={formData.previousSchoolName} 
-                onChange={handleChange} 
-                placeholder="Mention previous school if any" 
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Previous Class</label>
-              <input 
-                name="previousClass" 
-                value={formData.previousClass} 
-                onChange={handleChange} 
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Previous Result</label>
-              <select name="previousClassResult" value={formData.previousClassResult} onChange={handleChange} className={inputClass}>
-                <option value="N/A">N/A</option>
-                <option value="Pass">Pass</option>
-                <option value="Fail">Fail</option>
-              </select>
-            </div>
+            {admissionType === 'orphan' && (
+              <>
+                <div>
+                  <label className={labelClass}>Class Requested</label>
+                  <select name="admissionClassRequested" value={formData.admissionClassRequested} onChange={handleChange} className={inputClass}>
+                    <option value="">Select Class</option>
+                    {['Nursery', 'KG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="lg:col-span-1">
+                  <label className={labelClass}>Previous School Name</label>
+                  <input 
+                    name="previousSchoolName" 
+                    value={formData.previousSchoolName} 
+                    onChange={handleChange} 
+                    placeholder="Mention previous school if any" 
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Previous Class</label>
+                  <input 
+                    name="previousClass" 
+                    value={formData.previousClass} 
+                    onChange={handleChange} 
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Previous Result</label>
+                  <select name="previousClassResult" value={formData.previousClassResult} onChange={handleChange} className={inputClass}>
+                    <option value="N/A">N/A</option>
+                    <option value="Pass">Pass</option>
+                    <option value="Fail">Fail</option>
+                  </select>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Section 2: Parents' Information */}
-        <div className={sectionClass}>
-          <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-blue-600">
+        {/* Section 2: Parents' Information (Only for Orphan) */}
+        {admissionType === 'orphan' && (
+          <div className={sectionClass}>
+            <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-blue-600">
             <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
               <Users size={20} />
             </div>
@@ -356,7 +397,7 @@ export default function NewChildAdmissionPage() {
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Section 3: Guardian's Information */}
         <div className={sectionClass}>
@@ -404,7 +445,7 @@ export default function NewChildAdmissionPage() {
 
           <div className={gridClass}>
             <div>
-              <label className={labelClass}>Total Siblings</label>
+              <label className={labelClass}>{admissionType === 'orphan' ? 'Total Siblings' : 'Total Children/Dependents'}</label>
               <input type="number" name="siblingsCount" value={formData.siblingsCount} onChange={handleChange} className={inputClass} />
             </div>
             <div>
@@ -431,14 +472,13 @@ export default function NewChildAdmissionPage() {
           </div>
         </div>
 
-        {/* Section 5: Education & Section 6: Health */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className={sectionClass}>
             <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-purple-600">
               <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
                 <GraduationCap size={20} />
               </div>
-              <h2 className="text-xl font-black text-gray-900 tracking-tight">Academic History</h2>
+              <h2 className="text-xl font-black text-gray-900 tracking-tight">{admissionType === 'orphan' ? 'Academic History' : 'Background Information'}</h2>
             </div>
             <div className="space-y-6">
               <div className="space-y-1.5">
@@ -515,7 +555,6 @@ export default function NewChildAdmissionPage() {
           </div>
         </div>
 
-        {/* Submit Bar */}
         <div className="sticky bottom-8 z-20">
           <div className="bg-gray-900/95 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
@@ -530,10 +569,10 @@ export default function NewChildAdmissionPage() {
             <div className="flex items-center gap-3 w-full md:w-auto">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => setAdmissionType(null)}
                 className="flex-1 md:flex-none px-8 py-4 bg-white/5 text-white rounded-2xl text-sm font-black hover:bg-white/10 transition-colors uppercase tracking-widest"
               >
-                Cancel
+                Change Type
               </button>
               <button
                 type="submit"
@@ -571,6 +610,7 @@ export default function NewChildAdmissionPage() {
         </div>
 
       </form>
+      )}
     </div>
   );
 }

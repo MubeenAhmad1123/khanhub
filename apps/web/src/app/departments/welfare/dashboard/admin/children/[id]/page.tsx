@@ -211,6 +211,25 @@ export default function ChildDetailPage() {
     }
   }, [childId, router]);
 
+  const handleDeleteChild = async () => {
+    if (!isAdmin) return;
+    const confirmStr = window.prompt('To permanently delete this profile, type "DELETE" below:');
+    if (confirmStr !== 'DELETE') {
+      if (confirmStr !== null) toast.error('Deletion cancelled.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, 'welfare_children', childId));
+      toast.success('Profile deleted successfully');
+      router.push('/departments/welfare/dashboard/admin/children');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to delete profile');
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!session || !childId) return;
     fetchData();
@@ -681,14 +700,25 @@ export default function ChildDetailPage() {
           entityName={child?.name}
         />
         
-        {/* Top Link */}
-        <Link 
-          href="/departments/welfare/dashboard/admin/children" 
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Children
-        </Link>
+        <div className="flex justify-between items-center mb-2">
+          <Link 
+            href="/departments/welfare/dashboard/admin/children" 
+            className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-teal-600 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> 
+            Back to Children
+          </Link>
+          
+          {isAdmin && (
+            <button
+              onClick={handleDeleteChild}
+              className="inline-flex items-center text-xs font-black text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-widest"
+            >
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              Delete Profile
+            </button>
+          )}
+        </div>
         
         {/* Header Profile Summary */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-4 md:p-8 flex flex-col items-center gap-4 sm:gap-6 relative overflow-hidden">

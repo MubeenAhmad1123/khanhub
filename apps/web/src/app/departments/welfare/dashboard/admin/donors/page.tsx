@@ -4,12 +4,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Donor } from '@/types/welfare';
 import { formatDateDMY } from '@/lib/utils';
 import {
-  Banknote, Search, Heart, Plus, Loader2, ArrowRight, X, User, Copy, CheckCircle2, AlertTriangle, ShieldCheck
+  Banknote, Search, Heart, Plus, Loader2, ArrowRight, X, User, Copy, CheckCircle2, AlertTriangle, ShieldCheck, Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -61,6 +61,25 @@ export default function DonorsRegistryPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied!');
+  };
+
+  const handleDeleteDonor = async (donorId: string, donorName: string) => {
+    const confirmStr = window.prompt(`To permanently delete donor ${donorName}, type "DELETE" below:`);
+    if (confirmStr !== 'DELETE') {
+      if (confirmStr !== null) toast.error('Deletion cancelled.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, 'welfare_donors', donorId));
+      toast.success('Donor deleted successfully');
+      setDonors(donors.filter(d => d.id !== donorId));
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to delete donor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredDonors = donors.filter(d => {
@@ -215,12 +234,21 @@ export default function DonorsRegistryPage() {
 
               <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
                 <span className="text-xs text-gray-400 font-medium">Joined {formatDateDMY(donor.createdAt)}</span>
-                <Link
-                  href={`/departments/welfare/dashboard/admin/donors/${donor.id}`}
-                  className="w-8 h-8 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-teal-500 hover:text-white transition-colors"
-                >
-                  <ArrowRight size={14} />
-                </Link>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDeleteDonor(donor.id, donor.fullName)}
+                    className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors"
+                    title="Delete Donor"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <Link
+                    href={`/departments/welfare/dashboard/admin/donors/${donor.id}`}
+                    className="w-8 h-8 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-teal-500 hover:text-white transition-colors"
+                  >
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
