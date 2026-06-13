@@ -40,7 +40,7 @@ export default function CashierRedirect() {
           </Link>
           
           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">
-            You will no longer be able to manage transactions from the Rehab portal.
+            You will no longer be able to manage transactions from the Welfare portal.
           </p>
         </div>
       </div>

@@ -37,6 +37,20 @@ export default function RegisterDonorPage() {
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
+  
+  // New Form Fields from Member Registration
+  const [profession, setProfession] = useState('');
+  const [education, setEducation] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [province, setProvince] = useState('');
+  
+  const [referringMemberName, setReferringMemberName] = useState('');
+  const [referringMemberFatherName, setReferringMemberFatherName] = useState('');
+  const [referringMemberId, setReferringMemberId] = useState('');
+  const [referringMemberMobile, setReferringMemberMobile] = useState('');
+  const [referringMemberAddress, setReferringMemberAddress] = useState('');
 
   // SECTION 3: Donation Preferences
   const [donationScope, setDonationScope] = useState<'whole_welfare' | 'specific_child'>('whole_welfare');
@@ -138,6 +152,17 @@ export default function RegisterDonorPage() {
         whatsappNumber: whatsappNumber || null,
         address: address || null,
         email: email || null,
+        profession: profession || null,
+        education: education || null,
+        bloodGroup: bloodGroup || null,
+        city: city || null,
+        district: district || null,
+        province: province || null,
+        referringMemberName: referringMemberName || null,
+        referringMemberFatherName: referringMemberFatherName || null,
+        referringMemberId: referringMemberId || null,
+        referringMemberMobile: referringMemberMobile || null,
+        referringMemberAddress: referringMemberAddress || null,
         donationScope,
         linkedChildId: donationScope === 'specific_child' ? selectedChildId : null,
         linkedChildName: donationScope === 'specific_child' ? linkedChildName : null,
@@ -244,7 +269,7 @@ export default function RegisterDonorPage() {
                   <input required placeholder="Donor Name" className={inputStyle} value={fullName} onChange={e => setFullName(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Father's Name</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Father/Husband Name</label>
                   <input placeholder="Optional" className={inputStyle} value={fatherName} onChange={e => setFatherName(e.target.value)} />
                 </div>
               </div>
@@ -267,14 +292,78 @@ export default function RegisterDonorPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Profession</label>
+                  <input className={inputStyle} placeholder="Optional" value={profession} onChange={e => setProfession(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Education</label>
+                  <input className={inputStyle} placeholder="Optional" value={education} onChange={e => setEducation(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Blood Group</label>
+                  <input className={inputStyle} placeholder="e.g. O+, A-, B+" value={bloodGroup} onChange={e => setBloodGroup(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">City</label>
+                  <input className={inputStyle} placeholder="Optional" value={city} onChange={e => setCity(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">District</label>
+                  <input className={inputStyle} placeholder="Optional" value={district} onChange={e => setDistrict(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Province</label>
+                  <input className={inputStyle} placeholder="Optional" value={province} onChange={e => setProvince(e.target.value)} />
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Email Address</label>
                   <input type="email" className={inputStyle} placeholder="Optional" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Address</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Full Address</label>
                   <textarea rows={2} className={inputStyle} placeholder="Residential address" value={address} onChange={e => setAddress(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION: Referring Member Details */}
+            <div className="space-y-4 mt-10">
+              <SectionHeader icon={User} title="Referring Member Details" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Referring Member Name</label>
+                  <input placeholder="Optional" className={inputStyle} value={referringMemberName} onChange={e => setReferringMemberName(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Member Father's Name</label>
+                  <input placeholder="Optional" className={inputStyle} value={referringMemberFatherName} onChange={e => setReferringMemberFatherName(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Member ID</label>
+                  <input placeholder="Optional" className={inputStyle} value={referringMemberId} onChange={e => setReferringMemberId(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Member Mobile Number</label>
+                  <input placeholder="Optional" className={inputStyle} value={referringMemberMobile} onChange={e => setReferringMemberMobile(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Member Full Address</label>
+                  <textarea rows={2} className={inputStyle} placeholder="Optional" value={referringMemberAddress} onChange={e => setReferringMemberAddress(e.target.value)} />
                 </div>
               </div>
             </div>

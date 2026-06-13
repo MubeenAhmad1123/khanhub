@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
 import { resetWelfarePassword } from '@/app/departments/welfare/actions/createWelfareUser';
 
-type RehabChildCredential = {
+type WelfareChildCredential = {
   id: string;
   displayName?: string;
   customId?: string;
@@ -18,11 +18,11 @@ type RehabChildCredential = {
   isActive?: boolean;
 };
 
-export default function RehabAdminPasswordsPage() {
+export default function WelfareAdminPasswordsPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<RehabChildCredential[]>([]);
+  const [users, setUsers] = useState<WelfareChildCredential[]>([]);
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function RehabAdminPasswordsPage() {
           orderBy('displayName', 'asc'),
         );
         const snap = await getDocs(q);
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RehabChildCredential));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WelfareChildCredential));
 
         list.sort((a, b) => {
           const aName = (a.displayName || '').toLowerCase();
@@ -84,14 +84,14 @@ export default function RehabAdminPasswordsPage() {
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const copyCredentials = (u: RehabChildCredential) => {
+  const copyCredentials = (u: WelfareChildCredential) => {
     const text = `ID: ${u.customId || '-'} | Password: ${u.password || '-'}`;
     void navigator.clipboard.writeText(text);
     setCopiedId(u.id);
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleResetPassword = async (u: RehabChildCredential) => {
+  const handleResetPassword = async (u: WelfareChildCredential) => {
     const next = window.prompt(`Enter new password for ${u.customId || u.displayName || 'user'} (min 6 chars):`);
     if (!next) return;
     if (next.length < 6) {
@@ -139,7 +139,7 @@ export default function RehabAdminPasswordsPage() {
           <div>
             <h1 className="text-xl md:text-2xl font-black text-gray-900">Child Login Credentials</h1>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-              Rehab children only (family accounts)
+              Welfare children only (family accounts)
             </p>
           </div>
         </div>

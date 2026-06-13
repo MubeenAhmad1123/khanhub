@@ -127,7 +127,7 @@ export async function createWelfareUserServer(
 }
 
 // Keep old name as alias for backward-compat with HQ manager page imports
-export const createRehabUserServer = createWelfareUserServer;
+export const createWelfareUserAliasServer = createWelfareUserServer;
 
 export async function deactivateWelfareUser(
   uid: string
