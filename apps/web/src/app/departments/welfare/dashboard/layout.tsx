@@ -13,7 +13,7 @@ import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import StaffNotifications from '@/components/layout/StaffNotifications';
 
-type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin';
+type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin' | 'donor';
 
 function normalizeWelfareRole(rawRole: string): WelfareRole {
   const lower = (rawRole || '').toLowerCase();
@@ -23,6 +23,7 @@ function normalizeWelfareRole(rawRole: string): WelfareRole {
   if (lower === 'staff' || lower.includes('staff') || lower.includes('contractor') || lower.includes('internee')) {
     return 'staff';
   }
+  if (lower === 'donor') return 'donor';
   return rawRole as WelfareRole;
 }
 
@@ -43,13 +44,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'User Management', href: '/departments/welfare/dashboard/superadmin/users',      icon: <Users size={16}/>,           roles: ['superadmin'] },
   { label: 'My Attendance', href: '/departments/welfare/dashboard/staff',                   icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Child',      href: '/departments/welfare/dashboard/family',                  icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',                 icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
+  { label: 'My Dashboard',  href: '/departments/welfare/dashboard/donor',                   icon: <Heart size={16}/>,           roles: ['donor'] },
+  { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',                 icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin', 'donor'] },
 ];
 
 const ROLE_COLORS: Record<WelfareRole, string> = {
   admin:      'bg-blue-50 text-blue-700 border border-blue-100',
   staff:      'bg-teal-50 text-teal-700 border border-teal-100',
   family:     'bg-green-50 text-green-700 border border-green-100',
+  donor:      'bg-indigo-50 text-indigo-700 border border-indigo-100',
   superadmin: 'bg-purple-50 text-purple-700 border border-purple-100',
 };
 
@@ -57,6 +60,7 @@ const ROLE_LABELS: Record<WelfareRole, string> = {
   admin:      'Admin',
   staff:      'Staff',
   family:     'Family',
+  donor:      'Donor',
   superadmin: 'HQ Admin',
 };
 
