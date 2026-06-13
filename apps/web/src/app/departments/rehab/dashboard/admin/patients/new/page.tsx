@@ -106,10 +106,7 @@ export default function AdmitPatientPage() {
     if (submitting) return;
     
     // Validate required fields
-    if (!loginId || !loginPassword || !name || !fatherName || 
-        !age || !gender || !maritalStatus || !address || 
-        !guardianName || !guardianPhone || !guardianRelation || 
-        !admissionDate || reasonsForAdmission.length === 0) {
+    if (!loginId || !loginPassword || !name || !fatherName || !patientId || !guardianPhone) {
       setError('Please fill all required fields');
       toast.error('Missing required fields');
       return;
@@ -286,7 +283,7 @@ export default function AdmitPatientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <BrutalistCalendar
-                    label="Date of Birth *"
+                    label="Date of Birth"
                     value={dateOfBirth}
                     onChange={(iso) => {
                       setDateOfBirth(iso);
@@ -295,15 +292,15 @@ export default function AdmitPatientPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Age * (Auto-filled)</label>
-                  <input required type="number" min="1" max="120" placeholder="Age" className={inputStyle} value={age} onChange={e => setAge(e.target.value)} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Age (Auto-filled)</label>
+                  <input type="number" min="1" max="120" placeholder="Age" className={inputStyle} value={age} onChange={e => setAge(e.target.value)} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Gender *</label>
-                  <select required className={inputStyle} value={gender} onChange={e => setGender(e.target.value)}>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Gender</label>
+                  <select className={inputStyle} value={gender} onChange={e => setGender(e.target.value)}>
                     <option value="">Select</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -325,8 +322,8 @@ export default function AdmitPatientPage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Marital Status *</label>
-                  <select required className={inputStyle} value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)}>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Marital Status</label>
+                  <select className={inputStyle} value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)}>
                     <option value="">Select</option>
                     <option value="Unmarried">Unmarried</option>
                     <option value="Married">Married</option>
@@ -344,8 +341,8 @@ export default function AdmitPatientPage() {
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Address *</label>
-                <textarea required rows={2} className={inputStyle} placeholder="Full Address" value={address} onChange={e => setAddress(e.target.value)} />
+                <label className="text-xs font-bold text-gray-500 uppercase px-1">Address</label>
+                <textarea rows={2} className={inputStyle} placeholder="Full Address" value={address} onChange={e => setAddress(e.target.value)} />
               </div>
 
               {/* PHOTO UPLOAD */}
@@ -388,8 +385,8 @@ export default function AdmitPatientPage() {
               <SectionHeader icon={Users} title="Guardian / Family Information" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian Name *</label>
-                  <input required placeholder="Parent or responsible person" className={inputStyle} value={guardianName} onChange={e => setGuardianName(e.target.value)} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian Name</label>
+                  <input placeholder="Parent or responsible person" className={inputStyle} value={guardianName} onChange={e => setGuardianName(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian's Father Name</label>
@@ -398,8 +395,8 @@ export default function AdmitPatientPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Relation *</label>
-                  <select required className={inputStyle} value={guardianRelation} onChange={e => setGuardianRelation(e.target.value)}>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Relation</label>
+                  <select className={inputStyle} value={guardianRelation} onChange={e => setGuardianRelation(e.target.value)}>
                     <option value="">Select</option>
                     <option value="Father">Father</option>
                     <option value="Mother">Mother</option>
@@ -432,19 +429,19 @@ export default function AdmitPatientPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
                   <BrutalistCalendar
-                    label="Admission Date *"
+                    label="Admission Date"
                     value={admissionDate}
                     onChange={(iso) => setAdmissionDate(iso)}
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Monthly Package *</label>
-                  <input required type="number" className={inputStyle} value={packageAmount} onChange={e => setPackageAmount(e.target.value)} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Monthly Package</label>
+                  <input type="number" className={inputStyle} value={packageAmount} onChange={e => setPackageAmount(e.target.value)} />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Reasons for Admission *</label>
+                <label className="text-xs font-bold text-gray-500 uppercase px-1">Reasons for Admission</label>
                 <div className="flex flex-wrap gap-2">
                   {admissionReasons.map(r => (
                     <button

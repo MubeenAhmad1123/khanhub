@@ -478,13 +478,12 @@ export default function RegisterSeekerPage() {
     if (!seekerNumber.trim()) errors.seekerNumber = 'Serial Number / Seeker ID is required';
     if (!name.trim()) errors.name = 'Full name is required';
     if (!fatherName.trim()) errors.fatherName = "Father's name is required";
-    if (!dateOfBirth) errors.dateOfBirth = 'Date of birth is required';
-    if (!age || Number(age) <= 0) errors.age = 'Age is required';
+    // Date of birth and age are now optional
     if (!gender) errors.gender = 'Gender selection is required';
     if (!maritalStatus) errors.maritalStatus = 'Marital status is required';
     
     const cnicClean = cnic.replace(/\D/g, '');
-    if (cnicClean.length !== 13) {
+    if (cnicClean.length > 0 && cnicClean.length !== 13) {
       errors.cnic = 'CNIC must be in format XXXXX-XXXXXXX-X';
     }
 
@@ -774,7 +773,7 @@ export default function RegisterSeekerPage() {
                     </div>
                     <div className="space-y-1.5">
                       <BrutalistCalendar
-                        label="Date of Birth *"
+                        label="Date of Birth (Optional)"
                         value={dateOfBirth}
                         onChange={setDateOfBirth}
                       />
@@ -784,8 +783,8 @@ export default function RegisterSeekerPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Age * (Auto-calculated)</label>
-                      <input required readOnly placeholder="Age" className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 bg-gray-50 focus:outline-none text-sm transition-all shadow-sm cursor-not-allowed font-black" value={age} />
+                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">Age (Auto-calculated)</label>
+                      <input readOnly placeholder="Age" className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 bg-gray-50 focus:outline-none text-sm transition-all shadow-sm cursor-not-allowed font-black" value={age} />
                       {validationErrors.age && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.age}</p>}
                     </div>
                     <div className="space-y-1.5">
@@ -813,7 +812,7 @@ export default function RegisterSeekerPage() {
                       {validationErrors.maritalStatus && <p className="text-xs text-rose-500 font-bold mt-1 px-1">{validationErrors.maritalStatus}</p>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">CNIC Number * (Format: XXXXX-XXXXXXX-X)</label>
+                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">CNIC Number (Format: XXXXX-XXXXXXX-X)</label>
                       <input 
                         placeholder="35201-1234567-1" 
                         className={inputStyle} 
@@ -900,7 +899,7 @@ export default function RegisterSeekerPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={!seekerNumber || !name || !fatherName || !dateOfBirth || !gender || !maritalStatus || !cnic || !phone || !address}
+                      disabled={!seekerNumber || !name || !fatherName || !gender || !maritalStatus || !phone || !address}
                       onClick={() => {
                         if (validateStep2()) setCurrentStep(3);
                       }}
