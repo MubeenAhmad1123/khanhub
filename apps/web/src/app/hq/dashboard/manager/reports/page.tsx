@@ -185,7 +185,8 @@ export default function ManagerReportsPage() {
             allStaff.push({
               id: sid,
               department: depts[i],
-              ...data
+              ...data,
+              name: data.name || data.displayName || 'Staff'
             } as any);
             seenIds.add(sid);
           }
@@ -500,7 +501,7 @@ export default function ManagerReportsPage() {
 
     // Apply filters
     result = result.filter(r => {
-      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
+      const matchesSearch = (r.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (r.designation || '').toLowerCase().includes(search.toLowerCase()) ||
         (r.employeeId || '').toLowerCase().includes(search.toLowerCase());
       const matchesDept = deptFilter === 'all' || r.department === deptFilter;

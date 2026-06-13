@@ -460,10 +460,10 @@ export default function DailyReportPage() {
 
   const filteredData = useMemo(() => {
     let result = reportData.filter(r => {
-      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.designation.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = (r.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (r.designation || '').toLowerCase().includes(search.toLowerCase());
       const matchesDept = deptFilter === 'all' || r.department === deptFilter;
-      const matchesDesignation = selectedDesignation === 'all' || r.designation.toLowerCase() === selectedDesignation.toLowerCase();
+      const matchesDesignation = selectedDesignation === 'all' || (r.designation || '').toLowerCase() === selectedDesignation.toLowerCase();
       return matchesSearch && matchesDept && matchesDesignation;
     });
 
