@@ -6,7 +6,7 @@ import { Loader2, Plus, Star, Calendar, User, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 
-export default function TherapyTab({ patientId, session, dateFilter }: { patientId: string, session: any, dateFilter?: { admissionDate: any; dischargeDate?: any } | null }) {
+export default function TherapyTab({ patientId, session, dateFilter, readOnly = false }: { patientId: string, session: any, dateFilter?: { admissionDate: any; dischargeDate?: any } | null, readOnly?: boolean }) {
   const [sessions, setSessions] = useState<TherapySession[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -119,12 +119,14 @@ export default function TherapyTab({ patientId, session, dateFilter }: { patient
     <div className="space-y-6 animate-in fade-in duration-500 overflow-x-hidden w-full max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-gray-100 pb-4">
         <h2 className="text-xl font-black text-gray-900">Individual Therapy Sessions</h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
-        >
-          <Plus size={16} /> Add Session
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          >
+            <Plus size={16} /> Add Session
+          </button>
+        )}
       </div>
 
       {filteredSessions.length === 0 ? (

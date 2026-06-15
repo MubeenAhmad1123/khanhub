@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -43,27 +43,60 @@ export default function FamilyPatientViewPage() {
 
   const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'patients', patientId);
 
-  useEffect(() => {
-    if (visibilityLoading) return;
-    const tabVisibility: Record<string, boolean> = {
-      overview: sections.admissionDetails !== false,
-      admission: sections.admissionDetails !== false,
-      finance: sections.financialStatement !== false,
-      daily: sections.dailySheet !== false,
-      visits: sections.visits !== false,
-      therapy: sections.therapy !== false,
-      meds: sections.medication !== false,
-      canteen: sections.canteen !== false,
-      videos: sections.files !== false,
-    };
-    
-    if (tabVisibility[activeTab] === false) {
-      const firstVisible = Object.keys(tabVisibility).find(k => tabVisibility[k] !== false);
-      if (firstVisible) {
-        setActiveTab(firstVisible as any);
-      }
+  const isScrollingRef = useRef(false);
+
+  const scrollToSection = (id: string) => {
+    isScrollingRef.current = true;
+    setActiveTab(id as any);
+    const element = document.getElementById(`section-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [sections, visibilityLoading, activeTab]);
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 800);
+  };
+
+  useEffect(() => {
+    if (visibilityLoading || loading) return;
+
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      if (isScrollingRef.current) return;
+
+      let maxRatio = 0;
+      let visibleSectionId: any = null;
+
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          visibleSectionId = entry.target.id.replace('section-', '');
+        }
+      });
+
+      if (visibleSectionId) {
+        setActiveTab(visibleSectionId as any);
+      }
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: null,
+      rootMargin: '-15% 0px -65% 0px',
+      threshold: [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    });
+
+    const activeKeys = [
+      'overview', 'admission', 'finance', 'canteen', 'daily', 'visits', 'therapy', 'meds', 'videos'
+    ];
+    
+    activeKeys.forEach((key) => {
+      const el = document.getElementById(`section-${key}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visibilityLoading, loading]);
 
   const fetchPatientData = useCallback(async () => {
     try {
@@ -299,8 +332,8 @@ export default function FamilyPatientViewPage() {
         </div>
       )}
 
-      {/* Sticky Tabs for Mobile */}
-      <div className="sticky top-[72px] sm:static z-30 bg-gray-50/90 backdrop-blur-md border-b border-gray-150 py-2">
+      {/* Sticky Tabs for Mobile & Desktop */}
+      <div className="sticky top-[72px] sm:top-0 z-30 bg-gray-50/95 backdrop-blur-md border-b border-gray-200 py-3 shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
             {[
@@ -316,9 +349,9 @@ export default function FamilyPatientViewPage() {
             ].filter(t => t.visible !== false).map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => scrollToSection(tab.key)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-[11px] whitespace-nowrap rounded-xl font-black uppercase tracking-wider transition-all active:scale-95 flex-shrink-0 ${
-                  activeTab === tab.key ? 'bg-gray-900 text-white shadow-lg' : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                  activeTab === tab.key ? 'bg-teal-600 text-white shadow-md shadow-teal-900/10' : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300'
                 }`}
               >
                 <tab.icon size={14} />
@@ -330,15 +363,106 @@ export default function FamilyPatientViewPage() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="max-w-6xl mx-auto px-4 pb-12">
-        {activeTab === 'admission' && (
-          <div className="space-y-6 sm:space-y-8 mt-6">
+      <div className="max-w-6xl mx-auto px-4 pb-12 space-y-12 sm:space-y-16 mt-8">
+        
+        {/* Overview Section */}
+        {sections.admissionDetails !== false && (
+          <div id="section-overview" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <div className="space-y-6">
+              {/* Stay Details */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
+                <h2 className="font-black text-gray-900 text-lg sm:text-xl mb-6 flex items-center gap-2.5">
+                  <Clock size={20} className="text-teal-600" /> Stay Details
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Admission Date</p>
+                    <p className="font-bold text-gray-900 mt-1">
+                      {patient.admissionDate ? formatDateDMY(patient.admissionDate) : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Discharge Date</p>
+                    <p className="font-bold text-gray-900 mt-1">
+                      {patient.isActive === false && patient.dischargeDate ? formatDateDMY(patient.dischargeDate) : 'Still Admitted'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Stay Duration</p>
+                    <p className="font-bold text-gray-900 mt-1">{patient.durationFormatted || '0 Days'}</p>
+                  </div>
+                  <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Days</p>
+                    <p className="font-bold text-gray-900 mt-1">{patient.daysAdmitted} Days</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Health Status */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
+                <h2 className="font-black text-gray-900 text-lg sm:text-xl mb-6 flex items-center gap-2.5">
+                  <Shield size={20} className="text-teal-600" /> Health Status
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {[
+                    { label: 'HIV', value: healthStatus.hivStatus },
+                    { label: 'HBsAg', value: healthStatus.hbsagStatus },
+                    { label: 'HCV', value: healthStatus.hcvStatus },
+                    { label: 'TB', value: healthStatus.tbStatus },
+                    { label: 'STI', value: healthStatus.stiStatus },
+                  ].map(item => (
+                    <div key={item.label} className="bg-gray-50/70 rounded-2xl p-4 text-center border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{item.label}</p>
+                      <span className={`inline-block mt-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusColor(item.value || 'not_known')}`}>
+                        {item.value?.replace('_', ' ') || 'Not Known'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Guardian Contact */}
+              {sections.familyContact !== false && (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
+                  <h2 className="font-black text-gray-900 text-lg sm:text-xl mb-6 flex items-center gap-2.5">
+                    <User size={20} className="text-teal-600" /> Guardian Contact
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
+                      <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
+                    </div>
+                    <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Relationship</p>
+                      <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
+                    </div>
+                    <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
+                      <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
+                    </div>
+                    <div className="bg-gray-50/70 rounded-2xl p-4 border border-gray-100 hover:bg-white hover:border-teal-100 transition-all duration-300">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
+                      {patient.whatsappNumber ? (
+                        <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
+                      ) : <p className="font-bold text-gray-400 mt-1">—</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Admission Section */}
+        {sections.admissionDetails !== false && (
+          <div id="section-admission" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
             <AdmissionTab patient={patient} readOnly={true} />
           </div>
         )}
 
-        {activeTab === 'finance' && (
-          <div className="space-y-6 sm:space-y-8 mt-6">
+        {/* Finance Section */}
+        {sections.financialStatement !== false && (
+          <div id="section-finance" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
              <FinanceHistory 
               totalPackage={(patient.dueTillDate || 0) + (patient.medicineCharges || 0)}
               payments={payments.map(p => ({
@@ -388,9 +512,10 @@ export default function FamilyPatientViewPage() {
           </div>
         )}
 
-        {activeTab === 'canteen' && (
-          <div className="space-y-6 mt-6">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Canteen Section */}
+        {sections.canteen !== false && (
+          <div id="section-canteen" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
               <div className="p-5 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-4">
                 <div>
                   <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
@@ -406,9 +531,9 @@ export default function FamilyPatientViewPage() {
                 </div>
               </div>
               {canteenTransactions.length === 0 ? (
-                <div className="p-12 text-center text-gray-450">
+                <div className="p-12 text-center text-gray-400">
                   <ShoppingCart size={48} className="mx-auto mb-4 opacity-20" />
-                  <p className="text-sm font-medium">No canteen transactions found.</p>
+                  <p className="text-sm font-medium text-gray-500">No canteen transactions found.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 divide-y divide-gray-50">
@@ -433,9 +558,17 @@ export default function FamilyPatientViewPage() {
           </div>
         )}
 
-        {activeTab === 'visits' && (
-          <div className="space-y-6 mt-6">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Daily Sheet Section */}
+        {sections.dailySheet !== false && session && (
+          <div id="section-daily" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <DailySheetTab patientId={patientId} session={session} readOnly />
+          </div>
+        )}
+
+        {/* Visits Section */}
+        {sections.visits !== false && (
+          <div id="section-visits" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
               <div className="p-5 sm:p-6 border-b border-gray-50">
                 <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
                   <Clock size={18} className="text-teal-600" /> Family Visit Logs
@@ -445,7 +578,7 @@ export default function FamilyPatientViewPage() {
               {visits.length === 0 ? (
                 <div className="p-12 text-center text-gray-400">
                   <Users size={48} className="mx-auto mb-4 opacity-20" />
-                  <p className="text-sm font-medium">No family visits have been logged yet.</p>
+                  <p className="text-sm font-medium text-gray-500">No family visits have been logged yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 divide-y divide-gray-50">
@@ -479,103 +612,24 @@ export default function FamilyPatientViewPage() {
           </div>
         )}
 
-        {activeTab === 'overview' && (
-          <div className="space-y-6 mt-6">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 animate-in fade-in duration-500">
-              <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2">
-                <Clock size={18} className="text-teal-600" /> Stay Details
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admission Date</p>
-                  <p className="font-bold text-gray-900 mt-1">
-                    {patient.admissionDate ? formatDateDMY(patient.admissionDate) : '—'}
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Discharge Date</p>
-                  <p className="font-bold text-gray-900 mt-1">
-                    {patient.isActive === false && patient.dischargeDate ? formatDateDMY(patient.dischargeDate) : 'Still Admitted'}
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Stay Duration</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.durationFormatted || '0 Days'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Total Days</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.daysAdmitted} Days</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-              <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2"><Shield size={18} /> Health Status</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {[
-                  { label: 'HIV', value: healthStatus.hivStatus },
-                  { label: 'HBsAg', value: healthStatus.hbsagStatus },
-                  { label: 'HCV', value: healthStatus.hcvStatus },
-                  { label: 'TB', value: healthStatus.tbStatus },
-                  { label: 'STI', value: healthStatus.stiStatus },
-                ].map(item => (
-                  <div key={item.label} className="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100/50">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{item.label}</p>
-                    <span className={`inline-block mt-1 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest ${statusColor(item.value || 'not_known')}`}>
-                      {item.value?.replace('_', ' ') || 'Not Known'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {sections.familyContact !== false && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-                <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Name</p>
-                    <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Relationship</p>
-                    <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Phone</p>
-                    <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
-                  </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">WhatsApp</p>
-                    {patient.whatsappNumber ? (
-                      <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
-                    ) : <p className="font-bold text-gray-400 mt-1">—</p>}
-                  </div>
-                </div>
-              </div>
-            )}
+        {/* Therapy Section */}
+        {sections.therapy !== false && session && (
+          <div id="section-therapy" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <TherapyTab patientId={patientId} session={session} readOnly={true} />
           </div>
         )}
 
-        {activeTab === 'daily' && session && (
-          <DailySheetTab patientId={patientId} session={session} readOnly />
-        )}
-
-        {activeTab === 'therapy' && session && (
-          <div className="pointer-events-none mt-6">
-            <TherapyTab patientId={patientId} session={session} />
+        {/* Meds Section */}
+        {sections.medication !== false && session && (
+          <div id="section-meds" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <MedicationTab patientId={patientId} session={session} readOnly={true} />
           </div>
         )}
 
-        {activeTab === 'meds' && session && (
-          <div className="pointer-events-none mt-6">
-            <MedicationTab patientId={patientId} session={session} />
-          </div>
-        )}
-
-        {activeTab === 'videos' && (
-          <div className="space-y-6 mt-6">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Files/Videos Section */}
+        {sections.files !== false && (
+          <div id="section-videos" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
               <div className="p-5 sm:p-6 border-b border-gray-50">
                 <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
                   <Video size={18} className="text-teal-600" /> Files & Media Progress
@@ -584,7 +638,7 @@ export default function FamilyPatientViewPage() {
               </div>
               <div className="p-5 sm:p-6">
                 {videos.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
+                  <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/20">
                     <Video className="w-12 h-12 text-gray-300 mx-auto mb-3 opacity-30" />
                     <p className="text-gray-500 text-sm">No files uploaded yet</p>
                   </div>
@@ -596,7 +650,7 @@ export default function FamilyPatientViewPage() {
                       const isPdf = vid.fileType === 'application/pdf';
 
                       return (
-                        <div key={vid.id} className="border border-gray-205 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative flex flex-col justify-between">
+                        <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative flex flex-col justify-between">
                           <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
                             {isImage ? (
                               <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
@@ -613,7 +667,7 @@ export default function FamilyPatientViewPage() {
                             </a>
                           </div>
                           <div className="p-4">
-                            <h4 className="font-bold text-gray-900 dark:text-white truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
+                            <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
                             <div className="flex items-center justify-between mt-2">
                               <p className="text-xs text-gray-500">
                                 {formatDateDMY(vid.createdAt)}
