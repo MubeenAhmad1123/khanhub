@@ -255,11 +255,6 @@ export default function FamilyPatientViewPage() {
                      <Phone size={14} /> Call
                    </a>
                 )}
-                {patient.whatsappNumber && (
-                  <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-green-50 text-green-600 text-[11px] font-black hover:bg-green-100 transition-all border border-green-100/50 shadow-sm active:scale-95">
-                     <MessageCircle size={14} /> WhatsApp
-                  </a>
-                )}
               </div>
             </div>
           </div>

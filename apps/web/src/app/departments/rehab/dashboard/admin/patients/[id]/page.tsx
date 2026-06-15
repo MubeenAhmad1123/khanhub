@@ -12,7 +12,7 @@ import {
   ArrowLeft, User, DollarSign, ShoppingCart, Video,
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
   ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, CheckCircle2,
-  Clock, Printer
+  Clock, Printer, MessageCircle
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -2225,6 +2225,18 @@ export default function PatientDetailPage() {
                   {patient.name}
                 </h1>
                 <div className="flex flex-col sm:flex-row gap-2">
+                  {patient.whatsappNumber && (
+                    <a
+                      href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="self-center sm:self-start p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-all border border-emerald-100/50 shadow-sm active:scale-95 flex items-center gap-2 px-4"
+                      title="WhatsApp Chat"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="text-xs font-black uppercase tracking-widest">WhatsApp</span>
+                    </a>
+                  )}
                   <button
                     onClick={() => setShowReportModal(true)}
                     className="self-center sm:self-start p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-lg shadow-teal-600/20 active:scale-95 flex items-center gap-2 px-4"
