@@ -86,18 +86,48 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
       const currentRecord = records[dateStr];
       const currentActivities = currentRecord?.activities || [];
       const existingActivity = currentActivities.find(a => a.activityId === activityId);
-      const type = activityId === 8 ? 'counselling' : 'vital';
-      const existingNote = activityId === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
-      setNoteModal({ type, date: dateStr, value: existingNote });
-      if (!existingActivity || existingActivity.status === 'na') {
+      
+      const currentStatus = existingActivity?.status || 'na';
+      
+      if (currentStatus === 'na') {
+        // Transition to 'done' (tick) and open notes modal
+        const type = activityId === 8 ? 'counselling' : 'vital';
+        const existingNote = activityId === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
+        setNoteModal({ type, date: dateStr, value: existingNote });
+        
         const newActivities = [...currentActivities];
         const actIndex = newActivities.findIndex(a => a.activityId === activityId);
         if (actIndex >= 0) newActivities[actIndex] = { ...newActivities[actIndex], status: 'done' };
         else newActivities.push({ activityId, status: 'done' });
+        
         setRecords(prev => ({
           ...prev,
           [dateStr]: { ...prev[dateStr], date: dateStr, patientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
         }));
+      } else {
+        // Transition 'done' -> 'not_done' (cross) -> 'na' (unmarked)
+        const nextStatus: ActivityStatus = currentStatus === 'done' ? 'not_done' : 'na';
+        
+        const newActivities = [...currentActivities];
+        const actIndex = newActivities.findIndex(a => a.activityId === activityId);
+        if (actIndex >= 0) newActivities[actIndex] = { ...newActivities[actIndex], status: nextStatus };
+        else newActivities.push({ activityId, status: nextStatus });
+
+        setRecords(prev => ({
+          ...prev,
+          [dateStr]: { ...prev[dateStr], date: dateStr, patientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+        }));
+
+        try {
+          setPendingSaves(prev => new Set(prev).add(key));
+          await saveDailyActivity(patientId, dateStr, newActivities, session.uid);
+        } catch (error) {
+          console.error("Error saving activity cell", error);
+          toast.error('Failed to save activity');
+          fetchRecords();
+        } finally {
+          setPendingSaves(prev => { const next = new Set(prev); next.delete(key); return next; });
+        }
       }
       return;
     }
@@ -246,7 +276,22 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
       return (
         <span className="relative">
           <CheckCircle2 className="w-4 h-4 text-green-500" />
-          {hasNote && <FileText className="w-2.5 h-2.5 text-blue-500 absolute -top-1 -right-1" />}
+          {hasNote && (
+            <span 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!dateStr) return;
+                const currentRecord = records[dateStr];
+                const type = activityId === 8 ? 'counselling' : 'vital';
+                const existingNote = activityId === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
+                setNoteModal({ type, date: dateStr, value: existingNote });
+              }}
+              className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white rounded-full p-0.5 hover:bg-blue-600 cursor-pointer shadow-sm z-20 flex items-center justify-center"
+              title="Edit Notes"
+            >
+              <FileText className="w-2.5 h-2.5" />
+            </span>
+          )}
         </span>
       );
     }
@@ -381,7 +426,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
               const status = existing?.status || 'na';
               const disabledByFilter = !isDateInFilter(dateStr);
 
-              let btnStyle = "bg-gray-50/50 hover:bg-gray-105 text-gray-500 border-gray-200";
+              let btnStyle = "bg-gray-50/50 hover:bg-gray-100 text-gray-500 border-gray-200";
               let statusLabel = "-";
               if (status === 'done') {
                 btnStyle = "bg-green-50 hover:bg-green-100 text-green-700 border-green-200";
@@ -392,17 +437,36 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
               }
 
               return (
-                <button
-                  key={activity.id}
-                  type="button"
-                  disabled={disabledByFilter}
-                  onClick={() => handleCellClick(selectedDay, activity.id)}
-                  title={`${activity.id}. ${activity.name}`}
-                  className={`flex flex-col items-center justify-center w-11 h-11 rounded-xl border text-xs font-black transition active:scale-95 select-none shadow-sm ${btnStyle} ${disabledByFilter ? 'opacity-30 cursor-not-allowed' : ''}`}
-                >
-                  <span className="text-[10px] text-gray-400">{activity.id}</span>
-                  <span className="text-[9px] font-black -mt-0.5">{statusLabel}</span>
-                </button>
+                <div key={activity.id} className="relative flex flex-col items-center">
+                  <button
+                    type="button"
+                    disabled={disabledByFilter}
+                    onClick={() => handleCellClick(selectedDay, activity.id)}
+                    title={`${activity.id}. ${activity.name}`}
+                    className={`flex flex-col items-center justify-center w-11 h-11 rounded-xl border text-xs font-black transition active:scale-95 select-none shadow-sm ${btnStyle} ${disabledByFilter ? 'opacity-30 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="text-[10px] text-gray-400">{activity.id}</span>
+                    <span className="text-[9px] font-black -mt-0.5">{statusLabel}</span>
+                  </button>
+
+                  {(activity.id === 8 || activity.id === 11) && !disabledByFilter && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const dateStr = `${currentMonth}-${String(selectedDay).padStart(2, '0')}`;
+                        const currentRecord = records[dateStr];
+                        const type = activity.id === 8 ? 'counselling' : 'vital';
+                        const existingNote = activity.id === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
+                        setNoteModal({ type, date: dateStr, value: existingNote });
+                      }}
+                      className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full p-0.5 hover:bg-blue-600 shadow-sm transition active:scale-90 z-20 flex items-center justify-center"
+                      title="Edit Notes"
+                    >
+                      <FileText className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -453,10 +517,25 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
               const disabledByFilter = !isDateInFilter(selectedDateStr);
               return (
                 <div key={activity.id} className="p-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex items-center gap-2">
                     <p className="text-sm font-semibold text-gray-800 truncate">
                       <span className="text-teal-600 font-black mr-1">{activity.id}.</span>{activity.name}
                     </p>
+                    {(activity.id === 8 || activity.id === 11) && !disabledByFilter && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentRecord = records[selectedDateStr];
+                          const type = activity.id === 8 ? 'counselling' : 'vital';
+                          const existingNote = activity.id === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
+                          setNoteModal({ type, date: selectedDateStr, value: existingNote });
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded text-blue-500"
+                        title="Edit Notes"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   <button
                     onClick={() => handleCellClick(selectedDay, activity.id)}
@@ -519,9 +598,27 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                   const pct = getRowCompletion(activity.id);
                   return (
                     <tr key={activity.id} className="hover:bg-teal-50/20 transition-colors group">
-                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-teal-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs w-[220px] min-w-[220px] max-w-[220px] truncate">
-                        <span className="text-[10px] text-teal-600 w-5 inline-block font-black">{activity.id}.</span> 
-                        {activity.name}
+                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-teal-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs w-[220px] min-w-[220px] max-w-[220px] flex items-center justify-between">
+                        <span className="truncate">
+                          <span className="text-[10px] text-teal-600 w-5 inline-block font-black">{activity.id}.</span> 
+                          {activity.name}
+                        </span>
+                        {(activity.id === 8 || activity.id === 11) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const dateStr = `${currentMonth}-${String(selectedDay).padStart(2, '0')}`;
+                              const currentRecord = records[dateStr];
+                              const type = activity.id === 8 ? 'counselling' : 'vital';
+                              const existingNote = activity.id === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
+                              setNoteModal({ type, date: dateStr, value: existingNote });
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded text-blue-500 shrink-0"
+                            title="Edit Notes for Selected Day"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </td>
                       {daysArray.map(day => {
                         const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
