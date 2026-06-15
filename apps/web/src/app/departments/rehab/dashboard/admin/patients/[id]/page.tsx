@@ -1385,14 +1385,10 @@ export default function PatientDetailPage() {
   const handleCanteenEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canteenModal) return;
-    if (isAdmin) {
-      toast.error('Admins are not allowed to record canteen deposits/expenses.');
-      return;
-    }
     try {
       const entry = {
         id: Date.now().toString(),
-        type: canteenModal,
+        type: 'expense',
         amount: Number(canteenAmt),
         description: canteenDesc,
         date: Timestamp.fromDate(new Date(canteenDate)),
@@ -1403,20 +1399,16 @@ export default function PatientDetailPage() {
         await addDoc(collection(db, 'rehab_canteen'), {
           patientId: patientId,
           month: canteenMonth,
-          totalDeposited: canteenModal === 'deposit' ? Number(canteenAmt) : 0,
-          totalSpent: canteenModal === 'expense' ? Number(canteenAmt) : 0,
-          balance: canteenModal === 'deposit'
-            ? Number(canteenAmt)
-            : -Number(canteenAmt),
+          totalDeposited: 0,
+          totalSpent: Number(canteenAmt),
+          balance: -Number(canteenAmt),
           transactions: [entry],
           createdAt: Timestamp.now(),
           createdBy: session.uid
         });
       } else {
-        const newDeposited = Number(canteenRecord.totalDeposited) +
-          (canteenModal === 'deposit' ? Number(canteenAmt) : 0);
-        const newSpent = Number(canteenRecord.totalSpent) +
-          (canteenModal === 'expense' ? Number(canteenAmt) : 0);
+        const newDeposited = Number(canteenRecord.totalDeposited || 0);
+        const newSpent = Number(canteenRecord.totalSpent || 0) + Number(canteenAmt);
 
         await updateDoc(doc(db, 'rehab_canteen', canteenRecord.id), {
           totalDeposited: newDeposited,
@@ -1429,9 +1421,7 @@ export default function PatientDetailPage() {
       setCanteenModal(null);
       resetCanteenForm();
       fetchCanteenRecord();
-      toast.success(canteenModal === 'deposit'
-        ? 'Deposit recorded ✓'
-        : 'Expense recorded ✓');
+      toast.success('Expense recorded ✓');
     } catch (error) {
       console.error("Canteen entry error", error);
       toast.error('Failed to record transaction');
@@ -2948,18 +2938,12 @@ export default function PatientDetailPage() {
                     <ChevronRight size={20} className="text-gray-400" />
                   </button>
                 </div>
-                {!isAdmin && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto">
-                    <button onClick={() => setCanteenModal('deposit')}
-                      className="flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-green-600 transition shadow-sm active:scale-95">
-                      <Plus size={14} /> Deposit
-                    </button>
-                    <button onClick={() => setCanteenModal('expense')}
-                      className="flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
-                      <Minus size={14} /> Expense
-                    </button>
-                  </div>
-                )}
+                <div className="w-full sm:w-auto">
+                  <button onClick={() => setCanteenModal('expense')}
+                    className="flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95 w-full sm:w-auto">
+                    <Minus size={14} /> Record Expense
+                  </button>
+                </div>
               </div>
 
               {!canteenRecord ? (
@@ -2969,25 +2953,29 @@ export default function PatientDetailPage() {
                   </div>
                   <h3 className="text-gray-900 dark:text-white font-bold mb-1">No canteen record for this month</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
-                    Add a deposit or expense to get started with this month's wallet.
+                    Record an expense to get started with this month's wallet.
                   </p>
+                  <button onClick={() => setCanteenModal('expense')}
+                    className="inline-flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
+                    <Minus size={14} /> Record Expense
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   {/* Balance Card */}
                   <div className="text-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/30 rounded-[2rem] border border-teal-200/50 dark:border-teal-800/50 shadow-sm">
-                    <p className="text-[10px] font-black text-teal-500 dark:text-teal-400 uppercase tracking-widest mb-1">Available Balance</p>
+                    <p className="text-[10px] font-black text-teal-500 dark:text-teal-400 uppercase tracking-widest mb-1">Remaining Balance</p>
                     <p className={`text-2xl sm:text-4xl lg:text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700 dark:text-teal-300' : 'text-red-600 dark:text-red-400'}`}>
                       PKR {Number(canteenRecord.balance).toLocaleString('en-PK')}
                     </p>
                     <div className="flex justify-center gap-8 mt-6">
                       <div className="text-left">
-                        <p className="text-[10px] text-green-600 dark:text-green-400 font-black uppercase tracking-widest">↑ Deposited</p>
+                        <p className="text-[10px] text-green-600 dark:text-green-400 font-black uppercase tracking-widest">Total Canteen Budget (Deposited)</p>
                         <p className="text-sm font-black text-green-700 dark:text-green-300">PKR {Number(canteenRecord.totalDeposited).toLocaleString('en-PK')}</p>
                       </div>
                       <div className="w-px h-8 bg-teal-200/50 dark:bg-teal-800/50"></div>
                       <div className="text-left">
-                        <p className="text-[10px] text-red-500 dark:text-red-400 font-black uppercase tracking-widest">↓ Spent</p>
+                        <p className="text-[10px] text-red-500 dark:text-red-400 font-black uppercase tracking-widest">Total Canteen Spent</p>
                         <p className="text-sm font-black text-red-600 dark:text-red-400">PKR {Number(canteenRecord.totalSpent).toLocaleString('en-PK')}</p>
                       </div>
                     </div>
@@ -3431,7 +3419,7 @@ export default function PatientDetailPage() {
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900">
-                {canteenModal === 'deposit' ? 'Add Deposit' : 'Add Expense'}
+                Record Canteen Expense
               </h2>
               <button onClick={() => setCanteenModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
                 <X className="w-5 h-5" />
@@ -3449,7 +3437,7 @@ export default function PatientDetailPage() {
                   value={canteenDesc}
                   onChange={e => setCanteenDesc(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                  placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'}
+                  placeholder="e.g. Burger, snacks, drinks"
                 />
               </div>
               <div className="space-y-1.5">
@@ -3461,11 +3449,10 @@ export default function PatientDetailPage() {
               </div>
               <button
                 type="submit"
-                className={`w-full text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg ${canteenModal === 'deposit' ? 'bg-green-500 hover:bg-green-600 shadow-green-100' : 'bg-red-500 hover:bg-red-600 shadow-red-100'
-                  }`}
+                className="w-full text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg bg-red-500 hover:bg-red-600 shadow-red-100 shadow-red-100"
               >
-                {canteenModal === 'deposit' ? <Plus size={18} /> : <Minus size={18} />}
-                Record {canteenModal === 'deposit' ? 'Deposit' : 'Expense'}
+                <Minus size={18} />
+                Record Expense
               </button>
             </form>
           </div>

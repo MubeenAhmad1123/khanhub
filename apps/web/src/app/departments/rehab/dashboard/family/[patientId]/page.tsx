@@ -516,18 +516,35 @@ export default function FamilyPatientViewPage() {
         {sections.canteen !== false && (
           <div id="section-canteen" className="scroll-mt-36 sm:scroll-mt-20 transition-all duration-500">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:border-teal-100/50 transition-all duration-300">
-              <div className="p-5 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
-                    <ShoppingCart size={18} className="text-teal-600" /> Canteen Wallet History
-                  </h3>
-                  <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Canteen deposits and expenses</p>
+              <div className="p-5 sm:p-6 border-b border-gray-50 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
+                      <ShoppingCart size={18} className="text-teal-600" /> Canteen Wallet & Expenses
+                    </h3>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Track what your patient is eating & wallet balance</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Available Balance</p>
-                  <p className={`text-xl sm:text-2xl font-black ${patient.canteenBalance >= 0 ? 'text-teal-600' : 'text-red-600'}`}>
-                    PKR {Number(patient.canteenBalance || 0).toLocaleString('en-PK')}
-                  </p>
+
+                {/* Balance & Budget Card */}
+                <div className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl border border-teal-200/50 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+                  <div>
+                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">Remaining Canteen Balance</p>
+                    <p className={`text-2xl sm:text-3xl font-black ${patient.canteenBalance >= 0 ? 'text-teal-700' : 'text-red-600'}`}>
+                      PKR {Number(patient.canteenBalance || 0).toLocaleString('en-PK')}
+                    </p>
+                  </div>
+                  <div className="flex gap-6 text-sm">
+                    <div>
+                      <p className="text-[10px] text-green-600 font-black uppercase tracking-widest">Total Budget (Deposited)</p>
+                      <p className="font-black text-green-700">PKR {Number(patient.canteenDeposit || 0).toLocaleString('en-PK')}</p>
+                    </div>
+                    <div className="w-px h-8 bg-teal-200"></div>
+                    <div>
+                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">Total Spent (Expenses)</p>
+                      <p className="font-black text-red-600">PKR {Number(patient.canteenSpent || 0).toLocaleString('en-PK')}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               {canteenTransactions.length === 0 ? (
