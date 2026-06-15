@@ -6,6 +6,7 @@ import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 const SectionCard = React.memo(({ title, icon: Icon, children }: any) => (
   <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm mb-6">
@@ -83,38 +84,42 @@ const Field = React.memo(({ label, value, type = "text", fieldKey, options, isEd
   }
 
   if (type === 'date') {
-    let displayValue = '';
+    let isoValue = '';
     if (value) {
       if (typeof value.toDate === 'function') {
-        displayValue = formatDateDMY(value.toDate());
+        isoValue = value.toDate().toISOString().split('T')[0];
       } else if (value instanceof Date) {
-        displayValue = formatDateDMY(value);
+        isoValue = value.toISOString().split('T')[0];
       } else if (typeof value === 'string') {
-        displayValue = value.includes('-') ? formatDateDMY(value) : value;
-      } else {
-        displayValue = String(value);
+        if (value.includes('-')) {
+          isoValue = value;
+        } else {
+          const parsed = parseDateDMY(value);
+          if (parsed) {
+            isoValue = parsed.toISOString().split('T')[0];
+          }
+        }
       }
     }
 
+    if (!isEditing) {
+      const displayValue = isoValue ? formatDateDMY(isoValue) : '—';
+      return (
+        <div className="space-y-1">
+          <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</span>
+          <span className={`text-sm font-semibold text-gray-900 block ${!value ? 'text-gray-300 italic' : ''}`}>
+            {displayValue}
+          </span>
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-1">
-        <label className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</label>
-        <input
-          type="text"
-          placeholder="DD MM YYYY"
-          value={displayValue}
-          onChange={e => onFieldChange(fieldKey, e.target.value)}
-          onBlur={e => {
-            const val = e.target.value;
-            const parsed = parseDateDMY(val);
-            if (parsed) {
-              const iso = parsed.toISOString().split('T')[0];
-              onFieldChange(fieldKey, iso);
-            }
-          }}
-          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
-        />
-      </div>
+      <BrutalistCalendar
+        label={label}
+        value={isoValue}
+        onChange={iso => onFieldChange(fieldKey, iso)}
+      />
     );
   }
 

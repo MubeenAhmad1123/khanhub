@@ -5,6 +5,7 @@ import { getTherapySessions, addTherapySession } from '@/lib/rehab/patients';
 import { Loader2, Plus, Star, Calendar, User, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
+import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 export default function TherapyTab({ patientId, session, dateFilter, readOnly = false }: { patientId: string, session: any, dateFilter?: { admissionDate: any; dischargeDate?: any } | null, readOnly?: boolean }) {
   const [sessions, setSessions] = useState<TherapySession[]>([]);
@@ -181,18 +182,10 @@ export default function TherapyTab({ patientId, session, dateFilter, readOnly = 
             <form onSubmit={handleAddSession} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Date *</label>
-                  <input
-                    type="text"
-                    placeholder="DD MM YYYY"
-                    required
-                    value={formatDateDMY(date)}
-                    onChange={e => setDate(e.target.value)}
-                    onBlur={e => {
-                      const parsed = parseDateDMY(e.target.value);
-                      if (parsed) setDate(parsed.toISOString().split('T')[0]);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  <BrutalistCalendar
+                    label="Date *"
+                    value={date}
+                    onChange={iso => setDate(iso)}
                   />
                 </div>
                 <div>
