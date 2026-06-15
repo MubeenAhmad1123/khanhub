@@ -13,15 +13,43 @@ type Decision = 'approved' | 'rejected';
 function getAdminApp(): App {
   const existing = getApps().find((a) => a.name === 'hq-admin');
   if (existing) return existing;
+
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing');
-  const sa = JSON.parse(json);
+  if (json) {
+    const sa = JSON.parse(json);
+    return initializeApp(
+      {
+        credential: cert({
+          projectId: sa.project_id,
+          clientEmail: sa.client_email,
+          privateKey: sa.private_key,
+        }),
+      },
+      'hq-admin'
+    );
+  }
+
+  // Fallback for local development using individual variables
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY || '';
+
+  if (!projectId || !clientEmail || !rawPrivateKey) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing and no fallback credentials found.');
+  }
+
+  const cleanKey = rawPrivateKey
+    .replace(/^["']|["']$/g, '') // Remove wrapping quotes
+    .replace(/\\n/g, '\n')       // Replace literal \n with real newlines
+    .replace(/\\/g, '')          // Strip spurious line breaks
+    .trim();
+
   return initializeApp(
     {
       credential: cert({
-        projectId: sa.project_id,
-        clientEmail: sa.client_email,
-        privateKey: sa.private_key,
+        projectId,
+        clientEmail,
+        privateKey: cleanKey,
       }),
     },
     'hq-admin'
@@ -79,6 +107,8 @@ async function syncPatientFinance(
 
     if (tx.category === 'medicine_charge') {
       totalMedicineCharges += netAmount;
+    } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
+      // Exclude canteen transactions from standard patient package finances
     } else {
       totalReceived += netAmount;
       totalDiscount += discount;
@@ -288,6 +318,9 @@ async function syncRehabRecords(
 
     const isFeeCategory = 
       txData.category !== 'medicine_charge' &&
+      txData.category !== 'canteen_deposit' &&
+      txData.category !== 'canteen' &&
+      txData.category !== 'canteen_expense' &&
       (txData.type === 'income' ||
       txData.category === 'patient_fee' || 
       txData.category === 'fee' || 
@@ -363,7 +396,7 @@ async function syncRehabRecords(
       }
     }
 
-    if (txData.category === 'canteen_deposit' && patientId) {
+    if ((txData.category === 'canteen_deposit' || txData.category === 'canteen') && patientId) {
       const canteenRef = adminDb.collection('rehab_canteen');
       const canteenSnap = await canteenRef
         .where('patientId', '==', patientId)

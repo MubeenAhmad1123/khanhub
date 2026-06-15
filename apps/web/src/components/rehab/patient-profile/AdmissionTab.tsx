@@ -131,10 +131,12 @@ Field.displayName = 'Field';
 
 export default function AdmissionTab({
   patient,
-  onUpdate
+  onUpdate,
+  readOnly = false
 }: {
   patient: Patient;
-  onUpdate: (updatedPatient: Partial<Patient>) => void
+  onUpdate?: (updatedPatient: Partial<Patient>) => void;
+  readOnly?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -177,7 +179,7 @@ export default function AdmissionTab({
       };
 
       await updateDoc(doc(db, 'rehab_patients', patient.id), finalData);
-      onUpdate(finalData);
+      onUpdate?.(finalData);
       setIsEditing(false);
       toast.success('Patient admission details updated');
     } catch (error) {
@@ -192,33 +194,37 @@ export default function AdmissionTab({
     <div className="animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-black text-gray-900">Admission Details</h2>
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition-all active:scale-95"
-          >
-            <Edit3 size={16} /> Edit Form
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setForm({ ...patient });
-                setIsEditing(false);
-              }}
-              className="bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-gray-50 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 disabled:opacity-70 transition-all"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+        {!readOnly && (
+          <>
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 transition-all active:scale-95"
+              >
+                <Edit3 size={16} /> Edit Form
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setForm({ ...patient });
+                    setIsEditing(false);
+                  }}
+                  className="bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 disabled:opacity-70 transition-all"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

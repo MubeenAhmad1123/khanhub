@@ -15,6 +15,7 @@ import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import FinanceHistory from '@/components/patient/FinanceHistory';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
+import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
 import { formatDateDMY } from '@/lib/utils';
 import { Patient } from '@/types/rehab';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
@@ -34,7 +35,7 @@ export default function FamilyPatientViewPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'visits' | 'canteen' | 'videos'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'admission' | 'finance' | 'daily' | 'therapy' | 'meds' | 'visits' | 'canteen' | 'videos'>('overview');
   const [payments, setPayments] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
   const [canteenTransactions, setCanteenTransactions] = useState<any[]>([]);
@@ -46,6 +47,7 @@ export default function FamilyPatientViewPage() {
     if (visibilityLoading) return;
     const tabVisibility: Record<string, boolean> = {
       overview: sections.admissionDetails !== false,
+      admission: sections.admissionDetails !== false,
       finance: sections.financialStatement !== false,
       daily: sections.dailySheet !== false,
       visits: sections.visits !== false,
@@ -308,6 +310,7 @@ export default function FamilyPatientViewPage() {
           <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
             {[
               { key: 'overview', label: 'Overview', icon: User, visible: sections.admissionDetails !== false },
+              { key: 'admission', label: 'Admission', icon: FileText, visible: sections.admissionDetails !== false },
               { key: 'finance', label: 'Finance', icon: DollarSign, visible: sections.financialStatement !== false },
               { key: 'canteen', label: 'Canteen', icon: ShoppingCart, visible: sections.canteen !== false },
               { key: 'daily', label: 'Sheet', icon: Activity, visible: sections.dailySheet !== false },
@@ -333,6 +336,12 @@ export default function FamilyPatientViewPage() {
 
       {/* Tab Content Container */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
+        {activeTab === 'admission' && (
+          <div className="space-y-6 sm:space-y-8 mt-6">
+            <AdmissionTab patient={patient} readOnly={true} />
+          </div>
+        )}
+
         {activeTab === 'finance' && (
           <div className="space-y-6 sm:space-y-8 mt-6">
              <FinanceHistory 
@@ -477,6 +486,34 @@ export default function FamilyPatientViewPage() {
 
         {activeTab === 'overview' && (
           <div className="space-y-6 mt-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 animate-in fade-in duration-500">
+              <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2">
+                <Clock size={18} className="text-teal-600" /> Stay Details
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admission Date</p>
+                  <p className="font-bold text-gray-900 mt-1">
+                    {patient.admissionDate ? formatDateDMY(patient.admissionDate) : '—'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Discharge Date</p>
+                  <p className="font-bold text-gray-900 mt-1">
+                    {patient.isActive === false && patient.dischargeDate ? formatDateDMY(patient.dischargeDate) : 'Still Admitted'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Stay Duration</p>
+                  <p className="font-bold text-gray-900 mt-1">{patient.durationFormatted || '0 Days'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Total Days</p>
+                  <p className="font-bold text-gray-900 mt-1">{patient.daysAdmitted} Days</p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
               <h2 className="font-black text-gray-900 text-base sm:text-lg mb-4 flex items-center gap-2"><Shield size={18} /> Health Status</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

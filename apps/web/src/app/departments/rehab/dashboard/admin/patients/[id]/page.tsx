@@ -615,6 +615,11 @@ export default function PatientDetailPage() {
           const isApproved = txData.status === 'approved';
           const isSynced = syncedTxIds.has(txId);
           const isMedicineCharge = txData.category === 'medicine_charge';
+          const isCanteen = txData.category === 'canteen_deposit' || txData.category === 'canteen' || txData.category === 'canteen_expense';
+
+          if (isCanteen) {
+            return;
+          }
 
           if (isMedicineCharge) {
             if (isApproved) {
