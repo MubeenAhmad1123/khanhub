@@ -446,6 +446,28 @@ service cloud.firestore {
       allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
     }
 
+    // ── Patient daily activities ───────────────────────
+    // Family can read only their patient's activities.
+    // Admin/superadmin can read and write all.
+    match /rehab_daily_activities/{docId} {
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
+      allow create, update: if isRehabAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
+    }
+
+    // ── Patient therapy sessions ───────────────────────
+    // Family can read only their patient's therapy sessions.
+    // Admin/superadmin can read and write all.
+    match /rehab_therapy_sessions/{docId} {
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqTier1();
+      allow create, update: if isRehabAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
+    }
+
     // ── Audit log ──────────────────────────────────────
     // Only superadmin can read. 
     // Server actions write via Admin SDK (bypasses rules).
