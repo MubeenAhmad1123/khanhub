@@ -2647,7 +2647,7 @@ export default function PatientDetailPage() {
               </div>
             )}
 
-            <AdmissionTab patient={patient} onUpdate={(updated: any) => setPatient({ ...patient, ...updated })} />
+            <AdmissionTab patient={patient} onUpdate={fetchData} />
           </div>
 
           {/* TAB: DAILY SHEET */}

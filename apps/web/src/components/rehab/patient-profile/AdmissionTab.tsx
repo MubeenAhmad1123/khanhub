@@ -83,13 +83,26 @@ const Field = React.memo(({ label, value, type = "text", fieldKey, options, isEd
   }
 
   if (type === 'date') {
+    let displayValue = '';
+    if (value) {
+      if (typeof value.toDate === 'function') {
+        displayValue = formatDateDMY(value.toDate());
+      } else if (value instanceof Date) {
+        displayValue = formatDateDMY(value);
+      } else if (typeof value === 'string') {
+        displayValue = value.includes('-') ? formatDateDMY(value) : value;
+      } else {
+        displayValue = String(value);
+      }
+    }
+
     return (
       <div className="space-y-1">
         <label className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</label>
         <input
           type="text"
           placeholder="DD MM YYYY"
-          value={value ? (value.includes('-') ? formatDateDMY(value) : value) : ''}
+          value={displayValue}
           onChange={e => onFieldChange(fieldKey, e.target.value)}
           onBlur={e => {
             const val = e.target.value;
@@ -171,8 +184,11 @@ export default function AdmissionTab({
       const billableMonths = (now.getFullYear() - admissionDate.getFullYear()) * 12 + (now.getMonth() - admissionDate.getMonth()) + 1;
       const dynamicTotal = billableMonths * monthlyPkg;
 
+      const finalAdmissionDate = form.admissionDate ? Timestamp.fromDate(toDate(form.admissionDate)) : undefined;
+
       const finalData = {
         ...form,
+        admissionDate: finalAdmissionDate,
         monthlyPackage: monthlyPkg,
         packageAmount: monthlyPkg,
         dailyRate: dRate
@@ -231,6 +247,7 @@ export default function AdmissionTab({
       <div className="space-y-6">
         <SectionCard title="1. Identity & Demographics" icon={User}>
           <Field label="Inpatient Number" value={form.inpatientNumber} fieldKey="inpatientNumber" isEditing={isEditing} onFieldChange={handleChange} />
+          <Field label="Admission Date" value={form.admissionDate} type="date" fieldKey="admissionDate" isEditing={isEditing} onFieldChange={handleChange} />
           <Field label="Name" value={form.name} fieldKey="name" isEditing={isEditing} onFieldChange={handleChange} />
           <Field label="Father/Husband Name" value={form.fatherName} fieldKey="fatherName" isEditing={isEditing} onFieldChange={handleChange} />
           <Field label="Date of Birth" value={form.dateOfBirth} type="date" fieldKey="dateOfBirth" isEditing={isEditing} onFieldChange={handleChange} />
