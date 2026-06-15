@@ -76,6 +76,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
   };
 
   const handleCellClick = async (day: number, activityId: number) => {
+    setSelectedDay(day);
     if (readOnly) return;
     const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
     const key = `${dateStr}-${activityId}`;
@@ -157,7 +158,27 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
     }
   };
 
+  const getNextBulkStatus = useCallback((day: number) => {
+    const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
+    const dayActivities = records[dateStr]?.activities || [];
+    
+    const allDone = DAILY_ACTIVITIES.every(activity => {
+      const existing = dayActivities.find(a => a.activityId === activity.id);
+      return existing?.status === 'done';
+    });
+
+    const allNotDone = DAILY_ACTIVITIES.every(activity => {
+      const existing = dayActivities.find(a => a.activityId === activity.id);
+      return existing?.status === 'not_done';
+    });
+
+    if (allDone) return { status: 'not_done' as ActivityStatus, label: 'Cross All' };
+    if (allNotDone) return { status: 'na' as ActivityStatus, label: 'Unmark All' };
+    return { status: 'done' as ActivityStatus, label: 'Tick All' };
+  }, [currentMonth, records]);
+
   const handleBulkMarkDone = async (day: number) => {
+    setSelectedDay(day);
     if (readOnly) return;
     const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
     const keys = DAILY_ACTIVITIES.map(a => `${dateStr}-${a.id}`);
@@ -167,11 +188,13 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
     const currentRecord = records[dateStr];
     const currentActivities = currentRecord?.activities || [];
 
+    const nextInfo = getNextBulkStatus(day);
+
     const newActivities = DAILY_ACTIVITIES.map(activity => {
       const existing = currentActivities.find(a => a.activityId === activity.id);
       const item: any = {
         activityId: activity.id,
-        status: 'done' as ActivityStatus
+        status: nextInfo.status
       };
       if (existing?.note !== undefined) {
         item.note = existing.note;
@@ -199,7 +222,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
         return next;
       });
       await saveDailyActivity(patientId, dateStr, newActivities, session.uid);
-      toast.success(`Marked all as done for ${formatDateDMY(`${dateStr}T00:00:00`)}`);
+      toast.success(`Marked all as ${nextInfo.label} for ${formatDateDMY(`${dateStr}T00:00:00`)}`);
     } catch (error) {
       console.error("Bulk mark error", error);
       toast.error('Failed to save daily activities');
@@ -264,6 +287,17 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
   const selectedDayActivities = records[selectedDateStr]?.activities || [];
   const selectedDayPct = getDayCompletion(selectedDay);
 
+  const getBulkButtonIcon = (day: number) => {
+    const nextInfo = getNextBulkStatus(day);
+    if (nextInfo.status === 'not_done') {
+      return <CheckCircle2 className="w-3.5 h-3.5 text-green-500 hover:text-red-500 transition-colors" />;
+    }
+    if (nextInfo.status === 'na') {
+      return <XCircle className="w-3.5 h-3.5 text-red-500 hover:text-gray-400 transition-colors" />;
+    }
+    return <CheckCircle2 className="w-3.5 h-3.5 text-gray-400 hover:text-green-500 transition-colors" />;
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4">
@@ -287,6 +321,93 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
         <div className="flex items-center gap-2"><MinusCircle className="w-4 h-4 text-gray-300" /> <span className="text-gray-500">N/A</span></div>
         {!readOnly && <span className="text-xs text-gray-400 font-bold">Click cells to cycle status</span>}
       </div>
+
+      {/* Quick Activity Pad */}
+      {!readOnly && (
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 pb-3">
+            <div>
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-wide">Quick Activity Pad</h3>
+              <p className="text-[11px] text-gray-500 font-bold">Select a day, type activity ID + Enter, or click any number button to toggle status</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 shadow-sm">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Day:</span>
+                <select
+                  value={selectedDay}
+                  onChange={(e) => setSelectedDay(Number(e.target.value))}
+                  className="bg-transparent font-black text-gray-800 text-xs focus:outline-none cursor-pointer"
+                >
+                  {daysArray.map(day => (
+                    <option key={day} value={day}>Day {day}</option>
+                  ))}
+                </select>
+              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Type ID (e.g. 14) + Enter"
+                className="w-full sm:w-44 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-bold focus:ring-2 focus:ring-teal-500 outline-none text-center shadow-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(e.currentTarget.value);
+                    if (val >= 1 && val <= 21) {
+                      handleCellClick(selectedDay, val);
+                      e.currentTarget.value = '';
+                      toast.success(`Toggled Activity #${val}`);
+                    } else {
+                      toast.error('Enter a valid ID between 1 and 21');
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleBulkMarkDone(selectedDay)}
+                className="bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200/50 font-black px-3 py-1.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-sm flex items-center gap-1"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Bulk: {getNextBulkStatus(selectedDay).label}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {DAILY_ACTIVITIES.map((activity) => {
+              const dateStr = `${currentMonth}-${String(selectedDay).padStart(2, '0')}`;
+              const dayActivities = records[dateStr]?.activities || [];
+              const existing = dayActivities.find(a => a.activityId === activity.id);
+              const status = existing?.status || 'na';
+              const disabledByFilter = !isDateInFilter(dateStr);
+
+              let btnStyle = "bg-gray-50/50 hover:bg-gray-105 text-gray-500 border-gray-200";
+              let statusLabel = "-";
+              if (status === 'done') {
+                btnStyle = "bg-green-50 hover:bg-green-100 text-green-700 border-green-200";
+                statusLabel = "✓";
+              } else if (status === 'not_done') {
+                btnStyle = "bg-red-50 hover:bg-red-100 text-red-700 border-red-200";
+                statusLabel = "✗";
+              }
+
+              return (
+                <button
+                  key={activity.id}
+                  type="button"
+                  disabled={disabledByFilter}
+                  onClick={() => handleCellClick(selectedDay, activity.id)}
+                  title={`${activity.id}. ${activity.name}`}
+                  className={`flex flex-col items-center justify-center w-11 h-11 rounded-xl border text-xs font-black transition active:scale-95 select-none shadow-sm ${btnStyle} ${disabledByFilter ? 'opacity-30 cursor-not-allowed' : ''}`}
+                >
+                  <span className="text-[10px] text-gray-400">{activity.id}</span>
+                  <span className="text-[9px] font-black -mt-0.5">{statusLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>
@@ -320,7 +441,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
               onClick={() => handleBulkMarkDone(selectedDay)}
               className="w-full bg-teal-50 hover:bg-teal-100/80 border border-teal-200/50 text-teal-700 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-sm"
             >
-              <CheckCircle2 className="w-4 h-4" /> Mark All Done for This Day
+              <CheckCircle2 className="w-4 h-4" /> Bulk Toggle: {getNextBulkStatus(selectedDay).label} for This Day
             </button>
           )}
 
@@ -369,6 +490,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                     const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
                     const disabledByFilter = !isDateInFilter(dateStr);
                     const canBulkMark = !readOnly && !disabledByFilter;
+                    const nextInfo = getNextBulkStatus(day);
                     return (
                       <th key={day} className="px-1 py-2 border-b border-gray-200 text-center w-[44px] min-w-[44px] max-w-[44px] select-none align-top">
                         <div className="flex flex-col items-center gap-1.5">
@@ -377,10 +499,10 @@ export default function DailySheetTab({ patientId, session, readOnly = false, da
                             <button
                               type="button"
                               onClick={() => handleBulkMarkDone(day)}
-                              title={`Mark all as Done for Day ${day}`}
-                              className="p-1 rounded-md text-gray-400 hover:text-teal-600 hover:bg-gray-150 transition-all active:scale-90"
+                              title={`Bulk Toggle: ${nextInfo.label} for Day ${day}`}
+                              className="p-1 rounded-md text-gray-400 hover:bg-gray-150 transition-all active:scale-90"
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {getBulkButtonIcon(day)}
                             </button>
                           ) : (
                             <div className="h-6 w-1" />
