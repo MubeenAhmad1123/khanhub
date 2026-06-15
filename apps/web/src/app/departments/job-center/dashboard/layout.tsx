@@ -208,7 +208,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     return (
       <div className="flex flex-col h-full bg-white/50 backdrop-blur-xl border-r border-gray-200/50">
         {/* Header */}
-        <div className="p-8">
+        <div className="p-8 flex-shrink-0">
           <Link 
             href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
             className="flex items-center gap-2 text-gray-400 hover:text-orange-500 text-[9px] font-black mb-8 transition-colors group uppercase tracking-[0.2em]"
@@ -296,40 +296,40 @@ export default function JobCenterDashboardLayout({ children }: { children: React
               </button>
             </div>
           )}
-
-          {/* Navigation Links */}
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-orange-500/10 to-transparent text-orange-600' 
-                      : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50/50'
-                  }`}
-                >
-                  {isActive && (
-                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-orange-500 rounded-r-full shadow-[0_0_12px_rgba(249,115,22,0.5)]" />
-                  )}
-                  <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-orange-500' : ''}`}>
-                    {item.icon}
-                  </div>
-                  <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.label}</span>
-                  {isActive && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
 
+        {/* Navigation Links */}
+        <nav className="flex-1 px-8 space-y-2 overflow-y-auto custom-scrollbar">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-sm transition-all relative group overflow-hidden ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-orange-500/10 to-transparent text-orange-600' 
+                    : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50/50'
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-orange-500 rounded-r-full shadow-[0_0_12px_rgba(249,115,22,0.5)]" />
+                )}
+                <div className={`transition-transform duration-500 group-hover:scale-110 ${isActive ? 'text-orange-500' : ''}`}>
+                  {item.icon}
+                </div>
+                <span className="flex-1 font-black uppercase tracking-tight text-[11px]">{item.label}</span>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
         {/* Footer User Section */}
-        <div className="mt-auto p-8 space-y-6">
+        <div className="p-8 space-y-6 flex-shrink-0">
           <div className="flex items-center gap-4 px-2">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white font-black text-sm shadow-xl">
               {user?.displayName?.[0]?.toUpperCase()}
