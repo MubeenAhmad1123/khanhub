@@ -32,6 +32,9 @@ const SECTION_LABELS: Record<string, { label: string; desc: string; category: st
   progressNotes: { label: 'Progress & Growth', desc: 'Display psychiatric reports, psychological reviews, and behavioral growth notes.', category: 'Medical & Therapy' },
   financialStatement: { label: 'Financial Statement', desc: 'Allow family to view overall packages, canteen deposits, and remaining balances.', category: 'Financial' },
   familyContact: { label: 'Family Contact Info', desc: 'Display emergency phone numbers, guardian relations, and call buttons.', category: 'Core Patient Details' },
+  visits: { label: 'Family Visit Logs', desc: 'Allow family to view visitor logs and official visit history.', category: 'Core Patient Details' },
+  canteen: { label: 'Canteen Wallet History', desc: 'Allow family to view detailed canteen deposits, expenses, and transaction logs.', category: 'Financial' },
+  files: { label: 'Files & Media Progress', desc: 'Allow family to view uploaded progress videos, images, and documents.', category: 'Core Patient Details' },
 
   // Students
   examRecords: { label: 'Exam & Test Records', desc: 'Allow student to view test marks, exams results, and academic status.', category: 'Academic' },

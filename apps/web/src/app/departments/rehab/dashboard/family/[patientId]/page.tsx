@@ -7,7 +7,8 @@ import { db } from '@/lib/firebase';
 import { 
   User, DollarSign, Heart, Calendar, Clock, 
   Loader2, Phone, MessageCircle,
-  Shield, Pill, TrendingUp, Activity, ArrowLeft, Users
+  Shield, Pill, TrendingUp, Activity, ArrowLeft, Users,
+  ShoppingCart, Video, Play, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
@@ -33,9 +34,11 @@ export default function FamilyPatientViewPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'visits'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'visits' | 'canteen' | 'videos'>('overview');
   const [payments, setPayments] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
+  const [canteenTransactions, setCanteenTransactions] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
 
   const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'patients', patientId);
 
@@ -45,9 +48,11 @@ export default function FamilyPatientViewPage() {
       overview: sections.admissionDetails !== false,
       finance: sections.financialStatement !== false,
       daily: sections.dailySheet !== false,
-      visits: sections.familyContact !== false,
+      visits: sections.visits !== false,
       therapy: sections.therapy !== false,
       meds: sections.medication !== false,
+      canteen: sections.canteen !== false,
+      videos: sections.files !== false,
     };
     
     if (tabVisibility[activeTab] === false) {
@@ -122,11 +127,26 @@ export default function FamilyPatientViewPage() {
       const remainingTillDate = dueTillDate - totalReceived;
 
       let totalCanteenDeposited = 0, totalCanteenSpent = 0;
+      const allCanteenTransactions: any[] = [];
       canteenSnap.docs.forEach(d => {
         const cData = d.data();
         totalCanteenDeposited += cData.totalDeposited || 0;
         totalCanteenSpent += cData.totalSpent || 0;
+        if (Array.isArray(cData.transactions)) {
+          cData.transactions.forEach((t: any) => {
+            allCanteenTransactions.push({ ...t, month: cData.month });
+          });
+        }
       });
+      setCanteenTransactions(allCanteenTransactions.sort((a, b) => toDate(b.date || 0).getTime() - toDate(a.date || 0).getTime()));
+
+      try {
+        const videosSnap = await getDocs(query(collection(db, 'rehab_videos'), where('patientId', '==', patientId)));
+        const vids = videosSnap.docs.map(v => ({ id: v.id, ...v.data() } as any));
+        setVideos(vids.sort((a, b) => toDate(b.createdAt || 0).getTime() - toDate(a.createdAt || 0).getTime()));
+      } catch (err) {
+        console.warn("Videos fetch error:", err);
+      }
 
       setPatient({ 
         ...data, 
@@ -289,10 +309,12 @@ export default function FamilyPatientViewPage() {
             {[
               { key: 'overview', label: 'Overview', icon: User, visible: sections.admissionDetails !== false },
               { key: 'finance', label: 'Finance', icon: DollarSign, visible: sections.financialStatement !== false },
+              { key: 'canteen', label: 'Canteen', icon: ShoppingCart, visible: sections.canteen !== false },
               { key: 'daily', label: 'Sheet', icon: Activity, visible: sections.dailySheet !== false },
-              { key: 'visits', label: 'Visits', icon: Clock, visible: sections.familyContact !== false },
+              { key: 'visits', label: 'Visits', icon: Clock, visible: sections.visits !== false },
               { key: 'therapy', label: 'Therapy', icon: Heart, visible: sections.therapy !== false },
               { key: 'meds', label: 'Meds', icon: Pill, visible: sections.medication !== false },
+              { key: 'videos', label: 'Files', icon: Video, visible: sections.files !== false },
             ].filter(t => t.visible !== false).map(tab => (
               <button
                 key={tab.key}
@@ -359,6 +381,51 @@ export default function FamilyPatientViewPage() {
                 });
               })()}
             />
+          </div>
+        )}
+
+        {activeTab === 'canteen' && (
+          <div className="space-y-6 mt-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-5 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
+                    <ShoppingCart size={18} className="text-teal-600" /> Canteen Wallet History
+                  </h3>
+                  <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Canteen deposits and expenses</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Available Balance</p>
+                  <p className={`text-xl sm:text-2xl font-black ${patient.canteenBalance >= 0 ? 'text-teal-600' : 'text-red-600'}`}>
+                    PKR {Number(patient.canteenBalance || 0).toLocaleString('en-PK')}
+                  </p>
+                </div>
+              </div>
+              {canteenTransactions.length === 0 ? (
+                <div className="p-12 text-center text-gray-450">
+                  <ShoppingCart size={48} className="mx-auto mb-4 opacity-20" />
+                  <p className="text-sm font-medium">No canteen transactions found.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 divide-y divide-gray-50">
+                  {canteenTransactions.map((t, i) => (
+                    <div key={i} className={`p-5 sm:p-6 hover:bg-gray-50 transition-colors group flex items-center justify-between gap-4 border-l-4 ${t.type === 'deposit' ? 'border-l-green-400 bg-green-50/10' : 'border-l-red-400'}`}>
+                      <div>
+                        <p className="font-black text-gray-900 text-sm sm:text-base">{t.description || (t.type === 'deposit' ? 'Wallet Deposit' : 'Canteen Purchase')}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                          {formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-base sm:text-lg font-black ${t.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                          {t.type === 'deposit' ? '+' : '-'}PKR {t.amount?.toLocaleString('en-PK')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -471,6 +538,67 @@ export default function FamilyPatientViewPage() {
         {activeTab === 'meds' && session && (
           <div className="pointer-events-none mt-6">
             <MedicationTab patientId={patientId} session={session} />
+          </div>
+        )}
+
+        {activeTab === 'videos' && (
+          <div className="space-y-6 mt-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-5 sm:p-6 border-b border-gray-50">
+                <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2 text-base sm:text-lg">
+                  <Video size={18} className="text-teal-600" /> Files & Media Progress
+                </h3>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Videos and documents uploaded for updates</p>
+              </div>
+              <div className="p-5 sm:p-6">
+                {videos.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
+                    <Video className="w-12 h-12 text-gray-300 mx-auto mb-3 opacity-30" />
+                    <p className="text-gray-500 text-sm">No files uploaded yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {videos.map(vid => {
+                      const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
+                      const isImage = vid.fileType?.startsWith('image/');
+                      const isPdf = vid.fileType === 'application/pdf';
+
+                      return (
+                        <div key={vid.id} className="border border-gray-205 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative flex flex-col justify-between">
+                          <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
+                            {isImage ? (
+                              <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
+                            ) : isPdf ? (
+                              <FileText className="w-10 h-10 text-gray-600 z-0" />
+                            ) : (
+                              <Video className="w-10 h-10 text-gray-600 z-0" />
+                            )}
+
+                            <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                              <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
+                                <Play className="w-5 h-5 ml-1" />
+                              </div>
+                            </a>
+                          </div>
+                          <div className="p-4">
+                            <h4 className="font-bold text-gray-900 dark:text-white truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-500">
+                                {formatDateDMY(vid.createdAt)}
+                              </p>
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                                }`}>
+                                {isVideo ? 'Video' : isPdf ? 'Document' : 'Image'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

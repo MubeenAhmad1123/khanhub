@@ -70,6 +70,9 @@ export function getDefaultSections(
       progressNotes: true,
       financialStatement: true,
       familyContact: true,
+      visits: true,
+      canteen: true,
+      files: true,
     };
   }
   if (entityType === 'student') {
