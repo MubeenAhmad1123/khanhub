@@ -454,7 +454,7 @@ export function subscribeEntityTransactions({
   const attach = (
     dept: DeptFilter,
     field: string,
-    id: string
+    id: string | number
   ) => {
     const col = DEPT_TX_MAP[dept];
     if (!col) return;
@@ -465,7 +465,7 @@ export function subscribeEntityTransactions({
       orderBy('createdAt', 'desc'),
       limit(200)
     );
-    const key = `${dept}_${field}`;
+    const key = `${dept}_${field}_${id}`;
     const u = onSnapshot(
       q,
       (snap) => {
@@ -502,6 +502,61 @@ export function subscribeEntityTransactions({
       (e) => onError?.(e)
     );
     unsub.push(feeUnsub);
+
+    // Also load by numeric studentId
+    getDoc(doc(db, 'spims_students', entity.id)).then(studentSnap => {
+      if (studentSnap.exists()) {
+        const studentData = studentSnap.data() as any;
+        const fieldStudentId = studentData.studentId;
+        if (fieldStudentId && fieldStudentId !== entity.id) {
+          attach('spims', 'studentId', fieldStudentId);
+          attach('spims', 'patientId', fieldStudentId);
+
+          const feeQuery2 = query(
+            collection(db, feeCol),
+            where('studentId', '==', fieldStudentId),
+            orderBy('createdAt', 'desc')
+          );
+          const feeUnsub2 = onSnapshot(
+            feeQuery2,
+            (snap) => {
+              buffers[`spims_fees_${fieldStudentId}`] = snap.docs.map((d) =>
+                normalizeTx('spims', d.id, d.data() as Record<string, unknown>, 'spims_fees')
+              );
+              bump();
+            },
+            (e) => onError?.(e)
+          );
+          unsub.push(feeUnsub2);
+
+          // Support numeric types as well
+          if (/^\d+$/.test(fieldStudentId)) {
+            const numId = Number(fieldStudentId);
+            attach('spims', 'studentId', numId);
+            attach('spims', 'patientId', numId);
+
+            const feeQuery3 = query(
+              collection(db, feeCol),
+              where('studentId', '==', numId),
+              orderBy('createdAt', 'desc')
+            );
+            const feeUnsub3 = onSnapshot(
+              feeQuery3,
+              (snap) => {
+                buffers[`spims_fees_${numId}`] = snap.docs.map((d) =>
+                  normalizeTx('spims', d.id, d.data() as Record<string, unknown>, 'spims_fees')
+                );
+                bump();
+              },
+              (e) => onError?.(e)
+            );
+            unsub.push(feeUnsub3);
+          }
+        }
+      }
+    }).catch(err => {
+      console.error('[subscribeEntityTransactions] error resolving studentId:', err);
+    });
   } else if (entity.dept === 'job-center') {
     attach('job-center', 'seekerId', entity.id);
   } else if (DEPT_TX_MAP[entity.dept]) {

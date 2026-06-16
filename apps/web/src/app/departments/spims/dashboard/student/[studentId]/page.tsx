@@ -205,11 +205,37 @@ export default function StudentSelfServicePage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [s, fees, txSnapPatient, txSnapStudent] = await Promise.all([
-        getUnifiedStudent(studentId),
-        fetchStudentFees(studentId),
-        getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', studentId))),
-        getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', studentId)))
+      const s = await getUnifiedStudent(studentId);
+
+      let resolvedDocId = studentId;
+      let fieldStudentId = '';
+
+      if (s) {
+        resolvedDocId = s.id;
+        fieldStudentId = s.studentId || '';
+      }
+
+      const txQueries = [
+        getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', resolvedDocId))),
+        getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', resolvedDocId)))
+      ];
+
+      if (fieldStudentId && fieldStudentId !== resolvedDocId) {
+        txQueries.push(
+          getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', fieldStudentId))),
+          getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', fieldStudentId)))
+        );
+        if (/^\d+$/.test(fieldStudentId)) {
+          txQueries.push(
+            getDocs(query(collection(db, 'spims_transactions'), where('patientId', '==', Number(fieldStudentId)))),
+            getDocs(query(collection(db, 'spims_transactions'), where('studentId', '==', Number(fieldStudentId))))
+          );
+        }
+      }
+
+      const [fees, ...txSnaps] = await Promise.all([
+        fetchStudentFees(resolvedDocId, fieldStudentId),
+        ...txQueries
       ]);
 
       const aggregatedPayments: any[] = [];
@@ -246,8 +272,11 @@ export default function StudentSelfServicePage() {
         });
 
         const txMap = new Map<string, any>();
-        txSnapPatient.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
-        txSnapStudent.docs.forEach(doc => txMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        txSnaps.forEach((snap) => {
+          snap.docs.forEach((doc) => {
+            txMap.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+        });
         const mergedTxDocs = Array.from(txMap.values());
 
         mergedTxDocs.forEach(txData => {

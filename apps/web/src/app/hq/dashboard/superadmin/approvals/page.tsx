@@ -1294,7 +1294,20 @@ export default function HqApprovalsPage() {
           next.session = String(d.session || '');
           next.rollNo = (d.year2_rollNo as string) || (d.year1_rollNo as string) || (d.rollNo as string) || undefined;
         }
-        setEnriched((prev) => ({ ...prev, [k]: { ...prev[k], ...next } }));
+
+        const updates: Record<string, any> = {
+          [k]: next
+        };
+        if (selectedEntity.dept === 'spims' && d.studentId && d.studentId !== selectedEntity.id) {
+          updates[`spims_${d.studentId}`] = next;
+        }
+
+        setEnriched((prev) => ({ 
+          ...prev, 
+          ...Object.fromEntries(
+            Object.entries(updates).map(([key, val]) => [key, { ...prev[key], ...val }])
+          )
+        }));
       }
     });
 
@@ -1333,8 +1346,30 @@ export default function HqApprovalsPage() {
           
           if (!coll) continue;
           
-          const ref = doc(db, coll, v.id);
-          const snap = await getDoc(ref);
+          let ref = doc(db, coll, v.id);
+          let snap = await getDoc(ref);
+          let resolvedId = v.id;
+
+          if (!snap.exists() && v.dept === 'spims') {
+            const qStudent = query(collection(db, 'spims_students'), where('studentId', '==', v.id), limit(1));
+            const studentQuerySnap = await getDocs(qStudent);
+            if (!studentQuerySnap.empty) {
+              const docSnap = studentQuerySnap.docs[0];
+              resolvedId = docSnap.id;
+              ref = doc(db, coll, resolvedId);
+              snap = await getDoc(ref);
+            } else if (/^\d+$/.test(v.id)) {
+              const qStudentNum = query(collection(db, 'spims_students'), where('studentId', '==', Number(v.id)), limit(1));
+              const studentQuerySnapNum = await getDocs(qStudentNum);
+              if (!studentQuerySnapNum.empty) {
+                const docSnap = studentQuerySnapNum.docs[0];
+                resolvedId = docSnap.id;
+                ref = doc(db, coll, resolvedId);
+                snap = await getDoc(ref);
+              }
+            }
+          }
+
           if (!snap.exists() || cancelled) continue;
           const d = snap.data() as Record<string, unknown>;
 
@@ -1358,7 +1393,12 @@ export default function HqApprovalsPage() {
             next.rollNo =
               (d.year2_rollNo as string) || (d.year1_rollNo as string) || (d.rollNo as string) || undefined;
           }
-          setEnriched((prev) => ({ ...prev, [k]: { ...prev[k], ...next } }));
+
+          setEnriched((prev) => ({ 
+            ...prev, 
+            [k]: { ...prev[k], ...next },
+            [`${v.dept}_${resolvedId}`]: { ...prev[`${v.dept}_${resolvedId}`], ...next }
+          }));
         } catch {
           /* ignore */
         }

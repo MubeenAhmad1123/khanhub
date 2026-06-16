@@ -290,18 +290,59 @@ export async function updateStudentStatus(id: string, status: SpimsStudentStatus
   }
 }
 
-export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayment[]> {
+export async function fetchStudentFees(studentId: string, customStudentIdField?: string): Promise<SpimsFeePayment[]> {
   const cacheKey = `spims_fees_${studentId}`;
   const cached = getCached<SpimsFeePayment[]>(cacheKey);
   if (cached) return cached;
 
-  const q = query(
+  let fieldId = customStudentIdField;
+  if (!fieldId) {
+    try {
+      const studentDoc = await getDoc(doc(db, 'spims_students', studentId));
+      if (studentDoc.exists()) {
+        fieldId = (studentDoc.data() as any).studentId;
+      }
+    } catch (err) {
+      console.error('[fetchStudentFees] Error fetching student doc:', err);
+    }
+  }
+
+  const q1 = query(
     collection(db, 'spims_fees'),
     where('studentId', '==', studentId),
     limit(50) // Limit tx history
   );
-  const snap = await getDocs(q);
-  const fees = snap.docs.map((d) => {
+
+  let snapDocs: any[] = [];
+  if (fieldId && fieldId !== studentId) {
+    const q2 = query(
+      collection(db, 'spims_fees'),
+      where('studentId', '==', fieldId),
+      limit(50)
+    );
+    const q3 = /^\d+$/.test(fieldId) ? query(
+      collection(db, 'spims_fees'),
+      where('studentId', '==', Number(fieldId)),
+      limit(50)
+    ) : null;
+
+    const [snap1, snap2, snap3] = await Promise.all([
+      getDocs(q1),
+      getDocs(q2),
+      q3 ? getDocs(q3) : Promise.resolve({ docs: [] })
+    ]);
+
+    const docMap = new Map<string, any>();
+    snap1.docs.forEach((d) => docMap.set(d.id, d));
+    snap2.docs.forEach((d) => docMap.set(d.id, d));
+    snap3.docs.forEach((d) => docMap.set(d.id, d));
+    snapDocs = Array.from(docMap.values());
+  } else {
+    const snap = await getDocs(q1);
+    snapDocs = snap.docs;
+  }
+
+  const fees = snapDocs.map((d) => {
     const row = d.data();
     return {
       id: d.id,
@@ -324,29 +365,70 @@ export async function fetchStudentFees(studentId: string): Promise<SpimsFeePayme
 
 // Sync fee records and store summary for quick access
 export async function syncSpimsFeeRecords(studentId: string): Promise<void> {
-  // 1. Fetch all fee documents for the given student
-  const feeQuery = query(collection(db, 'spims_fees'), where('studentId', '==', studentId));
-  const feeSnap = await getDocs(feeQuery);
-  const fees = feeSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  const studentRef = doc(db, 'spims_students', studentId);
+  const studentSnap = await getDoc(studentRef);
+  let resolvedDocId = studentId;
+  let fieldStudentId = '';
+
+  if (studentSnap.exists()) {
+    const studentData = studentSnap.data() as any;
+    fieldStudentId = studentData.studentId || '';
+  } else {
+    const qStudent = query(collection(db, 'spims_students'), where('studentId', '==', studentId), limit(1));
+    const studentQuerySnap = await getDocs(qStudent);
+    if (!studentQuerySnap.empty) {
+      const docSnap = studentQuerySnap.docs[0];
+      resolvedDocId = docSnap.id;
+      fieldStudentId = (docSnap.data() as any).studentId || '';
+    } else if (/^\d+$/.test(studentId)) {
+      const qStudentNum = query(collection(db, 'spims_students'), where('studentId', '==', Number(studentId)), limit(1));
+      const studentQuerySnapNum = await getDocs(qStudentNum);
+      if (!studentQuerySnapNum.empty) {
+        const docSnap = studentQuerySnapNum.docs[0];
+        resolvedDocId = docSnap.id;
+        fieldStudentId = (docSnap.data() as any).studentId || '';
+      }
+    }
+  }
+
+  const [feesSnap1, feesSnap2] = await Promise.all([
+    getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', resolvedDocId))),
+    fieldStudentId && fieldStudentId !== resolvedDocId
+      ? getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', fieldStudentId)))
+      : Promise.resolve({ docs: [] as any[] })
+  ]);
+
+  let feesSnap3 = { docs: [] as any[] };
+  if (fieldStudentId && /^\d+$/.test(fieldStudentId)) {
+    feesSnap3 = await getDocs(query(collection(db, 'spims_fees'), where('studentId', '==', Number(fieldStudentId))));
+  }
+
+  const feeDocMap = new Map<string, any>();
+  [...feesSnap1.docs, ...feesSnap2.docs, ...feesSnap3.docs].forEach(d => {
+    if (!feeDocMap.has(d.id)) feeDocMap.set(d.id, { id: d.id, ...d.data() });
+  });
+
+  const fees = Array.from(feeDocMap.values());
 
   // 2. Filter approved fees and calculate total approved amount
   const approvedFees = fees.filter((f: any) => f.status === 'approved');
   const totalApproved = approvedFees.reduce((sum: number, f: any) => sum + (Number(f.amount) || 0), 0);
 
   // 3. Fetch student to get total package
-  const studentSnap = await getDoc(doc(db, 'spims_students', studentId));
-  const totalPackage = studentSnap.exists() ? Number((studentSnap.data() as any).totalPackage) || 0 : 0;
+  const finalStudentSnap = resolvedDocId === studentId ? studentSnap : await getDoc(doc(db, 'spims_students', resolvedDocId));
+  const totalPackage = finalStudentSnap.exists() ? Number((finalStudentSnap.data() as any).totalPackage) || 0 : 0;
   const remaining = Math.max(0, totalPackage - totalApproved);
 
   // 4. Update student document with received and remaining balances
-  await updateDoc(doc(db, 'spims_students', studentId), {
+  await updateDoc(doc(db, 'spims_students', resolvedDocId), {
     totalReceived: totalApproved,
     remaining: remaining,
+    remainingBalance: remaining,
     updatedAt: serverTimestamp(),
   });
 
   // 5. Write/update summary document under student record for quick access
-  const summaryRef = doc(db, 'spims_students', studentId, 'feeSummary', 'latest');
+  const summaryRef = doc(db, 'spims_students', resolvedDocId, 'feeSummary', 'latest');
   await setDoc(summaryRef, {
     totalApproved,
     feeCount: approvedFees.length,
