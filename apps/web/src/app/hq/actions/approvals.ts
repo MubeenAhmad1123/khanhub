@@ -244,8 +244,31 @@ async function updateEntityTotals(
   else if (dept === 'welfare') col = 'welfare_donors';
   else return; // unknown department or no auto-update logic
 
-  const ref = adminDb.collection(col).doc(entityId);
-  const snap = await ref.get();
+  let ref = adminDb.collection(col).doc(entityId);
+  let snap = await ref.get();
+
+  if (!snap.exists && dept === 'spims') {
+    const querySnap = await adminDb
+      .collection('spims_students')
+      .where('studentId', '==', entityId)
+      .limit(1)
+      .get();
+    if (!querySnap.empty) {
+      ref = querySnap.docs[0].ref;
+      snap = await ref.get();
+    } else if (/^\d+$/.test(entityId)) {
+      const numQuerySnap = await adminDb
+        .collection('spims_students')
+        .where('studentId', '==', Number(entityId))
+        .limit(1)
+        .get();
+      if (!numQuerySnap.empty) {
+        ref = numQuerySnap.docs[0].ref;
+        snap = await ref.get();
+      }
+    }
+  }
+
   if (!snap.exists) return;
 
   const amount = Number(txData.amount) || 0;
@@ -508,8 +531,31 @@ async function syncSpimsFeeRecords(
       }, { merge: true });
     }
 
-    const studentRef = adminDb.collection('spims_students').doc(studentId);
-    const studentSnap = await studentRef.get();
+    let studentRef = adminDb.collection('spims_students').doc(studentId);
+    let studentSnap = await studentRef.get();
+
+    if (!studentSnap.exists) {
+      const snap = await adminDb
+        .collection('spims_students')
+        .where('studentId', '==', studentId)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        studentRef = snap.docs[0].ref;
+        studentSnap = await studentRef.get();
+      } else if (/^\d+$/.test(studentId)) {
+        const snapNum = await adminDb
+          .collection('spims_students')
+          .where('studentId', '==', Number(studentId))
+          .limit(1)
+          .get();
+        if (!snapNum.empty) {
+          studentRef = snapNum.docs[0].ref;
+          studentSnap = await studentRef.get();
+        }
+      }
+    }
+
     if (studentSnap.exists) {
       const studentData = studentSnap.data() as any;
       const pkg = Number(studentData?.totalPackage || studentData?.totalPackageAmount) || 0;
@@ -546,6 +592,94 @@ async function syncSpimsFeeRecords(
     }
   } catch (err) {
     console.error('[syncSpimsFeeRecords] Error:', err);
+  }
+}
+
+async function updateSpimsStudentOnApproval(
+  adminDb: FirebaseFirestore.Firestore,
+  studentId: string,
+  amount: number,
+  category: string
+): Promise<void> {
+  // Step 1: Try direct doc lookup by Firestore document ID
+  let studentRef: FirebaseFirestore.DocumentReference | null = null;
+  let isDirectDoc = false;
+
+  try {
+    const directDoc = await adminDb.collection('spims_students').doc(studentId).get();
+    if (directDoc.exists) {
+      studentRef = directDoc.ref;
+      isDirectDoc = true;
+    }
+  } catch (_) {}
+
+  // Step 2: If not found, query by studentId field (handles numeric IDs like "36")
+  if (!studentRef) {
+    const snap = await adminDb
+      .collection('spims_students')
+      .where('studentId', '==', studentId)
+      .limit(1)
+      .get();
+    if (!snap.empty) {
+      studentRef = snap.docs[0].ref;
+    }
+  }
+
+  // Step 3: Also try numeric conversion (studentId might be stored as number)
+  if (!studentRef && /^\d+$/.test(studentId)) {
+    const snap = await adminDb
+      .collection('spims_students')
+      .where('studentId', '==', Number(studentId))
+      .limit(1)
+      .get();
+    if (!snap.empty) {
+      studentRef = snap.docs[0].ref;
+    }
+  }
+
+  if (!studentRef) {
+    console.warn('[approvals] SPIMS student not found for studentId:', studentId);
+    return; // Don't crash — transaction is already approved
+  }
+
+  // Step 4: Determine which fee flag to set
+  const cat = (category || '').toLowerCase();
+  const feeFlags: Record<string, boolean> = {};
+  if (cat.includes('monthly') || cat === 'fee' || cat.includes('fee')) {
+    feeFlags.monthlyFeePaid = true;
+  }
+  if (cat.includes('admission')) {
+    feeFlags.admissionFeePaid = true;
+  }
+  if (cat.includes('registration')) {
+    feeFlags.registrationFeePaid = true;
+  }
+  if (cat.includes('examination') || cat.includes('exam')) {
+    feeFlags.examinationFeePaid = true;
+  }
+
+  // Step 5: Read current values then update atomically
+  const currentData = (await studentRef.get()).data() || {};
+
+  if (isDirectDoc) {
+    // Already updated by updateEntityTotals / syncSpimsFeeRecords, so only set feeFlags
+    if (Object.keys(feeFlags).length > 0) {
+      await studentRef.update({
+        ...feeFlags,
+        updatedAt: new Date(),
+      });
+    }
+  } else {
+    // Direct lookup failed, so update totals and fee flags
+    const currentReceived = Number(currentData.totalReceived || 0);
+    const currentRemaining = Number(currentData.remainingBalance ?? currentData.remaining ?? 0);
+
+    await studentRef.update({
+      totalReceived: currentReceived + amount,
+      remainingBalance: Math.max(0, currentRemaining - amount),
+      ...feeFlags,
+      updatedAt: new Date(),
+    });
   }
 }
 
@@ -605,6 +739,17 @@ export async function decideTransaction(params: {
       }
       if (params.dept === 'spims') {
         await syncSpimsFeeRecords(adminDb, params.txId, data, 'approved');
+
+        const studentId = data.studentId || data.patientId;
+        const amount = Number(data.amount || 0);
+        const category = String(data.category || data.feePaymentType || '');
+        if (studentId && amount > 0) {
+          try {
+            await updateSpimsStudentOnApproval(adminDb, studentId, amount, category);
+          } catch (e) {
+            console.error('[approvals] Student update failed (non-fatal):', e);
+          }
+        }
       }
     } else {
       if (params.dept === 'spims') {
@@ -713,6 +858,18 @@ export async function bulkDecideTransactions(params: {
         }
         if (params.dept === 'spims') {
           await syncSpimsFeeRecords(adminDb, snap.id, snap.data(), 'approved');
+
+          const txData = snap.data() || {};
+          const studentId = txData.studentId || txData.patientId;
+          const amount = Number(txData.amount || 0);
+          const category = String(txData.category || txData.feePaymentType || '');
+          if (studentId && amount > 0) {
+            try {
+              await updateSpimsStudentOnApproval(adminDb, studentId, amount, category);
+            } catch (e) {
+              console.error('[approvals] Student update failed (non-fatal):', e);
+            }
+          }
         }
       }
     } else {
@@ -871,8 +1028,31 @@ export async function editApprovedTransaction(params: {
         else if (params.dept === 'welfare') entityCol = 'welfare_donors';
 
         if (entityCol) {
-          const entityRef = adminDb.collection(entityCol).doc(entityId);
-          const entitySnap = await entityRef.get();
+          let entityRef = adminDb.collection(entityCol).doc(entityId);
+          let entitySnap = await entityRef.get();
+
+          if (!entitySnap.exists && params.dept === 'spims') {
+            const snap = await adminDb
+              .collection('spims_students')
+              .where('studentId', '==', entityId)
+              .limit(1)
+              .get();
+            if (!snap.empty) {
+              entityRef = snap.docs[0].ref;
+              entitySnap = await entityRef.get();
+            } else if (/^\d+$/.test(entityId)) {
+              const snapNum = await adminDb
+                .collection('spims_students')
+                .where('studentId', '==', Number(entityId))
+                .limit(1)
+                .get();
+              if (!snapNum.empty) {
+                entityRef = snapNum.docs[0].ref;
+                entitySnap = await entityRef.get();
+              }
+            }
+          }
+
           if (entitySnap.exists) {
             const isIncome = oldData.type === 'income';
 
@@ -1066,8 +1246,31 @@ async function reverseEntityTotalsServer(
   else if (dept === 'welfare') col = 'welfare_donors';
   else return;
 
-  const ref = adminDb.collection(col).doc(entityId);
-  const snap = await ref.get();
+  let ref = adminDb.collection(col).doc(entityId);
+  let snap = await ref.get();
+
+  if (!snap.exists && dept === 'spims') {
+    const querySnap = await adminDb
+      .collection('spims_students')
+      .where('studentId', '==', entityId)
+      .limit(1)
+      .get();
+    if (!querySnap.empty) {
+      ref = querySnap.docs[0].ref;
+      snap = await ref.get();
+    } else if (/^\d+$/.test(entityId)) {
+      const numQuerySnap = await adminDb
+        .collection('spims_students')
+        .where('studentId', '==', Number(entityId))
+        .limit(1)
+        .get();
+      if (!numQuerySnap.empty) {
+        ref = numQuerySnap.docs[0].ref;
+        snap = await ref.get();
+      }
+    }
+  }
+
   if (!snap.exists) return;
 
   const amount = Number(txData.amount) || 0;
@@ -1111,8 +1314,31 @@ async function syncSpimsDeletedFee(
   studentId: string
 ) {
   try {
-    const studentRef = adminDb.collection('spims_students').doc(studentId);
-    const studentSnap = await studentRef.get();
+    let studentRef = adminDb.collection('spims_students').doc(studentId);
+    let studentSnap = await studentRef.get();
+
+    if (!studentSnap.exists) {
+      const snap = await adminDb
+        .collection('spims_students')
+        .where('studentId', '==', studentId)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        studentRef = snap.docs[0].ref;
+        studentSnap = await studentRef.get();
+      } else if (/^\d+$/.test(studentId)) {
+        const snapNum = await adminDb
+          .collection('spims_students')
+          .where('studentId', '==', Number(studentId))
+          .limit(1)
+          .get();
+        if (!snapNum.empty) {
+          studentRef = snapNum.docs[0].ref;
+          studentSnap = await studentRef.get();
+        }
+      }
+    }
+
     if (studentSnap.exists) {
       const studentData = studentSnap.data() as any;
       const pkg = Number(studentData?.totalPackage || studentData?.totalPackageAmount) || 0;
