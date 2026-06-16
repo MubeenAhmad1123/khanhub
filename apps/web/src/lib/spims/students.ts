@@ -290,10 +290,12 @@ export async function updateStudentStatus(id: string, status: SpimsStudentStatus
   }
 }
 
-export async function fetchStudentFees(studentId: string, customStudentIdField?: string): Promise<SpimsFeePayment[]> {
+export async function fetchStudentFees(studentId: string, customStudentIdField?: string, bypassCache = false): Promise<SpimsFeePayment[]> {
   const cacheKey = `spims_fees_${studentId}`;
-  const cached = getCached<SpimsFeePayment[]>(cacheKey);
-  if (cached) return cached;
+  if (!bypassCache) {
+    const cached = getCached<SpimsFeePayment[]>(cacheKey);
+    if (cached) return cached;
+  }
 
   let fieldId = customStudentIdField;
   if (!fieldId) {

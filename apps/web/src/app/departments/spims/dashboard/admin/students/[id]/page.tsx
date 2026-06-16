@@ -197,7 +197,7 @@ export default function AdminStudentProfilePage() {
       }
 
       const [fees, ...txSnaps] = await Promise.all([
-        fetchStudentFees(resolvedDocId, fieldStudentId),
+        fetchStudentFees(resolvedDocId, fieldStudentId, true),
         ...txQueries
       ]);
 

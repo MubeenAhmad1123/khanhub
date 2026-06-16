@@ -232,7 +232,7 @@ export default function StudentSelfServicePage() {
       }
 
       const [fees, ...txSnaps] = await Promise.all([
-        fetchStudentFees(resolvedDocId, fieldStudentId),
+        fetchStudentFees(resolvedDocId, fieldStudentId, true),
         ...txQueries
       ]);
 
