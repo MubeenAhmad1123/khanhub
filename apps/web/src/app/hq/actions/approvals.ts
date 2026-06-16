@@ -560,12 +560,24 @@ async function syncSpimsFeeRecords(
       const studentData = studentSnap.data() as any;
       const pkg = Number(studentData?.totalPackage || studentData?.totalPackageAmount) || 0;
 
-      const feesSnap = await adminDb.collection('spims_fees')
-        .where('studentId', '==', studentId)
-        .get();
+      // Use the resolved Firestore document ID for the query
+      const resolvedStudentId = studentRef.id;
+      
+      // Query by both the resolved doc ID AND the original studentId to catch all records
+      const [feesSnap1, feesSnap2] = await Promise.all([
+        adminDb.collection('spims_fees').where('studentId', '==', resolvedStudentId).get(),
+        resolvedStudentId !== studentId
+          ? adminDb.collection('spims_fees').where('studentId', '==', studentId).get()
+          : Promise.resolve({ docs: [] as any[] })
+      ]);
 
-      const approvedRows = feesSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as any))
+      // Merge and deduplicate by doc ID
+      const feeDocMap = new Map<string, any>();
+      [...feesSnap1.docs, ...feesSnap2.docs].forEach(d => {
+        if (!feeDocMap.has(d.id)) feeDocMap.set(d.id, { id: d.id, ...d.data() });
+      });
+
+      const approvedRows = Array.from(feeDocMap.values())
         .filter(r => r.status === 'approved');
 
       approvedRows.sort((a, b) => {
@@ -1343,12 +1355,24 @@ async function syncSpimsDeletedFee(
       const studentData = studentSnap.data() as any;
       const pkg = Number(studentData?.totalPackage || studentData?.totalPackageAmount) || 0;
 
-      const feesSnap = await adminDb.collection('spims_fees')
-        .where('studentId', '==', studentId)
-        .get();
+      // Use the resolved Firestore document ID for the query
+      const resolvedStudentId = studentRef.id;
+      
+      // Query by both the resolved doc ID AND the original studentId to catch all records
+      const [feesSnap1, feesSnap2] = await Promise.all([
+        adminDb.collection('spims_fees').where('studentId', '==', resolvedStudentId).get(),
+        resolvedStudentId !== studentId
+          ? adminDb.collection('spims_fees').where('studentId', '==', studentId).get()
+          : Promise.resolve({ docs: [] as any[] })
+      ]);
 
-      const approvedRows = feesSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as any))
+      // Merge and deduplicate by doc ID
+      const feeDocMap = new Map<string, any>();
+      [...feesSnap1.docs, ...feesSnap2.docs].forEach(d => {
+        if (!feeDocMap.has(d.id)) feeDocMap.set(d.id, { id: d.id, ...d.data() });
+      });
+
+      const approvedRows = Array.from(feeDocMap.values())
         .filter(r => r.status === 'approved');
 
       approvedRows.sort((a, b) => {
