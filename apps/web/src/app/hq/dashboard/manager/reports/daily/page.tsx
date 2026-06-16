@@ -197,7 +197,7 @@ export default function DailyReportPage() {
         }
 
         // Exclude patients, students, families, clients, seekers, and superadmins
-        const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin'];
+        const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin', 'donor', 'child', 'oldage', 'beneficiary', 'orphan'];
         if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) {
           return false;
         }
