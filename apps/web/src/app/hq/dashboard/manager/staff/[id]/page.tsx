@@ -204,6 +204,16 @@ export default function StaffProfilePage() {
   const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
   const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
   const [fines, setFines] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [advanceForm, setAdvanceForm] = useState({
+    amount: '',
+    date: new Date().toISOString().slice(0, 10),
+    description: '',
+    paymentMethod: 'cash' as 'cash' | 'bank_transfer' | 'jazzcash' | 'easypaisa',
+    referenceNo: ''
+  });
+  const [recordingAdvance, setRecordingAdvance] = useState(false);
 
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
@@ -313,6 +323,21 @@ export default function StaffProfilePage() {
     return String(f.date).startsWith(selectedMonth);
   }, [selectedMonth]);
 
+  const approvedAdvancesForMonth = useMemo(() => {
+    return transactions.filter(tx => {
+      if (tx.category !== 'advance_salary' || tx.status !== 'approved') return false;
+      const txDate = tx.transactionDate || tx.date || tx.createdAt;
+      if (!txDate) return false;
+      try {
+        const dObj = toDate(txDate);
+        if (dObj && typeof dObj.toISOString === 'function') {
+          return dObj.toISOString().slice(0, 7) === selectedMonth;
+        }
+      } catch (e) {}
+      return false;
+    }).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  }, [transactions, selectedMonth]);
+
   const salaryDetails = useMemo(() => {
     if (!staff) {
       return {
@@ -417,7 +442,8 @@ export default function StaffProfilePage() {
         earnings: slip.basicSalary - (slip.absentDeduction || 0),
         absentDeduction: slip.absentDeduction || 0,
         estimatedSalary: slip.netSalary || 0,
-        fines: slip.otherDeductions || 0,
+        fines: slip.fine || slip.otherDeductions || 0,
+        advance: slip.advance || 0,
         bonus: slip.bonus || 0,
         bonusReason: slip.bonusReason || '',
         deductionReason: slip.deductionReason || '',
@@ -428,7 +454,7 @@ export default function StaffProfilePage() {
       };
     }
 
-    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines));
+    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines - approvedAdvancesForMonth));
 
     return {
       dailyWage,
@@ -443,6 +469,7 @@ export default function StaffProfilePage() {
       absentDeduction,
       estimatedSalary,
       fines: totalFines,
+      advance: approvedAdvancesForMonth,
       bonus: 0,
       bonusReason: '',
       deductionReason: '',
@@ -451,7 +478,7 @@ export default function StaffProfilePage() {
       isFinalized: false,
       status: ''
     };
-  }, [staff, attendanceMap, fines, salaryRecords, selectedMonth, daysInMonth]);
+  }, [staff, attendanceMap, fines, salaryRecords, selectedMonth, daysInMonth, approvedAdvancesForMonth]);
 
   const tillDateSalary = useMemo(() => {
     return salaryDetails.estimatedSalary;
@@ -649,7 +676,8 @@ export default function StaffProfilePage() {
         salarySnap,
         tasksDocs,
         fineDocs,
-        metaDoc
+        metaDoc,
+        txDocs
       ] = await Promise.all([
         fetchParallel(`${prefix}_attendance`),
         fetchParallel(`${prefix}_dress_logs`),
@@ -657,7 +685,8 @@ export default function StaffProfilePage() {
         fetchParallel(`${prefix}_salary_records`),
         fetchParallel(`${prefix}_special_tasks`),
         fetchParallel(`${prefix}_fines`),
-        getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any))
+        getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any)),
+        fetchParallel(`${prefix}_transactions`).catch(() => [])
       ]);
       console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
 
@@ -707,6 +736,7 @@ export default function StaffProfilePage() {
       setSalaryRecords(salarySnap.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
       setSpecialTasks(tasksDocs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
       setFines(fineDocs.map((d: any) => ({ id: d.id, ...d.data() })));
+      setTransactions(txDocs.map((d: any) => ({ id: d.id, ...d.data() })));
 
       // Fetch growth history (all records)
       const monthlyGpDocs = (await fetchParallel(`${prefix}_growth_points`)).map((d: any) => d.data());
@@ -1613,6 +1643,128 @@ export default function StaffProfilePage() {
     }
   };
 
+  const handleRecordAdvance = async () => {
+    if (!staff || !advanceForm.amount || Number(advanceForm.amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    
+    try {
+      setRecordingAdvance(true);
+      toast.loading("Recording advance transaction...", { id: 'rec-advance' });
+      
+      const prefix = getDeptPrefix(staff.dept as StaffDept);
+      
+      const payload: any = {
+        type: 'expense',
+        category: 'advance_salary',
+        categoryName: 'Advance Salary',
+        amount: Number(advanceForm.amount),
+        patientId: `${staff.dept}-general`,
+        patientName: `General ${staff.dept.toUpperCase()} Account`,
+        description: advanceForm.description.trim() || `Advance salary for ${staff.name}`,
+        paymentMethod: advanceForm.paymentMethod,
+        referenceNo: advanceForm.referenceNo.trim(),
+        status: session?.role === 'superadmin' ? 'approved' : 'pending',
+        cashierId: session?.customId || 'HQ-MANAGER',
+        date: Timestamp.fromDate(new Date(`${advanceForm.date}T00:00:00`)),
+        transactionDate: Timestamp.fromDate(new Date(`${advanceForm.date}T00:00:00`)),
+        createdBy: session?.uid,
+        createdByName: session?.displayName || session?.name || 'HQ Manager',
+        createdAt: Timestamp.now(),
+        staffId: staff.staffId,
+        staffName: staff.name
+      };
+      
+      if (session?.role === 'superadmin') {
+        payload.approvedAt = Timestamp.now();
+        payload.approvedBy = session.customId;
+        payload.processedAt = Timestamp.now();
+        payload.processedBy = session.customId;
+      }
+      
+      const txRef = await addDoc(collection(db, `${prefix}_transactions`), payload);
+      
+      if (session?.role === 'superadmin') {
+        try {
+          const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+          await syncDirectApprovedTransaction({ 
+            dept: staff.dept as any, 
+            txId: txRef.id,
+            approvedBy: session?.customId || 'SUPERADMIN'
+          });
+        } catch (syncErr) {
+          console.error('[StaffProfile] Sync direct approved transaction failed:', syncErr);
+        }
+      }
+      
+      toast.success(session?.role === 'superadmin' ? "Advance salary recorded & approved!" : "Advance salary recorded & submitted for cashier/superadmin approval!", { id: 'rec-advance' });
+      setShowAdvanceModal(false);
+      setAdvanceForm({
+        amount: '',
+        date: new Date().toISOString().slice(0, 10),
+        description: '',
+        paymentMethod: 'cash',
+        referenceNo: ''
+      });
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to record advance salary", { id: 'rec-advance' });
+    } finally {
+      setRecordingAdvance(false);
+    }
+  };
+
+  const handlePromoteToAdmin = async () => {
+    if (!staff) return;
+    if (!confirm(`Are you sure you want to promote ${staff.name} to Department Admin? Any existing Admin in the ${staff.dept.toUpperCase()} department will be demoted to Staff role. This action is real-time and cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      toast.loading("Reconfiguring department administration...", { id: 'promote-admin' });
+      
+      const deptCol = getDeptCollection(staff.dept as StaffDept);
+      
+      // 1. Query for existing admin(s) in this department
+      const adminsQuery = query(collection(db, deptCol), where('role', '==', 'admin'));
+      const adminsSnap = await getDocs(adminsQuery);
+      
+      // 2. Demote them to 'staff'
+      const batchPromises: Promise<any>[] = [];
+      adminsSnap.docs.forEach(docSnap => {
+        if (docSnap.id !== staff.staffId) {
+          batchPromises.push(
+            updateDoc(doc(db, deptCol, docSnap.id), {
+              role: 'staff',
+              designation: 'Staff Member',
+              updatedAt: serverTimestamp()
+            })
+          );
+        }
+      });
+      
+      await Promise.all(batchPromises);
+      
+      // 3. Promote selected staff member to 'admin'
+      await updateDoc(doc(db, deptCol, staff.staffId), {
+        role: 'admin',
+        designation: 'Admin',
+        updatedAt: serverTimestamp()
+      });
+      
+      toast.success(`${staff.name} promoted to Admin successfully! Previous admin demoted.`, { id: 'promote-admin' });
+      fetchData();
+    } catch (error: any) {
+      console.error("[PromoteAdmin] Error:", error);
+      toast.error(error.message || "Failed to promote to Admin", { id: 'promote-admin' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1882,6 +2034,11 @@ export default function StaffProfilePage() {
                     {staff.seniority}
                   </span>
                 )}
+                {staff?.role === 'admin' && (
+                  <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                    👑 Admin
+                  </span>
+                )}
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : ('bg-gray-50 text-black')
                   }`}>
                   {staff?.dept || 'General'}
@@ -1982,6 +2139,16 @@ export default function StaffProfilePage() {
                     <Lock className="w-3.5 h-3.5" />
                     {staff?.defaultPassword ? 'Reset Password' : 'Set Password'}
                   </button>
+                  {staff && staff.role !== 'admin' && (
+                    <button
+                      onClick={handlePromoteToAdmin}
+                      disabled={saving}
+                      className="w-full mt-2 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-[10px] font-black uppercase tracking-widest text-white shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 border border-indigo-700/30 disabled:opacity-50"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      Promote to Admin
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -3693,7 +3860,7 @@ export default function StaffProfilePage() {
                             otherEarnings: 0,
                             otherEarningsReason: '',
                             fine: salaryDetails.fines,
-                            advance: 0,
+                            advance: salaryDetails.advance || 0,
                             absentDeduction: Math.round(salaryDetails.absentDeduction),
                             otherDeductions: 0,
                             deductionReason: '',
@@ -3703,6 +3870,21 @@ export default function StaffProfilePage() {
                         className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : ('bg-amber-50 text-amber-600')}`}
                       >
                         {showPayrollModal ? 'Cancel' : 'Generate Slip'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAdvanceForm({
+                            amount: '',
+                            date: new Date().toISOString().slice(0, 10),
+                            description: '',
+                            paymentMethod: 'cash',
+                            referenceNo: ''
+                          });
+                          setShowAdvanceModal(true);
+                        }}
+                        className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                      >
+                        Record Cashier Advance
                       </button>
                     </div>
                   </div>
@@ -3891,6 +4073,60 @@ export default function StaffProfilePage() {
                       ))}
                     </div>
                   )}
+
+                  {/* Advances History (Cashier Side) */}
+                  <div className="mt-8 pt-8 border-t border-dashed border-gray-200">
+                    <h4 className="text-sm font-black uppercase tracking-widest text-emerald-500 mb-6 flex items-center gap-2">
+                      <CreditCard size={16} /> Advance Salary Transactions (Cashier Side)
+                    </h4>
+                    
+                    {transactions.filter(tx => tx.category === 'advance_salary').length === 0 ? (
+                      <div className="py-10 text-center bg-gray-50/50 border border-gray-100 rounded-3xl">
+                        <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">No advance salary transactions recorded</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {transactions.filter(tx => tx.category === 'advance_salary').sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(tx => (
+                          <div key={tx.id} className="p-5 rounded-3xl border bg-gray-50 border-gray-100 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                                tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' :
+                                tx.status === 'rejected' ? 'bg-rose-500/10 text-rose-500' :
+                                'bg-amber-500/10 text-amber-500'
+                              }`}>
+                                <DollarSign size={20} />
+                              </div>
+                              <div>
+                                <h5 className="font-black text-gray-900 text-sm capitalize">
+                                  ₨{Number(tx.amount || 0).toLocaleString()}
+                                </h5>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                                    tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                                    tx.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                                    'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                  }`}>
+                                    {tx.status}
+                                  </span>
+                                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">
+                                    {tx.paymentMethod} · {formatDateDMY(tx.date || tx.createdAt)}
+                                  </span>
+                                </div>
+                                {tx.description && (
+                                  <p className="text-[10px] text-gray-500 italic mt-1">{tx.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            {tx.status === 'pending' && (
+                              <span className="text-[9px] text-amber-500 font-black uppercase tracking-widest bg-amber-50 border border-amber-200/50 px-3 py-1.5 rounded-xl">
+                                Pending Superadmin Approval
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -4364,6 +4600,96 @@ export default function StaffProfilePage() {
           </div>
         </div>
       )}
+      {showAdvanceModal && staff && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAdvanceModal(false)} />
+          <div className="relative w-full max-w-md rounded-[2.5rem] p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] border-4 border-black animate-in zoom-in-95 duration-200 bg-white text-black">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black italic tracking-tight text-emerald-600">Record Advance Salary</h3>
+                <p className="text-[10px] font-black text-black uppercase tracking-widest mt-1">
+                  Cashier transaction for {staff.name}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAdvanceModal(false)}
+                className="p-2 rounded-xl transition-colors hover:bg-black hover:text-white text-black border-2 border-black"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Advance Amount (PKR)</label>
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  value={advanceForm.amount}
+                  onChange={e => setAdvanceForm({ ...advanceForm, amount: e.target.value })}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-emerald-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Date</label>
+                <input
+                  type="date"
+                  value={advanceForm.date}
+                  onChange={e => setAdvanceForm({ ...advanceForm, date: e.target.value })}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-emerald-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Payment Method</label>
+                <select
+                  value={advanceForm.paymentMethod}
+                  onChange={e => setAdvanceForm({ ...advanceForm, paymentMethod: e.target.value as any })}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-emerald-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="jazzcash">JazzCash</option>
+                  <option value="easypaisa">EasyPaisa</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Reference Number (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Tx ID / Receipt No"
+                  value={advanceForm.referenceNo}
+                  onChange={e => setAdvanceForm({ ...advanceForm, referenceNo: e.target.value })}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-emerald-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Description / Reason</label>
+                <input
+                  type="text"
+                  placeholder="Reason for advance..."
+                  value={advanceForm.description}
+                  onChange={e => setAdvanceForm({ ...advanceForm, description: e.target.value })}
+                  className="w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-4 border-black bg-white text-black focus:bg-emerald-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                />
+              </div>
+
+              <button
+                onClick={handleRecordAdvance}
+                disabled={recordingAdvance}
+                className="w-full h-14 mt-6 rounded-2xl bg-emerald-400 text-black text-[11px] font-[1000] uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {recordingAdvance ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {recordingAdvance ? 'Recording...' : 'Submit Transaction'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showReset && staff && (
         <ResetPasswordModal
           uid={staff.staffId || staff.id || ''}
@@ -4429,6 +4755,12 @@ export default function StaffProfilePage() {
                           <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
                         </div>
                       )}
+                      {salaryDetails.advance > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Advance Salary:</span>
+                          <span>- ₨{salaryDetails.advance.toLocaleString()}</span>
+                        </div>
+                      )}
                       {salaryDetails.bonus > 0 && (
                         <div className="flex justify-between text-emerald-600">
                           <span>Allowance/Bonus ({salaryDetails.bonusReason || 'Adjustment'}):</span>
@@ -4452,6 +4784,12 @@ export default function StaffProfilePage() {
                         <div className="flex justify-between text-rose-500">
                           <span>Unmarked / Absent Deductions ({salaryDetails.unpaidDays} Days):</span>
                           <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {salaryDetails.advance > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Advance Salary:</span>
+                          <span>- ₨{salaryDetails.advance.toLocaleString()}</span>
                         </div>
                       )}
                       {salaryDetails.fines > 0 && (
