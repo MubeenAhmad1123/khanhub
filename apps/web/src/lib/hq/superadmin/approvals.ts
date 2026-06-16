@@ -488,7 +488,7 @@ export function subscribeEntityTransactions({
     const feeQuery = query(
       collection(db, feeCol),
       where('studentId', '==', entity.id),
-      orderBy('createdAt', 'desc')
+      orderBy('date', 'desc')
     );
     const feeUnsub = onSnapshot(
       feeQuery,
@@ -515,7 +515,7 @@ export function subscribeEntityTransactions({
           const feeQuery2 = query(
             collection(db, feeCol),
             where('studentId', '==', fieldStudentId),
-            orderBy('createdAt', 'desc')
+            orderBy('date', 'desc')
           );
           const feeUnsub2 = onSnapshot(
             feeQuery2,
@@ -538,7 +538,7 @@ export function subscribeEntityTransactions({
             const feeQuery3 = query(
               collection(db, feeCol),
               where('studentId', '==', numId),
-              orderBy('createdAt', 'desc')
+              orderBy('date', 'desc')
             );
             const feeUnsub3 = onSnapshot(
               feeQuery3,
