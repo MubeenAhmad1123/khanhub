@@ -314,6 +314,16 @@ export default function ProfilePage() {
     let workScore = 0;
     let finesTotal = 0;
 
+    let presents = 0;
+    let absents = 0;
+    let lates = 0;
+    let leaves = 0;
+    let unmarked = 0;
+
+    let dressTotalDays = 0;
+    let dutyTotalDays = 0;
+    let totalDailyPointsSum = 0;
+
     const getAttendancePriority = (status?: string) => {
       if (!status) return 0;
       const s = status.toLowerCase();
@@ -407,6 +417,12 @@ export default function ProfilePage() {
         attendanceStatus = 'late';
       }
 
+      if (attendanceStatus === 'present') presents++;
+      else if (attendanceStatus === 'late') lates++;
+      else if (attendanceStatus === 'absent') absents++;
+      else if (attendanceStatus === 'leave') leaves++;
+      else unmarked++;
+
       const onLeave = attendanceStatus === 'leave';
 
       // 3. Uniform: 1 point if all items are compliant
@@ -420,8 +436,9 @@ export default function ProfilePage() {
         uniformStatus = 'unmarked';
       }
 
-      let isDressCompliant = false;
       if (!onLeave && uniformStatus !== 'unmarked') {
+        dressTotalDays++;
+        let isDressCompliant = false;
         if (dress) {
           if (dress.status === 'yes' || dress.isCompliant === true) {
             isDressCompliant = true;
@@ -458,8 +475,9 @@ export default function ProfilePage() {
         dutyStatus = 'unmarked';
       }
 
-      let isDutyCompliant = false;
       if (!onLeave && dutyStatus !== 'unmarked') {
+        dutyTotalDays++;
+        let isDutyCompliant = false;
         if (duty) {
           if (duty.status === 'yes' || duty.status === 'completed') {
             isDutyCompliant = true;
@@ -490,6 +508,10 @@ export default function ProfilePage() {
       const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
       const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
       const dailyPoints = attPoint + uniformPoint + dutyPoint;
+
+      if (!onLeave && attendanceStatus !== 'unmarked') {
+        totalDailyPointsSum += dailyPoints;
+      }
 
       const dayNum = parseInt(day.split('-')[2], 10);
 
@@ -528,6 +550,13 @@ export default function ProfilePage() {
       .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
     gpScore += extraPoints;
 
+    const totalLogged = presents + lates + absents;
+    const attPct = totalLogged > 0 ? Math.round((presents / totalLogged) * 100) : 0;
+    const dressPct = dressTotalDays > 0 ? Math.round((uniScore / dressTotalDays) * 100) : 0;
+    const dutyPct = dutyTotalDays > 0 ? Math.round((workScore / dutyTotalDays) * 100) : 0;
+    const normalizedDaily = days.length > 0 ? Math.round((totalDailyPointsSum / (days.length * 3)) * 90) : 0;
+    const totalPoints = Math.min(100, normalizedDaily + gpScore);
+
     return {
       attendance: attScore,
       punctuality: punctScore,
@@ -536,7 +565,12 @@ export default function ProfilePage() {
       growthPoint: gpScore,
       workingDays: days.length,
       dailyBreakdown,
-      finesTotal
+      finesTotal,
+      attPct,
+      dressPct,
+      dutyPct,
+      totalPoints,
+      maxPoints: 100
     };
   }, [profile, attendance, dressLogs, duties, contributionsMap, growthHistory, fines, selectedMonth, daysInMonth]);
 
@@ -1315,26 +1349,19 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-xl relative overflow-hidden">
-                     <Sparkles className="absolute right-2 top-2 text-white opacity-10 w-20 h-20 -rotate-12" />
-                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total Growth Vault</p>
-                     <div className="text-3xl font-black text-amber-400">{computedScores.growthPoint}</div>
-                  </div>
-                  <div className="border border-gray-100 p-6 rounded-xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Punctuality Ratio</p>
-                     <div className="text-2xl font-black text-gray-900">
-                        {computedScores.workingDays > 0 
-                          ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
-                          : 0}%
-                     </div>
-                  </div>
-                  <div className="border border-gray-100 p-6 rounded-xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Score</p>
-                     <div className="text-2xl font-black text-gray-900">
-                       {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
-                     </div>
-                  </div>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+                  {[
+                    { label: 'Cumulative Score', val: `${computedScores.totalPoints} / ${computedScores.maxPoints}`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100/50' },
+                    { label: 'Attendance Rate', val: `${computedScores.attPct}%`, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100/50' },
+                    { label: 'Dress Code Rate', val: `${computedScores.dressPct}%`, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100/50' },
+                    { label: 'Duty Done Rate', val: `${computedScores.dutyPct}%`, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100/50' },
+                    { label: 'Fines Total', val: `₨${computedScores.finesTotal.toLocaleString()}`, color: computedScores.finesTotal > 0 ? 'text-rose-600' : 'text-slate-400', bg: computedScores.finesTotal > 0 ? 'bg-rose-50 border-rose-100/50' : 'bg-slate-50 border-slate-100/50' },
+                  ].map(s => (
+                    <div key={s.label} className={`border rounded-2xl p-4 text-center ${s.bg}`}>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 truncate">{s.label}</p>
+                      <p className={`text-base sm:text-lg font-black ${s.color}`}>{s.val}</p>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Interactive Calendar Heatmap */}
