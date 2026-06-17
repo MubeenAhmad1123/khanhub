@@ -173,9 +173,24 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
     );
   }
 
-  const role = user?.role as MediaRole;
+  const rawRole = (user?.role || '').toLowerCase();
+  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contractor') || rawRole.includes('internee');
+  const isManager = rawRole === 'manager';
+  const isSuperadmin = rawRole === 'superadmin';
+  const isAdmin = rawRole === 'admin';
+  const displayRole = user?.role || '';
+
   const navItems = viewMode === 'dept'
-    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    ? NAV_ITEMS.filter(item => {
+        if (!user) return false;
+        return item.roles.some(r => {
+          if (r === 'staff') return isStaff;
+          if (r === 'manager') return isManager;
+          if (r === 'superadmin') return isSuperadmin;
+          if (r === 'admin') return isAdmin;
+          return false;
+        });
+      })
     : HQ_NAV_ITEMS;
 
   const SidebarContent = () => (
@@ -266,7 +281,7 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
             <p className="text-xs font-black truncate dark:text-white uppercase tracking-tight">{user?.displayName}</p>
             <div className="flex items-center gap-2 mt-1">
                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
-               <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{role} node</p>
+               <p className="text-[9px] font-bold text-gray-400 truncate tracking-[0.1em] uppercase">{displayRole} node</p>
             </div>
           </div>
         </div>
@@ -351,7 +366,7 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
                 <div className="hidden sm:flex flex-col items-end">
                    <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
                    <span className="px-2 py-0.5 rounded-lg bg-cyan-500/10 text-cyan-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-cyan-500/20">
-                      {role}
+                      {displayRole}
                    </span>
                 </div>
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">
