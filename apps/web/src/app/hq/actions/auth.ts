@@ -185,13 +185,12 @@ export async function loginHqUser({
     
     const auth = getAdminAuth();
     
-    // Set Custom User Claims for zero-cost security rules and routing
     await auth.setCustomUserClaims(uid, {
       role: userData.role,
       customId: userData.customId,
       dashboardPath: userData.role === 'superadmin' ? '/hq/dashboard/superadmin' : 
                      userData.role === 'manager' ? '/hq/dashboard/manager' :
-                     userData.role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/login'
+                     userData.role === 'cashier' ? '/hq/dashboard/cashier' : '/hq/dashboard/staff'
     });
 
     const customToken = await auth.createCustomToken(uid, {

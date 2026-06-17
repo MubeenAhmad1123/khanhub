@@ -24,8 +24,7 @@ export default function HqLoginPage() {
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
     if (r === 'superadmin' || r === 'manager' || r === 'cashier') return r as HqRole;
-    if (r === 'staff' || r.includes('staff') || r.includes('contract') || r.includes('internee')) return 'staff' as HqRole;
-    return null;
+    return 'staff';
   };
 
   useEffect(() => {
@@ -107,7 +106,8 @@ export default function HqLoginPage() {
           cashier: '/hq/dashboard/cashier',
           staff: '/hq/dashboard/staff',
         };
-        const dest = roleRoutes[result.user.role as HqRole] || '/hq/dashboard';
+        const normalized = normalizeRole(result.user.role) || 'staff';
+        const dest = roleRoutes[normalized] || '/hq/dashboard/staff';
         window.location.href = dest;
       } else {
         setError('Login failed: No authentication token received.');

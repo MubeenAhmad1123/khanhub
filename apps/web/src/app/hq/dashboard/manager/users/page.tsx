@@ -540,6 +540,11 @@ export default function ManagerUsersPage() {
       const staffRef = firestoreDoc(db, collectionName, loginUserId);
 
       await setDoc(staffRef, {
+        // ── Identity / Login ──────────────────────────────────────────────
+        customId: formData.isOpenVacancy ? '' : targetUserId,
+        password: formData.isOpenVacancy ? '' : pass,
+        defaultPassword: formData.isOpenVacancy ? '' : pass,
+        // ─────────────────────────────────────────────────────────────────
         employeeId: empId,
         userId: formData.isOpenVacancy ? loginUserId : targetUserId,
         loginEmail: formData.isOpenVacancy ? '' : formData.email,
@@ -547,6 +552,7 @@ export default function ManagerUsersPage() {
         lastName: formData.isOpenVacancy ? 'Vacancy' : formData.lastName,
         fatherName: formData.isOpenVacancy ? '' : formData.fatherName,
         name: formData.isOpenVacancy ? 'Open Vacancy' : `${formData.firstName} ${formData.lastName}`,
+        displayName: formData.isOpenVacancy ? 'Open Vacancy' : `${formData.firstName} ${formData.lastName}`,
         gender: formData.isOpenVacancy ? 'other' : formData.gender,
         dateOfBirth: formData.isOpenVacancy ? '' : formData.dateOfBirth,
         cnic: formData.isOpenVacancy ? '' : formData.cnic,

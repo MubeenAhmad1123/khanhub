@@ -451,8 +451,7 @@ export function getDashboardPath(deptId: string, role: string, patientId?: strin
     if (normalizedRole === 'superadmin') return '/hq/dashboard/superadmin';
     if (normalizedRole === 'manager') return '/hq/dashboard/manager';
     if (normalizedRole === 'cashier') return '/hq/dashboard/cashier';
-    if (normalizedRole === 'staff' || normalizedRole.includes('staff') || normalizedRole.includes('contract') || normalizedRole.includes('internee')) return '/hq/dashboard/staff';
-    return '/hq/dashboard';
+    return '/hq/dashboard/staff';
   }
 
   const base = `/departments/${deptId}/dashboard`;
