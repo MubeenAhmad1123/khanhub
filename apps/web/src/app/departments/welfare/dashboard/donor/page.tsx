@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Donor, Transaction } from '@/types/welfare';
 import { formatDateDMY } from '@/lib/utils';
 import { 
-  Heart, Banknote, ShieldCheck, Mail, FileText, Loader2, Calendar, Phone, ArrowRight, User
+  Heart, User, Phone, MapPin, 
+  Banknote, Calendar, ShieldCheck, Mail, AlertTriangle, FileText, Loader2, ArrowRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -52,7 +53,7 @@ export default function DonorDashboardPage() {
       const donorData = { id: donorSnap.docs[0].id, ...donorSnap.docs[0].data() } as Donor;
       setDonor(donorData);
 
-      // Fetch their transactions
+      // Fetch their transactions (Donations)
       const txnQuery = query(
         collection(db, 'welfare_transactions'),
         where('donorId', '==', donorData.id),
@@ -93,44 +94,60 @@ export default function DonorDashboardPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-teal-500 to-emerald-600 rounded-[2.5rem] p-8 md:p-12 shadow-lg text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl"></div>
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      
+      {/* Header Profile Summary */}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 w-full p-6 md:p-10 flex flex-col items-center gap-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
         
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-          <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-4xl font-black border-4 border-white/30 shadow-xl shrink-0">
-            {donor.fullName.charAt(0).toUpperCase()}
+        <div className="relative z-10 w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-black text-4xl border-4 border-white shadow-md">
+          {donor.fullName.charAt(0).toUpperCase()}
+        </div>
+        
+        <div className="relative z-10 text-center">
+          <h1 className="text-3xl font-black text-gray-900 mb-2">{donor.fullName}</h1>
+          <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-6">
+            <span className="flex items-center justify-center gap-1 font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-widest text-xs">
+              {donor.donorNumber}
+            </span>
+            <span className="flex items-center justify-center gap-1">
+              <Calendar className="w-4 h-4" /> 
+              Joined {formatDateDMY(donor.createdAt)}
+            </span>
+            <span className={`flex items-center justify-center gap-1 font-medium px-3 py-1 rounded-full text-xs uppercase tracking-widest ${donor.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+              <ShieldCheck className="w-4 h-4" /> {donor.isActive ? 'Active' : 'Inactive'}
+            </span>
           </div>
-          <div className="text-center md:text-left flex-1">
-            <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">Welcome, {donor.fullName}!</h1>
-            <p className="text-teal-50 text-lg opacity-90 max-w-2xl">
-              Thank you for your generous support to KhanHub Welfare. Your contributions make a real difference in the lives of those we serve.
-            </p>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-6">
-              <span className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-bold tracking-widest uppercase flex items-center gap-2">
-                <Heart size={16} /> {donor.donorNumber}
-              </span>
-              <span className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2">
-                <Calendar size={16} /> Member since {formatDateDMY(donor.createdAt)}
-              </span>
+          
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-gray-600">
+            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
+              <Phone className="w-4 h-4 text-gray-400" />
+              {donor.contactNumber}
             </div>
+            {donor.email && (
+              <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
+                <Mail className="w-4 h-4 text-gray-400" />
+                {donor.email}
+              </div>
+            )}
+            {donor.address && (
+              <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
+                <MapPin className="w-4 h-4 text-gray-400" />
+                {donor.address}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-1 space-y-8">
-          {/* Sponsorship Status */}
-          <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-3 text-indigo-600 mb-6 border-b border-gray-50 pb-6">
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-                <Heart size={20} />
-              </div>
-              <h3 className="text-xl font-black text-gray-900">Your Sponsorship</h3>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Details */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white rounded-[2rem] border border-gray-100 p-6 md:p-8">
+            <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+              <Heart className="w-5 h-5 text-rose-500" />
+              Sponsorship Details
+            </h3>
             
             <div className="space-y-6">
               <div>
@@ -141,17 +158,24 @@ export default function DonorDashboardPage() {
               </div>
 
               {donor.donationScope === 'specific_child' && donor.linkedChildName && (
-                <div className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100/50 rounded-full blur-xl -translate-y-1/2 translate-x-1/2"></div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-400 mb-2 relative z-10">You are sponsoring</p>
-                  <div className="font-black text-indigo-700 text-lg relative z-10">
-                    {donor.linkedChildName}
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-blue-400 mb-2">Sponsoring</p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-blue-700">{donor.linkedChildName}</span>
+                    {donor.linkedChildId && (
+                      <Link 
+                        href={`/departments/welfare/dashboard/child/${donor.linkedChildId}`}
+                        className="w-8 h-8 rounded-full bg-white text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-colors shadow-sm"
+                      >
+                        <ArrowRight size={14} />
+                      </Link>
+                    )}
                   </div>
                 </div>
               )}
 
               <div>
-                <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Commitment Type</p>
+                <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Type</p>
                 <div className="font-bold text-teal-600 uppercase tracking-widest text-sm">
                   {donor.donationType.replace('_', ' ')}
                 </div>
@@ -159,8 +183,8 @@ export default function DonorDashboardPage() {
 
               {donor.donationType === 'monthly_retainer' && donor.monthlyAmount && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Monthly Pledge</p>
-                  <div className="font-black text-gray-900 text-3xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Pledged Amount</p>
+                  <div className="font-black text-gray-900 text-2xl">
                     Rs {donor.monthlyAmount.toLocaleString()}<span className="text-sm text-gray-400 font-medium">/mo</span>
                   </div>
                 </div>
@@ -168,68 +192,49 @@ export default function DonorDashboardPage() {
             </div>
           </div>
 
-          {/* Contact Info */}
-          <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
-             <div className="flex items-center gap-3 text-emerald-600 mb-6 border-b border-gray-50 pb-6">
-              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
-                <User size={20} />
-              </div>
-              <h3 className="text-xl font-black text-gray-900">Profile Details</h3>
+          {donor.notes && (
+            <div className="bg-amber-50 rounded-[2rem] border border-amber-100 p-6 md:p-8">
+              <h3 className="text-sm font-black text-amber-900 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                <AlertTriangle className="w-4 h-4" /> Profile Notes
+              </h3>
+              <p className="text-amber-800 text-sm leading-relaxed">{donor.notes}</p>
             </div>
-            <div className="space-y-4 text-sm font-medium text-gray-600">
-              <div className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-gray-400" />
-                {donor.contactNumber}
-              </div>
-              {donor.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  {donor.email}
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Right Column: Donation History */}
+        {/* Right Column: Transactions */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm h-full">
-            <div className="p-8 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-teal-600">
-                <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center">
-                  <Banknote size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-gray-900">Donation History</h3>
-                  <p className="text-sm font-medium text-gray-500 mt-1">Your past contributions</p>
-                </div>
-              </div>
-              <div className="bg-teal-50 px-4 py-2 rounded-xl text-center">
-                <p className="text-[10px] uppercase tracking-widest font-bold text-teal-500 mb-0.5">Total Donations</p>
-                <p className="font-black text-teal-700">{transactions.length}</p>
-              </div>
+          <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden">
+            <div className="p-6 md:p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-teal-600" />
+                Donation History
+              </h3>
+              <span className="text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full uppercase tracking-widest">
+                {transactions.length} Records
+              </span>
             </div>
 
             {transactions.length === 0 ? (
-              <div className="p-16 text-center">
-                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-10 h-10 text-gray-300" />
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-gray-300" />
                 </div>
-                <h4 className="text-xl text-gray-900 font-black mb-2">No Donations Yet</h4>
-                <p className="text-gray-500 max-w-md mx-auto">We haven't recorded any donations for your profile yet. Once you make a contribution, it will appear here.</p>
+                <h4 className="text-gray-900 font-bold">No Donations Found</h4>
+                <p className="text-gray-500 text-sm mt-1">This donor has no recorded transactions yet.</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
                 {transactions.map(txn => (
-                  <div key={txn.id} className="p-6 md:p-8 hover:bg-gray-50/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
-                        <Banknote size={24} />
+                  <div key={txn.id} className="p-4 md:p-6 hover:bg-gray-50/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                        <Banknote size={18} />
                       </div>
                       <div>
-                        <div className="font-black text-gray-900 text-lg flex items-center gap-3 mb-1">
+                        <div className="font-bold text-gray-900 flex items-center gap-2">
                           Rs {txn.amount.toLocaleString()}
-                          <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-widest ${
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-widest ${
                             txn.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
                             txn.status === 'pending' || txn.status === 'pending_cashier' ? 'bg-amber-50 text-amber-600' :
                             'bg-rose-50 text-rose-600'
@@ -237,14 +242,14 @@ export default function DonorDashboardPage() {
                             {txn.status.replace('_', ' ')}
                           </span>
                         </div>
-                        <div className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                          <Calendar size={14} /> {formatDateDMY(txn.createdAt)} • {txn.categoryName || txn.category}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {formatDateDMY(txn.createdAt)} • {txn.categoryName || txn.category}
                         </div>
                       </div>
                     </div>
                     {txn.txnDescription && (
-                      <div className="text-sm font-medium text-gray-600 bg-gray-50 p-4 rounded-2xl sm:max-w-xs w-full">
-                        "{txn.txnDescription}"
+                      <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-xl sm:max-w-[200px] truncate">
+                        {txn.txnDescription}
                       </div>
                     )}
                   </div>

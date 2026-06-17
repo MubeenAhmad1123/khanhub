@@ -95,15 +95,39 @@ export default function FamilyChildViewPage() {
   }, [childId, router]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('welfare_session');
-    if (!sessionData) { router.push('/departments/welfare/login'); return; }
-    const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'family' || parsed.childId !== childId) {
-      setLoading(false);
-      return;
-    }
-    setSession(parsed);
-    fetchChildData();
+    const checkAuthAndFetch = async () => {
+      const sessionData = localStorage.getItem('welfare_session');
+      if (!sessionData) {
+        router.push('/departments/welfare/login');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(sessionData);
+        if (parsed.role === 'family' && parsed.childId === childId) {
+          setSession(parsed);
+          await fetchChildData();
+        } else if (parsed.role === 'donor' && parsed.donorId) {
+          // Fetch the donor profile to verify linkedChildId
+          const donorDoc = await getDoc(doc(db, 'welfare_donors', parsed.donorId));
+          if (donorDoc.exists()) {
+            const donorData = donorDoc.data();
+            if (donorData.linkedChildId === childId) {
+              setSession(parsed);
+              await fetchChildData();
+              return;
+            }
+          }
+          setLoading(false);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error verifying child access:', err);
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndFetch();
   }, [router, childId, fetchChildData]);
 
   if (loading) {
@@ -141,7 +165,10 @@ export default function FamilyChildViewPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <Link href="/departments/welfare/dashboard/family" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors">
+          <Link 
+            href={session?.role === 'donor' ? "/departments/welfare/dashboard/donor" : "/departments/welfare/dashboard/family"} 
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors"
+          >
             <ArrowLeft size={16} /> Back
           </Link>
           <div className="flex flex-col items-start gap-3 p-2 sm:p-4">

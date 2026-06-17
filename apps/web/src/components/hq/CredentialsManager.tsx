@@ -56,7 +56,21 @@ const ROLE_LABELS: Record<string, string> = {
 
 const isStaffRole = (role: string): boolean => {
   const r = role.toLowerCase();
-  return r !== 'family' && r !== 'superadmin' && r !== 'manager' && r !== 'student' && r !== 'client' && r !== 'other';
+  return (
+    r !== 'family' &&
+    r !== 'superadmin' &&
+    r !== 'manager' &&
+    r !== 'student' &&
+    r !== 'client' &&
+    r !== 'other' &&
+    r !== 'seeker' &&
+    r !== 'employer' &&
+    r !== 'donor' &&
+    r !== 'child' &&
+    r !== 'beneficiary' &&
+    r !== 'patient' &&
+    r !== 'resident'
+  );
 };
 
 interface CredentialsManagerProps {
