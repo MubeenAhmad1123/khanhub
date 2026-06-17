@@ -240,35 +240,32 @@ export default function StaffSelfPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center p-8">
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-          <p className="text-sm font-black uppercase tracking-widest text-gray-400">Loading Portal...</p>
+          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-450 animate-pulse">Loading Portal...</p>
         </div>
       </div>
     );
   }
 
-  // --- Styles (Cream/Black Brutalist) ---
-  const glassStyle = "bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all";
-
   return (
-    <div className="min-h-screen bg-[#FCFBF8] text-black pb-24 overflow-x-hidden font-bold">
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 pb-24 overflow-x-hidden font-sans">
+      <div className="max-w-2xl mx-auto px-4 py-12 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-gray-900">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
               {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'},
-              <span className="block text-blue-600">{user?.displayName?.split?.(' ')?.[0] || 'User'}</span>
+              <span className="block text-indigo-600 font-black">{user?.displayName?.split?.(' ')?.[0] || 'User'}</span>
             </h1>
-            <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mt-2">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-[0.2em] mt-2">
               {formatDateDMY(new Date())}
             </p>
           </div>
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 ${glassStyle}`}>
-            <UserIcon size={24} strokeWidth={2.5} />
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-indigo-600 shadow-sm">
+            <UserIcon size={20} strokeWidth={2} />
           </div>
         </div>
 
@@ -278,25 +275,25 @@ export default function StaffSelfPage() {
             (sections.growthPoints !== false) && (sections.attendance !== false) ? 'grid-cols-2' : 'grid-cols-1'
           }`}>
             {sections.growthPoints !== false && (
-              <div className={`p-5 ${glassStyle}`}>
+              <div className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-md transition-all duration-300">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                  <div className="p-2 bg-indigo-50/50 rounded-xl text-indigo-600">
                     <Trophy size={16} />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Growth Points</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-455">Growth Points</p>
                 </div>
-                <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
+                <p className="text-3xl font-extrabold text-slate-905">{staffProfile?.totalGrowthPoints || 0}</p>
               </div>
             )}
             {sections.attendance !== false && (
-              <div className={`p-5 ${glassStyle}`}>
+              <div className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-md transition-all duration-300">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                  <div className="p-2 bg-emerald-50/50 rounded-xl text-emerald-600">
                     <Activity size={16} />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-455">Attendance</p>
                 </div>
-                <p className="text-3xl font-black text-gray-900">{monthlySummary.present}</p>
+                <p className="text-3xl font-extrabold text-slate-905">{monthlySummary.present}</p>
               </div>
             )}
           </div>
@@ -304,30 +301,28 @@ export default function StaffSelfPage() {
 
         {/* Contribution Section */}
         {sections.reports !== false && (
-          <div className={`p-8 border-4 border-black ${glassStyle}`}>
+          <div className="p-8 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-md transition-all duration-300">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
                 <Lightbulb size={20} />
               </div>
-              <h2 className="text-xl font-black text-gray-900">Record Contribution</h2>
+              <h2 className="text-xl font-bold text-slate-900">Record Contribution</h2>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Submit daily achievements for growth points</p>
             
             <div className="space-y-4">
-              <div className="p-2 border-2 border-black bg-white">
-                <textarea
-                  value={contributionText}
-                  onChange={(e) => setContributionText(e.target.value)}
-                  placeholder="What did you achieve or contribute today?"
-                  rows={4}
-                  className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
-                />
-              </div>
+              <textarea
+                value={contributionText}
+                onChange={(e) => setContributionText(e.target.value)}
+                placeholder="What did you achieve or contribute today?"
+                rows={4}
+                className="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-5 text-sm font-medium text-slate-800 outline-none resize-none placeholder:text-slate-400 focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+              />
               
               <button
                 onClick={handleContribution}
                 disabled={contribLoading || hasContributedToday || !contributionText.trim()}
-                className="w-full py-5 bg-black text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.2em] transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-3 shadow-md shadow-indigo-600/10 hover:shadow-lg"
               >
                 {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
@@ -341,20 +336,20 @@ export default function StaffSelfPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 px-2">
               <Star size={16} className="text-amber-500 fill-amber-500" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Recent Contributions</h3>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Recent Contributions</h3>
             </div>
             <div className="space-y-4">
               {contributions.map((c) => (
-                <div key={c.id} className={`p-6 rounded-[2rem] border-2 border-white ${glassStyle}`}>
+                <div key={c.id} className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-md transition-all duration-300">
                   <div className="flex items-start justify-between gap-4 mb-4">
-                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{c.content}</p>
-                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest whitespace-nowrap ${
-                      c.isApproved ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                    <p className="text-sm font-medium text-slate-700 leading-relaxed">{c.content}</p>
+                    <div className={`px-3 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest whitespace-nowrap ${
+                      c.isApproved ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
                     }`}>
                       {c.isApproved ? 'Approved' : 'Pending'}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                  <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                     <Calendar size={10} />
                     {c.date}
                   </div>
@@ -366,32 +361,32 @@ export default function StaffSelfPage() {
 
         {/* Duties Section */}
         {sections.duties !== false && staffProfile?.duties?.length > 0 && (
-          <div className={`p-8 border-4 border-black ${glassStyle}`}>
+          <div className="p-8 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-md transition-all duration-300">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <List size={20} />
               </div>
-              <h2 className="text-xl font-black text-gray-900">Daily Duties</h2>
+              <h2 className="text-xl font-bold text-slate-900">Daily Duties</h2>
             </div>
             <div className="space-y-3">
               {staffProfile.duties.map((duty: any, idx: number) => {
                 const label = duty.label || duty.description || (typeof duty === 'string' ? duty : 'Unknown Duty');
                 const isDone = duty.status === 'done';
                 return (
-                  <div key={idx} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isDone ? 'bg-emerald-50 border-emerald-100' : 'bg-white/50 border-white'}`}>
+                  <div key={idx} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isDone ? 'bg-emerald-50/50 border-emerald-100/30' : 'bg-slate-50/30 border-slate-100'}`}>
                     <div className="flex items-center gap-4">
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
                         {idx + 1}
                       </div>
-                      <p className={`text-sm font-bold ${isDone ? 'text-emerald-900' : 'text-slate-700'}`}>{label}</p>
+                      <p className={`text-sm font-medium ${isDone ? 'text-emerald-955' : 'text-slate-700'}`}>{label}</p>
                     </div>
                     {isDone ? (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100/50 text-emerald-700 rounded-full text-[9px] font-bold uppercase tracking-widest border border-emerald-100">
                         <CheckCircle2 size={12} />
                         Completed
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-400 rounded-full text-[9px] font-black uppercase tracking-widest">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-400 rounded-full text-[9px] font-bold uppercase tracking-widest">
                         <Circle size={12} />
                         Pending
                       </div>
@@ -407,3 +402,4 @@ export default function StaffSelfPage() {
     </div>
   );
 }
+
