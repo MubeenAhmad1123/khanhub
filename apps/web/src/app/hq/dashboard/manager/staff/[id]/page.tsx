@@ -17,7 +17,8 @@ import {
   TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X, UserMinus,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
-  Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff, FileText, Loader2
+  Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff, FileText, Loader2,
+  Briefcase
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import {
@@ -148,7 +149,9 @@ export default function StaffProfilePage() {
     seniority: '',
     fatherName: '',
     defaultPassword: '',
-    documents: [] as { title: string; url: string }[]
+    documents: [] as { title: string; url: string }[],
+    education: [] as { degree: string; institution: string; year: string }[],
+    experience: [] as { title: string; company: string; duration: string }[]
   });
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
@@ -656,7 +659,9 @@ export default function StaffProfilePage() {
         seniority: profile.seniority || '',
         fatherName: profile.fatherName || '',
         defaultPassword: profile.defaultPassword || '',
-        documents: profile.documents || []
+        documents: profile.documents || [],
+        education: profile.education || [],
+        experience: profile.experience || []
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -2383,6 +2388,12 @@ export default function StaffProfilePage() {
                       <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Employee ID</p>
                       <p className="text-sm font-black font-mono">{staff?.employeeId || '—'}</p>
                     </div>
+                    {staff?.address && (
+                      <div className="md:col-span-2 lg:col-span-3">
+                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Residential Address</p>
+                        <p className="text-sm font-black">{staff.address}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className={`mt-10 p-8 rounded-3xl border border-dashed flex flex-col md:flex-row items-center justify-between gap-6 ${theme.light} ${theme.border}`}>
@@ -2441,6 +2452,44 @@ export default function StaffProfilePage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Education & Experience */}
+                {(((staff?.education?.length ?? 0) > 0) || ((staff?.experience?.length ?? 0) > 0)) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    {((staff?.education?.length ?? 0) > 0) && (
+                      <div className="p-8 rounded-[2.5rem] border bg-white border-gray-100 shadow-sm">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
+                          <Award size={14} className="text-indigo-500" /> Education
+                        </h4>
+                        <div className="space-y-4">
+                          {staff?.education?.map((edu: any, idx: number) => (
+                            <div key={idx} className="flex flex-col gap-0.5 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                              <p className="text-sm font-black text-gray-900">{edu.degree || '—'}</p>
+                              <p className="text-xs font-bold text-gray-500">{edu.institution || '—'}</p>
+                              {edu.year && <p className="text-[10px] font-bold text-gray-400 uppercase">{edu.year}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {((staff?.experience?.length ?? 0) > 0) && (
+                      <div className="p-8 rounded-[2.5rem] border bg-white border-gray-100 shadow-sm">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-6 flex items-center gap-2">
+                          <Briefcase size={14} className="text-teal-500" /> Work Experience
+                        </h4>
+                        <div className="space-y-4">
+                          {staff?.experience?.map((exp: any, idx: number) => (
+                            <div key={idx} className="flex flex-col gap-0.5 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                              <p className="text-sm font-black text-gray-900">{exp.title || '—'}</p>
+                              <p className="text-xs font-bold text-gray-500">{exp.company || '—'}</p>
+                              {exp.duration && <p className="text-[10px] font-bold text-gray-400 uppercase">{exp.duration}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
 
               </div>
@@ -3454,10 +3503,35 @@ export default function StaffProfilePage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Row 4: Phone & Address */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Phone Number</label>
+                        <input
+                          type="text"
+                          placeholder="03xx-xxxxxxx"
+                          value={editForm.phone}
+                          onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 mb-2 block">Residential Address</label>
+                        <input
+                          type="text"
+                          placeholder="Street, City, Province"
+                          value={editForm.address}
+                          onChange={e => setEditForm({ ...editForm, address: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500`}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Section 3: Operations & Extensions */}
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Custom Basic Info */}
                   <div className={`rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm`}>

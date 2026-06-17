@@ -756,6 +756,8 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     visibleSections: data.visibleSections || undefined,
     loginUserId: data.loginUserId || undefined,
     documents: data.documents || [],
+    education: data.education || [],
+    experience: data.experience || [],
   };
 }
 
@@ -787,6 +789,8 @@ export type StaffProfile = StaffCardRow & {
   seniority?: string;
   visibleSections?: Record<string, boolean>;
   documents?: { title: string; url: string }[];
+  education?: { degree: string; institution: string; year: string }[];
+  experience?: { title: string; company: string; duration: string }[];
 };
 
 export async function updateStaffProfile(

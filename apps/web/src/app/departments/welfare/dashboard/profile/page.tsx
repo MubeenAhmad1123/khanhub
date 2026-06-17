@@ -1783,7 +1783,44 @@ export default function ProfilePage() {
                    <button disabled className="px-6 py-2.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-400 uppercase tracking-wider shadow-sm opacity-70 cursor-not-allowed">
                      Download Identification Token
                    </button>
-                </div>
+                 </div>
+
+                {((profile?.education?.length > 0) || (profile?.experience?.length > 0)) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    {profile?.education?.length > 0 && (
+                      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6">
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Award size={14} className="text-indigo-500" /> Education
+                        </h4>
+                        <div className="space-y-3">
+                          {profile.education.map((edu: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-white rounded-xl border border-gray-100">
+                              <p className="text-sm font-bold text-gray-900">{edu.degree || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">{edu.institution || ''}</p>
+                              {edu.year && <p className="text-[10px] text-gray-400 uppercase font-semibold mt-1">{edu.year}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile?.experience?.length > 0 && (
+                      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6">
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Briefcase size={14} className="text-teal-500" /> Work Experience
+                        </h4>
+                        <div className="space-y-3">
+                          {profile.experience.map((exp: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-white rounded-xl border border-gray-100">
+                              <p className="text-sm font-bold text-gray-900">{exp.title || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">{exp.company || ''}</p>
+                              {exp.duration && <p className="text-[10px] text-gray-400 uppercase font-semibold mt-1">{exp.duration}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             }
 
