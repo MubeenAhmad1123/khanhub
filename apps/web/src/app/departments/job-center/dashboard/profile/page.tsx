@@ -182,7 +182,7 @@ export default function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
   const [profile, setProfile] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'attendance' | 'duty' | 'dress' | 'score' | 'finance' | 'profile'>('tasks');
+  const [activeSection, setActiveSection] = useState<string>('tasks');
   
   const [attendance, setAttendance] = useState<AttendanceLog[]>([]);
   const [duties, setDuties] = useState<DutyRecord[]>([]);
@@ -196,6 +196,7 @@ export default function ProfilePage() {
   const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
   const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
   const [selectedDay, setSelectedDay] = useState<any | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Fetch visibility settings using standard hook
   const { sections, loading: visibilityLoading } = useVisibleSections('job-center', 'staff', session?.uid || '');
@@ -204,7 +205,7 @@ export default function ProfilePage() {
   const cardStyle = "bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-2xl transition-all";
   const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-amber-500/20 outline-none text-sm transition-all text-gray-800";
 
-  // Dynamic Navigation Tabs filtered by visibleSections claims and renamed appropriately
+  // Dynamic Navigation Tabs filtered by visibleSections claims
   const visibleTabs = useMemo(() => {
     const list = [
       { id: 'tasks' as const, label: 'Special Tasks', icon: Target, visible: sections.reports !== false },
@@ -218,15 +219,28 @@ export default function ProfilePage() {
     return list.filter(t => t.visible);
   }, [sections]);
 
-  // Adjust current tab if the loaded one has been disabled/hidden
+  // IntersectionObserver: update active tab as user scrolls
   useEffect(() => {
-    if (!visibilityLoading && visibleTabs.length > 0) {
-      const isCurrentTabVisible = visibleTabs.some(t => t.id === activeTab);
-      if (!isCurrentTabVisible) {
-        setActiveTab(visibleTabs[0].id);
-      }
-    }
-  }, [visibleTabs, activeTab, visibilityLoading]);
+    if (visibilityLoading) return;
+    const observers: IntersectionObserver[] = [];
+    visibleTabs.forEach(tab => {
+      const el = sectionRefs.current[tab.id];
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveSection(tab.id); },
+        { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+    return () => observers.forEach(o => o.disconnect());
+  }, [visibleTabs, visibilityLoading]);
+
+  const scrollToSection = (id: string) => {
+    const el = sectionRefs.current[id];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSection(id);
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1019,15 +1033,15 @@ export default function ProfilePage() {
         {/* Right Content Block */}
         <div className="lg:col-span-8 space-y-6">
           
-          {/* Minimalist Top Navigation Tabs */}
-          <nav className="flex gap-1 overflow-x-auto no-scrollbar bg-white p-1.5 rounded-xl border border-gray-100 shadow-sm">
+          {/* Sticky Section Navigation */}
+          <nav className="sticky top-[80px] z-40 flex gap-1 overflow-x-auto no-scrollbar bg-white/95 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm">
             {visibleTabs.map(tab => {
               const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+              const isActive = activeSection === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => scrollToSection(tab.id)}
                   className={`flex items-center gap-2.5 px-5 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all duration-200
                     ${isActive 
                       ? 'bg-gray-900 text-white shadow-md shadow-gray-200' 
@@ -1041,12 +1055,12 @@ export default function ProfilePage() {
             })}
           </nav>
 
-          {/* Display Area Container */}
-          <div className={`${cardStyle} p-6 min-h-[500px]`}>
+          {/* All Sections Stacked — scroll-based */}
+          <div className="space-y-6">
             
-            {/* --- TASKS TAB --- */}
-            {activeTab === 'tasks' && sections.reports !== false && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* --- TASKS SECTION --- */}
+            {sections.reports !== false && (
+              <div ref={el => { sectionRefs.current['tasks'] = el; }} id="section-tasks" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
@@ -1103,9 +1117,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- ATTENDANCE TAB --- */}
-            {activeTab === 'attendance' && sections.attendance !== false && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* --- ATTENDANCE SECTION --- */}
+            {sections.attendance !== false && (
+              <div ref={el => { sectionRefs.current['attendance'] = el; }} id="section-attendance" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
@@ -1163,9 +1177,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- DUTY LOGS TAB --- */}
-            {activeTab === 'duty' && sections.duties !== false && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* --- DUTIES SECTION --- */}
+            {sections.duties !== false && (
+              <div ref={el => { sectionRefs.current['duty'] = el; }} id="section-duty" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600">
@@ -1220,9 +1234,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- DRESS CODE TAB --- */}
-            {activeTab === 'dress' && sections.uniform !== false && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* --- DRESS CODE SECTION --- */}
+            {sections.uniform !== false && (
+              <div ref={el => { sectionRefs.current['dress'] = el; }} id="section-dress" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
@@ -1277,9 +1291,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- SCORING TAB --- */}
-            {activeTab === 'score' && sections.growthPoints !== false && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* --- SCORE SECTION --- */}
+            {sections.growthPoints !== false && (
+              <div ref={el => { sectionRefs.current['score'] = el; }} id="section-score" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
@@ -1596,9 +1610,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- FINANCE TAB --- */}
-            {activeTab === 'finance' && (
-              <div className="animate-in fade-in duration-300">
+            {/* --- FINANCE SECTION --- */}
+            {sections.salary !== false && (
+              <div ref={el => { sectionRefs.current['finance'] = el; }} id="section-finance" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">Financial Overview</h3>
@@ -1704,9 +1718,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- IDENTITY / PROFILE TAB --- */}
-            {activeTab === 'profile' && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* --- IDENTITY SECTION --- */}
+            {
+              <div ref={el => { sectionRefs.current['profile'] = el; }} id="section-profile" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
@@ -1771,7 +1785,7 @@ export default function ProfilePage() {
                    </button>
                 </div>
               </div>
-            )}
+            }
 
           </div>
         </div>
