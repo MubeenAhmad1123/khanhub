@@ -261,26 +261,26 @@ export default function StaffSelfPage() {
     );
   }
 
-  // --- Styles (Cream/Black Brutalist) ---
-  const glassStyle = "bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all";
+  // --- Styles (Minimalist Cream/White) ---
+  const glassStyle = "bg-white border border-gray-100 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.04)] rounded-2xl transition-all hover:shadow-md hover:border-gray-200/80";
 
   return (
-    <div className="min-h-screen bg-[#FCFBF8] text-black pb-24 overflow-x-hidden font-bold">
+    <div className="min-h-screen bg-[#FCFBF8] text-gray-900 pb-24 overflow-x-hidden">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-[1000] tracking-tighter text-black uppercase">
-              {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},
-              <span className="block text-indigo-600">{user?.displayName?.split?.(' ')?.[0] || 'User'}</span>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},{' '}
+              <span className="text-indigo-600">{user?.displayName?.split?.(' ')?.[0] || 'User'}</span>
             </h1>
-            <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mt-2">
+            <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mt-1.5">
               {formatDateDMY(new Date())}
             </p>
           </div>
-          <div className={`w-14 h-14 rounded-none flex items-center justify-center text-black bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`}>
-            <UserIcon size={24} strokeWidth={2.5} />
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-gray-500 bg-white border border-gray-100 shadow-sm">
+            <UserIcon size={20} />
           </div>
         </div>
 
@@ -290,25 +290,25 @@ export default function StaffSelfPage() {
             (sections.growthPoints !== false) && (sections.attendance !== false) ? 'grid-cols-2' : 'grid-cols-1'
           }`}>
             {sections.growthPoints !== false && (
-              <div className={`p-5 rounded-[2rem] ${glassStyle}`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-                    <Trophy size={16} />
+              <div className={`p-6 ${glassStyle}`}>
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <Trophy size={15} />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Growth Points</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Growth Points</p>
                 </div>
-                <p className="text-3xl font-black text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
+                <p className="text-2xl font-bold text-gray-900">{staffProfile?.totalGrowthPoints || 0}</p>
               </div>
             )}
             {sections.attendance !== false && (
-              <div className={`p-5 ${glassStyle}`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-                    <Activity size={16} />
+              <div className={`p-6 ${glassStyle}`}>
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <Activity size={15} />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Attendance</p>
                 </div>
-                <p className="text-3xl font-black text-gray-900">{monthlySummary.present}</p>
+                <p className="text-2xl font-bold text-gray-900">{monthlySummary.present} days</p>
               </div>
             )}
           </div>
@@ -316,34 +316,31 @@ export default function StaffSelfPage() {
 
         {/* Special Tasks Override Card */}
         {sections.reports !== false && specialTasks.length > 0 && (
-          <div className={`p-8 border-4 border-black bg-indigo-50/30 ${glassStyle}`}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                <Sparkles size={20} />
+          <div className={`p-6 ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <Sparkles size={16} />
               </div>
-              <h2 className="text-xl font-black text-gray-900">Special Tasks</h2>
+              <h2 className="text-lg font-bold text-gray-900">Special Tasks</h2>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {specialTasks.map(task => (
-                <div key={task.id} className="bg-white p-6 rounded-3xl border border-indigo-100 shadow-sm relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-all">
-                    <Sparkles size={40} />
-                  </div>
-                  <p className="text-sm font-bold text-slate-700 mb-4">{task.description}</p>
+                <div key={task.id} className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden group">
+                  <p className="text-sm text-gray-700 mb-3">{task.description}</p>
                   <div className="flex gap-2">
                     {task.status === 'assigned' ? (
                       <button 
                         onClick={() => handleTaskUpdate(task.id, 'acknowledged')}
-                        className="flex-1 py-3 rounded-xl bg-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
+                        className="flex-1 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold transition-all"
                       >
                         Acknowledge
                       </button>
                     ) : (
                       <button 
                         onClick={() => handleTaskUpdate(task.id, 'completed')}
-                        className="flex-1 py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
                       >
-                        <CheckCircle size={12} /> Complete
+                        <CheckCircle size={13} /> Complete
                       </button>
                     )}
                   </div>
@@ -353,35 +350,34 @@ export default function StaffSelfPage() {
           </div>
         )}
 
-
         {/* Contribution Section */}
         {sections.reports !== false && (
-          <div className={`p-8 rounded-[2.5rem] border-2 border-white ${glassStyle}`}>
+          <div className={`p-6 ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
-                <Lightbulb size={20} />
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                <Lightbulb size={16} />
               </div>
-              <h2 className="text-2xl font-[1000] text-black uppercase tracking-tighter">Record Contribution</h2>
+              <h2 className="text-lg font-bold text-gray-900">Record Contribution</h2>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Submit daily achievements for growth points</p>
+            <p className="text-xs text-gray-400 font-medium mb-5">Submit daily achievements for growth points</p>
             
             <div className="space-y-4">
-              <div className="p-2 border-2 border-black bg-white">
+              <div className="bg-gray-50 border border-gray-100 rounded-xl focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:bg-white focus-within:border-indigo-500/30 transition-all overflow-hidden">
                 <textarea
                   value={contributionText}
                   onChange={(e) => setContributionText(e.target.value)}
                   placeholder="What did you achieve or contribute today?"
                   rows={4}
-                  className="w-full bg-transparent p-6 text-sm font-bold text-black outline-none resize-none placeholder:text-slate-400"
+                  className="w-full bg-transparent px-4 py-3.5 text-sm font-medium text-gray-800 outline-none resize-none placeholder:text-gray-400"
                 />
               </div>
               
               <button
                 onClick={handleContribution}
                 disabled={contribLoading || hasContributedToday || !contributionText.trim()}
-                className="w-full py-5 bg-black text-white font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                className="w-full py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
               >
-                {contribLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                {contribLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={14} />}
                 {hasContributedToday ? 'Submitted for Today' : 'Submit for Approval'}
               </button>
             </div>
@@ -390,24 +386,24 @@ export default function StaffSelfPage() {
 
         {/* Recent Contributions List */}
         {sections.reports !== false && contributions.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-2">
-              <Star size={16} className="text-amber-500 fill-amber-500" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Recent Contributions</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Star size={14} className="text-amber-500 fill-amber-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Recent Contributions</h3>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {contributions.map((c) => (
-                <div key={c.id} className={`p-6 border-4 border-black ${glassStyle}`}>
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{c.content}</p>
-                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest whitespace-nowrap ${
-                      c.isApproved ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                <div key={c.id} className={`p-5 ${glassStyle}`}>
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <p className="text-sm text-gray-700 leading-relaxed font-medium">{c.content}</p>
+                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide whitespace-nowrap ${
+                      c.isApproved ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
                     }`}>
                       {c.isApproved ? 'Approved' : 'Pending'}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    <Calendar size={10} />
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <Calendar size={12} />
                     {c.date}
                   </div>
                 </div>
@@ -418,20 +414,20 @@ export default function StaffSelfPage() {
 
         {/* Duties Section */}
         {sections.duties !== false && staffProfile?.duties?.length > 0 && (
-          <div className={`p-8 border-4 border-black ${glassStyle}`}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
-                <List size={20} />
+          <div className={`p-6 ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white">
+                <List size={16} />
               </div>
-              <h2 className="text-xl font-black text-gray-900">Daily Duties</h2>
+              <h2 className="text-lg font-bold text-gray-900">Daily Duties</h2>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {staffProfile.duties.map((duty: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 border border-white">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 text-[10px] font-black">
+                <div key={idx} className="flex items-center gap-4 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 text-xs font-bold">
                     {idx + 1}
                   </div>
-                  <p className="text-sm font-bold text-slate-700">{duty.description || duty}</p>
+                  <p className="text-sm text-gray-700 font-medium">{duty.description || duty}</p>
                 </div>
               ))}
             </div>

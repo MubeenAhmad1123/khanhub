@@ -203,7 +203,7 @@ export default function ProfilePage() {
 
   // Design Tokens for Clean Minimalism
   const cardStyle = "bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-2xl transition-all";
-  const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-purple-500/20 outline-none text-sm transition-all text-gray-800";
+  const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm transition-all text-gray-800";
 
   // Dynamic Navigation Tabs filtered by visibleSections claims
   const visibleTabs = useMemo(() => {
@@ -937,27 +937,27 @@ export default function ProfilePage() {
   }, [router, fetchMetrics]);
 
   if (loading || visibilityLoading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]">
-      <Loader2 className="animate-spin text-purple-600 w-10 h-10 mb-4" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FCFBF8]">
+      <Loader2 className="animate-spin text-indigo-600 w-10 h-10 mb-4" />
       <p className="text-xs font-medium text-gray-400 tracking-widest uppercase">Synchronizing Data Nexus...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-gray-900 font-sans selection:bg-purple-100">
+    <div className="min-h-screen bg-[#FCFBF8] text-gray-900 font-sans selection:bg-indigo-100">
       
       {/* Navbar */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
+      <header className="sticky top-0 z-50 bg-[#FCFBF8]/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <Activity size={22} strokeWidth={2.5} />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">Media Department</h1>
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 <span>Staff Portal</span>
-                <span className="w-1 h-1 bg-green-500 rounded-full inline-block"></span>
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
                 <span className="text-green-600">Live</span>
               </div>
             </div>
@@ -972,7 +972,7 @@ export default function ProfilePage() {
              )}
              <button 
                onClick={handleLogout}
-               className="p-2.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all tooltip" 
+               className="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all tooltip" 
                title="Sign Out"
              >
                <LogOut size={20} />
@@ -987,7 +987,7 @@ export default function ProfilePage() {
         <aside className="lg:col-span-4 space-y-6">
           <div className={`${cardStyle} p-8 text-center relative overflow-hidden`}>
             {/* Minimal geometric flair */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600"></div>
             
             <div className="relative inline-block group mx-auto mb-6">
               <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-4 border-white shadow-md ring-1 ring-gray-100 relative">
@@ -1004,18 +1004,18 @@ export default function ProfilePage() {
             <h2 className="text-xl font-bold text-gray-900">{profile?.displayName || profile?.name}</h2>
             
             {sections.designation !== false && (
-              <p className="text-purple-600 font-semibold text-xs uppercase tracking-wider mt-1 bg-purple-50 px-3 py-1 rounded-full inline-block">
+              <p className="text-indigo-600 font-semibold text-xs uppercase tracking-wider mt-1 bg-indigo-50 px-3 py-1 rounded-full inline-block">
                 {profile?.designation || 'Media Specialist'}
               </p>
             )}
 
             <div className="mt-8 space-y-2">
               <div className="flex items-center gap-3 p-3.5 bg-gray-50/50 rounded-xl border border-gray-50 text-left group hover:border-gray-200 transition-colors">
-                <Mail size={16} className="text-gray-400 group-hover:text-purple-500 transition-colors" />
+                <Mail size={16} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
                 <span className="text-sm text-gray-600 font-medium truncate">{profile?.email}</span>
               </div>
               <div className="flex items-center gap-3 p-3.5 bg-gray-50/50 rounded-xl border border-gray-50 text-left group hover:border-gray-200 transition-colors">
-                <Phone size={16} className="text-gray-400 group-hover:text-purple-500 transition-colors" />
+                <Phone size={16} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
                 <span className="text-sm text-gray-600 font-medium">{profile?.phone || 'No contact linked'}</span>
               </div>
             </div>
@@ -1036,7 +1036,7 @@ export default function ProfilePage() {
           {(sections.attendance !== false || sections.reports !== false) && (
             <div className={`${cardStyle} p-6`}>
               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
-                <TrendingUp size={16} className="text-purple-500" />
+                <TrendingUp size={16} className="text-indigo-500" />
                 Performance Index
               </h3>
               <div className="space-y-5">
@@ -1047,7 +1047,7 @@ export default function ProfilePage() {
                       <span className="font-bold text-gray-900">{attendancePerformance}%</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-500 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
+                      <div className="h-full bg-indigo-600 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
                     </div>
                   </div>
                 )}
@@ -1068,7 +1068,7 @@ export default function ProfilePage() {
         <div className="lg:col-span-8 space-y-6">
           
           {/* Sticky Section Navigation */}
-          <nav className="sticky top-[80px] z-40 flex gap-1 overflow-x-auto no-scrollbar bg-white/95 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm">
+          <nav className="sticky top-[80px] z-40 flex gap-1 overflow-x-auto no-scrollbar bg-[#FCFBF8]/95 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm">
             {visibleTabs.map(tab => {
               const Icon = tab.icon;
               const isActive = activeSection === tab.id;
@@ -1078,11 +1078,11 @@ export default function ProfilePage() {
                   onClick={() => scrollToSection(tab.id)}
                   className={`flex items-center gap-2.5 px-5 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all duration-200
                     ${isActive 
-                      ? 'bg-gray-900 text-white shadow-md shadow-gray-200' 
+                      ? 'bg-gray-900 text-white shadow-sm' 
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                     }`}
                 >
-                  <Icon size={16} className={isActive ? 'text-purple-400' : 'text-gray-400'} />
+                  <Icon size={16} className={isActive ? 'text-indigo-400' : 'text-gray-400'} />
                   {tab.label}
                 </button>
               );
@@ -1130,11 +1130,11 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-[11px] font-black uppercase px-3 py-1.5 rounded-md ${isDone ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                          <span className={`text-[11px] font-bold uppercase px-3 py-1.5 rounded-md ${isDone ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
                             {task.status}
                           </span>
                           {task.points && (
-                            <span className="text-[11px] font-black text-purple-600 bg-purple-50 px-3 py-1.5 rounded-md">
+                            <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-md">
                               +{task.points} PTS
                             </span>
                           )}
@@ -1156,7 +1156,7 @@ export default function ProfilePage() {
               <div ref={el => { sectionRefs.current['attendance'] = el; }} id="section-attendance" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
                       <Calendar size={20} />
                     </div>
                     <div>
@@ -1176,7 +1176,7 @@ export default function ProfilePage() {
                           <div className="flex items-center gap-2 mb-1">
                              <span className="font-bold text-sm text-gray-900">{formatDateDMY(log.date)}</span>
                              {isLate && log.status !== 'absent' && (
-                                <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Late</span>
+                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Late</span>
                              )}
                           </div>
                           <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
@@ -1190,7 +1190,7 @@ export default function ProfilePage() {
                             </div>
                           </div>
                         </div>
-                        <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider border ${
+                        <div className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider border ${
                            log.status === 'present' 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : log.status === 'absent'
@@ -1345,7 +1345,7 @@ export default function ProfilePage() {
                       setSelectedMonth(e.target.value);
                       setSelectedDay(null); // Reset selected day on month change
                     }}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-500/20 w-full sm:w-auto"
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 w-full sm:w-auto"
                   />
                 </div>
 
@@ -1354,12 +1354,12 @@ export default function ProfilePage() {
                     { label: 'Cumulative Score', val: `${computedScores.totalPoints} / ${computedScores.maxPoints}`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100/50' },
                     { label: 'Attendance Rate', val: `${computedScores.attPct}%`, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100/50' },
                     { label: 'Dress Code Rate', val: `${computedScores.dressPct}%`, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100/50' },
-                    { label: 'Duty Done Rate', val: `${computedScores.dutyPct}%`, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100/50' },
+                    { label: 'Duty Done Rate', val: `${computedScores.dutyPct}%`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100/50' },
                     { label: 'Fines Total', val: `₨${computedScores.finesTotal.toLocaleString()}`, color: computedScores.finesTotal > 0 ? 'text-rose-600' : 'text-slate-400', bg: computedScores.finesTotal > 0 ? 'bg-rose-50 border-rose-100/50' : 'bg-slate-50 border-slate-100/50' },
                   ].map(s => (
                     <div key={s.label} className={`border rounded-2xl p-4 text-center ${s.bg}`}>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 truncate">{s.label}</p>
-                      <p className={`text-base sm:text-lg font-black ${s.color}`}>{s.val}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 truncate">{s.label}</p>
+                      <p className={`text-base sm:text-lg font-bold ${s.color}`}>{s.val}</p>
                     </div>
                   ))}
                 </div>
@@ -1368,7 +1368,7 @@ export default function ProfilePage() {
                 <div className="bg-slate-50 border border-slate-100/80 rounded-3xl p-4 sm:p-6 mb-8 print:hidden">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                     <div>
-                      <h3 className="text-slate-900 font-extrabold text-sm sm:text-base flex items-center gap-2">
+                      <h3 className="text-slate-900 font-bold text-sm sm:text-base flex items-center gap-2">
                         <Calendar size={18} className="text-indigo-600 animate-pulse" />
                         Performance Calendar Heatmap
                       </h3>
@@ -1376,12 +1376,12 @@ export default function ProfilePage() {
                     </div>
                     
                     {/* Heatmap Legend */}
-                    <div className="flex flex-wrap gap-2 text-[9px] font-extrabold uppercase tracking-wide">
+                    <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wide">
                       <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600 block shadow-sm" /> 3/3 Pts</div>
                       <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-200 block" /> 2 Pts</div>
                       <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-200 block" /> 1 Pt</div>
                       <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-rose-100 border border-rose-200 block" /> Absent</div>
-                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-purple-100 border border-purple-200 block" /> Leave</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-indigo-100 border border-indigo-200 block" /> Leave</div>
                       <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-slate-200 block" /> Unmarked</div>
                     </div>
                   </div>
@@ -1390,7 +1390,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                     {/* Weekday headers */}
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(w => (
-                      <div key={w} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-1">{w}</div>
+                      <div key={w} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest py-1">{w}</div>
                     ))}
                     
                     {/* Calendar cells */}
@@ -1403,8 +1403,8 @@ export default function ProfilePage() {
                       const dayDate = `${selectedMonth}-${dayStr}`;
                       const dayLog = computedScores.dailyBreakdown.find((b: any) => b.date === dayDate);
                       
-                      let cellBg = 'bg-slate-200 hover:bg-slate-300';
-                      let cellText = 'text-slate-600 font-extrabold';
+                      let cellBg = 'bg-slate-200 hover:bg-slate-350';
+                      let cellText = 'text-slate-600 font-bold';
                       let borderClass = 'border border-slate-100';
 
                       if (dayLog) {
@@ -1413,28 +1413,28 @@ export default function ProfilePage() {
                         const isLeave = dayLog.attendance === 'leave';
 
                         if (isLeave) {
-                          cellBg = 'bg-purple-100 hover:bg-purple-200';
-                          cellText = 'text-purple-700 font-extrabold';
-                          borderClass = 'border border-purple-200';
+                          cellBg = 'bg-indigo-100 hover:bg-indigo-200';
+                          cellText = 'text-indigo-700 font-bold';
+                          borderClass = 'border border-indigo-200';
                         } else if (isAbsent) {
                           cellBg = 'bg-rose-100 hover:bg-rose-200';
-                          cellText = 'text-rose-700 font-extrabold';
+                          cellText = 'text-rose-700 font-bold';
                           borderClass = 'border border-rose-200';
                         } else if (isUnmarked) {
-                          cellBg = 'bg-slate-100 hover:bg-slate-250';
+                          cellBg = 'bg-slate-100 hover:bg-slate-200';
                           cellText = 'text-slate-400 font-semibold';
                         } else {
                           // Numeric scores
                           if (dayLog.score === 3) {
                             cellBg = 'bg-emerald-600 hover:bg-emerald-700';
-                            cellText = 'text-white font-black';
+                            cellText = 'text-white font-bold';
                           } else if (dayLog.score === 2) {
                             cellBg = 'bg-emerald-100 hover:bg-emerald-200';
-                            cellText = 'text-emerald-800 font-extrabold';
+                            cellText = 'text-emerald-800 font-bold';
                             borderClass = 'border border-emerald-300';
                           } else {
-                            cellBg = 'bg-amber-100 hover:bg-amber-255 hover:bg-amber-250';
-                            cellText = 'text-amber-800 font-extrabold';
+                            cellBg = 'bg-amber-100 hover:bg-amber-200';
+                            cellText = 'text-amber-800 font-bold';
                             borderClass = 'border border-amber-300';
                           }
                         }
@@ -1448,7 +1448,7 @@ export default function ProfilePage() {
                           key={`cell-${cell}`}
                           onClick={() => setSelectedDay(dayLog || null)}
                           className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${cellBg} ${cellText} ${borderClass} ${
-                            isCurrentlySelected ? 'ring-4 ring-indigo-500 shadow-lg scale-105 z-10' : 'hover:scale-103'
+                            isCurrentlySelected ? 'ring-2 ring-gray-900 shadow-sm scale-105 z-10' : 'hover:scale-[1.02]'
                           }`}
                         >
                           <span className="text-xs sm:text-sm">{cell}</span>
@@ -1466,10 +1466,10 @@ export default function ProfilePage() {
                   <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5 shadow-inner mb-8 print:hidden animate-in fade-in duration-200">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-200">
                       <div>
-                        <h4 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">Granular Day Audit Logs</h4>
-                        <p className="text-xs text-indigo-600 font-extrabold mt-0.5">Selected Date: {selectedDay.date}</p>
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wider">Granular Day Audit Logs</h4>
+                        <p className="text-xs text-indigo-600 font-bold mt-0.5">Selected Date: {selectedDay.date}</p>
                       </div>
-                      <span className="text-xs font-black bg-indigo-100 border border-indigo-200/50 text-indigo-700 px-3 py-1 rounded-xl">
+                      <span className="text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1 rounded-xl">
                         Score: {selectedDay.score} / 3 Pts
                       </span>
                     </div>
@@ -1477,12 +1477,12 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
                       {/* Attendance */}
                       <div className="bg-white border border-slate-100 rounded-2xl p-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
-                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                          selectedDay.attendance === 'present' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
+                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${
+                          selectedDay.attendance === 'present' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
                           selectedDay.attendance === 'late' ? 'bg-amber-50 border-amber-100 text-amber-700' :
                           selectedDay.attendance === 'absent' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                          selectedDay.attendance === 'leave' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                          selectedDay.attendance === 'leave' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
                           'bg-slate-100 border-slate-200 text-slate-400'
                         }`}>
                           {selectedDay.attendance}
@@ -1491,11 +1491,11 @@ export default function ProfilePage() {
 
                       {/* Dress Code */}
                       <div className="bg-white border border-slate-100 rounded-2xl p-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">2. Dress Compliance</p>
-                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                          selectedDay.uniform === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">2. Dress Compliance</p>
+                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${
+                          selectedDay.uniform === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
                           selectedDay.uniform === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-                          selectedDay.uniform === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                          selectedDay.uniform === 'na' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
                           'bg-rose-50 border-rose-100 text-rose-700'
                         }`}>
                           {selectedDay.uniform === 'yes' ? 'Full Compliant' : selectedDay.uniform === 'incomplete' ? 'Incomplete' : selectedDay.uniform === 'na' ? 'Not Applicable' : 'Non Compliant'}
@@ -1510,13 +1510,13 @@ export default function ProfilePage() {
                       </div>
 
                       {/* Duties Checklist */}
-                      <div className="bg-white border border-slate-105 bg-white border border-slate-100 rounded-2xl p-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">3. Duty Checklist</p>
-                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                          selectedDay.duty === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
-                          selectedDay.duty === 'incomplete' ? 'bg-amber-55 bg-amber-55/10 bg-amber-50 border-amber-100 text-amber-700' :
-                          selectedDay.duty === 'na' ? 'bg-purple-55 bg-purple-55/10 bg-purple-50 border-purple-100 text-purple-700' :
-                          'bg-rose-55 bg-rose-55/10 bg-rose-50 border-rose-100 text-rose-700'
+                      <div className="bg-white border border-slate-100 rounded-2xl p-4">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">3. Duty Checklist</p>
+                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${
+                          selectedDay.duty === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                          selectedDay.duty === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+                          selectedDay.duty === 'na' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
+                          'bg-rose-50 border-rose-100 text-rose-700'
                         }`}>
                           {selectedDay.duty === 'yes' ? 'Accomplished' : selectedDay.duty === 'incomplete' ? 'Incomplete' : selectedDay.duty === 'na' ? 'Not Applicable' : 'Incomplete'}
                         </span>
@@ -1535,8 +1535,8 @@ export default function ProfilePage() {
                       <div className="mt-4 bg-rose-50/50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3">
                         <Shield className="text-rose-600 shrink-0" size={20} />
                         <div>
-                          <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Incurred Penalty Fines</p>
-                          <p className="text-xs font-extrabold text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Unexcused audit failure'}</p>
+                          <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Incurred Penalty Fines</p>
+                          <p className="text-xs font-bold text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Unexcused audit failure'}</p>
                         </div>
                       </div>
                     )}
@@ -1545,7 +1545,7 @@ export default function ProfilePage() {
 
                 {/* Complete Day-by-Day Historical Log */}
                 <div className="space-y-4 mb-8">
-                  <h3 className="font-extrabold text-sm sm:text-base flex items-center gap-2 text-slate-900">
+                  <h3 className="font-bold text-sm sm:text-base flex items-center gap-2 text-slate-900">
                     <ClipboardList size={18} className="text-indigo-600" /> Complete Day-by-Day Historical Log
                   </h3>
                   
@@ -1554,7 +1554,7 @@ export default function ProfilePage() {
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-150">
                           {['Date', 'Attendance', 'Uniform', 'Duties', 'Fines', 'Daily Score'].map(h => (
-                            <th key={h} className="px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider">{h}</th>
+                            <th key={h} className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-wider">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1564,14 +1564,14 @@ export default function ProfilePage() {
                           
                           return (
                             <tr key={idx} className={`hover:bg-slate-50/50 ${!isActive ? 'opacity-50 bg-slate-50/30' : ''}`}>
-                              <td className="px-5 py-3 font-extrabold text-slate-800">{b.date}</td>
+                              <td className="px-5 py-3 font-bold text-slate-800">{b.date}</td>
                               
                               <td className="px-5 py-3 font-semibold uppercase text-[10px]">
-                                <span className={`px-2.5 py-1 rounded-lg font-black tracking-wide ${
+                                <span className={`px-2.5 py-1 rounded-lg font-bold tracking-wide ${
                                   b.attendance === 'present' ? 'bg-emerald-50 text-emerald-700' :
                                   b.attendance === 'late' ? 'bg-amber-50 text-amber-700' :
                                   b.attendance === 'absent' ? 'bg-rose-50 text-rose-700' :
-                                  b.attendance === 'leave' ? 'bg-purple-50 text-purple-700' :
+                                  b.attendance === 'leave' ? 'bg-indigo-50 text-indigo-700' :
                                   'text-slate-400'
                                 }`}>
                                   {b.attendance}
@@ -1579,26 +1579,26 @@ export default function ProfilePage() {
                               </td>
 
                               <td className="px-5 py-3 font-bold uppercase text-[9px]">
-                                <span className={b.uniform === 'yes' ? 'text-emerald-600' : b.uniform === 'incomplete' ? 'text-amber-600' : b.uniform === 'na' ? 'text-purple-600' : 'text-rose-600'}>
+                                <span className={b.uniform === 'yes' ? 'text-emerald-600' : b.uniform === 'incomplete' ? 'text-amber-600' : b.uniform === 'na' ? 'text-indigo-600' : 'text-rose-600'}>
                                   {b.uniform === 'yes' ? 'yes' : b.uniform === 'incomplete' ? 'incomplete' : b.uniform === 'na' ? 'na' : 'no'}
                                 </span>
                               </td>
 
                               <td className="px-5 py-3 font-bold uppercase text-[9px]">
-                                <span className={b.duty === 'yes' ? 'text-emerald-600' : b.duty === 'incomplete' ? 'text-amber-600' : b.duty === 'na' ? 'text-purple-600' : 'text-rose-600'}>
+                                <span className={b.duty === 'yes' ? 'text-emerald-600' : b.duty === 'incomplete' ? 'text-amber-600' : b.duty === 'na' ? 'text-indigo-600' : 'text-rose-600'}>
                                   {b.duty === 'yes' ? 'yes' : b.duty === 'incomplete' ? 'incomplete' : b.duty === 'na' ? 'na' : 'no'}
                                 </span>
                               </td>
 
-                              <td className="px-5 py-3 font-extrabold text-slate-800">
+                              <td className="px-5 py-3 font-bold text-slate-800">
                                 {b.fines > 0 ? (
-                                  <span className="text-rose-600 font-black">₨{b.fines.toLocaleString()}</span>
+                                  <span className="text-rose-600 font-bold">₨{b.fines.toLocaleString()}</span>
                                 ) : (
                                   <span className="text-slate-350">—</span>
                                 )}
                               </td>
 
-                              <td className="px-5 py-3 font-black text-slate-800">
+                              <td className="px-5 py-3 font-bold text-slate-800">
                                 {isActive ? `${b.score} / 3` : <span className="text-slate-300 font-bold">—</span>}
                               </td>
                             </tr>
@@ -1649,7 +1649,7 @@ export default function ProfilePage() {
                     type="month"
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-500/20 w-full sm:w-auto"
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 w-full sm:w-auto"
                   />
                 </div>
 
@@ -1659,27 +1659,27 @@ export default function ProfilePage() {
                        <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
                           <CreditCard size={18} />
                        </div>
-                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
+                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cycle Current</span>
                      </div>
                      <p className="text-xs font-medium text-gray-500">Total Monthly Salary</p>
-                     <h4 className="text-2xl font-black text-gray-900">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
+                     <h4 className="text-2xl font-bold text-gray-900">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
                      
                      <div className="border-t border-gray-50 mt-4 pt-4 space-y-1.5 text-[10px] font-bold text-gray-700 uppercase">
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Daily Rate (Base / 30):</span>
-                          <span className="font-black text-gray-900">Rs. {Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
+                          <span className="font-bold text-gray-900">Rs. {Math.round(salaryDetails.dailyWage).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Payable Days:</span>
-                          <span className="font-black text-emerald-600">{salaryDetails.payableDays} Days</span>
+                          <span className="font-bold text-emerald-600">{salaryDetails.payableDays} Days</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Unpaid Deductions:</span>
-                          <span className="font-black text-rose-500">{salaryDetails.unpaidDays} Days (-Rs. {Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
+                          <span className="font-bold text-rose-500">{salaryDetails.unpaidDays} Days (-Rs. {Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Total Fines:</span>
-                          <span className="font-black text-rose-500">-Rs. {totalFines.toLocaleString()}</span>
+                          <span className="font-bold text-rose-500">-Rs. {totalFines.toLocaleString()}</span>
                         </div>
                      </div>
                   </div>
@@ -1692,8 +1692,8 @@ export default function ProfilePage() {
                         <DollarSign size={96} />
                      </div>
                      <div>
-                       <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Est. Retainable Net (Click for breakdown)</p>
-                       <h4 className="text-3xl font-black">Rs. {totalEarnings.toLocaleString()}</h4>
+                       <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Est. Retainable Net (Click for breakdown)</p>
+                       <h4 className="text-3xl font-bold">Rs. {totalEarnings.toLocaleString()}</h4>
                      </div>
                      <p className="text-xs mt-2 font-medium opacity-70 border-t border-teal-500 pt-2">
                        Calculated dynamically for current month's marked logs. All leaves are paid.
@@ -1713,7 +1713,7 @@ export default function ProfilePage() {
                          <p className="font-bold text-gray-900">{new Date(rec.month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
                          <p className="text-xs text-gray-400 font-medium">Net Disbursed: Rs. {rec.netSalary.toLocaleString()}</p>
                        </div>
-                       <div className={`px-3 py-1 text-[11px] font-black uppercase tracking-wide rounded-md ${rec.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                       <div className={`px-3 py-1 text-[11px] font-bold uppercase tracking-wide rounded-md ${rec.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                          {rec.status}
                        </div>
                      </div>
@@ -1799,7 +1799,7 @@ export default function ProfilePage() {
                 
                 <div className="mt-8 bg-gray-50 border border-gray-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-purple-600">
+                      <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-indigo-600">
                         <Award size={24} />
                       </div>
                       <div>
@@ -1862,7 +1862,7 @@ export default function ProfilePage() {
             {/* Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-purple-500">Salary Breakdown</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-600">Salary Breakdown</h3>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
                   Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
                 </p>
@@ -1875,23 +1875,23 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {/* Scrollable Content */}
+             {/* Scrollable Content */}
             <div className="p-8 overflow-y-auto space-y-6 flex-1 text-xs">
               {/* Top Overview Cards */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-purple-50/30 rounded-2xl border border-purple-100/50">
-                  <p className="text-[9px] font-black text-purple-500 uppercase tracking-widest mb-1">Monthly Base Salary</p>
-                  <p className="text-lg font-black text-gray-900">₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</p>
+                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50">
+                  <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Monthly Base Salary</p>
+                  <p className="text-lg font-bold text-gray-900">₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</p>
                 </div>
-                <div className="p-4 bg-purple-50/30 rounded-2xl border border-purple-100/50">
-                  <p className="text-[9px] font-black text-purple-500 uppercase tracking-widest mb-1">Net Till Date Earned</p>
-                  <p className="text-lg font-black text-purple-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
+                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50">
+                  <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Net Till Date Earned</p>
+                  <p className="text-lg font-bold text-indigo-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
                 </div>
               </div>
 
               {/* Calculations Formula */}
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
-                <p className="text-[9px] font-black text-black uppercase tracking-widest">
+                <p className="text-[9px] font-bold text-black uppercase tracking-wider">
                   {salaryDetails.isFinalized ? `Official Salary Slip Registry (${salaryDetails.status})` : 'Calculation Formula'}
                 </p>
                 <div className="space-y-1 font-mono text-gray-600">
@@ -1944,7 +1944,7 @@ export default function ProfilePage() {
                       )}
                     </>
                   )}
-                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-black text-gray-900">
+                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-bold text-gray-900">
                     <span>{salaryDetails.isFinalized ? 'Disbursed Net Salary:' : 'Till Date Net:'}</span>
                     <span>₨{salaryDetails.estimatedSalary.toLocaleString()}</span>
                   </div>
@@ -1955,7 +1955,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Payable Dates List */}
                 <div className="space-y-3">
-                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                  <h4 className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     Payable Dates ({salaryDetails.payableDatesList.length})
                   </h4>
@@ -1975,7 +1975,7 @@ export default function ProfilePage() {
 
                 {/* Deductible/Unpaid Dates List */}
                 <div className="space-y-3">
-                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <h4 className="text-[10px] font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                     Deductions / Absent ({salaryDetails.deductedDatesList.length})
                   </h4>
@@ -1987,9 +1987,9 @@ export default function ProfilePage() {
                         <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
                           <div className="flex flex-col">
                             <span className="font-bold text-gray-700">{formatDateDMY(item.date)}</span>
-                            <span className="text-[8px] text-rose-400 uppercase font-black">{item.status}</span>
+                            <span className="text-[8px] text-rose-400 uppercase font-bold">{item.status}</span>
                           </div>
-                          <span className="font-black text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
+                          <span className="font-bold text-rose-500">-₨{Math.round(item.deduction).toLocaleString()}</span>
                         </div>
                       ))
                     )}
@@ -1998,7 +1998,7 @@ export default function ProfilePage() {
 
                 {/* Fine Deductions List */}
                 <div className="space-y-3 col-span-1 md:col-span-2 mt-4">
-                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <h4 className="text-[10px] font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                     Fine Deductions Details ({fines.filter(f => f.date && f.date.startsWith(selectedMonth)).length})
                   </h4>
@@ -2010,9 +2010,9 @@ export default function ProfilePage() {
                         <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
                           <div className="flex flex-col">
                             <span className="font-bold text-gray-700">{item.reason || 'Penalty'}</span>
-                            <span className="text-[8px] text-gray-400 uppercase font-black">{formatDateDMY(item.date)}</span>
+                            <span className="text-[8px] text-gray-400 uppercase font-bold">{formatDateDMY(item.date)}</span>
                           </div>
-                          <span className="font-black text-rose-500">-₨{Number(item.amount).toLocaleString()}</span>
+                          <span className="font-bold text-rose-500">-₨{Number(item.amount).toLocaleString()}</span>
                         </div>
                       ))
                     )}
