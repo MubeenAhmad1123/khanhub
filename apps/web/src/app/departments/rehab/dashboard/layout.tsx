@@ -103,7 +103,11 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       if (hqSessionStr) {
         try {
           const hqSession = JSON.parse(hqSessionStr);
-          if (hqSession?.role === 'superadmin') {
+          // Only sync HQ superadmin session if the Firebase Auth user IS the HQ superadmin.
+          // This prevents the manager's stored hq_session from overwriting a rehab staff member's
+          // freshly-set rehab_session when the manager tests staff login on the same browser.
+          const firebaseUidMatchesHq = firebaseUser && firebaseUser.uid === hqSession.uid;
+          if (hqSession?.role === 'superadmin' && firebaseUidMatchesHq) {
             console.log('[RehabLayout] Detected HQ Superadmin session, syncing to rehab...');
             const syncSession = {
               uid: hqSession.uid,

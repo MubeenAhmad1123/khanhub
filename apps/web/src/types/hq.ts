@@ -1,6 +1,6 @@
 import { StaffDept } from "@/lib/hq/superadmin/staff";
 
-export type HqRole = 'superadmin' | 'manager' | 'cashier';
+export type HqRole = 'superadmin' | 'manager' | 'cashier' | 'staff';
 
 export interface HqUser {
   uid: string;

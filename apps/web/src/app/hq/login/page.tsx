@@ -24,6 +24,7 @@ export default function HqLoginPage() {
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
     if (r === 'superadmin' || r === 'manager' || r === 'cashier') return r as HqRole;
+    if (r === 'staff' || r.includes('staff') || r.includes('contract') || r.includes('internee')) return 'staff' as HqRole;
     return null;
   };
 
@@ -51,6 +52,7 @@ export default function HqLoginPage() {
             superadmin: '/hq/dashboard/superadmin',
             manager: '/hq/dashboard/manager',
             cashier: '/hq/dashboard/cashier',
+            staff: '/hq/dashboard/staff',
           };
           const normalized = normalizeRole(parsed.role) || 'cashier';
           router.push(roleRoutes[normalized] || '/hq/login');
@@ -103,6 +105,7 @@ export default function HqLoginPage() {
           superadmin: '/hq/dashboard/superadmin',
           manager: '/hq/dashboard/manager',
           cashier: '/hq/dashboard/cashier',
+          staff: '/hq/dashboard/staff',
         };
         const dest = roleRoutes[result.user.role as HqRole] || '/hq/dashboard';
         window.location.href = dest;

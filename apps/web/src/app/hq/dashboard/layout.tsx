@@ -51,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Profile', href: '/hq/dashboard/manager/profile', icon: <User size={16} />, roles: ['manager'] },
   { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
   { label: 'Credentials', href: '/hq/dashboard/manager/passwords', icon: <Lock size={16} />, roles: ['manager'] },
+  { label: 'My Profile', href: '/hq/dashboard/staff', icon: <User size={16} />, roles: ['staff' as HqRole] },
   { label: 'Home', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
   { label: 'Daily Report', href: '/hq/dashboard/cashier/daily-report', icon: <FileText size={16} />, roles: ['superadmin', 'cashier'] },
   { label: 'End of Day', href: '/hq/dashboard/cashier/reconciliation', icon: <Calculator size={16} />, roles: ['cashier'] },
@@ -62,12 +63,14 @@ const ROLE_COLORS: Record<HqRole, string> = {
   superadmin: 'bg-indigo-50 text-indigo-600 border border-indigo-100 font-semibold',
   manager: 'bg-emerald-50 text-emerald-600 border border-emerald-100 font-semibold',
   cashier: 'bg-blue-50 text-blue-600 border border-blue-100 font-semibold',
+  staff: 'bg-gray-50 text-gray-600 border border-gray-100 font-semibold',
 };
 
 const ROLE_LABELS: Record<HqRole, string> = {
   superadmin: 'SYSTEM ARCHITECT',
   manager: 'MANAGER',
   cashier: 'CASHIER',
+  staff: 'STAFF',
 };
 
 // Dept label map for sidebar shortcuts
@@ -162,6 +165,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
     if (r === 'superadmin' || r === 'manager' || r === 'cashier') return r as HqRole;
+    if (r === 'staff' || r.includes('staff') || r.includes('contract') || r.includes('internee')) return 'staff' as HqRole;
     return null;
   };
 
