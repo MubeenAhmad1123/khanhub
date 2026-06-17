@@ -141,7 +141,17 @@ export default function JobCenterDashboardLayout({ children }: { children: React
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
 
-        if (parsed.uid !== firebaseUser.uid) {
+        const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0].toLowerCase() : '';
+        const sessionCustomId = (parsed.customId || '').toLowerCase();
+        const sessionEmail = (parsed.email || '').toLowerCase();
+        const firebaseEmail = (firebaseUser.email || '').toLowerCase();
+        
+        const isUidMatch = parsed.uid === firebaseUser.uid;
+        const isEmailMatch = firebaseEmail && sessionEmail && firebaseEmail === sessionEmail;
+        const isCustomIdMatch = emailPrefix && sessionCustomId && emailPrefix === sessionCustomId;
+        const isCustomIdEmailMatch = firebaseEmail && sessionCustomId && firebaseEmail === sessionCustomId;
+
+        if (!isUidMatch && !isEmailMatch && !isCustomIdMatch && !isCustomIdEmailMatch) {
           throw new Error('UID mismatch');
         }
 

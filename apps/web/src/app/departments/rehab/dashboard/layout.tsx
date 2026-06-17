@@ -146,8 +146,18 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           throw new Error('Invalid session');
         }
 
-        if (parsed.uid !== firebaseUser.uid) {
-          console.warn('[RehabLayout] Session UID mismatch with Firebase Auth UID');
+        const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0].toLowerCase() : '';
+        const sessionCustomId = (parsed.customId || '').toLowerCase();
+        const sessionEmail = (parsed.email || '').toLowerCase();
+        const firebaseEmail = (firebaseUser.email || '').toLowerCase();
+        
+        const isUidMatch = parsed.uid === firebaseUser.uid;
+        const isEmailMatch = firebaseEmail && sessionEmail && firebaseEmail === sessionEmail;
+        const isCustomIdMatch = emailPrefix && sessionCustomId && emailPrefix === sessionCustomId;
+        const isCustomIdEmailMatch = firebaseEmail && sessionCustomId && firebaseEmail === sessionCustomId;
+
+        if (!isUidMatch && !isEmailMatch && !isCustomIdMatch && !isCustomIdEmailMatch) {
+          console.warn('[RehabLayout] Session authentication validation failed');
           throw new Error('UID mismatch');
         }
 
