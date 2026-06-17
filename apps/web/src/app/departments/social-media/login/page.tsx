@@ -17,7 +17,7 @@ export default function SocialMediaLoginPage() {
     if (hqSessionStr) {
       try {
         const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession && hqSession.role === 'superadmin') {
+        if (hqSession && (hqSession.role === 'superadmin' || hqSession.role === 'manager')) {
           router.push('/departments/social-media/dashboard/admin');
         }
       } catch (e) {}

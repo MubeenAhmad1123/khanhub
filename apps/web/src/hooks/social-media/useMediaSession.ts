@@ -17,7 +17,28 @@ export function useMediaSession() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem('media_session');
+    let raw = localStorage.getItem('media_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    
+    // Auto-sync hq_session to media_session if missing to prevent layout/page mount race condition
+    if (!raw && hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession?.role === 'superadmin' || hqSession?.role === 'manager') {
+          const syncSession = {
+            uid: hqSession.uid,
+            customId: hqSession.customId || hqSession.email || 'HQ-USER',
+            role: hqSession.role,
+            displayName: hqSession.displayName || (hqSession.role === 'superadmin' ? 'Superadmin' : 'Manager'),
+            loginTime: hqSession.loginTime || Number(localStorage.getItem('hq_login_time')) || Date.now()
+          };
+          localStorage.setItem('media_session', JSON.stringify(syncSession));
+          localStorage.setItem('media_login_time', (syncSession.loginTime).toString());
+          raw = JSON.stringify(syncSession);
+        }
+      } catch (e) {}
+    }
+
     const parsed = raw ? (JSON.parse(raw) as MediaSession) : null;
     if (parsed) {
       if (!parsed.loginTime) {
