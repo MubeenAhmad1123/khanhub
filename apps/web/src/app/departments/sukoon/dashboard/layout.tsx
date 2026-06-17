@@ -173,8 +173,25 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
   }
 
   const role = user?.role as RehabRole;
+  const rawRole = (user?.role || '').toLowerCase();
+  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
+  const isFamily = rawRole === 'family' || rawRole.includes('family') || rawRole.includes('patient') || rawRole.includes('student') || rawRole.includes('seeker') || rawRole.includes('child');
+  const isSuperadmin = rawRole === 'superadmin';
+  const isAdmin = rawRole === 'admin' || rawRole === 'manager';
+  const displayRole = user?.role || '';
+
   const navItems = viewMode === 'dept'
-    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    ? NAV_ITEMS.filter(item => {
+        if (!user) return false;
+        return item.roles.some(r => {
+          const lowerR = r.toLowerCase();
+          if (lowerR === 'staff') return isStaff;
+          if (lowerR === 'family') return isFamily;
+          if (lowerR === 'superadmin') return isSuperadmin;
+          if (lowerR === 'admin') return isAdmin;
+          return lowerR === rawRole;
+        });
+      })
     : HQ_NAV_ITEMS;
 
   const SidebarContent = () => {
@@ -407,7 +424,7 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
                 <div className="flex flex-col items-end">
                    <p className="text-xs font-black text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
                    <span className="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-purple-500/20">
-                      {role && ROLE_LABELS[role]}
+                      {(role && (ROLE_LABELS as any)[role]) || displayRole || 'Staff'}
                    </span>
                 </div>
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center text-gray-900 font-black text-sm shadow-sm">

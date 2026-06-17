@@ -147,7 +147,9 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') {
+    const role = (user?.role || '').toLowerCase();
+    const isStaff = role === 'staff' || role.includes('staff') || role.includes('contract') || role.includes('internee');
+    if (!user || !isStaff) {
       router.push('/departments/sukoon/login');
       return;
     }

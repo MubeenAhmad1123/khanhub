@@ -22,7 +22,7 @@ export default function DynamicRoleRedirect({ params }: PageProps) {
     const isStaff = 
       decodedRole === 'staff' || 
       decodedRole.includes('staff') || 
-      decodedRole.includes('contractor') || 
+      decodedRole.includes('contract') || 
       decodedRole.includes('internee');
 
     if (isStaff) {

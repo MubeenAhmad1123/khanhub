@@ -148,7 +148,7 @@ export default function StaffSelfPage() {
   useEffect(() => {
     if (sessionLoading) return;
     const role = (user?.role || '').toLowerCase();
-    const isStaff = role === 'staff' || role.includes('staff') || role.includes('contractor') || role.includes('internee');
+    const isStaff = role === 'staff' || role.includes('staff') || role.includes('contract') || role.includes('internee');
     if (!user || !isStaff) {
       router.push('/departments/social-media/login');
       return;

@@ -174,7 +174,7 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
   }
 
   const rawRole = (user?.role || '').toLowerCase();
-  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contractor') || rawRole.includes('internee');
+  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
   const isManager = rawRole === 'manager';
   const isSuperadmin = rawRole === 'superadmin';
   const isAdmin = rawRole === 'admin';

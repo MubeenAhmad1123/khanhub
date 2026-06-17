@@ -1390,7 +1390,7 @@ export default function PatientDetailPage() {
         id: Date.now().toString(),
         type: 'expense',
         amount: Number(canteenAmt),
-        description: canteenDesc,
+        description: canteenDesc || 'Canteen Expense',
         date: Timestamp.fromDate(new Date(canteenDate)),
         cashierId: session.uid
       };
@@ -3431,9 +3431,8 @@ export default function PatientDetailPage() {
                 <input required type="number" value={canteenAmt} onChange={e => setCanteenAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
               </div>
               <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Description *</label>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Description (Optional)</label>
                 <input
-                  required
                   value={canteenDesc}
                   onChange={e => setCanteenDesc(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none"

@@ -9,7 +9,7 @@ import {
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, Briefcase, Search
 } from 'lucide-react';
-import { getDoc, doc, onSnapshot } from 'firebase/firestore';
+import { getDoc, doc, onSnapshot, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { JobCenterRole } from '@/types/job-center';
@@ -28,38 +28,29 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Seekers',       href: '/departments/job-center/dashboard/admin/seekers',  icon: <User size={16}/>,            roles: ['admin', 'superadmin'] },
   { label: 'Employers',     href: '/departments/job-center/dashboard/admin/employers',icon: <Building2 size={16}/>,       roles: ['admin', 'superadmin'] },
   { label: 'Finance',       href: '/departments/job-center/dashboard/admin/finance',  icon: <Banknote size={16}/>,        roles: ['admin', 'superadmin'] },
-  { label: 'Reports',       href: '/departments/job-center/dashboard/admin/reports',  icon: <BarChart2 size={16}/>,       roles: ['admin'] },
-  { label: 'Reports',       href: '/departments/job-center/dashboard/superadmin/reports', icon: <BarChart2 size={16}/>, roles: ['superadmin'] },
-  { label: 'Staff Management', href: '/departments/job-center/dashboard/admin/staff',  icon: <Users size={16}/>,           roles: ['superadmin'] },
   { label: 'My Attendance', href: '/departments/job-center/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'Seeker Portal', href: '/departments/job-center/dashboard/seeker',         icon: <Briefcase size={16}/>,       roles: ['seeker'] },
-  { label: 'Employer Portal', href: '/departments/job-center/dashboard/employer',     icon: <Building2 size={16}/>,       roles: ['employer'] },
-  { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'seeker', 'employer', 'superadmin'] },
+  { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'superadmin'] },
 ];
 
-const ROLE_COLORS: Record<JobCenterRole, string> = {
+const ROLE_COLORS: Record<string, string> = {
   admin:      'bg-blue-100 text-blue-700',
-  staff:      'bg-orange-100 text-orange-700',
-  seeker:     'bg-green-100 text-green-700',
-  employer:   'bg-indigo-100 text-indigo-700',
+  staff:      'bg-teal-100 text-teal-700',
   superadmin: 'bg-purple-100 text-purple-700',
+  manager:    'bg-indigo-100 text-indigo-700',
+  seeker:     'bg-green-100 text-green-700',
 };
 
-const ROLE_LABELS: Record<JobCenterRole, string> = {
+const ROLE_LABELS: Record<string, string> = {
   admin:      'Admin',
   staff:      'Staff',
-  seeker:     'Job Seeker',
-  employer:   'Employer',
   superadmin: 'HQ Admin',
+  manager:    'Manager',
+  seeker:     'Seeker',
 };
 
 const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string; icon: React.ReactNode }> = {
-  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
-  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
-  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
-  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
-  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
-  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
+  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin', color: 'text-orange-500', icon: <Briefcase size={16} /> },
+  hq:           { label: 'HQ',         adminUrl: '/hq/dashboard/superadmin',                  color: 'text-indigo-500', icon: <Users size={16} /> },
 };
 
 const HQ_NAV_ITEMS = [
@@ -128,33 +119,9 @@ export default function JobCenterDashboardLayout({ children }: { children: React
         return; 
       }
 
-      if (!firebaseUser) {
-        const timeout = setTimeout(() => {
-          if (!auth.currentUser) {
-            router.push('/departments/job-center/login');
-          }
-        }, 8000);
-        return () => clearTimeout(timeout);
-      }
-
       try {
-        const parsed = JSON.parse(session!);
+        const parsed = JSON.parse(session);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
-
-        const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0].toLowerCase() : '';
-        const sessionCustomId = (parsed.customId || '').toLowerCase();
-        const sessionEmail = (parsed.email || '').toLowerCase();
-        const firebaseEmail = (firebaseUser.email || '').toLowerCase();
-        
-        const isUidMatch = parsed.uid === firebaseUser.uid;
-        const isEmailMatch = firebaseEmail && sessionEmail && firebaseEmail === sessionEmail;
-        const isCustomIdMatch = emailPrefix && sessionCustomId && emailPrefix === sessionCustomId;
-        const isCustomIdEmailMatch = firebaseEmail && sessionCustomId && firebaseEmail === sessionCustomId;
-
-        if (!isUidMatch && !isEmailMatch && !isCustomIdMatch && !isCustomIdEmailMatch) {
-          throw new Error('UID mismatch');
-        }
-
         setUser(parsed);
         setIsChecking(false);
       } catch (err) {
@@ -169,47 +136,99 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     if (!user || !user.uid) return;
     if (user.role === 'superadmin') return;
 
-    const unsub = onSnapshot(doc(db, 'jobcenter_users', user.uid), (snap) => {
-      if (!snap.exists()) {
-        handleSignOut();
-        return;
-      }
-      const data = snap.data();
-      if (data?.isActive === false || data?.role !== user.role) {
-        handleSignOut();
-        return;
-      }
-      if (data?.forceLogoutAt) {
-        const logoutTime = new Date(data.forceLogoutAt).getTime();
-        const loginTimeStr = localStorage.getItem('jobcenter_login_time');
-        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
-        if (logoutTime > loginTime) {
-          handleSignOut();
+    let unsub: (() => void) | undefined;
+
+    const setupListener = async () => {
+      try {
+        let finalDocRef = doc(db, 'jobcenter_users', user.uid);
+        const snap = await getDoc(finalDocRef);
+        
+        if (!snap.exists()) {
+          const q = query(collection(db, 'jobcenter_staff'), where('loginUserId', '==', user.uid), limit(1));
+          const fallbackSnap = await getDocs(q);
+          if (!fallbackSnap.empty) {
+            finalDocRef = doc(db, 'jobcenter_staff', fallbackSnap.docs[0].id);
+          } else {
+            console.warn('[JobCenterLayout] No profile document found in jobcenter_users or jobcenter_staff');
+            handleSignOut();
+            return;
+          }
         }
+
+        unsub = onSnapshot(finalDocRef, (snap) => {
+          if (!snap.exists()) {
+            handleSignOut();
+            return;
+          }
+          const data = snap.data();
+          const dbRole = (data?.role || '').toLowerCase();
+          const sessionRole = (user?.role || '').toLowerCase();
+          const isDbStaff = dbRole === 'staff' || dbRole.includes('staff') || dbRole.includes('contract') || dbRole.includes('internee');
+          const isSessionStaff = sessionRole === 'staff' || sessionRole.includes('staff') || sessionRole.includes('contract') || sessionRole.includes('internee');
+          
+          const rolesMatch = dbRole === sessionRole || (isDbStaff && isSessionStaff);
+
+          if (data?.isActive === false || !rolesMatch) {
+            handleSignOut();
+            return;
+          }
+          if (data?.forceLogoutAt) {
+            const logoutTime = new Date(data.forceLogoutAt).getTime();
+            const loginTimeStr = localStorage.getItem('jobcenter_login_time');
+            const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+            if (logoutTime > loginTime) {
+              handleSignOut();
+            }
+          }
+        }, (error) => {
+          console.error('JobCenter session listener error:', error);
+        });
+      } catch (err) {
+        console.error('Error setting up JobCenter snapshot listener:', err);
       }
-    }, (error) => {
-      console.error('JobCenter session listener error:', error);
-    });
-    return () => unsub();
+    };
+
+    setupListener();
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, [user, handleSignOut]);
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#FFFBF7] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 border-4 border-orange-500/20 rounded-full" />
-            <div className="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <div className="relative w-12 h-12">
+            <div className="absolute inset-0 border-2 border-orange-500/10 rounded-full" />
+            <div className="absolute inset-0 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
           </div>
-          <p className="text-orange-600 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Syncing Workforce Grid...</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Initializing Grid</p>
         </div>
       </div>
     );
   }
 
   const role = user?.role as JobCenterRole;
+  const rawRole = (user?.role || '').toLowerCase();
+  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
+  const isSeeker = rawRole === 'seeker' || rawRole.includes('seeker') || rawRole.includes('family') || rawRole.includes('patient') || rawRole.includes('student') || rawRole.includes('child');
+  const isSuperadmin = rawRole === 'superadmin';
+  const isAdmin = rawRole === 'admin' || rawRole === 'manager';
+  const displayRole = user?.role || '';
+
   const navItems = viewMode === 'dept'
-    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    ? NAV_ITEMS.filter(item => {
+        if (!user) return false;
+        return item.roles.some(r => {
+          const lowerR = r.toLowerCase();
+          if (lowerR === 'staff') return isStaff;
+          if (lowerR === 'seeker') return isSeeker;
+          if (lowerR === 'superadmin') return isSuperadmin;
+          if (lowerR === 'admin') return isAdmin;
+          return lowerR === rawRole;
+        });
+      })
     : HQ_NAV_ITEMS;
 
   const SidebarContent = () => {

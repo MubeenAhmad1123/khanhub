@@ -149,8 +149,25 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
   }
 
   const role = user?.role as ItRole;
+  const rawRole = (user?.role || '').toLowerCase();
+  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
+  const isStudent = rawRole === 'student' || rawRole.includes('student') || rawRole.includes('family') || rawRole.includes('patient') || rawRole.includes('seeker') || rawRole.includes('child') || rawRole.includes('client');
+  const isSuperadmin = rawRole === 'superadmin';
+  const isAdmin = rawRole === 'admin' || rawRole === 'manager';
+  const displayRole = user?.role || '';
+
   const navItems = viewMode === 'dept'
-    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    ? NAV_ITEMS.filter(item => {
+        if (!user) return false;
+        return item.roles.some(r => {
+          const lowerR = r.toLowerCase();
+          if (lowerR === 'staff') return isStaff;
+          if (lowerR === 'student' || lowerR === 'client') return isStudent;
+          if (lowerR === 'superadmin') return isSuperadmin;
+          if (lowerR === 'admin') return isAdmin;
+          return lowerR === rawRole;
+        });
+      })
     : HQ_NAV_ITEMS;
 
   const SidebarContent = () => {
@@ -387,7 +404,7 @@ export default function ITDashboardLayout({ children }: { children: React.ReactN
                 <div className="flex flex-col items-end">
                    <p className="text-xs font-black dark:text-white uppercase tracking-tight">{user?.displayName}</p>
                    <span className="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-500 text-[8px] font-black uppercase tracking-wider mt-1 border border-indigo-500/20">
-                      {role && ROLE_LABELS[role]}
+                       {(role && (ROLE_LABELS as any)[role]) || displayRole || 'Staff'}
                    </span>
                 </div>
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/10 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white font-black text-sm shadow-sm">

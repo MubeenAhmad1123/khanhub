@@ -21,7 +21,7 @@ function normalizeWelfareRole(rawRole: string): WelfareRole {
   if (lower === 'admin') return 'admin';
   if (lower === 'superadmin') return 'superadmin';
   if (lower === 'family') return 'family';
-  if (lower === 'staff' || lower.includes('staff') || lower.includes('contractor') || lower.includes('internee')) {
+  if (lower === 'staff' || lower.includes('staff') || lower.includes('contract') || lower.includes('internee')) {
     return 'staff';
   }
   if (lower === 'donor') return 'donor';

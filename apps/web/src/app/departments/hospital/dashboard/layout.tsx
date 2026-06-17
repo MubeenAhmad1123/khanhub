@@ -185,13 +185,17 @@ export default function HospitalDashboardLayout({
       return true;
     }
 
+    const isStaff = userRole === 'staff' || userRole.includes('staff') || userRole.includes('contract') || userRole.includes('internee') || userRole === 'worker' || userRole === 'receptionist';
+    
     // Exact match:
     if (itemRoles.includes(userRole)) return true;
 
-    // Special fallback mappings for worker / receptionist roles
-    if (userRole === 'worker' || userRole === 'receptionist') {
+    // Special fallback mappings for staff roles
+    if (isStaff) {
       if (itemRoles.includes('staff')) return true;
-      if (item.title === 'Leads & CRM') return true;
+      if (userRole === 'worker' || userRole === 'receptionist') {
+        if (item.title === 'Leads & CRM') return true;
+      }
     }
     return false;
   });

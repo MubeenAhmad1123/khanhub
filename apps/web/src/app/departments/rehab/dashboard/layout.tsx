@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, PhoneCall,
   LayoutDashboard, Heart, CalendarDays, User, UserCog, Shield, ArrowLeft, LogOut, Menu, X, CheckCircle, Users
 } from 'lucide-react';
-import { getDoc, doc, onSnapshot } from 'firebase/firestore';
+import { getDoc, doc, onSnapshot, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import StaffNotifications from '@/components/layout/StaffNotifications';
@@ -125,47 +125,15 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         return; 
       }
 
-      if (!firebaseUser) {
-        console.warn('[RehabLayout] Firebase Auth user is null, checking for redirection...');
-        const timeout = setTimeout(() => {
-          if (!auth.currentUser) {
-            console.warn('[RehabLayout] Session restoration timed out, redirecting to login');
-            router.push('/departments/rehab/login');
-          }
-        }, 8000);
-        return () => clearTimeout(timeout);
-      }
-
-      console.log('[RehabLayout] Performing auth check. Session exists:', !!session, 'Firebase User:', firebaseUser.uid);
       try {
-        const parsed = JSON.parse(session!);
-        console.log('[RehabLayout] Session parsed for:', parsed.customId, 'Role:', parsed.role);
-
+        const parsed = JSON.parse(session);
         if (!parsed.uid || !parsed.role) {
-          console.warn('[RehabLayout] Invalid session structure');
           throw new Error('Invalid session');
         }
-
-        const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0].toLowerCase() : '';
-        const sessionCustomId = (parsed.customId || '').toLowerCase();
-        const sessionEmail = (parsed.email || '').toLowerCase();
-        const firebaseEmail = (firebaseUser.email || '').toLowerCase();
-        
-        const isUidMatch = parsed.uid === firebaseUser.uid;
-        const isEmailMatch = firebaseEmail && sessionEmail && firebaseEmail === sessionEmail;
-        const isCustomIdMatch = emailPrefix && sessionCustomId && emailPrefix === sessionCustomId;
-        const isCustomIdEmailMatch = firebaseEmail && sessionCustomId && firebaseEmail === sessionCustomId;
-
-        if (!isUidMatch && !isEmailMatch && !isCustomIdMatch && !isCustomIdEmailMatch) {
-          console.warn('[RehabLayout] Session authentication validation failed');
-          throw new Error('UID mismatch');
-        }
-
-        console.log('[RehabLayout] Auth Check SUCCESS');
         setUser(parsed);
         setIsChecking(false);
       } catch (err) {
-        console.error('[RehabLayout] Auth Check FAILED:', err);
+        console.error('[RehabLayout] Session parse failed:', err);
         handleSignOut();
       }
     });
@@ -177,28 +145,64 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     if (!user || !user.uid) return;
     if (user.role === 'superadmin') return;
 
-    const unsub = onSnapshot(doc(db, 'rehab_users', user.uid), (snap) => {
-      if (!snap.exists()) {
-        handleSignOut();
-        return;
-      }
-      const data = snap.data();
-      if (data?.isActive === false || data?.role !== user.role) {
-        handleSignOut();
-        return;
-      }
-      if (data?.forceLogoutAt) {
-        const logoutTime = new Date(data.forceLogoutAt).getTime();
-        const loginTimeStr = localStorage.getItem('rehab_login_time');
-        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
-        if (logoutTime > loginTime) {
-          handleSignOut();
+    let unsub: (() => void) | undefined;
+
+    const setupListener = async () => {
+      try {
+        let finalDocRef = doc(db, 'rehab_users', user.uid);
+        const snap = await getDoc(finalDocRef);
+        
+        if (!snap.exists()) {
+          const q = query(collection(db, 'rehab_staff'), where('loginUserId', '==', user.uid), limit(1));
+          const fallbackSnap = await getDocs(q);
+          if (!fallbackSnap.empty) {
+            finalDocRef = doc(db, 'rehab_staff', fallbackSnap.docs[0].id);
+          } else {
+            console.warn('[RehabLayout] No profile document found in rehab_users or rehab_staff');
+            handleSignOut();
+            return;
+          }
         }
+
+        unsub = onSnapshot(finalDocRef, (snap) => {
+          if (!snap.exists()) {
+            handleSignOut();
+            return;
+          }
+          const data = snap.data();
+          const dbRole = (data?.role || '').toLowerCase();
+          const sessionRole = (user?.role || '').toLowerCase();
+          const isDbStaff = dbRole === 'staff' || dbRole.includes('staff') || dbRole.includes('contract') || dbRole.includes('internee');
+          const isSessionStaff = sessionRole === 'staff' || sessionRole.includes('staff') || sessionRole.includes('contract') || sessionRole.includes('internee');
+          
+          const rolesMatch = dbRole === sessionRole || (isDbStaff && isSessionStaff);
+
+          if (data?.isActive === false || !rolesMatch) {
+            console.warn('[RehabLayout] Session validation failed. Active status or role mismatch:', { dbRole, sessionRole });
+            handleSignOut();
+            return;
+          }
+          if (data?.forceLogoutAt) {
+            const logoutTime = new Date(data.forceLogoutAt).getTime();
+            const loginTimeStr = localStorage.getItem('rehab_login_time');
+            const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+            if (logoutTime > loginTime) {
+              handleSignOut();
+            }
+          }
+        }, (error) => {
+          console.error('Rehab session listener error:', error);
+        });
+      } catch (err) {
+        console.error('Error setting up snapshot listener:', err);
       }
-    }, (error) => {
-      console.error('Rehab session listener error:', error);
-    });
-    return () => unsub();
+    };
+
+    setupListener();
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, [user, handleSignOut]);
 
   if (isChecking) {
@@ -219,8 +223,25 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   }
 
   const role = user?.role as RehabRole;
+  const rawRole = (user?.role || '').toLowerCase();
+  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
+  const isFamily = rawRole === 'family' || rawRole.includes('family') || rawRole.includes('patient') || rawRole.includes('student') || rawRole.includes('seeker') || rawRole.includes('child');
+  const isSuperadmin = rawRole === 'superadmin';
+  const isAdmin = rawRole === 'admin' || rawRole === 'manager';
+  const displayRole = user?.role || '';
+
   const navItems = viewMode === 'dept'
-    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    ? NAV_ITEMS.filter(item => {
+        if (!user) return false;
+        return item.roles.some(r => {
+          const lowerR = r.toLowerCase();
+          if (lowerR === 'staff') return isStaff;
+          if (lowerR === 'family') return isFamily;
+          if (lowerR === 'superadmin') return isSuperadmin;
+          if (lowerR === 'admin') return isAdmin;
+          return lowerR === rawRole;
+        });
+      })
     : HQ_NAV_ITEMS;
 
   const SidebarContent = ({ collapsed }: { collapsed?: boolean }) => {
@@ -457,7 +478,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
                 <div className="flex flex-col items-end">
                    <p className="text-xs font-black text-gray-900 uppercase tracking-tight">{user?.displayName}</p>
                    <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black uppercase tracking-wider mt-1 shadow-sm">
-                      {role && ROLE_LABELS[role]}
+                      {(role && (ROLE_LABELS as any)[role]) || displayRole || 'Staff'}
                    </span>
                 </div>
                 <div className="w-12 h-12 rounded-[20px] bg-white border border-rose-100 flex items-center justify-center text-rose-600 font-black text-sm shadow-sm hover:shadow-md transition-all cursor-pointer">

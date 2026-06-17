@@ -217,7 +217,7 @@ export default function StaffSelfPage() {
     if (sessionLoading) return;
     
     const rawRole = String(user?.role || '').toLowerCase();
-    const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contractor') || rawRole.includes('internee');
+    const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
 
     if (!user || !isStaff) {
       router.push('/departments/welfare/login');
