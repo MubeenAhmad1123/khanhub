@@ -10,7 +10,8 @@ import {
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, Monitor, Camera, Share2, Search
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import StaffNotifications from '@/components/layout/StaffNotifications';
 import NotificationRegister from '@/components/hq/NotificationRegister';
 
@@ -81,8 +82,13 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     localStorage.removeItem('media_session');
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('Error signing out:', err);
+    }
     router.push('/departments/social-media/login');
   }, [router]);
 

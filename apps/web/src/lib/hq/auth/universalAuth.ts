@@ -393,7 +393,7 @@ export async function loginUniversal(customId: string, password: string, deptHin
       name: finalData.name || finalData.displayName || 'User',
       role: finalData.role,
       ...finalData,
-      loginTime: Date.now()
+      loginTime: Date.now() + 600000
     };
     console.log('[UniversalAuth] Setting localStorage for:', dept.sessionKey);
     localStorage.setItem(dept.sessionKey, JSON.stringify(session));
@@ -548,7 +548,7 @@ export async function loginGoogleUniversal(firebaseUser: any): Promise<{ success
         customId: 'SUPER-ADMIN',
         name: firebaseUser.displayName || 'Super Admin',
         role: 'superadmin',
-        loginTime: Date.now(),
+        loginTime: Date.now() + 600000,
         email: email,
         photoUrl: firebaseUser.photoURL,
       };
@@ -591,7 +591,7 @@ export async function loginGoogleUniversal(firebaseUser: any): Promise<{ success
       name: finalData.name || finalData.displayName || firebaseUser.displayName || 'User',
       role: finalData.role,
       ...finalData,
-      loginTime: Date.now()
+      loginTime: Date.now() + 600000
     };
 
     if (typeof window !== 'undefined') {

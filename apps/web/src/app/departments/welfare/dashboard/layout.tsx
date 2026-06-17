@@ -10,7 +10,8 @@ import {
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import StaffNotifications from '@/components/layout/StaffNotifications';
 
 type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin' | 'donor';
@@ -93,8 +94,13 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
   const [isHqAdmin, setIsHqAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     localStorage.removeItem('welfare_session');
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('Error signing out:', err);
+    }
     const hqSessionStr = localStorage.getItem('hq_session');
     if (hqSessionStr) {
       try {

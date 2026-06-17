@@ -55,8 +55,8 @@ export function AuthProvider({ children }: { children: any }) {
                     customId: data.customId,
                     name: data.name || data.displayName || 'User',
                     role: data.role,
-                    loginTime: Date.now(),
-                    ...data
+                    ...data,
+                    loginTime: Date.now() + 600000
                   };
                   localStorage.setItem(dept.sessionKey, JSON.stringify(newSession));
                   console.log(`[AuthProvider] Restored session for ${dept.name}`);
