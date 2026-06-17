@@ -219,184 +219,9 @@ export default function ProfilePage() {
     }
   }, [visibleTabs, activeTab, visibilityLoading]);
 
-  // Robust Dual Fetcher matching HQ dashboard patterns
-  const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
-    try {
-      const prefix = 'hospital';
-      
-      const candidateIds = new Set<string>();
-      if (sId) {
-        candidateIds.add(sId);
-        candidateIds.add(sId.startsWith('hospital_') ? sId.replace('hospital_', '') : sId);
-        candidateIds.add(sId.startsWith('hospital_') ? sId : `hospital_${sId}`);
-      }
-      if (authUid) {
-        candidateIds.add(authUid);
-        candidateIds.add(authUid.startsWith('hospital_') ? authUid.replace('hospital_', '') : authUid);
-        candidateIds.add(authUid.startsWith('hospital_') ? authUid : `hospital_${authUid}`);
-      }
-      if (customId) {
-        candidateIds.add(customId);
-      }
-      if (employeeId) {
-        candidateIds.add(employeeId);
-      }
-
-      const uniqueIds = Array.from(candidateIds).filter(Boolean);
-
-      const fetchForCandidates = async (colName: string) => {
-        const snaps = await Promise.all(
-          uniqueIds.map(id => 
-            getDocs(query(collection(db, colName), where('staffId', '==', id)))
-              .catch(() => ({ docs: [] } as any))
-          )
-        );
-        const allDocs = snaps.flatMap(snap => snap.docs);
-        return { docs: allDocs };
-      };
-
-      const [
-        attSnap,
-        dutySnap,
-        dressSnap,
-        taskSnap,
-        fineSnap,
-        growthSnap,
-        salarySnap,
-        contribSnap
-      ] = await Promise.all([
-        fetchForCandidates(`${prefix}_attendance`),
-        fetchForCandidates(`${prefix}_duty_logs`),
-        fetchForCandidates(`${prefix}_dress_logs`),
-        fetchForCandidates(`${prefix}_special_tasks`),
-        fetchForCandidates(`${prefix}_fines`),
-        fetchForCandidates(`${prefix}_growth_points`),
-        fetchForCandidates(`${prefix}_salary_records`),
-        fetchForCandidates(`${prefix}_contributions`)
-      ]);
-
-      const mergeAndSort = (snap: any, dateField: string = 'date') => {
-        const combined = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-        const unique = Array.from(new Map(combined.map((item: any) => [item.id, item])).values());
-        return unique.sort((a: any, b: any) => {
-          const da = a[dateField] || '';
-          const db = b[dateField] || '';
-          return db.toString().localeCompare(da.toString());
-        });
-      };
-
-      setAttendance(mergeAndSort(attSnap, 'date') as any);
-      setDuties(mergeAndSort(dutySnap, 'date') as any);
-      setDressLogs(mergeAndSort(dressSnap, 'date') as any);
-      setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
-      setFines(mergeAndSort(fineSnap, 'date') as any);
-
-      // Extract contributions map
-      const cMap: Record<string, any> = {};
-      contribSnap.docs.forEach((d: any) => {
-        const data = d.data();
-        if (data.date) {
-          cMap[data.date] = data;
-        }
-      });
-      setContributionsMap(cMap);
-
-      // Process growth points / extra monthly bonus points
-      const rawGrowth = mergeAndSort(growthSnap, 'date') as any;
-      const extraRows: any[] = [];
-      growthSnap.docs.forEach((d: any) => {
-        const data = d.data();
-        if (Number(data.extra) > 0) {
-          extraRows.push({
-            id: `${d.id}_extra`,
-            points: data.extra,
-            reason: 'Monthly Bonus/Extra Points',
-            category: 'Growth Point Bonus',
-            date: `${data.month || '2026-06'}-28`,
-            month: data.month || '2026-06'
-          });
-        }
-      });
-      
-      const contribRows = contribSnap.docs
-        .map((d: any) => d.data())
-        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
-        .map((item: any) => ({
-          id: item.date,
-          points: 1,
-          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
-          category: 'Growth Point',
-          date: item.date,
-          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
-        }));
-
-      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
-      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
-        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
-      setGrowthHistory(uniqueGrowth);
-
-      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
-      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
-        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
-      setSalaryRecords(uniqueSalaries);
-
-    } catch (error) {
-      console.error("Critical sync failure in fetchMetrics:", error);
-      toast.error("Some system synchronization logs were unavailable.");
-    }
-  }, []);
-
-  useEffect(() => {
-    const sessionData = localStorage.getItem('hospital_session');
-    if (!sessionData) { router.push('/departments/hospital/login'); return; }
-    const parsed = JSON.parse(sessionData);
-    setSession(parsed);
-
-    const loadProfile = async () => {
-      try {
-        setLoading(true);
-        const userRef = doc(db, 'hospital_users', parsed.uid);
-        let userSnap = await getDoc(userRef);
-        let uData = null;
-        let finalId = parsed.uid;
-        
-        if (userSnap.exists()) {
-          uData = userSnap.data();
-        } else {
-          // Fallback to hospital_staff collection
-          const fallbackSnap = await getDocs(query(collection(db, 'hospital_staff'), where('loginUserId', '==', parsed.uid)));
-          if (!fallbackSnap.empty) {
-            userSnap = fallbackSnap.docs[0] as any;
-            uData = userSnap.data();
-            finalId = userSnap.id;
-          }
-        }
-        
-        if (!uData) { 
-          toast.error("User profile not found in active ledger.");
-          router.push('/departments/hospital/login'); 
-          return; 
-        }
-
-        setProfile({ 
-          id: finalId, 
-          ...uData,
-          phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
-        });
-
-        // Execute comprehensive data synchronization
-        await fetchMetrics(finalId, uData.loginUserId || parsed.uid, uData.customId || parsed.customId, uData.employeeId);
-      } catch (err) {
-        console.error(err);
-        toast.error("Secure synchronization failed.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadProfile();
-  }, [router, fetchMetrics]);
-
-  const handleUploadPhoto = async (file: File) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session) return;
     try {
       setUploadingPhoto(true);
       const url = await uploadToCloudinary(file, 'Khan Hub/hospital/profile');
@@ -450,36 +275,57 @@ export default function ProfilePage() {
     duties.forEach(d => { dutyMap[d.date] = d; });
 
     days.forEach(day => {
-      // 1. Attendance: 1 point if present or late
+      // 1. Attendance: 1 point if present and NOT late
       const att = attMap[day];
-      if (att?.status === 'present' || att?.status === 'late') {
-        attScore++;
-        // 2. Punctuality: 1 point if arrived on time
-        if (att.arrivedOnTime !== false) punctScore++;
+      if (att) {
+        const status = String(att.status || '').toLowerCase();
+        const isLate = att.isLate === true || status === 'late';
+        if (status === 'present' && !isLate) {
+          attScore++;
+        }
+        if (att.arrivedOnTime !== false && !isLate) {
+          punctScore++;
+        }
       }
 
       // 3. Uniform: 1 point if all items are compliant
       const dress = dressMap[day];
       if (dress) {
-        const config = profile?.dressCodeConfig || [];
-        const items = dress.items || [];
-        const missing = config.filter((c: any) => {
-          const item = items.find((i: any) => i.key === c.key);
-          return !item || item.status === 'no';
-        });
-        if (config.length > 0 && missing.length === 0) uniScore++;
+        if (dress.status === 'yes' || dress.isCompliant === true) {
+          uniScore++;
+        } else {
+          const config = profile?.dressCodeConfig || [];
+          const items = dress.items || [];
+          if (config.length === 0) {
+            if (dress.status !== 'no') uniScore++;
+          } else {
+            const missing = config.filter((c: any) => {
+              const item = items.find((i: any) => i.key === c.key);
+              return !item || item.status === 'no' || item.wearing === false;
+            });
+            if (missing.length === 0) uniScore++;
+          }
+        }
       }
 
       // 4. Working (Duties): 1 point if all duties are done
       const duty = dutyMap[day];
       if (duty) {
-        const config = profile?.dutyConfig || [];
-        const items = duty.duties || [];
-        const pending = config.filter((c: any) => {
-          const item = items.find((i: any) => i.key === c.key);
-          return !item || item.status === 'not_done';
-        });
-        if (config.length > 0 && pending.length === 0) workScore++;
+        if (duty.status === 'yes' || duty.status === 'completed') {
+          workScore++;
+        } else {
+          const config = profile?.dutyConfig || [];
+          const items = duty.duties || [];
+          if (config.length === 0) {
+            if (duty.status !== 'no' && duty.status !== 'failed') workScore++;
+          } else {
+            const pending = config.filter((c: any) => {
+              const item = items.find((i: any) => i.key === c.key);
+              return !item || item.status === 'pending' || item.status === 'not_done';
+            });
+            if (pending.length === 0) workScore++;
+          }
+        }
       }
     });
 
@@ -670,6 +516,176 @@ export default function ProfilePage() {
     return Math.round((present / recent30.length) * 100);
   }, [attendance]);
 
+  // Robust Dual Fetcher matching HQ dashboard patterns
+  const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
+    try {
+      const prefix = 'hospital';
+      
+      const candidateIds = new Set<string>();
+      if (sId) {
+        candidateIds.add(sId);
+        candidateIds.add(sId.startsWith('hospital_') ? sId.replace('hospital_', '') : sId);
+        candidateIds.add(sId.startsWith('hospital_') ? sId : `hospital_${sId}`);
+      }
+      if (authUid) {
+        candidateIds.add(authUid);
+        candidateIds.add(authUid.startsWith('hospital_') ? authUid.replace('hospital_', '') : authUid);
+        candidateIds.add(authUid.startsWith('hospital_') ? authUid : `hospital_${authUid}`);
+      }
+      if (customId) {
+        candidateIds.add(customId);
+      }
+      if (employeeId) {
+        candidateIds.add(employeeId);
+      }
+
+      const uniqueIds = Array.from(candidateIds).filter(Boolean);
+
+      const fetchForCandidates = async (colName: string) => {
+        const snaps = await Promise.all(
+          uniqueIds.map(id => 
+            getDocs(query(collection(db, colName), where('staffId', '==', id)))
+              .catch(() => ({ docs: [] } as any))
+          )
+        );
+        const allDocs = snaps.flatMap(snap => snap.docs);
+        return { docs: allDocs };
+      };
+
+      const [
+        attSnap,
+        dutySnap,
+        dressSnap,
+        taskSnap,
+        fineSnap,
+        growthSnap,
+        salarySnap,
+        contribSnap
+      ] = await Promise.all([
+        fetchForCandidates(`${prefix}_attendance`),
+        fetchForCandidates(`${prefix}_duty_logs`),
+        fetchForCandidates(`${prefix}_dress_logs`),
+        fetchForCandidates(`${prefix}_special_tasks`),
+        fetchForCandidates(`${prefix}_fines`),
+        fetchForCandidates(`${prefix}_growth_points`),
+        fetchForCandidates(`${prefix}_salary_records`),
+        fetchForCandidates(`${prefix}_contributions`)
+      ]);
+
+      const mergeAndSort = (snap: any, dateField: string = 'date') => {
+        const combined = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        const unique = Array.from(new Map(combined.map((item: any) => [item.id, item])).values());
+        return unique.sort((a: any, b: any) => {
+          const da = a[dateField] || '';
+          const db = b[dateField] || '';
+          return db.toString().localeCompare(da.toString());
+        });
+      };
+
+      setAttendance(mergeAndSort(attSnap, 'date') as any);
+      setDuties(mergeAndSort(dutySnap, 'date') as any);
+      setDressLogs(mergeAndSort(dressSnap, 'date') as any);
+      setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
+      setFines(mergeAndSort(fineSnap, 'date') as any);
+
+      // Extract contributions map
+      const cMap: Record<string, any> = {};
+      contribSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (data.date) {
+          cMap[data.date] = data;
+        }
+      });
+      setContributionsMap(cMap);
+
+      // Process growth points / extra monthly bonus points
+      const rawGrowth = mergeAndSort(growthSnap, 'date') as any;
+      const extraRows: any[] = [];
+      growthSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (Number(data.extra) > 0) {
+          extraRows.push({
+            id: `${d.id}_extra`,
+            points: data.extra,
+            reason: 'Monthly Bonus/Extra Points',
+            category: 'Growth Point Bonus',
+            date: `${data.month || '2026-06'}-28`,
+            month: data.month || '2026-06'
+          });
+        }
+      });
+      
+      const contribRows = contribSnap.docs
+        .map((d: any) => d.data())
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.date,
+          points: 1,
+          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
+          category: 'Growth Point',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
+        }));
+
+      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
+      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
+        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+      setGrowthHistory(uniqueGrowth);
+
+      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
+      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
+        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
+      setSalaryRecords(uniqueSalaries);
+
+    } catch (error) {
+      console.error("Critical sync failure in fetchMetrics:", error);
+      toast.error("Some system synchronization logs were unavailable.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const sessionData = localStorage.getItem('hospital_session');
+    if (!sessionData) { router.push('/departments/hospital/login'); return; }
+    const parsed = JSON.parse(sessionData);
+    setSession(parsed);
+
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const userRef = doc(db, 'hospital_users', parsed.uid);
+        let userSnap = await getDoc(userRef);
+        let uData = null;
+        if (userSnap.exists()) {
+          uData = userSnap.data();
+        }
+
+        const fallbackSnap = await getDocs(query(collection(db, 'hospital_staff'), where('loginUserId', '==', parsed.uid)));
+        let sData = null;
+        let staffId = parsed.uid;
+        if (!fallbackSnap.empty) {
+          sData = fallbackSnap.docs[0].data();
+          staffId = fallbackSnap.docs[0].id;
+        }
+
+        if (!uData && !sData) {
+          toast.error("Profile registry not found.");
+          return;
+        }
+
+        const merged = { ...sData, ...uData, staffId } as any;
+        setProfile(merged);
+
+        await fetchMetrics(staffId, parsed.uid, merged.customId, merged.employeeId);
+      } catch (err) {
+        console.error("Profile load failure:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [router, fetchMetrics]);
+
   if (loading || visibilityLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]">
       <Loader2 className="animate-spin text-rose-600 w-10 h-10 mb-4" />
@@ -699,10 +715,10 @@ export default function ProfilePage() {
           
           <div className="flex items-center gap-3">
              {sections.growthPoints !== false && (
-               <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
-                  <Award className="text-amber-500" size={16} />
-                  <span className="text-xs font-bold text-gray-700">{computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} Points</span>
-               </div>
+                <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
+                   <Award className="text-amber-500" size={16} />
+                   <span className="text-xs font-bold text-gray-700">{computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} Points</span>
+                </div>
              )}
              <button 
                onClick={handleLogout}
@@ -894,7 +910,7 @@ export default function ProfilePage() {
                       <Calendar size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Time & Attendance Audit</h3>
+                      <h3 className="text-lg font-bold text-gray-950">Time & Attendance Audit</h3>
                       <p className="text-xs text-gray-500 font-medium">Official timeline of check-ins and daily presence</p>
                     </div>
                   </div>
@@ -970,7 +986,6 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {/* Complex duties array from new sync engine */}
                         {rec.duties && rec.duties.length > 0 ? rec.duties.map((sub, idx) => (
                           <div 
                             key={idx}
@@ -986,7 +1001,6 @@ export default function ProfilePage() {
                             {getDutyLabel(sub, profile)}
                           </div>
                         )) : (
-                          /* Legacy support fallback */
                           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold bg-gray-100 border-gray-200 text-gray-700`}>
                             {rec.status === 'completed' ? <CheckCircle size={12} className="text-emerald-600" /> : <AlertCircle size={12} className="text-amber-600"/>}
                             <span className="capitalize">{(rec.dutyType || 'General Routine').replace(/_/g, ' ')}</span>
@@ -1029,7 +1043,6 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {/* Complex items array from new sync engine */}
                         {rec.items && rec.items.length > 0 ? rec.items.map((item, idx) => (
                           <div 
                             key={idx}
@@ -1045,7 +1058,6 @@ export default function ProfilePage() {
                             {getDressLabel(item, profile)}
                           </div>
                         )) : (
-                          /* Legacy support fallback */
                           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${rec.status === 'yes' ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
                             {rec.status === 'yes' ? <CheckCircle size={12} /> : <XCircle size={12} />}
                             {rec.status === 'yes' ? 'Compliant' : 'Non-Compliant'}
@@ -1232,8 +1244,8 @@ export default function ProfilePage() {
                        <div>
                         <p className="font-bold text-sm text-gray-800">{fine.reason}</p>
                         <p className="text-[10px] font-bold text-gray-400 uppercase mt-0.5">{formatDateDMY(fine.date)}</p>
-                      </div>
-                      <div className="text-sm font-bold text-rose-600">-Rs. {fine.amount}</div>
+                       </div>
+                       <div className="text-sm font-bold text-rose-600">-Rs. {fine.amount}</div>
                     </div>
                   )) : (
                     <div className="p-4 text-center text-xs text-gray-400 font-medium border border-dashed border-gray-100 rounded-xl">No system fines enforced.</div>

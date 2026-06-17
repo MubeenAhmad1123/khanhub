@@ -119,9 +119,9 @@ export default function StaffSelfPage() {
       ]);
       const contribDocs = [...contribSnap1.docs, ...contribSnap2.docs];
       const contribCombinedDocs = contribDocs.map(d => ({ 
-        id: d.id, 
-        ...d.data(), 
-        createdAt: toDate(d.data().createdAt) || new Date() 
+          id: d.id, 
+          ...d.data(), 
+          createdAt: toDate(d.data().createdAt) || new Date() 
       } as any));
 
       const uniqueContribs = Array.from(new Map(contribCombinedDocs.map(c => [c.id, c])).values())
@@ -343,7 +343,7 @@ export default function StaffSelfPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 mt-8 space-y-6">
-               {/* Welcome Header */}
+        {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
@@ -361,58 +361,6 @@ export default function StaffSelfPage() {
             </span>
           )}
         </div>
-
-        {/* Attendance Marking Slider Panel */}
-        {sections.attendance !== false && (
-          <div className={`${cardStyle} relative overflow-hidden bg-gradient-to-r from-white to-gray-50/50`}>
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1D9E75]"></div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
-                  <Clock size={16} className="text-[#1D9E75]" />
-                  Daily Presence Logger
-                </h3>
-                <p className="text-xs text-gray-400 font-medium">Record check-in and check-out timing securely.</p>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                {todayRecord?.checkInTime && (
-                  <div className="text-right hidden sm:block">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Checked In</p>
-                    <p className="text-xs font-bold text-gray-700">{todayRecord.checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                )}
-                <button
-                  onClick={handleCheckIn}
-                  disabled={checkLoading || (todayRecord?.checkInTime && todayRecord?.checkOutTime)}
-                  className={`px-6 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2.5 transition-all duration-300 active:scale-[0.97]
-                    ${todayRecord?.checkInTime && !todayRecord?.checkOutTime
-                      ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/10'
-                      : todayRecord?.checkInTime && todayRecord?.checkOutTime
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                        : 'bg-gray-900 hover:bg-black text-white shadow-md shadow-gray-900/10'
-                    }`}
-                >
-                  {checkLoading ? (
-                    <Loader2 size={15} className="animate-spin" />
-                  ) : todayRecord?.checkInTime && !todayRecord?.checkOutTime ? (
-                    <>Check Out <ArrowRight size={14} /></>
-                  ) : todayRecord?.checkInTime && todayRecord?.checkOutTime ? (
-                    <>Attendance Completed <UserCheck size={14} /></>
-                  ) : (
-                    <>Check In <UserCheck size={14} /></>
-                  )}
-                </button>
-              </div>
-            </div>
-            {todayRecord?.checkInTime && (
-              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-[11px] font-semibold text-gray-500">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Shift</span>
-                <span className="text-gray-400">Shift Start: {staffProfile?.dutyStartTime || '08:00'}</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Quick Stats Matrix */}
         {((sections.growthPoints !== false) || (sections.attendance !== false)) && (

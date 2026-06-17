@@ -514,7 +514,7 @@ export default function StaffProfilePage() {
     let workScore = 0;
 
     days.forEach(day => {
-      // 1. Attendance: 1 point if present and NOT late (matching reports page)
+      // 1. Attendance: 1 point if present and NOT late
       const att = attendanceMap[day];
       if (att) {
         const status = String(att.status || '').toLowerCase();
@@ -525,51 +525,78 @@ export default function StaffProfilePage() {
         if (att.arrivedOnTime) punctScore++;
       }
 
-      // 3. Uniform: 1 point if all items are 'yes'
+      // 3. Uniform: 1 point if all items are compliant
       const dress = dressMap[day];
       if (dress) {
-        const config = staff.dressCodeConfig || [];
-        const items = dress.items || [];
-        const missing = config.filter(c => {
-          const item = items.find(i => i.key === c.key);
-          return !item || item.status === 'no';
-        });
-        if (config.length > 0 && missing.length === 0) uniScore++;
+        if ((dress as any).status === 'yes' || (dress as any).isCompliant === true) {
+          uniScore++;
+        } else {
+          const config = (staff as any).dressCodeConfig || [];
+          const items = dress.items || [];
+          if (config.length === 0) {
+            if ((dress as any).status !== 'no') uniScore++;
+          } else {
+            const missing = config.filter((c: any) => {
+              const item = items.find(i => i.key === c.key);
+              return !item || item.status === 'no' || (item as any).wearing === false;
+            });
+            if (missing.length === 0) uniScore++;
+          }
+        }
       }
 
-      // 4. Working (Duties): 1 point if all duties are 'done'
+      // 4. Working (Duties): 1 point if all duties are done
       const duty = dutyMap[day];
       if (duty) {
-        const config = staff.dutyConfig || [];
-        const items = duty.duties || [];
-        const pending = config.filter(c => {
-          const item = items.find(i => i.key === c.key);
-          return !item || item.status === 'not_done';
-        });
-        if (config.length > 0 && pending.length === 0) workScore++;
+        if ((duty as any).status === 'yes' || (duty as any).status === 'completed') {
+          workScore++;
+        } else {
+          const config = (staff as any).dutyConfig || [];
+          const items = duty.duties || [];
+          if (config.length === 0) {
+            if ((duty as any).status !== 'no' && (duty as any).status !== 'failed') workScore++;
+          } else {
+            const pending = config.filter((c: any) => {
+              const item = items.find(i => i.key === c.key);
+              return !item || (item as any).status === 'pending' || item.status === 'not_done';
+            });
+            if (pending.length === 0) workScore++;
+          }
+        }
       }
     });
 
-    // 5. Monthly bonus points awarded manually by the manager
+    let gpScore = 0;
+    days.forEach(day => {
+      const contrib = contributionsMap[day];
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
+      }
+    });
+
     const extraPoints = growthHistory
       .filter(item => item.month === selectedMonth && item.category === 'Growth Point Bonus')
       .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
+    gpScore += extraPoints;
 
     const dailyPointsSum = attScore + uniScore + workScore;
     const normalizedDaily = days.length > 0 ? Math.round((dailyPointsSum / (days.length * 3)) * 90) : 0;
-    const totalScore = Math.min(100, normalizedDaily + extraPoints);
+    const totalScore = Math.min(100, normalizedDaily + gpScore);
 
     return {
       attendance: attScore,
       punctuality: punctScore,
       uniform: uniScore,
       working: workScore,
-      growthPoint: extraPoints,
+      growthPoint: gpScore,
       normalizedDaily,
       totalScore,
       workingDays: days.length
     };
-  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, daysInMonth, selectedMonth]);
+  }, [staff, attendanceMap, dressMap, dutyMap, growthHistory, contributionsMap, daysInMonth, selectedMonth]);
 
   useEffect(() => {
     setBonusInput(computedScores.growthPoint);
@@ -677,7 +704,8 @@ export default function StaffProfilePage() {
         tasksDocs,
         fineDocs,
         metaDoc,
-        txDocs
+        txDocs,
+        contribDocs
       ] = await Promise.all([
         fetchParallel(`${prefix}_attendance`),
         fetchParallel(`${prefix}_dress_logs`),
@@ -686,7 +714,8 @@ export default function StaffProfilePage() {
         fetchParallel(`${prefix}_special_tasks`),
         fetchParallel(`${prefix}_fines`),
         getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any)),
-        fetchParallel(`${prefix}_transactions`).catch(() => [])
+        fetchParallel(`${prefix}_transactions`).catch(() => []),
+        fetchParallel(`${prefix}_contributions`).catch(() => [])
       ]);
       console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
 
@@ -738,6 +767,15 @@ export default function StaffProfilePage() {
       setFines(fineDocs.map((d: any) => ({ id: d.id, ...d.data() })));
       setTransactions(txDocs.map((d: any) => ({ id: d.id, ...d.data() })));
 
+      const cMap: Record<string, any> = {};
+      contribDocs.forEach((d: any) => {
+        const data = d.data();
+        if (data.date) {
+          cMap[data.date] = data;
+        }
+      });
+      setContributionsMap(cMap);
+
       // Fetch growth history (all records)
       const monthlyGpDocs = (await fetchParallel(`${prefix}_growth_points`)).map((d: any) => d.data());
 
@@ -757,8 +795,20 @@ export default function StaffProfilePage() {
         }
       });
 
-      // Deduplicate contribRows
-      const uniqueContribRows = Array.from(new Map(contribRows.map(item => [item.id + '_' + item.category, item])).values());
+      const approvedContribs = contribDocs
+        .map((d: any) => d.data())
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.date,
+          points: 1,
+          note: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : '',
+          category: 'Growth Point'
+        }));
+
+      const combinedGrowth = [...contribRows, ...approvedContribs];
+      const uniqueContribRows = Array.from(new Map(combinedGrowth.map(item => [item.id + '_' + item.category, item])).values());
       uniqueContribRows.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       setGrowthHistory(uniqueContribRows);
 

@@ -207,7 +207,7 @@ export default function ManagerReportsPage() {
         return { docs: [] } as any;
       };
 
-      const [attSnaps, dressSnaps, dutySnaps, growthPointsSnaps, fineSnaps] = await Promise.all([
+      const [attSnaps, dressSnaps, dutySnaps, growthPointsSnaps, fineSnaps, contribSnaps] = await Promise.all([
         Promise.all(depts.map(d => 
           getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '>=', startDate), where('date', '<=', endDate)))
             .catch(handleQueryError)
@@ -227,6 +227,10 @@ export default function ManagerReportsPage() {
         Promise.all(depts.map(d => 
           getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('date', '>=', startDate), where('date', '<=', endDate)))
             .catch(handleQueryError)
+        )),
+        Promise.all(depts.map(d => 
+          getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '>=', startDate), where('date', '<=', endDate)))
+            .catch(handleQueryError)
         ))
       ]);
 
@@ -240,6 +244,7 @@ export default function ManagerReportsPage() {
       const dutyMap = new Map();
       const growthPointsMap = new Map();
       const fineMap = new Map();
+      const contributionsMap = new Map();
 
       attSnaps.forEach(snap => snap.docs.forEach((d: any) => {
         const data = d.data();
@@ -295,8 +300,19 @@ export default function ManagerReportsPage() {
         fineMap.set(key, [...existing, data]);
       }));
 
+      contribSnaps.forEach(snap => snap.docs.forEach((d: any) => {
+        const data = d.data();
+        let sid = data.staffId || d.id;
+        const date = data.date;
+        if (!data.staffId && sid.endsWith(`_${date}`)) {
+          sid = sid.slice(0, -(date.length + 1));
+        }
+        const simpleSid = getSimpleId(sid);
+        contributionsMap.set(`${simpleSid}_${date}`, data);
+      }));
+
       setStaff(allStaff);
-      setLogs({ attMap, dressMap, dutyMap, growthPointsMap, fineMap });
+      setLogs({ attMap, dressMap, dutyMap, growthPointsMap, fineMap, contributionsMap });
     } catch (err) {
       console.error("Error fetching report data:", err);
       toast.error("Failed to fetch reports");
@@ -318,7 +334,7 @@ export default function ManagerReportsPage() {
       finesTotal: 0, maxPoints: 100, dailyBreakdown: [] 
     };
 
-    const { attMap, dressMap, dutyMap, growthPointsMap, fineMap } = logs;
+    const { attMap, dressMap, dutyMap, growthPointsMap, fineMap, contributionsMap } = logs;
     const simpleSid = getSimpleId(member.id);
 
     const gpDoc = growthPointsMap.get(simpleSid) || growthPointsMap.get(member.id);
@@ -360,7 +376,7 @@ export default function ManagerReportsPage() {
       let isLate = false;
       if (att) {
         attStatus = att.status || 'unmarked';
-        isLate = att.isLate || false;
+        isLate = att.isLate === true || attStatus === 'late';
       }
 
       let attendanceStatus = 'unmarked';
@@ -393,7 +409,30 @@ export default function ManagerReportsPage() {
 
       if (!onLeave && uniformStatus !== 'unmarked') {
         dressTotalDays++;
-        if (uniformStatus === 'yes') dressCompliantDays++;
+        let isDressCompliant = false;
+        if (dress) {
+          if (dress.status === 'yes' || dress.isCompliant === true) {
+            isDressCompliant = true;
+          } else {
+            const config = (member as any).dressCodeConfig || [];
+            const items = dress.items || [];
+            if (config.length === 0) {
+              if (dress.status !== 'no') isDressCompliant = true;
+            } else {
+              const missing = config.filter((c: any) => {
+                const item = items.find((i: any) => i.key === c.key);
+                return !item || item.status === 'no' || item.wearing === false;
+              });
+              if (missing.length === 0) isDressCompliant = true;
+            }
+          }
+        }
+        if (isDressCompliant) {
+          dressCompliantDays++;
+          uniformStatus = 'yes';
+        } else {
+          uniformStatus = 'incomplete';
+        }
       }
 
       // Duty compliance points
@@ -408,10 +447,34 @@ export default function ManagerReportsPage() {
 
       if (!onLeave && dutyStatus !== 'unmarked') {
         dutyTotalDays++;
-        if (dutyStatus === 'yes') dutyCompliantDays++;
+        let isDutyCompliant = false;
+        if (duty) {
+          if (duty.status === 'yes' || duty.status === 'completed') {
+            isDutyCompliant = true;
+          } else {
+            const config = (member as any).dutyConfig || [];
+            const items = duty.duties || [];
+            if (config.length === 0) {
+              if (duty.status !== 'no' && duty.status !== 'failed') isDutyCompliant = true;
+            } else {
+              const pending = config.filter((c: any) => {
+                const item = items.find((i: any) => i.key === c.key);
+                return !item || item.status === 'pending' || item.status === 'not_done';
+              });
+              if (pending.length === 0) isDutyCompliant = true;
+            }
+          }
+        }
+        if (isDutyCompliant) {
+          dutyCompliantDays++;
+          dutyStatus = 'yes';
+        } else {
+          dutyStatus = 'incomplete';
+        }
       }
 
       // Exact points rules
+      // Attendance: 1 point if present and NOT late
       const attPoint = (attendanceStatus === 'present') ? 1 : 0;
       const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
       const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
@@ -445,16 +508,30 @@ export default function ManagerReportsPage() {
     const dressPct = dressTotalDays > 0 ? Math.round((dressCompliantDays / dressTotalDays) * 100) : 0;
     const dutyPct = dutyTotalDays > 0 ? Math.round((dutyCompliantDays / dutyTotalDays) * 100) : 0;
 
+    // Standardized Growth Points Calculation: Approved Contributions + Extra/Manual points
+    let gpScore = 0;
+    daysToProcess.forEach(date => {
+      const logKey = `${simpleSid}_${date}`;
+      const contrib = contributionsMap.get(logKey);
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
+      }
+    });
+    gpScore += extraPoints;
+
     const maxDailyPoints = daysToProcess.length * 3;
     const normalizedDaily = maxDailyPoints > 0 ? Math.round((totalDailyPointsSum / maxDailyPoints) * 90) : 0;
-    const totalPoints = Math.min(100, normalizedDaily + extraPoints);
+    const totalPoints = Math.min(100, normalizedDaily + gpScore);
 
     return {
       attPct,
       dressPct,
       dutyPct,
-      gpPct: extraPoints * 10, // just map bonus percentage directly for generic visual representation (e.g. 7 bonus points = 70%)
-      extraPoints,
+      gpPct: gpScore * 10,
+      extraPoints: gpScore,
       normalizedDaily,
       totalPoints,
       presents,
@@ -687,8 +764,8 @@ export default function ManagerReportsPage() {
                     </div>
                     
                     <div className="text-center mt-3 max-w-full">
-                      <p className="font-extrabold text-xs sm:text-sm truncate w-24 sm:w-36 text-white group-hover:text-indigo-200 transition-colors">{second.name}</p>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{formatDesignation(second.designation)}</p>
+                       <p className="font-extrabold text-xs sm:text-sm truncate w-24 sm:w-36 text-white group-hover:text-indigo-200 transition-colors">{second.name}</p>
+                       <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">{formatDesignation(second.designation)}</p>
                     </div>
  
                     {/* Silver Stand */}
@@ -721,7 +798,7 @@ export default function ManagerReportsPage() {
                           first.name?.[0]
                         )}
                       </div>
-                      <div className="absolute -top-3 -right-2 bg-amber-400 border border-amber-200 text-indigo-950 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">1</div>
+                      <div className="absolute -top-3 -right-2 bg-amber-400 border border-amber-205 text-indigo-955 bg-amber-450 border-amber-200 text-indigo-950 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">1</div>
                     </div>
                     
                     <div className="text-center mt-3 max-w-full">
@@ -747,7 +824,7 @@ export default function ManagerReportsPage() {
                 {third && (
                   <div className="flex flex-col items-center group cursor-pointer w-full md:w-52 order-3 md:order-3" onClick={() => handleOpenStaffModal(third)}>
                     <div className="relative">
-                      <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-amber-950/80 border-2 border-amber-700/80 flex items-center justify-center text-lg sm:text-2xl font-black text-amber-600 overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
+                      <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-amber-955/80 border-2 border-amber-700/80 flex items-center justify-center text-lg sm:text-2xl font-black text-amber-600 overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
                         {third.photoUrl ? (
                           <img src={third.photoUrl} alt={third.name} className="w-full h-full object-cover" />
                         ) : (
@@ -763,7 +840,7 @@ export default function ManagerReportsPage() {
                     </div>
 
                     {/* Bronze Stand */}
-                    <div className="w-full bg-gradient-to-t from-amber-900/60 to-amber-950/40 border border-amber-900/40 rounded-2xl md:rounded-b-none md:rounded-t-2xl mt-4 py-4 md:h-28 flex flex-col justify-between items-center text-center shadow-lg">
+                    <div className="w-full bg-gradient-to-t from-amber-900/60 to-amber-955/40 border border-amber-900/40 rounded-2xl md:rounded-b-none md:rounded-t-2xl mt-4 py-4 md:h-28 flex flex-col justify-between items-center text-center shadow-lg">
                       <div className="flex justify-center shrink-0">
                         <Medal size={22} className="text-amber-700" />
                       </div>
@@ -889,7 +966,7 @@ export default function ManagerReportsPage() {
                           index === 0 ? 'bg-amber-50 text-amber-700 border-amber-250 shadow-sm' : 
                           index === 1 ? 'bg-slate-50 text-slate-700 border-slate-350' : 
                           index === 2 ? 'bg-orange-50 text-orange-700 border-orange-250' : 
-                          'bg-slate-50/50 text-slate-500 border-slate-100'
+                          'bg-slate-50/50 text-slate-550 border-slate-100'
                         }`}>
                           {getOrdinalRank(index + 1)}
                         </span>
@@ -897,7 +974,7 @@ export default function ManagerReportsPage() {
                       
                       <td className="sticky left-20 bg-white group-hover:bg-slate-50 z-10 transition-colors px-6 py-4.5 cursor-pointer min-w-[200px] border-r border-slate-100" onClick={() => handleOpenStaffModal(member)}>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-sm text-indigo-600 overflow-hidden shadow-inner shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-55 bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-sm text-indigo-600 overflow-hidden shadow-inner shrink-0">
                             {member.photoUrl ? (
                               <img src={member.photoUrl} alt={member.name} className="w-full h-full object-cover" />
                             ) : (
@@ -910,7 +987,7 @@ export default function ManagerReportsPage() {
                           </div>
                         </div>
                       </td>
-
+                      
                       <td className="px-6 py-4.5">
                         <span className="px-3 py-1.5 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-black border border-slate-100 uppercase tracking-wide">
                           {getDeptLabel(member.department)}
@@ -929,13 +1006,13 @@ export default function ManagerReportsPage() {
                               <div 
                                 className={`h-full rounded-full transition-all duration-300 ${
                                   item.val >= 85 ? 'bg-emerald-500' : item.val >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                                }`} 
+                                  }`} 
                                 style={{ width: `${item.val}%` }} 
                               />
                             </div>
                             <span className={`text-[11px] font-black ${
                               item.val >= 85 ? 'text-emerald-600' : item.val >= 50 ? 'text-amber-600' : 'text-rose-600'
-                            }`}>{item.val}%</span>
+                              }`}>{item.val}%</span>
                           </div>
                         </td>
                       ))}
@@ -1032,13 +1109,13 @@ export default function ManagerReportsPage() {
                               <div 
                                 className={`h-full rounded-full transition-all duration-300 ${
                                   item.val >= 85 ? 'bg-emerald-500' : item.val >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                                }`} 
+                                  }`} 
                                 style={{ width: `${item.val}%` }} 
                               />
                             </div>
                             <span className={`text-[10px] font-black shrink-0 ${
                               item.val >= 85 ? 'text-emerald-600' : item.val >= 50 ? 'text-amber-600' : 'text-rose-600'
-                            }`}>{item.display}</span>
+                              }`}>{item.display}</span>
                           </div>
                         )}
                       </div>
@@ -1198,11 +1275,11 @@ export default function ManagerReportsPage() {
                           cellBg = 'bg-emerald-600 hover:bg-emerald-700';
                           cellText = 'text-white font-black';
                         } else if (dayLog.score === 2) {
-                          cellBg = 'bg-emerald-100 hover:bg-emerald-200';
+                          cellBg = 'bg-emerald-100 hover:bg-emerald-205 hover:bg-emerald-200';
                           cellText = 'text-emerald-800 font-extrabold';
                           borderClass = 'border border-emerald-300';
                         } else {
-                          cellBg = 'bg-amber-100 hover:bg-amber-250';
+                          cellBg = 'bg-amber-100 hover:bg-amber-255 hover:bg-amber-250';
                           cellText = 'text-amber-800 font-extrabold';
                           borderClass = 'border border-amber-300';
                         }
@@ -1247,11 +1324,11 @@ export default function ManagerReportsPage() {
                     <div className="bg-white border border-slate-100 rounded-2xl p-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
                       <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.attendance === 'present' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                        selectedDay.attendance === 'present' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
                         selectedDay.attendance === 'late' ? 'bg-amber-50 border-amber-100 text-amber-700' :
                         selectedDay.attendance === 'absent' ? 'bg-rose-50 border-rose-100 text-rose-700' :
                         selectedDay.attendance === 'leave' ? 'bg-purple-50 border-purple-100 text-purple-700' :
-                        'bg-slate-100 border-slate-200 text-slate-400'
+                        'bg-slate-105 bg-slate-100 border-slate-200 text-slate-400'
                       }`}>
                         {selectedDay.attendance}
                       </span>
@@ -1261,10 +1338,10 @@ export default function ManagerReportsPage() {
                     <div className="bg-white border border-slate-100 rounded-2xl p-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">2. Dress Compliance</p>
                       <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.uniform === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                        selectedDay.uniform === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
                         selectedDay.uniform === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
                         selectedDay.uniform === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
-                        'bg-rose-50 border-rose-100 text-rose-700'
+                        'bg-rose-55 bg-rose-55/10 bg-rose-50 border-rose-100 text-rose-700'
                       }`}>
                         {selectedDay.uniform === 'yes' ? 'Full Compliant' : selectedDay.uniform === 'incomplete' ? 'Incomplete' : selectedDay.uniform === 'na' ? 'Not Applicable' : 'Non Compliant'}
                       </span>
@@ -1281,10 +1358,10 @@ export default function ManagerReportsPage() {
                     <div className="bg-white border border-slate-100 rounded-2xl p-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">3. Duty Checklist</p>
                       <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.duty === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                        selectedDay.duty === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
                         selectedDay.duty === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
                         selectedDay.duty === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
-                        'bg-rose-50 border-rose-100 text-rose-700'
+                        'bg-rose-55 bg-rose-55/10 bg-rose-50 border-rose-100 text-rose-700'
                       }`}>
                         {selectedDay.duty === 'yes' ? 'Accomplished' : selectedDay.duty === 'incomplete' ? 'Incomplete' : selectedDay.duty === 'na' ? 'Not Applicable' : 'Incomplete'}
                       </span>
@@ -1304,7 +1381,7 @@ export default function ManagerReportsPage() {
                       <Shield className="text-rose-600 shrink-0" size={20} />
                       <div>
                         <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Incurred Penalty Fines</p>
-                        <p className="text-xs font-extrabold text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Unexcused audit failure'}</p>
+                        <p className="text-xs font-extrabold text-rose-805 text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Unexcused audit failure'}</p>
                       </div>
                     </div>
                   )}
@@ -1331,7 +1408,7 @@ export default function ManagerReportsPage() {
                         const isActive = b.attendance !== 'unmarked';
                         
                         return (
-                          <tr key={idx} className={`hover:bg-slate-50/50 ${!isActive ? 'opacity-50 bg-slate-50/30' : ''}`}>
+                          <tr key={idx} className={`hover:bg-slate-50/50 ${!isActive ? 'opacity-50 bg-slate-55 bg-slate-50/30' : ''}`}>
                             <td className="px-5 py-3 font-extrabold text-slate-800">{b.date}</td>
                             
                             <td className="px-5 py-3 font-semibold uppercase text-[10px]">
@@ -1388,7 +1465,7 @@ export default function ManagerReportsPage() {
                     }
                     window.print();
                   }}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 duration-200"
+                  className="flex-1 bg-indigo-650 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 duration-200"
                 >
                   <Printer size={16} /> Print Audit Record
                 </button>
