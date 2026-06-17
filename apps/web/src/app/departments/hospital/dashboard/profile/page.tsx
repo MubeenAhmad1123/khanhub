@@ -167,6 +167,13 @@ function getDressLabel(item: any, profile: any) {
   return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+const getDeptPrefix = (dept: string): string => {
+  const d = String(dept || '').toLowerCase();
+  if (d === 'job-center' || d === 'job_center') return 'jobcenter';
+  if (d === 'social-media' || d === 'social_media') return 'media';
+  return d.replace('-', '_');
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -293,14 +300,57 @@ export default function ProfilePage() {
     let workScore = 0;
     let finesTotal = 0;
 
+    const getAttendancePriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'present') return 4;
+      if (s === 'late') return 3;
+      if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+      if (s === 'absent') return 1;
+      return 0;
+    };
+
+    const getDressPriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'yes') return 3;
+      if (s === 'incomplete') return 2;
+      if (s === 'no') return 1;
+      return 0;
+    };
+
+    const getDutyPriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'yes' || s === 'completed') return 3;
+      if (s === 'incomplete') return 2;
+      if (s === 'no' || s === 'failed') return 1;
+      return 0;
+    };
+
     const attMap: Record<string, any> = {};
-    attendance.forEach(a => { attMap[a.date] = a; });
+    attendance.forEach(a => { 
+      const existing = attMap[a.date];
+      if (!existing || getAttendancePriority(a.status) > getAttendancePriority(existing.status)) {
+        attMap[a.date] = a; 
+      }
+    });
 
     const dressMap: Record<string, any> = {};
-    dressLogs.forEach(d => { dressMap[d.date] = d; });
+    dressLogs.forEach(d => { 
+      const existing = dressMap[d.date];
+      if (!existing || getDressPriority(d.status) > getDressPriority(existing.status)) {
+        dressMap[d.date] = d; 
+      }
+    });
 
     const dutyMap: Record<string, any> = {};
-    duties.forEach(d => { dutyMap[d.date] = d; });
+    duties.forEach(d => { 
+      const existing = dutyMap[d.date];
+      if (!existing || getDutyPriority(d.status) > getDutyPriority(existing.status)) {
+        dutyMap[d.date] = d; 
+      }
+    });
 
     const fineMap: Record<string, any[]> = {};
     fines.forEach(f => {
@@ -530,8 +580,23 @@ export default function ProfilePage() {
     const payableDatesList: { date: string; status: string }[] = [];
     const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
 
+    const getAttendancePriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'present') return 4;
+      if (s === 'late') return 3;
+      if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+      if (s === 'absent') return 1;
+      return 0;
+    };
+
     const attMap: Record<string, any> = {};
-    attendance.forEach(a => { attMap[a.date] = a; });
+    attendance.forEach(a => {
+      const existing = attMap[a.date];
+      if (!existing || getAttendancePriority(a.status) > getAttendancePriority(existing.status)) {
+        attMap[a.date] = a;
+      }
+    });
 
     days.forEach(dayStr => {
       const att = attMap[dayStr];
@@ -635,20 +700,28 @@ export default function ProfilePage() {
   }, [attendance]);
 
   // Robust Dual Fetcher matching HQ dashboard patterns
-  const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
+  const fetchMetrics = useCallback(async (
+    sId: string, 
+    authUid?: string, 
+    customId?: string, 
+    employeeId?: string,
+    prefixes: string[] = ['hospital']
+  ) => {
     try {
-      const prefix = 'hospital';
-      
       const candidateIds = new Set<string>();
       if (sId) {
         candidateIds.add(sId);
-        candidateIds.add(sId.startsWith('hospital_') ? sId.replace('hospital_', '') : sId);
-        candidateIds.add(sId.startsWith('hospital_') ? sId : `hospital_${sId}`);
+        prefixes.forEach(p => {
+          candidateIds.add(sId.startsWith(`${p}_`) ? sId.replace(`${p}_`, '') : sId);
+          candidateIds.add(sId.startsWith(`${p}_`) ? sId : `${p}_${sId}`);
+        });
       }
       if (authUid) {
         candidateIds.add(authUid);
-        candidateIds.add(authUid.startsWith('hospital_') ? authUid.replace('hospital_', '') : authUid);
-        candidateIds.add(authUid.startsWith('hospital_') ? authUid : `hospital_${authUid}`);
+        prefixes.forEach(p => {
+          candidateIds.add(authUid.startsWith(`${p}_`) ? authUid.replace(`${p}_`, '') : authUid);
+          candidateIds.add(authUid.startsWith(`${p}_`) ? authUid : `${p}_${authUid}`);
+        });
       }
       if (customId) {
         candidateIds.add(customId);
@@ -659,15 +732,19 @@ export default function ProfilePage() {
 
       const uniqueIds = Array.from(candidateIds).filter(Boolean);
 
-      const fetchForCandidates = async (colName: string) => {
-        const snaps = await Promise.all(
-          uniqueIds.map(id => 
-            getDocs(query(collection(db, colName), where('staffId', '==', id)))
-              .catch(() => ({ docs: [] } as any))
-          )
-        );
-        const allDocs = snaps.flatMap(snap => snap.docs);
-        return { docs: allDocs };
+      const fetchForCandidates = async (suffix: string) => {
+        const docsList: any[] = [];
+        for (const p of prefixes) {
+          const colName = `${p}_${suffix}`;
+          const snaps = await Promise.all(
+            uniqueIds.map(id => 
+              getDocs(query(collection(db, colName), where('staffId', '==', id)))
+                .catch(() => ({ docs: [] } as any))
+            )
+          );
+          docsList.push(...snaps.flatMap(snap => snap.docs));
+        }
+        return { docs: docsList };
       };
 
       const [
@@ -680,14 +757,14 @@ export default function ProfilePage() {
         salarySnap,
         contribSnap
       ] = await Promise.all([
-        fetchForCandidates(`${prefix}_attendance`),
-        fetchForCandidates(`${prefix}_duty_logs`),
-        fetchForCandidates(`${prefix}_dress_logs`),
-        fetchForCandidates(`${prefix}_special_tasks`),
-        fetchForCandidates(`${prefix}_fines`),
-        fetchForCandidates(`${prefix}_growth_points`),
-        fetchForCandidates(`${prefix}_salary_records`),
-        fetchForCandidates(`${prefix}_contributions`)
+        fetchForCandidates(`attendance`),
+        fetchForCandidates(`duty_logs`),
+        fetchForCandidates(`dress_logs`),
+        fetchForCandidates(`special_tasks`),
+        fetchForCandidates(`fines`),
+        fetchForCandidates(`growth_points`),
+        fetchForCandidates(`salary_records`),
+        fetchForCandidates(`contributions`)
       ]);
 
       const mergeAndSort = (snap: any, dateField: string = 'date') => {
@@ -793,7 +870,14 @@ export default function ProfilePage() {
         const merged = { ...sData, ...uData, staffId } as any;
         setProfile(merged);
 
-        await fetchMetrics(staffId, parsed.uid, merged.customId, merged.employeeId);
+        const primaryDept = merged.department || 'hospital';
+        const secondaryDepts = merged.secondaryDepts || [];
+        const prefixes = Array.from(new Set([
+          getDeptPrefix(primaryDept),
+          ...secondaryDepts.map((d: any) => getDeptPrefix(d))
+        ])).filter(Boolean);
+
+        await fetchMetrics(staffId, parsed.uid, merged.customId, merged.employeeId, prefixes);
       } catch (err) {
         console.error("Profile load failure:", err);
       } finally {

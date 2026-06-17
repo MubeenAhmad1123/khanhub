@@ -661,6 +661,12 @@ export default function StaffProfilePage() {
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
       const prefix = getDeptPrefix(profile.dept);
+      const secondaryDepts = profile.secondaryDepts || [];
+      const prefixes = Array.from(new Set([
+        prefix,
+        ...secondaryDepts.map((d: any) => getDeptPrefix(d))
+      ])).filter(Boolean);
+
       const uid = profile.staffId;
       const days = daysInMonth();
       const start = days[0];
@@ -670,30 +676,40 @@ export default function StaffProfilePage() {
       const candidateIds = new Set<string>();
       if (uid) {
         candidateIds.add(uid);
-        candidateIds.add(uid.startsWith(`${prefix}_`) ? uid.replace(`${prefix}_`, '') : uid);
-        candidateIds.add(uid.startsWith(`${prefix}_`) ? uid : `${prefix}_${uid}`);
+        prefixes.forEach(p => {
+          candidateIds.add(uid.startsWith(`${p}_`) ? uid.replace(`${p}_`, '') : uid);
+          candidateIds.add(uid.startsWith(`${p}_`) ? uid : `${p}_${uid}`);
+        });
       }
       if (profile.loginUserId) {
-        candidateIds.add(profile.loginUserId);
-        candidateIds.add(profile.loginUserId.startsWith(`${prefix}_`) ? profile.loginUserId.replace(`${prefix}_`, '') : profile.loginUserId);
-        candidateIds.add(profile.loginUserId.startsWith(`${prefix}_`) ? profile.loginUserId : `${prefix}_${profile.loginUserId}`);
+        const loginId = profile.loginUserId as string;
+        candidateIds.add(loginId);
+        prefixes.forEach(p => {
+          candidateIds.add(loginId.startsWith(`${p}_`) ? loginId.replace(`${p}_`, '') : loginId);
+          candidateIds.add(loginId.startsWith(`${p}_`) ? loginId : `${p}_${loginId}`);
+        });
       }
       if (profile.customId) candidateIds.add(profile.customId);
       if (profile.employeeId) candidateIds.add(profile.employeeId);
 
       const uniqueIds = Array.from(candidateIds).filter(Boolean);
 
-      console.log(`[StaffProfile] Triggering parallel snaps for: ${prefix} | Candidates:`, uniqueIds, `| Range: ${start} to ${end}`);
+      console.log(`[StaffProfile] Triggering parallel snaps for prefixes:`, prefixes, `| Candidates:`, uniqueIds, `| Range: ${start} to ${end}`);
       const t1 = Date.now();
 
-      const fetchParallel = async (colName: string) => {
-        const snaps = await Promise.all(
-          uniqueIds.map(id => 
-            getDocs(query(collection(db, colName), where('staffId', '==', id)))
-              .catch(() => ({ docs: [] } as any))
-          )
-        );
-        return snaps.flatMap(snap => snap.docs);
+      const fetchParallel = async (suffix: string) => {
+        const docsList: any[] = [];
+        for (const p of prefixes) {
+          const colName = `${p}_${suffix}`;
+          const snaps = await Promise.all(
+            uniqueIds.map(id => 
+              getDocs(query(collection(db, colName), where('staffId', '==', id)))
+                .catch(() => ({ docs: [] } as any))
+            )
+          );
+          docsList.push(...snaps.flatMap(snap => snap.docs));
+        }
+        return docsList;
       };
 
       const [
@@ -707,15 +723,15 @@ export default function StaffProfilePage() {
         txDocs,
         contribDocs
       ] = await Promise.all([
-        fetchParallel(`${prefix}_attendance`),
-        fetchParallel(`${prefix}_dress_logs`),
-        fetchParallel(`${prefix}_duty_logs`),
-        fetchParallel(`${prefix}_salary_records`),
-        fetchParallel(`${prefix}_special_tasks`),
-        fetchParallel(`${prefix}_fines`),
+        fetchParallel(`attendance`),
+        fetchParallel(`dress_logs`),
+        fetchParallel(`duty_logs`),
+        fetchParallel(`salary_records`),
+        fetchParallel(`special_tasks`),
+        fetchParallel(`fines`),
         getDoc(doc(db, `hq_meta`, 'config')).catch(() => ({ exists: () => false } as any)),
-        fetchParallel(`${prefix}_transactions`).catch(() => []),
-        fetchParallel(`${prefix}_contributions`).catch(() => [])
+        fetchParallel(`transactions`).catch(() => []),
+        fetchParallel(`contributions`).catch(() => [])
       ]);
       console.log(`[StaffProfile] All snaps LOADED in ${Date.now() - t1}ms`);
 
@@ -729,11 +745,42 @@ export default function StaffProfilePage() {
         ...(metaData.customDress || [])
       ]);
 
+      const getAttendancePriority = (status?: string) => {
+        if (!status) return 0;
+        const s = status.toLowerCase();
+        if (s === 'present') return 4;
+        if (s === 'late') return 3;
+        if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+        if (s === 'absent') return 1;
+        return 0;
+      };
+
+      const getDressPriority = (status?: string) => {
+        if (!status) return 0;
+        const s = status.toLowerCase();
+        if (s === 'yes') return 3;
+        if (s === 'incomplete') return 2;
+        if (s === 'no') return 1;
+        return 0;
+      };
+
+      const getDutyPriority = (status?: string) => {
+        if (!status) return 0;
+        const s = status.toLowerCase();
+        if (s === 'yes' || s === 'completed') return 3;
+        if (s === 'incomplete') return 2;
+        if (s === 'no' || s === 'failed') return 1;
+        return 0;
+      };
+
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
       attDocs.forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
-          aMap[data.date] = data as HqDailyAttendanceRecord; 
+          const existing = aMap[data.date];
+          if (!existing || getAttendancePriority(data.status) > getAttendancePriority(existing.status)) {
+            aMap[data.date] = data as HqDailyAttendanceRecord; 
+          }
         }
       });
       setAttendanceMap(aMap);
@@ -742,7 +789,10 @@ export default function StaffProfilePage() {
       dressDocs.forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
-          drMap[data.date] = data as HqDailyDressCodeRecord; 
+          const existing = drMap[data.date];
+          if (!existing || getDressPriority(data.status) > getDressPriority((existing as any).status)) {
+            drMap[data.date] = data as HqDailyDressCodeRecord; 
+          }
         }
       });
       setDressMap(drMap);
@@ -751,7 +801,8 @@ export default function StaffProfilePage() {
       dutyDocs.forEach((d: any) => { 
         const data = d.data();
         if (data.date >= start && data.date <= end) {
-          if (!duMap[data.date] || (data.duties && !duMap[data.date].duties)) {
+          const existing = duMap[data.date];
+          if (!existing || getDutyPriority(data.status) > getDutyPriority((existing as any).status)) {
             duMap[data.date] = data as HqDailyDutyRecord; 
           }
         }
@@ -777,7 +828,7 @@ export default function StaffProfilePage() {
       setContributionsMap(cMap);
 
       // Fetch growth history (all records)
-      const monthlyGpDocs = (await fetchParallel(`${prefix}_growth_points`)).map((d: any) => d.data());
+      const monthlyGpDocs = (await fetchParallel(`growth_points`)).map((d: any) => d.data());
 
       const contribRows: any[] = [];
 

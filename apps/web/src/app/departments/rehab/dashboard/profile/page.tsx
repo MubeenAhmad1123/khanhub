@@ -14,11 +14,13 @@ import {
   Shirt, Award, Clock, Target, DollarSign,
   TrendingUp, Activity, MapPin, Mail, Briefcase,
   AlertCircle, ChevronRight, Download, Info, Sparkles,
-  Heart, CheckCircle2, XCircle, FileText, Eye, LogOut, CreditCard
+  Heart, CheckCircle2, XCircle, FileText, Eye, LogOut, CreditCard,
+  ClipboardList, Coins
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 // --- Enhanced Types matched with HQ data schema ---
 interface AttendanceLog {
@@ -44,15 +46,13 @@ interface DressRecord {
   id: string;
   date: string;
   status?: 'yes' | 'no'; // Legacy backup
-  isCompliant?: boolean; // Regional manager logs boolean
   items?: Array<{ key: string; label: string; status: 'yes' | 'no' | 'na' }>;
 }
 
 interface SpecialTask {
   id: string;
-  description?: string;
-  task?: string; // Legacy fallback
-  status: 'assigned' | 'acknowledged' | 'completed' | 'pending';
+  description: string;
+  status: 'assigned' | 'acknowledged' | 'completed';
   date?: string;
   dueDate?: string;
   createdAt?: string;
@@ -96,13 +96,13 @@ interface SalarySlip {
 
 // Helper to translate raw duty item keys to beautiful labels
 function getDutyLabel(item: any, profile: any) {
-  if (!item) return 'General Duty';
   if (item.label) return item.label;
-  if (!item.key) return 'General Duty';
   
+  // Look up in profile's dutyConfig
   const configItem = profile?.dutyConfig?.find((c: any) => c.key === item.key);
   if (configItem?.label) return configItem.label;
   
+  // Custom manual mappings matching HQ configurations and user requests
   const keyMap: Record<string, string> = {
     'morning': 'Morning Duty',
     'afternoon': 'Afternoon Duty',
@@ -128,18 +128,20 @@ function getDutyLabel(item: any, profile: any) {
   };
 
   if (keyMap[item.key]) return keyMap[item.key];
+  
+  // Fallback to capitalizing the key
   return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 // Helper to translate raw dress item keys to beautiful labels
 function getDressLabel(item: any, profile: any) {
-  if (!item) return 'Uniform Item';
   if (item.label) return item.label;
-  if (!item.key) return 'Uniform Item';
   
+  // Look up in profile's dressCodeConfig
   const configItem = profile?.dressCodeConfig?.find((c: any) => c.key === item.key);
   if (configItem?.label) return configItem.label;
 
+  // Custom manual mappings matching HQ configurations, UNIFORM_RULES, and user requests
   const keyMap: Record<string, string> = {
     'uniform': 'Uniform Shirt',
     'black_suit': 'Black OT Kit / Black Suit',
@@ -160,11 +162,21 @@ function getDressLabel(item: any, profile: any) {
   };
 
   if (keyMap[item.key]) return keyMap[item.key];
+
+  // Fallback to capitalizing the key
   return item.key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+const getDeptPrefix = (dept: string): string => {
+  const d = String(dept || '').toLowerCase();
+  if (d === 'job-center' || d === 'job_center') return 'jobcenter';
+  if (d === 'social-media' || d === 'social_media') return 'media';
+  return d.replace('-', '_');
+};
+
 export default function ProfilePage() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -183,10 +195,59 @@ export default function ProfilePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
   const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
+  const [selectedDay, setSelectedDay] = useState<any | null>(null);
+
+  // Fetch visibility settings using standard hook
+  const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'staff', session?.uid || '');
 
   // Design Tokens for Clean Minimalism
   const cardStyle = "bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-2xl transition-all";
-  const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-[#1D9E75]/20 outline-none text-sm transition-all text-gray-800";
+  const inputStyle = "bg-gray-50 border-gray-100 rounded-xl px-4 py-3 w-full border focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm transition-all text-gray-800";
+
+  // Dynamic Navigation Tabs filtered by visibleSections claims and renamed appropriately
+  const visibleTabs = useMemo(() => {
+    const list = [
+      { id: 'tasks' as const, label: 'Special Tasks', icon: Target, visible: sections.reports !== false },
+      { id: 'attendance' as const, label: 'Attendance', icon: Calendar, visible: sections.attendance !== false },
+      { id: 'duty' as const, label: 'Duties', icon: Briefcase, visible: sections.duties !== false },
+      { id: 'dress' as const, label: 'Dress Code', icon: Shirt, visible: sections.uniform !== false },
+      { id: 'score' as const, label: 'Score', icon: Award, visible: sections.growthPoints !== false },
+      { id: 'finance' as const, label: 'Financial', icon: DollarSign, visible: sections.salary !== false },
+      { id: 'profile' as const, label: 'Identity', icon: Info, visible: true },
+    ];
+    return list.filter(t => t.visible);
+  }, [sections]);
+
+  // Adjust current tab if the loaded one has been disabled/hidden
+  useEffect(() => {
+    if (!visibilityLoading && visibleTabs.length > 0) {
+      const isCurrentTabVisible = visibleTabs.some(t => t.id === activeTab);
+      if (!isCurrentTabVisible) {
+        setActiveTab(visibleTabs[0].id);
+      }
+    }
+  }, [visibleTabs, activeTab, visibilityLoading]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session) return;
+    try {
+      setUploadingPhoto(true);
+      const url = await uploadToCloudinary(file, 'Khan Hub/rehab/profile');
+      await updateDoc(doc(db, 'rehab_users', session.uid), { photoUrl: url });
+      setProfile((p: any) => ({ ...p, photoUrl: url }));
+      toast.success('Official identity photograph updated');
+    } catch (e) {
+      toast.error('Upload transmission failed');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('rehab_session');
+    router.push('/departments/rehab/login');
+  };
 
   const daysInMonth = useCallback(() => {
     if (!selectedMonth || !selectedMonth.includes('-')) return [];
@@ -206,53 +267,242 @@ export default function ProfilePage() {
     return days;
   }, [selectedMonth]);
 
+  const getCalendarCells = () => {
+    if (!selectedMonth) return [];
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    
+    // Day index of 1st day of month (0 = Sun, 1 = Mon...)
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const daysInMonthList = new Date(year, month, 0).getDate();
+    
+    // Convert to Monday start index (0 = Mon, 6 = Sun)
+    const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+    
+    const cells = [];
+    // Pad initial days
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      cells.push(null);
+    }
+    // Add real days
+    for (let i = 1; i <= daysInMonthList; i++) {
+      cells.push(i);
+    }
+    return cells;
+  };
+
   const computedScores = useMemo(() => {
     const days = daysInMonth();
     let attScore = 0;
     let punctScore = 0;
     let uniScore = 0;
     let workScore = 0;
+    let finesTotal = 0;
+
+    const getAttendancePriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'present') return 4;
+      if (s === 'late') return 3;
+      if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+      if (s === 'absent') return 1;
+      return 0;
+    };
+
+    const getDressPriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'yes') return 3;
+      if (s === 'incomplete') return 2;
+      if (s === 'no') return 1;
+      return 0;
+    };
+
+    const getDutyPriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'yes' || s === 'completed') return 3;
+      if (s === 'incomplete') return 2;
+      if (s === 'no' || s === 'failed') return 1;
+      return 0;
+    };
 
     const attMap: Record<string, any> = {};
-    attendance.forEach(a => { attMap[a.date] = a; });
+    attendance.forEach(a => { 
+      const existing = attMap[a.date];
+      if (!existing || getAttendancePriority(a.status) > getAttendancePriority(existing.status)) {
+        attMap[a.date] = a; 
+      }
+    });
 
     const dressMap: Record<string, any> = {};
-    dressLogs.forEach(d => { dressMap[d.date] = d; });
+    dressLogs.forEach(d => { 
+      const existing = dressMap[d.date];
+      if (!existing || getDressPriority(d.status) > getDressPriority(existing.status)) {
+        dressMap[d.date] = d; 
+      }
+    });
 
     const dutyMap: Record<string, any> = {};
-    duties.forEach(d => { dutyMap[d.date] = d; });
+    duties.forEach(d => { 
+      const existing = dutyMap[d.date];
+      if (!existing || getDutyPriority(d.status) > getDutyPriority(existing.status)) {
+        dutyMap[d.date] = d; 
+      }
+    });
+
+    const fineMap: Record<string, any[]> = {};
+    fines.forEach(f => {
+      if (f.date) {
+        if (!fineMap[f.date]) fineMap[f.date] = [];
+        fineMap[f.date].push(f);
+      }
+    });
+
+    const dailyBreakdown: any[] = [];
 
     days.forEach(day => {
+      // Day Fines
+      const dayFinesList = fineMap[day] || [];
+      const dayFines = dayFinesList.reduce((acc: number, f: any) => acc + (Number(f.amount) || 0), 0);
+      finesTotal += dayFines;
+
+      // 1. Attendance: 1 point if present and NOT late
       const att = attMap[day];
+      let attStatus = 'unmarked';
+      let isLate = false;
       if (att) {
-        const status = String(att.status || '').toLowerCase();
-        const isLate = att.isLate === true || status === 'late';
-        if (status === 'present' && !isLate) {
+        attStatus = att.status || 'unmarked';
+        isLate = att.isLate === true || attStatus === 'late';
+        if (attStatus === 'present' && !isLate) {
           attScore++;
         }
-        if (att.arrivedOnTime !== false) punctScore++;
+        if (att.arrivedOnTime !== false && !isLate) {
+          punctScore++;
+        }
       }
 
+      let attendanceStatus = 'unmarked';
+      if (attStatus === 'paid_leave' || attStatus === 'unpaid_leave' || attStatus === 'leave') {
+        attendanceStatus = 'leave';
+      } else if (['present', 'absent', 'late', 'unmarked', 'leave'].includes(attStatus)) {
+        attendanceStatus = attStatus;
+      }
+      if (isLate && attendanceStatus === 'present') {
+        attendanceStatus = 'late';
+      }
+
+      const onLeave = attendanceStatus === 'leave';
+
+      // 3. Uniform: 1 point if all items are compliant
       const dress = dressMap[day];
-      if (dress) {
-        const config = profile?.dressCodeConfig || [];
-        const items = dress.items || [];
-        const missing = config.filter((c: any) => {
-          const item = items.find((i: any) => i.key === c.key);
-          return !item || item.status === 'no';
-        });
-        if (config.length > 0 && missing.length === 0) uniScore++;
+      let uniformStatus = 'no';
+      if (onLeave) {
+        uniformStatus = 'na';
+      } else if (dress) {
+        uniformStatus = dress.status || 'no';
+      } else {
+        uniformStatus = 'unmarked';
       }
 
+      let isDressCompliant = false;
+      if (!onLeave && uniformStatus !== 'unmarked') {
+        if (dress) {
+          if (dress.status === 'yes' || dress.isCompliant === true) {
+            isDressCompliant = true;
+          } else {
+            const config = profile?.dressCodeConfig || [];
+            const items = dress.items || [];
+            if (config.length === 0) {
+              if (dress.status !== 'no') isDressCompliant = true;
+            } else {
+              const missing = config.filter((c: any) => {
+                const item = items.find((i: any) => i.key === c.key);
+                return !item || item.status === 'no' || item.wearing === false;
+              });
+              if (missing.length === 0) isDressCompliant = true;
+            }
+          }
+        }
+        if (isDressCompliant) {
+          uniScore++;
+          uniformStatus = 'yes';
+        } else {
+          uniformStatus = 'incomplete';
+        }
+      }
+
+      // 4. Working (Duties): 1 point if all duties are done
       const duty = dutyMap[day];
-      if (duty) {
-        const config = profile?.dutyConfig || [];
-        const items = duty.duties || [];
-        const pending = config.filter((c: any) => {
-          const item = items.find((i: any) => i.key === c.key);
-          return !item || item.status === 'not_done';
-        });
-        if (config.length > 0 && pending.length === 0) workScore++;
+      let dutyStatus = 'no';
+      if (onLeave) {
+        dutyStatus = 'na';
+      } else if (duty) {
+        dutyStatus = duty.status || 'no';
+      } else {
+        dutyStatus = 'unmarked';
+      }
+
+      let isDutyCompliant = false;
+      if (!onLeave && dutyStatus !== 'unmarked') {
+        if (duty) {
+          if (duty.status === 'yes' || duty.status === 'completed') {
+            isDutyCompliant = true;
+          } else {
+            const config = profile?.dutyConfig || [];
+            const items = duty.duties || [];
+            if (config.length === 0) {
+              if (duty.status !== 'no' && duty.status !== 'failed') isDutyCompliant = true;
+            } else {
+              const pending = config.filter((c: any) => {
+                const item = items.find((i: any) => i.key === c.key);
+                return !item || item.status === 'pending' || item.status === 'not_done';
+              });
+              if (pending.length === 0) isDutyCompliant = true;
+            }
+          }
+        }
+        if (isDutyCompliant) {
+          workScore++;
+          dutyStatus = 'yes';
+        } else {
+          dutyStatus = 'incomplete';
+        }
+      }
+
+      // Daily point rules
+      const attPoint = (attendanceStatus === 'present') ? 1 : 0;
+      const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
+      const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
+      const dailyPoints = attPoint + uniformPoint + dutyPoint;
+
+      const dayNum = parseInt(day.split('-')[2], 10);
+
+      dailyBreakdown.push({
+        date: day,
+        day: dayNum,
+        attendance: attendanceStatus,
+        uniform: uniformStatus,
+        duty: dutyStatus,
+        score: dailyPoints,
+        fines: dayFines,
+        fineReasons: dayFinesList.map((f: any) => `${f.reason} (₨${f.amount})`).join(', '),
+        details: {
+          uniformItems: dress?.items || [],
+          dutyItems: duty?.duties || []
+        }
+      });
+    });
+
+    let gpScore = 0;
+    days.forEach(day => {
+      const contrib = contributionsMap[day];
+      if (contrib) {
+        const status = String(contrib.status || '').toLowerCase();
+        if (status === 'yes' || contrib.isApproved === true) {
+          gpScore++;
+        }
       }
     });
 
@@ -262,192 +512,19 @@ export default function ProfilePage() {
         return itemMonth === selectedMonth && item.category === 'Growth Point Bonus';
       })
       .reduce((acc, curr) => acc + (Number(curr.points) || 0), 0);
-
-    const dailyPointsSum = attScore + uniScore + workScore;
-    const normalizedDaily = days.length > 0 ? Math.round((dailyPointsSum / (days.length * 3)) * 90) : 0;
-    const totalScore = Math.min(100, normalizedDaily + extraPoints);
+    gpScore += extraPoints;
 
     return {
       attendance: attScore,
       punctuality: punctScore,
       uniform: uniScore,
       working: workScore,
-      growthPoint: extraPoints,
-      normalizedDaily,
-      totalScore,
-      workingDays: days.length
+      growthPoint: gpScore,
+      workingDays: days.length,
+      dailyBreakdown,
+      finesTotal
     };
-  }, [profile, attendance, dressLogs, duties, growthHistory, selectedMonth, daysInMonth]);
-
-  const fetchMetrics = useCallback(async (sId: string, authUid?: string, customId?: string, employeeId?: string) => {
-    try {
-      const prefix = 'rehab';
-      
-      const candidateIds = new Set<string>();
-      if (sId) {
-        candidateIds.add(sId);
-        candidateIds.add(sId.startsWith('rehab_') ? sId.replace('rehab_', '') : sId);
-        candidateIds.add(sId.startsWith('rehab_') ? sId : `rehab_${sId}`);
-      }
-      if (authUid) {
-        candidateIds.add(authUid);
-        candidateIds.add(authUid.startsWith('rehab_') ? authUid.replace('rehab_', '') : authUid);
-        candidateIds.add(authUid.startsWith('rehab_') ? authUid : `rehab_${authUid}`);
-      }
-      if (customId) {
-        candidateIds.add(customId);
-      }
-      if (employeeId) {
-        candidateIds.add(employeeId);
-      }
-
-      const uniqueIds = Array.from(candidateIds).filter(Boolean);
-
-      const fetchForCandidates = async (colName: string) => {
-        const snaps = await Promise.all(
-          uniqueIds.map(id => 
-            getDocs(query(collection(db, colName), where('staffId', '==', id)))
-              .catch(() => ({ docs: [] } as any))
-          )
-        );
-        const allDocs = snaps.flatMap(snap => snap.docs);
-        return { docs: allDocs };
-      };
-
-      const [
-        attSnap,
-        dutySnap,
-        dressSnap,
-        taskSnap,
-        fineSnap,
-        growthSnap,
-        salarySnap
-      ] = await Promise.all([
-        fetchForCandidates(`${prefix}_attendance`),
-        fetchForCandidates(`${prefix}_duty_logs`),
-        fetchForCandidates(`${prefix}_dress_logs`),
-        fetchForCandidates(`${prefix}_special_tasks`),
-        fetchForCandidates(`${prefix}_fines`),
-        fetchForCandidates(`${prefix}_growth_points`),
-        fetchForCandidates(`${prefix}_salary_records`)
-      ]);
-
-      const mergeAndSort = (snap: any, dateField: string = 'date') => {
-        const combined = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-        const unique = Array.from(new Map(combined.map((item: any) => [item.id, item])).values());
-        return unique.sort((a: any, b: any) => {
-          const da = a[dateField] || '';
-          const db = b[dateField] || '';
-          return db.toString().localeCompare(da.toString());
-        });
-      };
-
-      setAttendance(mergeAndSort(attSnap, 'date') as any);
-      setDuties(mergeAndSort(dutySnap, 'date') as any);
-      setDressLogs(mergeAndSort(dressSnap, 'date') as any);
-      setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
-      setFines(mergeAndSort(fineSnap, 'date') as any);
-
-      const rawGrowth = mergeAndSort(growthSnap, 'date') as any;
-      const extraRows: any[] = [];
-      growthSnap.docs.forEach((d: any) => {
-        const data = d.data();
-        if (Number(data.extra) > 0) {
-          extraRows.push({
-            id: `${d.id}_extra`,
-            points: data.extra,
-            reason: 'Monthly Bonus/Extra Points',
-            category: 'Growth Point Bonus',
-            date: `${data.month || '2026-06'}-28`,
-            month: data.month || '2026-06'
-          });
-        }
-      });
-      
-      const combinedGrowth = [...rawGrowth, ...extraRows];
-      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
-        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
-      setGrowthHistory(uniqueGrowth as GrowthRecord[]);
-
-      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
-      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
-        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
-      setSalaryRecords(uniqueSalaries);
-
-    } catch (error) {
-      console.error("Critical sync failure in fetchMetrics:", error);
-      toast.error("Some system synchronization logs were unavailable.");
-    }
-  }, []);
-
-  useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
-    const parsed = JSON.parse(sessionData);
-    setSession(parsed);
-
-    const loadProfile = async () => {
-      try {
-        setLoading(true);
-
-        const [userSnap, staffSnap] = await Promise.all([
-          getDoc(doc(db, 'rehab_users', parsed.uid)).catch(() => null),
-          getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid))).catch(() => null)
-        ]);
-
-        let uData: any = {};
-        let finalId = parsed.uid;
-
-        if (userSnap && userSnap.exists()) {
-          uData = { ...userSnap.data() };
-        }
-        if (staffSnap && !staffSnap.empty) {
-          const docSnap = staffSnap.docs[0];
-          uData = { ...docSnap.data(), ...uData };
-          finalId = docSnap.id;
-        }
-
-        if (!uData.name && !uData.displayName) { 
-          toast.error("User profile not found in active ledger.");
-          router.push('/departments/rehab/login'); 
-          return; 
-        }
-
-        setProfile({ 
-          id: finalId, 
-          ...uData,
-          phone: uData.phone || uData.phoneNumber || uData.mobile || parsed.phone || parsed.phoneNumber || ''
-        });
-
-        await fetchMetrics(finalId, parsed.uid, uData.customId, uData.employeeId);
-      } catch (err) {
-        console.error(err);
-        toast.error("Secure synchronization failed.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadProfile();
-  }, [router, fetchMetrics]);
-
-  const handleUploadPhoto = async (file: File) => {
-    try {
-      setUploadingPhoto(true);
-      const url = await uploadToCloudinary(file, 'Khan Hub/rehab/profile');
-      await updateDoc(doc(db, 'rehab_users', session.uid), { photoUrl: url });
-      setProfile((p: any) => ({ ...p, photoUrl: url }));
-      toast.success('Official identity photograph updated');
-    } catch (e) {
-      toast.error('Upload failed');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('rehab_session');
-    router.push('/departments/rehab/login');
-  };
+  }, [profile, attendance, dressLogs, duties, contributionsMap, growthHistory, fines, selectedMonth, daysInMonth]);
 
   // Standardized Dynamic Finance Calculations (Leaves are Paid)
   const salaryDetails = useMemo(() => {
@@ -475,7 +552,7 @@ export default function ProfilePage() {
       };
     }
 
-    const monthlySalary = Number(profile.monthlySalary) || 0;
+    const monthlySalary = Number(profile.monthlySalary || profile.salary || 0);
     const dailyWage = monthlySalary / 30;
 
     // Check if finalized slip exists
@@ -503,8 +580,23 @@ export default function ProfilePage() {
     const payableDatesList: { date: string; status: string }[] = [];
     const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
 
+    const getAttendancePriority = (status?: string) => {
+      if (!status) return 0;
+      const s = status.toLowerCase();
+      if (s === 'present') return 4;
+      if (s === 'late') return 3;
+      if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+      if (s === 'absent') return 1;
+      return 0;
+    };
+
     const attMap: Record<string, any> = {};
-    attendance.forEach(a => { attMap[a.date] = a; });
+    attendance.forEach(a => {
+      const existing = attMap[a.date];
+      if (!existing || getAttendancePriority(a.status) > getAttendancePriority(existing.status)) {
+        attMap[a.date] = a;
+      }
+    });
 
     days.forEach(dayStr => {
       const att = attMap[dayStr];
@@ -607,43 +699,232 @@ export default function ProfilePage() {
     return Math.round((present / recent30.length) * 100);
   }, [attendance]);
 
-  if (loading) return (
+  // Robust Dual Fetcher matching HQ dashboard patterns
+  const fetchMetrics = useCallback(async (
+    sId: string, 
+    authUid?: string, 
+    customId?: string, 
+    employeeId?: string,
+    prefixes: string[] = ['rehab']
+  ) => {
+    try {
+      const candidateIds = new Set<string>();
+      if (sId) {
+        candidateIds.add(sId);
+        prefixes.forEach(p => {
+          candidateIds.add(sId.startsWith(`${p}_`) ? sId.replace(`${p}_`, '') : sId);
+          candidateIds.add(sId.startsWith(`${p}_`) ? sId : `${p}_${sId}`);
+        });
+      }
+      if (authUid) {
+        candidateIds.add(authUid);
+        prefixes.forEach(p => {
+          candidateIds.add(authUid.startsWith(`${p}_`) ? authUid.replace(`${p}_`, '') : authUid);
+          candidateIds.add(authUid.startsWith(`${p}_`) ? authUid : `${p}_${authUid}`);
+        });
+      }
+      if (customId) {
+        candidateIds.add(customId);
+      }
+      if (employeeId) {
+        candidateIds.add(employeeId);
+      }
+
+      const uniqueIds = Array.from(candidateIds).filter(Boolean);
+
+      const fetchForCandidates = async (suffix: string) => {
+        const docsList: any[] = [];
+        for (const p of prefixes) {
+          const colName = `${p}_${suffix}`;
+          const snaps = await Promise.all(
+            uniqueIds.map(id => 
+              getDocs(query(collection(db, colName), where('staffId', '==', id)))
+                .catch(() => ({ docs: [] } as any))
+            )
+          );
+          docsList.push(...snaps.flatMap(snap => snap.docs));
+        }
+        return { docs: docsList };
+      };
+
+      const [
+        attSnap,
+        dutySnap,
+        dressSnap,
+        taskSnap,
+        fineSnap,
+        growthSnap,
+        salarySnap,
+        contribSnap
+      ] = await Promise.all([
+        fetchForCandidates(`attendance`),
+        fetchForCandidates(`duty_logs`),
+        fetchForCandidates(`dress_logs`),
+        fetchForCandidates(`special_tasks`),
+        fetchForCandidates(`fines`),
+        fetchForCandidates(`growth_points`),
+        fetchForCandidates(`salary_records`),
+        fetchForCandidates(`contributions`)
+      ]);
+
+      const mergeAndSort = (snap: any, dateField: string = 'date') => {
+        const combined = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        const unique = Array.from(new Map(combined.map((item: any) => [item.id, item])).values());
+        return unique.sort((a: any, b: any) => {
+          const da = a[dateField] || '';
+          const db = b[dateField] || '';
+          return db.toString().localeCompare(da.toString());
+        });
+      };
+
+      setAttendance(mergeAndSort(attSnap, 'date') as any);
+      setDuties(mergeAndSort(dutySnap, 'date') as any);
+      setDressLogs(mergeAndSort(dressSnap, 'date') as any);
+      setSpecialTasks(mergeAndSort(taskSnap, 'createdAt') as any);
+      setFines(mergeAndSort(fineSnap, 'date') as any);
+
+      // Extract contributions map
+      const cMap: Record<string, any> = {};
+      contribSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (data.date) {
+          cMap[data.date] = data;
+        }
+      });
+      setContributionsMap(cMap);
+
+      // Process growth points / extra monthly bonus points
+      const rawGrowth = mergeAndSort(growthSnap, 'date') as any;
+      const extraRows: any[] = [];
+      growthSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (Number(data.extra) > 0) {
+          extraRows.push({
+            id: `${d.id}_extra`,
+            points: data.extra,
+            reason: 'Monthly Bonus/Extra Points',
+            category: 'Growth Point Bonus',
+            date: `${data.month || '2026-06'}-28`,
+            month: data.month || '2026-06'
+          });
+        }
+      });
+      
+      const contribRows = contribSnap.docs
+        .map((d: any) => d.data())
+        .filter((item: any) => item.status === 'yes' || item.isApproved === true)
+        .map((item: any) => ({
+          id: item.date,
+          points: 1,
+          reason: item.link ? `Contribution: ${item.link}` : 'Daily Growth Contribution',
+          category: 'Growth Point',
+          date: item.date,
+          month: item.date && typeof item.date === 'string' ? item.date.substring(0, 7) : ''
+        }));
+
+      const combinedGrowth = [...rawGrowth, ...extraRows, ...contribRows];
+      const uniqueGrowth = Array.from(new Map(combinedGrowth.map((item: any) => [item.id + '_' + item.category, item])).values())
+        .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+      setGrowthHistory(uniqueGrowth);
+
+      const salaryCombined = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip));
+      const uniqueSalaries = Array.from(new Map(salaryCombined.map(item => [item.id, item])).values())
+        .sort((a: SalarySlip, b: SalarySlip) => b.month.localeCompare(a.month));
+      setSalaryRecords(uniqueSalaries);
+
+    } catch (error) {
+      console.error("Critical sync failure in fetchMetrics:", error);
+      toast.error("Some system synchronization logs were unavailable.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const parsed = JSON.parse(sessionData);
+    setSession(parsed);
+
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const userRef = doc(db, 'rehab_users', parsed.uid);
+        let userSnap = await getDoc(userRef);
+        let uData = null;
+        if (userSnap.exists()) {
+          uData = userSnap.data();
+        }
+
+        const fallbackSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+        let sData = null;
+        let staffId = parsed.uid;
+        if (!fallbackSnap.empty) {
+          sData = fallbackSnap.docs[0].data();
+          staffId = fallbackSnap.docs[0].id;
+        }
+
+        if (!uData && !sData) {
+          toast.error("Profile registry not found.");
+          return;
+        }
+
+        const merged = { ...sData, ...uData, staffId } as any;
+        setProfile(merged);
+
+        const primaryDept = merged.department || 'rehab';
+        const secondaryDepts = merged.secondaryDepts || [];
+        const prefixes = Array.from(new Set([
+          getDeptPrefix(primaryDept),
+          ...secondaryDepts.map((d: any) => getDeptPrefix(d))
+        ])).filter(Boolean);
+
+        await fetchMetrics(staffId, parsed.uid, merged.customId, merged.employeeId, prefixes);
+      } catch (err) {
+        console.error("Profile load failure:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [router, fetchMetrics]);
+
+  if (loading || visibilityLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]">
-      <Loader2 className="animate-spin text-teal-600 w-10 h-10 mb-4" />
+      <Loader2 className="animate-spin text-emerald-600 w-10 h-10 mb-4" />
       <p className="text-xs font-medium text-gray-400 tracking-widest uppercase">Synchronizing Data Nexus...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-gray-900 font-sans selection:bg-teal-100">
+    <div className="min-h-screen bg-[#F9FAFB] text-gray-900 font-sans selection:bg-emerald-100">
       
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
               <Activity size={22} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Rehab Gateway</h1>
+              <h1 className="text-lg font-bold text-gray-900">Rehab Center Portal</h1>
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 <span>Staff Portal</span>
-                <span className="w-1 h-1 bg-teal-500 rounded-full inline-block"></span>
-                <span className="text-teal-600">Live</span>
+                <span className="w-1 h-1 bg-green-500 rounded-full inline-block"></span>
+                <span className="text-green-600">Live</span>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-             <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
-                <Award className="text-amber-500" size={16} />
-                <span className="text-xs font-bold text-gray-700">
-                  {computedScores.totalScore} / 100 Points
-                </span>
-             </div>
+             {sections.growthPoints !== false && (
+                <div className="hidden md:flex bg-gray-50 px-4 py-2 rounded-full border border-gray-100 items-center gap-2">
+                   <Award className="text-amber-500" size={16} />
+                   <span className="text-xs font-bold text-gray-700">{computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint} Points</span>
+                </div>
+             )}
              <button 
                onClick={handleLogout}
-               className="p-2.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all tooltip" 
+               className="p-2.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all tooltip" 
                title="Sign Out"
              >
                <LogOut size={20} />
@@ -657,7 +938,8 @@ export default function ProfilePage() {
         {/* Left Sidebar Profile Card */}
         <aside className="lg:col-span-4 space-y-6">
           <div className={`${cardStyle} p-8 text-center relative overflow-hidden`}>
-            <div className="absolute top-0 left-0 w-full h-1 bg-teal-500"></div>
+            {/* Minimal geometric flair */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
             
             <div className="relative inline-block group mx-auto mb-6">
               <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-4 border-white shadow-md ring-1 ring-gray-100 relative">
@@ -672,17 +954,20 @@ export default function ProfilePage() {
             </div>
 
             <h2 className="text-xl font-bold text-gray-900">{profile?.displayName || profile?.name}</h2>
-            <p className="text-teal-600 font-semibold text-xs uppercase tracking-wider mt-1 bg-teal-50 px-3 py-1 rounded-full inline-block">
-              {profile?.designation || 'Healthcare Member'}
-            </p>
+            
+            {sections.designation !== false && (
+              <p className="text-emerald-600 font-semibold text-xs uppercase tracking-wider mt-1 bg-emerald-50 px-3 py-1 rounded-full inline-block">
+                {profile?.designation || 'Rehab Practitioner'}
+              </p>
+            )}
 
             <div className="mt-8 space-y-2">
               <div className="flex items-center gap-3 p-3.5 bg-gray-50/50 rounded-xl border border-gray-50 text-left group hover:border-gray-200 transition-colors">
-                <Mail size={16} className="text-gray-400 group-hover:text-teal-500 transition-colors" />
+                <Mail size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
                 <span className="text-sm text-gray-600 font-medium truncate">{profile?.email}</span>
               </div>
               <div className="flex items-center gap-3 p-3.5 bg-gray-50/50 rounded-xl border border-gray-50 text-left group hover:border-gray-200 transition-colors">
-                <Phone size={16} className="text-gray-400 group-hover:text-teal-500 transition-colors" />
+                <Phone size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
                 <span className="text-sm text-gray-600 font-medium">{profile?.phone || 'No contact linked'}</span>
               </div>
             </div>
@@ -694,35 +979,41 @@ export default function ProfilePage() {
               </div>
               <div className="bg-gray-50 p-3 rounded-xl text-center border border-gray-100">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Dept</div>
-                <div className="text-sm font-bold text-gray-800 mt-0.5 uppercase">Rehab</div>
+                <div className="text-sm font-bold text-gray-800 mt-0.5 uppercase">Hospital</div>
               </div>
             </div>
           </div>
 
           {/* Quick Overview Analytics Card */}
-          <div className={`${cardStyle} p-6`}>
-            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <TrendingUp size={16} className="text-teal-500" />
-              Performance Index
-            </h3>
-            <div className="space-y-5">
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500 font-medium">Attendance Rate (Past 30d)</span>
-                  <span className="font-bold text-gray-900">{attendancePerformance}%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-500 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-50">
-                <span className="text-xs text-gray-500 font-medium">Task Success Ratio</span>
-                <span className="text-sm font-bold text-gray-800">
-                  {specialTasks.filter(t => t.status === 'completed').length} / {specialTasks.length}
-                </span>
+          {(sections.attendance !== false || sections.reports !== false) && (
+            <div className={`${cardStyle} p-6`}>
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                <TrendingUp size={16} className="text-emerald-500" />
+                Performance Index
+              </h3>
+              <div className="space-y-5">
+                {sections.attendance !== false && (
+                  <div>
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-gray-500 font-medium">Attendance Rate (Past 30d)</span>
+                      <span className="font-bold text-gray-900">{attendancePerformance}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${attendancePerformance}%` }}></div>
+                    </div>
+                  </div>
+                )}
+                {sections.reports !== false && (
+                  <div className={`flex justify-between items-center ${sections.attendance !== false ? 'pt-2 border-t border-gray-50' : ''}`}>
+                    <span className="text-xs text-gray-500 font-medium">Task Success Ratio</span>
+                    <span className="text-sm font-bold text-gray-800">
+                      {specialTasks.filter(t => t.status === 'completed').length} / {specialTasks.length}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
         </aside>
 
         {/* Right Content Block */}
@@ -730,28 +1021,20 @@ export default function ProfilePage() {
           
           {/* Minimalist Top Navigation Tabs */}
           <nav className="flex gap-1 overflow-x-auto no-scrollbar bg-white p-1.5 rounded-xl border border-gray-100 shadow-sm">
-            {[
-              { id: 'tasks', label: 'Task Board', icon: Target },
-              { id: 'attendance', label: 'Presence', icon: Calendar },
-              { id: 'duty', label: 'Duties', icon: Briefcase },
-              { id: 'dress', label: 'Apparel', icon: Shirt },
-              { id: 'score', label: 'Scoring', icon: Award },
-              { id: 'finance', label: 'Ledger', icon: DollarSign },
-              { id: 'profile', label: 'Identity', icon: Info },
-            ].map(tab => {
+            {visibleTabs.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2.5 px-5 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all duration-200
                     ${isActive 
                       ? 'bg-gray-900 text-white shadow-md shadow-gray-200' 
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                     }`}
                 >
-                  <Icon size={16} className={isActive ? 'text-teal-400' : 'text-gray-400'} />
+                  <Icon size={16} className={isActive ? 'text-emerald-400' : 'text-gray-400'} />
                   {tab.label}
                 </button>
               );
@@ -762,7 +1045,7 @@ export default function ProfilePage() {
           <div className={`${cardStyle} p-6 min-h-[500px]`}>
             
             {/* --- TASKS TAB --- */}
-            {activeTab === 'tasks' && (
+            {activeTab === 'tasks' && sections.reports !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -770,7 +1053,7 @@ export default function ProfilePage() {
                       <Target size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Assigned Mission Criticals</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Assigned Special Tasks</h3>
                       <p className="text-xs text-gray-500 font-medium">Review special tasks designated by administration</p>
                     </div>
                   </div>
@@ -779,7 +1062,6 @@ export default function ProfilePage() {
                 <div className="space-y-3">
                   {specialTasks.length > 0 ? specialTasks.map(task => {
                     const isDone = task.status === 'completed';
-                    const desc = task.description || task.task || 'Assigned Duty';
                     return (
                       <div key={task.id} className="group bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row md:items-center gap-4 hover:border-gray-300 transition-all shadow-sm hover:shadow-md">
                         <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${isDone ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
@@ -787,7 +1069,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1">
                           <p className={`font-bold text-sm text-gray-900 ${isDone ? 'line-through opacity-60' : ''}`}>
-                            {desc}
+                            {task.description}
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 font-semibold uppercase tracking-wider">
                             <span>{formatDateDMY(task.createdAt || task.date)}</span>
@@ -804,7 +1086,7 @@ export default function ProfilePage() {
                             {task.status}
                           </span>
                           {task.points && (
-                            <span className="text-[11px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-md">
+                            <span className="text-[11px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-md">
                               +{task.points} PTS
                             </span>
                           )}
@@ -822,15 +1104,15 @@ export default function ProfilePage() {
             )}
 
             {/* --- ATTENDANCE TAB --- */}
-            {activeTab === 'attendance' && (
+            {activeTab === 'attendance' && sections.attendance !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600">
+                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
                       <Calendar size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Time & Presence Audit</h3>
+                      <h3 className="text-lg font-bold text-gray-950">Time & Attendance Audit</h3>
                       <p className="text-xs text-gray-500 font-medium">Official timeline of check-ins and daily presence</p>
                     </div>
                   </div>
@@ -861,7 +1143,7 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider border ${
-                          log.status === 'present' 
+                           log.status === 'present' 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : log.status === 'absent'
                               ? 'bg-red-50 text-red-700 border-red-100'
@@ -882,7 +1164,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- DUTY LOGS TAB --- */}
-            {activeTab === 'duty' && (
+            {activeTab === 'duty' && sections.duties !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -939,7 +1221,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- DRESS CODE TAB --- */}
-            {activeTab === 'dress' && (
+            {activeTab === 'dress' && sections.uniform !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -947,7 +1229,7 @@ export default function ProfilePage() {
                       <Shirt size={20} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Appearance Compliance</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Dress Code Compliance</h3>
                       <p className="text-xs text-gray-500 font-medium">Review uniform code status evaluations</p>
                     </div>
                   </div>
@@ -974,7 +1256,7 @@ export default function ProfilePage() {
                                   : 'bg-orange-50 border-orange-100 text-orange-700'
                                 }`}
                           >
-                            {item.status === 'yes' ? <CheckCircle2 size={12} /> : item.status === 'na' ? <MinusCircle size={12} /> : <AlertCircle size={12} />}
+                            {item.status === 'yes' ? <CheckCircle2 size={12} /> : item.status === 'na' ? <MinusCircle size={12} /> : <AlertTriangle size={12} />}
                             {getDressLabel(item, profile)}
                           </div>
                         )) : (
@@ -996,7 +1278,7 @@ export default function ProfilePage() {
             )}
 
             {/* --- SCORING TAB --- */}
-            {activeTab === 'score' && (
+            {activeTab === 'score' && sections.growthPoints !== false && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
                   <div className="flex items-center gap-3">
@@ -1011,30 +1293,278 @@ export default function ProfilePage() {
                   <input
                     type="month"
                     value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#1D9E75]/20 w-full sm:w-auto"
+                    onChange={(e) => {
+                      setSelectedMonth(e.target.value);
+                      setSelectedDay(null); // Reset selected day on month change
+                    }}
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-emerald-500/20 w-full sm:w-auto"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-xl relative overflow-hidden">
                      <Sparkles className="absolute right-2 top-2 text-white opacity-10 w-20 h-20 -rotate-12" />
-                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Monthly Bonus Points</p>
-                     <div className="text-3xl font-black text-amber-400">{computedScores.growthPoint} / 10</div>
+                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total Growth Vault</p>
+                     <div className="text-3xl font-black text-amber-400">{computedScores.growthPoint}</div>
                   </div>
                   <div className="border border-gray-100 p-6 rounded-xl">
                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Punctuality Ratio</p>
                      <div className="text-2xl font-black text-gray-900">
                         {computedScores.workingDays > 0 
-                           ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
-                           : 0}%
+                          ? Math.round((computedScores.punctuality / computedScores.workingDays) * 100) 
+                          : 0}%
                      </div>
                   </div>
                   <div className="border border-gray-100 p-6 rounded-xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Monthly Score</p>
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Score</p>
                      <div className="text-2xl font-black text-gray-900">
-                       {computedScores.totalScore} / 100
+                       {computedScores.attendance + computedScores.uniform + computedScores.working + computedScores.growthPoint}
                      </div>
+                  </div>
+                </div>
+
+                {/* Interactive Calendar Heatmap */}
+                <div className="bg-slate-50 border border-slate-100/80 rounded-3xl p-4 sm:p-6 mb-8 print:hidden">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="text-slate-900 font-extrabold text-sm sm:text-base flex items-center gap-2">
+                        <Calendar size={18} className="text-indigo-600 animate-pulse" />
+                        Performance Calendar Heatmap
+                      </h3>
+                      <p className="text-slate-400 text-[11px] font-medium mt-0.5">Click any day box below to audit daily granular logs</p>
+                    </div>
+                    
+                    {/* Heatmap Legend */}
+                    <div className="flex flex-wrap gap-2 text-[9px] font-extrabold uppercase tracking-wide">
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600 block shadow-sm" /> 3/3 Pts</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-200 block" /> 2 Pts</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-200 block" /> 1 Pt</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-rose-100 border border-rose-200 block" /> Absent</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-purple-100 border border-purple-200 block" /> Leave</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-slate-200 block" /> Unmarked</div>
+                    </div>
+                  </div>
+
+                  {/* Calendar Layout */}
+                  <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                    {/* Weekday headers */}
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(w => (
+                      <div key={w} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-1">{w}</div>
+                    ))}
+                    
+                    {/* Calendar cells */}
+                    {getCalendarCells().map((cell, idx) => {
+                      if (cell === null) {
+                        return <div key={`empty-${idx}`} className="aspect-square bg-slate-100/30 rounded-xl" />;
+                      }
+
+                      const dayStr = String(cell).padStart(2, '0');
+                      const dayDate = `${selectedMonth}-${dayStr}`;
+                      const dayLog = computedScores.dailyBreakdown.find((b: any) => b.date === dayDate);
+                      
+                      let cellBg = 'bg-slate-200 hover:bg-slate-300';
+                      let cellText = 'text-slate-600 font-extrabold';
+                      let borderClass = 'border border-slate-100';
+
+                      if (dayLog) {
+                        const isUnmarked = dayLog.attendance === 'unmarked';
+                        const isAbsent = dayLog.attendance === 'absent';
+                        const isLeave = dayLog.attendance === 'leave';
+
+                        if (isLeave) {
+                          cellBg = 'bg-purple-100 hover:bg-purple-200';
+                          cellText = 'text-purple-700 font-extrabold';
+                          borderClass = 'border border-purple-200';
+                        } else if (isAbsent) {
+                          cellBg = 'bg-rose-100 hover:bg-rose-200';
+                          cellText = 'text-rose-700 font-extrabold';
+                          borderClass = 'border border-rose-200';
+                        } else if (isUnmarked) {
+                          cellBg = 'bg-slate-100 hover:bg-slate-250';
+                          cellText = 'text-slate-400 font-semibold';
+                        } else {
+                          // Numeric scores
+                          if (dayLog.score === 3) {
+                            cellBg = 'bg-emerald-600 hover:bg-emerald-700';
+                            cellText = 'text-white font-black';
+                          } else if (dayLog.score === 2) {
+                            cellBg = 'bg-emerald-100 hover:bg-emerald-200';
+                            cellText = 'text-emerald-800 font-extrabold';
+                            borderClass = 'border border-emerald-300';
+                          } else {
+                            cellBg = 'bg-amber-100 hover:bg-amber-255 hover:bg-amber-250';
+                            cellText = 'text-amber-800 font-extrabold';
+                            borderClass = 'border border-amber-300';
+                          }
+                        }
+                      }
+
+                      const isCurrentlySelected = selectedDay && selectedDay.date === dayDate;
+
+                      return (
+                        <button 
+                          type="button"
+                          key={`cell-${cell}`}
+                          onClick={() => setSelectedDay(dayLog || null)}
+                          className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${cellBg} ${cellText} ${borderClass} ${
+                            isCurrentlySelected ? 'ring-4 ring-indigo-500 shadow-lg scale-105 z-10' : 'hover:scale-103'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">{cell}</span>
+                          {dayLog && dayLog.attendance !== 'unmarked' && dayLog.attendance !== 'leave' && dayLog.attendance !== 'absent' && (
+                            <span className="text-[8px] sm:text-[9px] opacity-80 leading-none mt-0.5">{dayLog.score}★</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Day details subpanel */}
+                {selectedDay && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5 shadow-inner mb-8 print:hidden animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-200">
+                      <div>
+                        <h4 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">Granular Day Audit Logs</h4>
+                        <p className="text-xs text-indigo-600 font-extrabold mt-0.5">Selected Date: {selectedDay.date}</p>
+                      </div>
+                      <span className="text-xs font-black bg-indigo-100 border border-indigo-200/50 text-indigo-700 px-3 py-1 rounded-xl">
+                        Score: {selectedDay.score} / 3 Pts
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                      {/* Attendance */}
+                      <div className="bg-white border border-slate-100 rounded-2xl p-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
+                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                          selectedDay.attendance === 'present' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
+                          selectedDay.attendance === 'late' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+                          selectedDay.attendance === 'absent' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                          selectedDay.attendance === 'leave' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                          'bg-slate-100 border-slate-200 text-slate-400'
+                        }`}>
+                          {selectedDay.attendance}
+                        </span>
+                      </div>
+
+                      {/* Dress Code */}
+                      <div className="bg-white border border-slate-100 rounded-2xl p-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">2. Dress Compliance</p>
+                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                          selectedDay.uniform === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
+                          selectedDay.uniform === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+                          selectedDay.uniform === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                          'bg-rose-50 border-rose-100 text-rose-700'
+                        }`}>
+                          {selectedDay.uniform === 'yes' ? 'Full Compliant' : selectedDay.uniform === 'incomplete' ? 'Incomplete' : selectedDay.uniform === 'na' ? 'Not Applicable' : 'Non Compliant'}
+                        </span>
+                        
+                        {/* Detailed dress missing items */}
+                        {selectedDay.uniform === 'incomplete' && selectedDay.details?.uniformItems && (
+                          <div className="mt-2 text-[9px] font-bold text-amber-600/80">
+                            Missing: {selectedDay.details.uniformItems.filter((i: any) => i.status === 'no').map((i: any) => i.key).join(', ') || 'Dress items'}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Duties Checklist */}
+                      <div className="bg-white border border-slate-105 bg-white border border-slate-100 rounded-2xl p-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">3. Duty Checklist</p>
+                        <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                          selectedDay.duty === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
+                          selectedDay.duty === 'incomplete' ? 'bg-amber-55 bg-amber-55/10 bg-amber-50 border-amber-100 text-amber-700' :
+                          selectedDay.duty === 'na' ? 'bg-purple-55 bg-purple-55/10 bg-purple-50 border-purple-100 text-purple-700' :
+                          'bg-rose-55 bg-rose-55/10 bg-rose-50 border-rose-100 text-rose-700'
+                        }`}>
+                          {selectedDay.duty === 'yes' ? 'Accomplished' : selectedDay.duty === 'incomplete' ? 'Incomplete' : selectedDay.duty === 'na' ? 'Not Applicable' : 'Incomplete'}
+                        </span>
+
+                        {/* Detailed pending duties */}
+                        {selectedDay.duty === 'incomplete' && selectedDay.details?.dutyItems && (
+                          <div className="mt-2 text-[9px] font-bold text-amber-600/80">
+                            Pending: {selectedDay.details.dutyItems.filter((i: any) => i.status !== 'done').map((i: any) => i.key).join(', ') || 'Duties'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Fines Subcard */}
+                    {selectedDay.fines > 0 && (
+                      <div className="mt-4 bg-rose-50/50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3">
+                        <Shield className="text-rose-600 shrink-0" size={20} />
+                        <div>
+                          <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Incurred Penalty Fines</p>
+                          <p className="text-xs font-extrabold text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Unexcused audit failure'}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Complete Day-by-Day Historical Log */}
+                <div className="space-y-4 mb-8">
+                  <h3 className="font-extrabold text-sm sm:text-base flex items-center gap-2 text-slate-900">
+                    <ClipboardList size={18} className="text-indigo-600" /> Complete Day-by-Day Historical Log
+                  </h3>
+                  
+                  <div className="overflow-x-auto w-full border border-slate-100 rounded-3xl max-h-72 overflow-y-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-150">
+                          {['Date', 'Attendance', 'Uniform', 'Duties', 'Fines', 'Daily Score'].map(h => (
+                            <th key={h} className="px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {computedScores.dailyBreakdown.map((b: any, idx: number) => {
+                          const isActive = b.attendance !== 'unmarked';
+                          
+                          return (
+                            <tr key={idx} className={`hover:bg-slate-50/50 ${!isActive ? 'opacity-50 bg-slate-50/30' : ''}`}>
+                              <td className="px-5 py-3 font-extrabold text-slate-800">{b.date}</td>
+                              
+                              <td className="px-5 py-3 font-semibold uppercase text-[10px]">
+                                <span className={`px-2.5 py-1 rounded-lg font-black tracking-wide ${
+                                  b.attendance === 'present' ? 'bg-emerald-50 text-emerald-700' :
+                                  b.attendance === 'late' ? 'bg-amber-50 text-amber-700' :
+                                  b.attendance === 'absent' ? 'bg-rose-50 text-rose-700' :
+                                  b.attendance === 'leave' ? 'bg-purple-50 text-purple-700' :
+                                  'text-slate-400'
+                                }`}>
+                                  {b.attendance}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-3 font-bold uppercase text-[9px]">
+                                <span className={b.uniform === 'yes' ? 'text-emerald-600' : b.uniform === 'incomplete' ? 'text-amber-600' : b.uniform === 'na' ? 'text-purple-600' : 'text-rose-600'}>
+                                  {b.uniform === 'yes' ? 'yes' : b.uniform === 'incomplete' ? 'incomplete' : b.uniform === 'na' ? 'na' : 'no'}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-3 font-bold uppercase text-[9px]">
+                                <span className={b.duty === 'yes' ? 'text-emerald-600' : b.duty === 'incomplete' ? 'text-amber-600' : b.duty === 'na' ? 'text-purple-600' : 'text-rose-600'}>
+                                  {b.duty === 'yes' ? 'yes' : b.duty === 'incomplete' ? 'incomplete' : b.duty === 'na' ? 'na' : 'no'}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-3 font-extrabold text-slate-800">
+                                {b.fines > 0 ? (
+                                  <span className="text-rose-600 font-black">₨{b.fines.toLocaleString()}</span>
+                                ) : (
+                                  <span className="text-slate-350">—</span>
+                                )}
+                              </td>
+
+                              <td className="px-5 py-3 font-black text-slate-800">
+                                {isActive ? `${b.score} / 3` : <span className="text-slate-300 font-bold">—</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
@@ -1078,7 +1608,7 @@ export default function ProfilePage() {
                     type="month"
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#1D9E75]/20 w-full sm:w-auto"
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-emerald-500/20 w-full sm:w-auto"
                   />
                 </div>
 
@@ -1091,7 +1621,7 @@ export default function ProfilePage() {
                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cycle Current</span>
                      </div>
                      <p className="text-xs font-medium text-gray-500">Total Monthly Salary</p>
-                     <h4 className="text-2xl font-black text-gray-900">Rs. {profile.monthlySalary ? Number(profile.monthlySalary).toLocaleString() : '0'}</h4>
+                     <h4 className="text-2xl font-black text-gray-900">Rs. {(profile?.monthlySalary || 0).toLocaleString()}</h4>
                      
                      <div className="border-t border-gray-50 mt-4 pt-4 space-y-1.5 text-[10px] font-bold text-gray-700 uppercase">
                         <div className="flex justify-between items-center">
@@ -1125,7 +1655,7 @@ export default function ProfilePage() {
                        <h4 className="text-3xl font-black">Rs. {totalEarnings.toLocaleString()}</h4>
                      </div>
                      <p className="text-xs mt-2 font-medium opacity-70 border-t border-teal-500 pt-2">
-                       Calculated dynamically. All leaves are paid.
+                       Calculated dynamically for current month's marked logs. All leaves are paid.
                      </p>
                   </div>
                 </div>
@@ -1164,8 +1694,8 @@ export default function ProfilePage() {
                        <div>
                         <p className="font-bold text-sm text-gray-800">{fine.reason}</p>
                         <p className="text-[10px] font-bold text-gray-400 uppercase mt-0.5">{formatDateDMY(fine.date)}</p>
-                      </div>
-                      <div className="text-sm font-bold text-rose-600">-Rs. {fine.amount}</div>
+                       </div>
+                       <div className="text-sm font-bold text-rose-600">-Rs. {fine.amount}</div>
                     </div>
                   )) : (
                     <div className="p-4 text-center text-xs text-gray-400 font-medium border border-dashed border-gray-100 rounded-xl">No system fines enforced.</div>
@@ -1198,7 +1728,47 @@ export default function ProfilePage() {
                   <div className="space-y-6">
                     <InfoRow label="Designated Operational Shift" value={`${profile?.dutyStartTime || '09:00'} - ${profile?.dutyEndTime || '17:00'}`} icon={Clock} />
                     <InfoRow label="Blood Group Matrix" value={profile?.bloodGroup || 'N/A'} icon={Heart} />
+                    <InfoRow label="Emergency Contact Protocol" value={(() => {
+                      let name = 'Contact';
+                      let phone = 'N/A';
+                      const rawName = profile?.emergencyContactName || profile?.emergencyContact;
+                      if (rawName) {
+                        if (typeof rawName === 'object') {
+                          name = rawName.name || rawName.displayName || rawName.label || 'Contact';
+                        } else {
+                          name = rawName;
+                        }
+                      }
+                      const rawPhone = profile?.emergencyPhone || profile?.emergencyContactPhone;
+                      if (rawPhone) {
+                        if (typeof rawPhone === 'object') {
+                          phone = rawPhone.phone || rawPhone.phoneNumber || rawPhone.number || 'N/A';
+                        } else {
+                          phone = rawPhone;
+                        }
+                      } else if (typeof profile?.emergencyContact === 'object') {
+                        phone = profile.emergencyContact.phone || profile.emergencyContact.phoneNumber || profile.emergencyContact.number || 'N/A';
+                      }
+                      if (name.includes('[object Object]')) name = 'Contact';
+                      if (phone.includes('[object Object]')) phone = 'N/A';
+                      return `${name} (${phone})`;
+                    })()} icon={AlertCircle} />
                   </div>
+                </div>
+                
+                <div className="mt-8 bg-gray-50 border border-gray-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                   <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-emerald-600">
+                        <Award size={24} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">Official Staff Clearance</p>
+                        <p className="text-xs text-gray-500 font-medium">Issued for internal operational validation.</p>
+                      </div>
+                   </div>
+                   <button disabled className="px-6 py-2.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-400 uppercase tracking-wider shadow-sm opacity-70 cursor-not-allowed">
+                     Download Identification Token
+                   </button>
                 </div>
               </div>
             )}
@@ -1206,7 +1776,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-
+      
       {/* Salary Calculation Breakdown Modal */}
       {showSalaryBreakdownModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-gray-900">
@@ -1214,7 +1784,7 @@ export default function ProfilePage() {
             {/* Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#1D9E75]">Salary Breakdown</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-emerald-500">Salary Breakdown</h3>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
                   Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
                 </p>
@@ -1231,13 +1801,13 @@ export default function ProfilePage() {
             <div className="p-8 overflow-y-auto space-y-6 flex-1 text-xs">
               {/* Top Overview Cards */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-teal-50/30 rounded-2xl border border-teal-100/50">
-                  <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mb-1">Monthly Base Salary</p>
-                  <p className="text-lg font-black text-gray-900">₨{Number(profile?.monthlySalary || 0).toLocaleString()}</p>
+                <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50">
+                  <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Monthly Base Salary</p>
+                  <p className="text-lg font-black text-gray-900">₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</p>
                 </div>
-                <div className="p-4 bg-teal-50/30 rounded-2xl border border-teal-100/50">
-                  <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mb-1">Net Till Date Earned</p>
-                  <p className="text-lg font-black text-teal-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
+                <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50">
+                  <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Net Till Date Earned</p>
+                  <p className="text-lg font-black text-emerald-600">₨{salaryDetails.estimatedSalary.toLocaleString()}</p>
                 </div>
               </div>
 
@@ -1249,13 +1819,13 @@ export default function ProfilePage() {
                 <div className="space-y-1 font-mono text-gray-600">
                   <div className="flex justify-between">
                     <span>Base Daily Rate:</span>
-                    <span>₨{Number(profile?.monthlySalary || 0).toLocaleString()} / 30 = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
+                    <span>₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()} / 30 = ₨{Math.round(salaryDetails.dailyWage).toLocaleString()} / Day</span>
                   </div>
                   {salaryDetails.isFinalized ? (
                     <>
                       <div className="flex justify-between text-emerald-600">
                         <span>Base Monthly Salary:</span>
-                        <span>+ ₨{Number(profile?.monthlySalary || 0).toLocaleString()}</span>
+                        <span>+ ₨{Number(profile?.monthlySalary || profile?.salary || 0).toLocaleString()}</span>
                       </div>
                       {salaryDetails.absentDeduction > 0 && (
                         <div className="flex justify-between text-rose-500">
@@ -1381,6 +1951,7 @@ export default function ProfilePage() {
         </div>
       )}
       
+      {/* Add generic custom styles for the transitions if needed */}
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -1424,6 +1995,27 @@ function MinusCircle(props: any) {
     >
       <circle cx="12" cy="12" r="10" />
       <line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+  );
+}
+
+function AlertTriangle(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
   );
 }
