@@ -84,10 +84,25 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
 
   const handleSignOut = useCallback(async () => {
     localStorage.removeItem('media_session');
+    localStorage.removeItem('media_login_time');
     try {
       await signOut(auth);
     } catch (err) {
       console.error('Error signing out:', err);
+    }
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession?.role === 'superadmin') {
+          router.push('/hq/dashboard/superadmin');
+          return;
+        }
+        if (hqSession?.role === 'manager') {
+          router.push('/hq/dashboard/manager');
+          return;
+        }
+      } catch (e) {}
     }
     router.push('/departments/social-media/login');
   }, [router]);
@@ -106,12 +121,26 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
             customId: hqSession.customId || hqSession.email || 'HQ-USER',
             role: hqSession.role,
             displayName: hqSession.displayName || (hqSession.role === 'superadmin' ? 'Superadmin' : 'Manager'),
+            loginTime: hqSession.loginTime || Number(localStorage.getItem('hq_login_time')) || Date.now()
           };
           localStorage.setItem('media_session', JSON.stringify(syncSession));
+          localStorage.setItem('media_login_time', (syncSession.loginTime).toString());
           session = JSON.stringify(syncSession);
           setIsHqAdmin(true);
         }
       } catch (e) {}
+    } else {
+      if (session) {
+        try {
+          const parsed = JSON.parse(session);
+          if (parsed.role === 'superadmin' || parsed.role === 'manager') {
+            localStorage.removeItem('media_session');
+            localStorage.removeItem('media_login_time');
+            router.push('/departments/social-media/login');
+            return;
+          }
+        } catch (e) {}
+      }
     }
 
     if (!session) { 
