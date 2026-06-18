@@ -176,8 +176,15 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           const data = snap.data();
           const dbRole = (data?.role || '').toLowerCase();
           const sessionRole = (user?.role || '').toLowerCase();
-          const isDbStaff = dbRole === 'staff' || dbRole.includes('staff') || dbRole.includes('contract') || dbRole.includes('internee');
-          const isSessionStaff = sessionRole === 'staff' || sessionRole.includes('staff') || sessionRole.includes('contract') || sessionRole.includes('internee');
+
+          // Normalize: worker / receptionist / contract* / internee* → 'staff'
+          // so that DB and session roles always match even if one side normalizes
+          const normalizeToStaff = (r: string) =>
+            r === 'staff' || r === 'worker' || r === 'receptionist' ||
+            r.includes('staff') || r.includes('contract') || r.includes('internee');
+
+          const isDbStaff = normalizeToStaff(dbRole);
+          const isSessionStaff = normalizeToStaff(sessionRole);
           
           const rolesMatch = dbRole === sessionRole || (isDbStaff && isSessionStaff);
 
@@ -228,7 +235,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
   const role = user?.role as RehabRole;
   const rawRole = (user?.role || '').toLowerCase();
-  const isStaff = rawRole === 'staff' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
+  const isStaff = rawRole === 'staff' || rawRole === 'worker' || rawRole === 'receptionist' || rawRole.includes('staff') || rawRole.includes('contract') || rawRole.includes('internee');
   const isFamily = rawRole === 'family' || rawRole.includes('family') || rawRole.includes('patient') || rawRole.includes('student') || rawRole.includes('seeker') || rawRole.includes('child');
   const isSuperadmin = rawRole === 'superadmin';
   const isAdmin = rawRole === 'admin' || rawRole === 'manager';
