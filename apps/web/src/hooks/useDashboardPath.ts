@@ -5,6 +5,23 @@ import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { useEffect, useState } from 'react';
 import { resolveDashboardPathOnServer } from '@/app/actions/resolveDashboard';
 
+// ─── Normalize staff sub-roles ─────────────────────────────────────────────────
+// Workers, internees, contract staff, and receptionists all share the same
+// /staff dashboard and /profile pages. No separate route pages are needed.
+function normalizeStaffRole(role: string): string {
+  const r = role.toLowerCase();
+  if (
+    r === 'worker' ||
+    r === 'receptionist' ||
+    r.includes('internee') ||
+    r.includes('contract') ||
+    r.includes('staff')
+  ) {
+    return 'staff';
+  }
+  return r;
+}
+
 // ─── Department session registry ──────────────────────────────────────────────
 const DEPT_SESSION_RESOLVERS: {
   sessionKey: string;
@@ -17,13 +34,16 @@ const DEPT_SESSION_RESOLVERS: {
         if (role === 'superadmin') return '/hq/dashboard/superadmin';
         if (role === 'manager') return '/hq/dashboard/manager';
         if (role === 'cashier') return '/hq/dashboard/cashier';
+        // HQ staff (any sub-role) → /hq/dashboard/staff
+        if (normalizeStaffRole(role) === 'staff') return '/hq/dashboard/staff';
         return '/hq/dashboard';
       },
     },
     {
       sessionKey: 'rehab_session',
       resolvePath: (s) => {
-        const role = String(s.role || '').toLowerCase();
+        const rawRole = String(s.role || '').toLowerCase();
+        const role = normalizeStaffRole(rawRole);
         if (role === 'admin') return '/departments/rehab/dashboard/admin';
         if (role === 'cashier') return '/departments/rehab/dashboard/cashier';
         if (role === 'staff') return '/departments/rehab/dashboard/staff';
@@ -35,7 +55,8 @@ const DEPT_SESSION_RESOLVERS: {
     {
       sessionKey: 'spims_session',
       resolvePath: (s) => {
-        const role = String(s.role || '').toLowerCase();
+        const rawRole = String(s.role || '').toLowerCase();
+        const role = normalizeStaffRole(rawRole);
         if (role === 'admin') return '/departments/spims/dashboard/admin';
         if (role === 'cashier') return '/departments/spims/dashboard/cashier';
         if (role === 'staff') return '/departments/spims/dashboard/staff';
@@ -48,28 +69,32 @@ const DEPT_SESSION_RESOLVERS: {
     {
       sessionKey: 'hospital_session',
       resolvePath: (s) => {
-        const role = String(s.role || '').toLowerCase();
+        const rawRole = String(s.role || '').toLowerCase();
+        const role = normalizeStaffRole(rawRole);
         return `/departments/hospital/dashboard${role ? `/${role}` : ''}`;
       },
     },
     {
       sessionKey: 'sukoon_session',
       resolvePath: (s) => {
-        const role = String(s.role || '').toLowerCase();
+        const rawRole = String(s.role || '').toLowerCase();
+        const role = normalizeStaffRole(rawRole);
         return `/departments/sukoon/dashboard${role ? `/${role}` : ''}`;
       },
     },
     {
       sessionKey: 'welfare_session',
       resolvePath: (s) => {
-        const role = String(s.role || '').toLowerCase();
+        const rawRole = String(s.role || '').toLowerCase();
+        const role = normalizeStaffRole(rawRole);
         return `/departments/welfare/dashboard${role ? `/${role}` : ''}`;
       },
     },
     {
       sessionKey: 'job_center_session',
       resolvePath: (s) => {
-        const role = String(s.role || '').toLowerCase();
+        const rawRole = String(s.role || '').toLowerCase();
+        const role = normalizeStaffRole(rawRole);
         return `/departments/job-center/dashboard${role ? `/${role}` : ''}`;
       },
     },

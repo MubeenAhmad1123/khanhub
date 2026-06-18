@@ -463,8 +463,9 @@ export function getDashboardPath(deptId: string, role: string, patientId?: strin
     }
   }
   
-  // Handle staff variations (including contractor, internee, etc.) first to route them to /staff
-  const isAnyStaff = normalizedRole === 'staff' || normalizedRole.includes('staff') || normalizedRole.includes('contractor') || normalizedRole.includes('internee');
+  // Handle staff variations (including worker, contractor, internee, receptionist, etc.)
+  // All sub-roles route to the unified /staff dashboard and /profile pages.
+  const isAnyStaff = normalizedRole === 'staff' || normalizedRole === 'worker' || normalizedRole === 'receptionist' || normalizedRole.includes('staff') || normalizedRole.includes('contractor') || normalizedRole.includes('internee') || normalizedRole.includes('contract');
   if (isAnyStaff) return `${base}/staff`;
 
   // Handle common roles directly

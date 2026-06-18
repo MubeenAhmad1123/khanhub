@@ -24,6 +24,25 @@ function getAdminApp(): App {
   );
 }
 
+/**
+ * Normalize any staff sub-role to 'staff' so that workers, internees,
+ * contract staff, and receptionists all land on the same staff dashboard
+ * and profile pages. No separate pages needed for each sub-role.
+ */
+function normalizeRole(role: string): string {
+  const r = role.toLowerCase();
+  if (
+    r === 'worker' ||
+    r === 'receptionist' ||
+    r.includes('internee') ||
+    r.includes('contract') ||
+    r.includes('staff')
+  ) {
+    return 'staff';
+  }
+  return r;
+}
+
 const DEPT_CONFIGS = [
   { domain: '@rehab.Khan Hub', collection: 'rehab_users', pathBase: '/departments/rehab/dashboard' },
   { domain: '@jobcenter.Khan Hub', collection: 'jobcenter_users', pathBase: '/departments/job-center/dashboard' },
@@ -58,7 +77,8 @@ export async function resolveDashboardPathOnServer(uid: string): Promise<string 
         const doc = await db.collection(config.collection).doc(uid).get();
         if (doc.exists) {
           const data = doc.data() || {};
-          const role = String(data.role || '').toLowerCase();
+          const rawRole = String(data.role || '').toLowerCase();
+          const role = normalizeRole(rawRole);
           if (role === 'family' && data.patientId) resolvedPath = `${config.pathBase}/family/${data.patientId}`;
           else if (role === 'family') resolvedPath = `${config.pathBase}/family`;
           else resolvedPath = role ? `${config.pathBase}/${role}` : config.pathBase;
@@ -86,7 +106,8 @@ export async function resolveDashboardPathOnServer(uid: string): Promise<string 
         const doc = await db.collection(config.collection).doc(uid).get();
         if (doc.exists) {
           const data = doc.data() || {};
-          const role = String(data.role || '').toLowerCase();
+          const rawRole = String(data.role || '').toLowerCase();
+          const role = normalizeRole(rawRole);
           if (role === 'family' && data.patientId) resolvedPath = `${config.pathBase}/family/${data.patientId}`;
           else resolvedPath = role ? `${config.pathBase}/${role}` : config.pathBase;
           break;
