@@ -596,6 +596,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </main>
       </div>
+      </div>
       <VoiceCommandBar />
       <VoiceDisambiguationCard />
     </VoiceAssistantProvider>

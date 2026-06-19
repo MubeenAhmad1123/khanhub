@@ -2061,8 +2061,8 @@ export default function PatientDetailPage() {
 
   const handleAddVisit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vName || !vRelation || !vPhone) {
-      toast.error('Name, Relation and Phone are required');
+    if (!vNotes) {
+      toast.error('Visit Notes / Line is required');
       return;
     }
 
@@ -2070,11 +2070,11 @@ export default function PatientDetailPage() {
       setIsSavingVisit(true);
       const visitData = {
         patientId,
-        visitorName: vName,
-        relation: vRelation,
-        phone: vPhone,
+        visitorName: vName || null,
+        relation: vRelation || null,
+        phone: vPhone || null,
         cnic: vCnic || null,
-        notes: vNotes || null,
+        notes: vNotes,
         // Use explicit local midnight to avoid date shifting issues
         date: Timestamp.fromDate(new Date(`${vDate}T00:00:00`)),
         loggedBy: session.uid,
@@ -2125,18 +2125,18 @@ export default function PatientDetailPage() {
   const handleUpdateVisit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editVisitModal?.id) return;
-    if (!vName || !vRelation || !vPhone) {
-      toast.error('Name, Relation and Phone are required');
+    if (!vNotes) {
+      toast.error('Visit Notes / Line is required');
       return;
     }
     try {
       setIsUpdatingVisit(true);
       await updateDoc(doc(db, 'rehab_visits', editVisitModal.id), {
-        visitorName: vName,
-        relation: vRelation,
-        phone: vPhone,
+        visitorName: vName || null,
+        relation: vRelation || null,
+        phone: vPhone || null,
         cnic: vCnic || null,
-        notes: vNotes || null,
+        notes: vNotes,
         date: Timestamp.fromDate(new Date(`${vDate}T00:00:00`)),
         updatedAt: Timestamp.now(),
         updatedBy: session.uid
@@ -3228,15 +3228,18 @@ export default function PatientDetailPage() {
                       </div>
 
                       <div className="flex flex-col gap-4">
-                        <div className="space-y-1 pr-16">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-black text-gray-900 dark:text-white text-xl tracking-tight">{visit.visitorName}</h4>
-                            <span className="text-[10px] font-black bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
+                        <div className="space-y-2 pr-16">
+                          <div className="text-gray-800 dark:text-gray-200 text-sm sm:text-base leading-relaxed font-semibold">
+                            {visit.notes || (visit.visitorName ? `${visit.visitorName} (${visit.relation || 'Visitor'}) came to visit.` : 'Family Visit Logged.')}
                           </div>
-                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
-                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-teal-500" /> {visit.phone}</span>
-                            {visit.cnic && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {visit.cnic}</span>}
-                          </div>
+                          {(visit.visitorName || visit.relation || visit.phone || visit.cnic) && (
+                            <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-400 font-medium">
+                              {visit.visitorName && <span>Visitor: <strong className="text-gray-600 dark:text-gray-300">{visit.visitorName}</strong></span>}
+                              {visit.relation && <span>Relation: <strong className="text-gray-600 dark:text-gray-300">{visit.relation}</strong></span>}
+                              {visit.phone && <span>Phone: <strong className="text-gray-600 dark:text-gray-300">{visit.phone}</strong></span>}
+                              {visit.cnic && <span>CNIC: <strong className="text-gray-600 dark:text-gray-300">{visit.cnic}</strong></span>}
+                            </div>
+                          )}
                         </div>
 
                         {visit.notes && (
@@ -3457,7 +3460,6 @@ export default function PatientDetailPage() {
           </div>
         </div>
       )}
-      {/* Add Visit Modal */}
       {showAddVisitModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -3470,61 +3472,6 @@ export default function PatientDetailPage() {
               </button>
             </div>
             <form onSubmit={handleAddVisit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
-                  <input 
-                    required 
-                    value={vName} 
-                    onChange={e => setVName(e.target.value)} 
-
-
-
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="Full Name" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
-                  <input 
-                    required 
-                    value={vRelation} 
-                    onChange={e => setVRelation(e.target.value)} 
-
-
-
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="e.g. Father" 
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
-                  <input 
-                    required 
-                    value={vPhone} 
-                    onChange={e => setVPhone(e.target.value)} 
-
-
-
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="+92..." 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
-                  <input 
-                    value={vCnic} 
-                    onChange={e => setVCnic(e.target.value)} 
-
-
-
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="XXXXX-XXXXXXX-X" 
-                  />
-                </div>
-              </div>
               <div className="space-y-1.5">
                 <BrutalistCalendar
                   label="Visit Date *"
@@ -3533,13 +3480,23 @@ export default function PatientDetailPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation / Who Met (Optional)</label>
+                <input 
+                  value={vRelation} 
+                  onChange={e => setVRelation(e.target.value)} 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                  placeholder="e.g. Father, Grandmother" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes / Line *</label>
                 <textarea 
-                  rows={2} 
+                  required
+                  rows={3} 
                   value={vNotes} 
                   onChange={e => setVNotes(e.target.value)} 
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
-                  placeholder="What was discussed? items brought?"
+                  placeholder="Write the visit notes / line details..."
                 ></textarea>
               </div>
               <button type="submit" disabled={isSavingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
@@ -3551,7 +3508,6 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      {/* Edit Visit Modal */}
       {editVisitModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 sm:pt-16 bg-gray-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -3564,49 +3520,6 @@ export default function PatientDetailPage() {
               </button>
             </div>
             <form onSubmit={handleUpdateVisit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
-                  <input 
-                    required 
-                    value={vName} 
-                    onChange={e => setVName(e.target.value)} 
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="Full Name" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
-                  <input 
-                    required 
-                    value={vRelation} 
-                    onChange={e => setVRelation(e.target.value)} 
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="e.g. Father" 
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
-                  <input 
-                    required 
-                    value={vPhone} 
-                    onChange={e => setVPhone(e.target.value)} 
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="+92..." 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
-                  <input 
-                    value={vCnic} 
-                    onChange={e => setVCnic(e.target.value)} 
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
-                    placeholder="XXXXX-XXXXXXX-X" 
-                  />
-                </div>
-              </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
                 <input 
@@ -3623,13 +3536,23 @@ export default function PatientDetailPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation / Who Met (Optional)</label>
+                <input 
+                  value={vRelation} 
+                  onChange={e => setVRelation(e.target.value)} 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                  placeholder="e.g. Father, Grandmother" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes / Line *</label>
                 <textarea 
-                  rows={2} 
+                  required
+                  rows={3} 
                   value={vNotes} 
                   onChange={e => setVNotes(e.target.value)} 
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" 
-                  placeholder="What was discussed? items brought?"
+                  placeholder="Write the visit notes / line details..."
                 ></textarea>
               </div>
               <button type="submit" disabled={isUpdatingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">

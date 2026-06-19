@@ -601,26 +601,27 @@ export default function FamilyPatientViewPage() {
                 <div className="grid grid-cols-1 divide-y divide-gray-50">
                   {visits.map((v, i) => (
                     <div key={i} className="p-5 sm:p-6 hover:bg-gray-50 transition-colors group">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-600 border border-teal-100 group-hover:bg-teal-600 group-hover:text-white transition-all shrink-0">
                             <User size={24} />
                           </div>
-                          <div>
-                            <p className="font-black text-gray-900 text-base sm:text-lg">{v.visitorName}</p>
-                            <p className="text-xs text-gray-500 font-bold">{v.relation}</p>
+                          <div className="space-y-1">
+                            <p className="font-bold text-gray-900 text-sm sm:text-base leading-relaxed">
+                              {v.notes || (v.visitorName ? `${v.visitorName} (${v.relation || 'Visitor'}) came to visit.` : 'Family Visit Logged.')}
+                            </p>
+                            {(v.visitorName || v.relation) && v.notes && (
+                              <p className="text-xs text-gray-400 font-medium">
+                                Visitor: <span className="font-semibold text-gray-600">{v.visitorName}</span> {v.relation ? `(${v.relation})` : ''}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="text-left sm:text-right">
+                        <div className="text-left sm:text-right shrink-0">
                           <p className="text-sm font-black text-gray-900">{formatDateDMY(v.date)}</p>
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Visit Logged</p>
                         </div>
                       </div>
-                      {v.notes && (
-                        <div className="mt-4 p-4 bg-gray-50 rounded-2xl text-sm text-gray-600 italic border border-gray-100 group-hover:bg-white group-hover:border-teal-100 transition-all">
-                          &ldquo;{v.notes}&rdquo;
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
