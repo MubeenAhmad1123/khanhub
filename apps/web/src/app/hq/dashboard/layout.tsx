@@ -19,6 +19,10 @@ import { HqManagerApprovalsNavBadge } from '@/components/hq/HqManagerApprovalsNa
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
 import { HqNotificationPermissionBanner } from '@/components/hq/HqNotificationPermissionBanner';
 import { Spinner } from '@/components/ui';
+import VoiceAssistantProvider from '@/components/hq/VoiceAssistant/VoiceAssistantProvider';
+import VoiceAssistantButton from '@/components/hq/VoiceAssistant/VoiceAssistantButton';
+import VoiceCommandBar from '@/components/hq/VoiceAssistant/VoiceCommandBar';
+import VoiceDisambiguationCard from '@/components/hq/VoiceAssistant/VoiceDisambiguationCard';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
@@ -304,6 +308,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   const role = normalizeRole(user?.role) || 'cashier';
   const currentRole = role === 'superadmin' ? (activeRole || 'superadmin') : role;
+  const canUseVoice = user && ['superadmin', 'manager', 'cashier'].includes(user.role);
   
   // Dynamic Nav Items based on viewMode
   let navItems = viewMode === 'hq' 
@@ -489,7 +494,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   };
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-white">
+    <VoiceAssistantProvider>
+      <div className="min-h-screen flex overflow-x-hidden bg-white">
       <aside className="hidden md:flex flex-col w-20 lg:w-64 hover:w-64 fixed left-0 top-0 h-screen z-30 bg-white border-r border-gray-100 transition-all duration-300 group/sidebar">
         <SidebarContent />
       </aside>
@@ -539,6 +545,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
           <div className="flex items-center gap-2">
             {user ? <HqNotificationBell session={user} /> : null}
+            {canUseVoice && <VoiceAssistantButton />}
             <div className="w-9 h-9 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-xs font-black text-indigo-600 shadow-sm">
               {user?.name?.[0]?.toUpperCase()}
             </div>
@@ -562,6 +569,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           <div className="flex items-center gap-3">
             <div className="w-px h-6 bg-gray-100 mx-1" />
             {user ? <HqNotificationBell session={user} /> : null}
+            {canUseVoice && <VoiceAssistantButton />}
             <span className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest ${ROLE_COLORS[currentRole]} shadow-sm`}>
               {ROLE_LABELS[currentRole]}
             </span>
@@ -588,6 +596,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </main>
       </div>
-    </div>
+      <VoiceCommandBar />
+      <VoiceDisambiguationCard />
+    </VoiceAssistantProvider>
   );
 }
