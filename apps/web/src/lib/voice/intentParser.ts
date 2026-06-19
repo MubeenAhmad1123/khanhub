@@ -18,6 +18,7 @@ export interface ParsedVoiceIntent {
   entityName: string | null;   // extracted name or ID, e.g. "Ahmed" or "99"
   rawTranscript: string;
   departmentCode?: string;     // department code (if query is about a department)
+  entityType?: 'patient' | 'student' | 'seeker' | 'child' | 'client';
 }
 
 export interface VoicePhrasePattern {
@@ -173,6 +174,14 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     }
   }
 
+  // Detect if transcript mentions an entity type
+  let entityType: 'patient' | 'student' | 'seeker' | 'child' | 'client' | undefined = undefined;
+  if (lowercase.includes('patient')) entityType = 'patient';
+  else if (lowercase.includes('student')) entityType = 'student';
+  else if (lowercase.includes('seeker')) entityType = 'seeker';
+  else if (lowercase.includes('child')) entityType = 'child';
+  else if (lowercase.includes('client')) entityType = 'client';
+
   // 2. Query Topics - Financial / Dashboard
   // check for remaining_fee_today
   const isRemainingToday = lowercase.includes("today's remaining") || 
@@ -188,7 +197,8 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
       queryTopic: 'remaining_fee_today',
       entityName: null,
       rawTranscript: transcript,
-      departmentCode
+      departmentCode,
+      entityType
     };
   }
 
@@ -206,7 +216,8 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
       queryTopic: 'earnings_today',
       entityName: null,
       rawTranscript: transcript,
-      departmentCode
+      departmentCode,
+      entityType
     };
   }
 
@@ -221,7 +232,8 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
           queryTopic: item.topic || 'unknown',
           entityName: extractedName,
           rawTranscript: transcript,
-          departmentCode
+          departmentCode,
+          entityType
         };
       }
     }
@@ -279,6 +291,7 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     queryTopic,
     entityName: intentType !== 'unknown' && extractedName ? cleanEntityName(extractedName) : null,
     rawTranscript: transcript,
-    departmentCode
+    departmentCode,
+    entityType
   };
 }

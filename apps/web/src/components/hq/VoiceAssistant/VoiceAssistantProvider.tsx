@@ -163,15 +163,15 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
 
       if (parsed.type === 'unknown' || !parsed.entityName) {
-        speakUtterance("Mujhe samajh nahi aya. Dobara boliye.");
+        speakUtterance("I didn't understand that. Please say it again.");
         return;
       }
 
       const scopedDepts = getScopedDepartments();
-      const { matches } = await resolveEntityByName(parsed.entityName, scopedDepts);
+      const { matches } = await resolveEntityByName(parsed.entityName, scopedDepts, parsed.entityType);
 
       if (matches.length === 0) {
-        speakUtterance(`Mujhe "${parsed.entityName}" naam ka koi active record nahi mila.`);
+        speakUtterance(`I couldn't find any active record for "${parsed.entityName}".`);
         return;
       }
 
@@ -180,16 +180,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       } else {
         setPendingIntent({ intent: parsed, matches });
         const nameListPrompt = matches
-          .map((m, idx) => `number ${idx + 1}, ${m.name} jin ke walid ka naam ${m.fatherName} hai`)
-          .join(', aur ');
+          .map((m, idx) => `number ${idx + 1}, ${m.name} whose father is ${m.fatherName}`)
+          .join(', and ');
         speakUtterance(
-          `Mujhe ${parsed.entityName} ke naam ke ${matches.length} log mile hain. ${nameListPrompt}. Aap kis ke baare me baat kar rahe hain? Ya screen par card tap karein.`
+          `I found ${matches.length} matches for ${parsed.entityName}. ${nameListPrompt}. Which one do you mean? Or you can tap the card on the screen.`
         );
       }
     } catch (err: any) {
       console.error('[VoiceAssistant] Command execution failed:', err);
-      setError('Command perform karne me koi masla pesh aya.');
-      speakUtterance("Server par query process karte hue error aya.");
+      setError('An error occurred performing the command.');
+      speakUtterance("There was an error processing your query on the server.");
     } finally {
       setProcessing(false);
     }
@@ -205,13 +205,13 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         const res = await getTodayEarnings(intent.departmentCode);
         answer = formatTodayEarningsResponse(res, intent.departmentCode);
       } else {
-        answer = "Mujhe topic samajh nahi aya.";
+        answer = "I couldn't understand the topic.";
       }
       
       speakUtterance(answer);
     } catch (err) {
       console.error('[VoiceAssistant] Dashboard query failed:', err);
-      speakUtterance("Financial details check karne me error aya.");
+      speakUtterance("There was an error checking the financial details.");
     }
   };
 
@@ -242,7 +242,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
       
       router.push(path);
-      speakUtterance(`theek hai, ${match.name} ka record khol rahi hoon.`);
+      speakUtterance(`Sure, opening the record for ${match.name}.`);
     } else if (intent.type === 'query') {
       try {
         let answer = '';
@@ -259,13 +259,13 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           const res = await getStatusForEntity(match.id, match.collection);
           answer = formatStatusResponse(res);
         } else {
-          answer = "Mujhe topic samajh nahi aya.";
+          answer = "I couldn't understand the topic.";
         }
         
         speakUtterance(answer);
       } catch (err) {
         console.error('[VoiceAssistant] Query detail fetch failed:', err);
-        speakUtterance("Un ka record check karne me error aya.");
+        speakUtterance("There was an error checking their record.");
       }
     }
   };
@@ -279,7 +279,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
   const clearPendingIntent = () => {
     setPendingIntent(null);
-    speakUtterance("Cancel kar diya.");
+    speakUtterance("Cancelled.");
   };
 
   const speakUtterance = (text: string) => {

@@ -9,13 +9,13 @@ export function formatRemainingFeeResponse(data: {
   lastPaymentDate?: string;
 }): string {
   if (data.amountRemaining <= 0) {
-    return `${data.name} ka koi remaining balance nahi hai. Unki fees mukammal jama ho chuki hai.`;
+    return `${data.name} has no remaining balance. Their fees are fully paid.`;
   }
 
-  let text = `${data.name} ka remaining balance ${data.amountRemaining.toLocaleString()} rupees hai. Total fee ${data.totalFee.toLocaleString()} hai, aur ${data.amountPaid.toLocaleString()} rupees already paid ho chuki hai.`;
+  let text = `${data.name} has a remaining balance of ${data.amountRemaining.toLocaleString()} rupees. The total fee is ${data.totalFee.toLocaleString()} rupees, and ${data.amountPaid.toLocaleString()} rupees have already been paid.`;
 
   if (data.lastPaymentAmount && data.lastPaymentAmount > 0) {
-    text += ` Last payment ${data.lastPaymentAmount.toLocaleString()} rupees ki ${data.lastPaymentDate ? `${data.lastPaymentDate} ko` : 'hui thi'}.`;
+    text += ` The last payment of ${data.lastPaymentAmount.toLocaleString()} rupees was made ${data.lastPaymentDate ? `on ${data.lastPaymentDate}` : 'recently'}.`;
   }
 
   return text;
@@ -28,22 +28,22 @@ export function formatAttendanceResponse(data: {
   tracked: boolean;
 }): string {
   if (!data.tracked) {
-    return `${data.name} ki daily attendance database me track nahi ki jati.`;
+    return `${data.name}'s daily attendance is not tracked in the database.`;
   }
 
-  const dateStr = 'aaj'; // Default to today's context
+  const dateStr = 'today';
 
   switch (data.status) {
     case 'present':
-      return `${data.name} ${dateStr} present hain.`;
+      return `${data.name} is present ${dateStr}.`;
     case 'absent':
-      return `${data.name} ${dateStr} absent hain.`;
+      return `${data.name} is absent ${dateStr}.`;
     case 'leave':
-      return `${data.name} ${dateStr} leave par hain.`;
+      return `${data.name} is on leave ${dateStr}.`;
     case 'unmarked':
-      return `${data.name} ki attendance ${dateStr} mark nahi ki gayi hai.`;
+      return `${data.name}'s attendance has not been marked ${dateStr}.`;
     default:
-      return `${data.name} ki attendance status unmarked hai.`;
+      return `${data.name}'s attendance status is unmarked.`;
   }
 }
 
@@ -52,9 +52,9 @@ export function formatTotalPaidResponse(data: {
   totalPaid: number;
 }): string {
   if (data.totalPaid <= 0) {
-    return `${data.name} ne ab tak koi payment jama nahi karwayi hai.`;
+    return `${data.name} has not made any payments yet.`;
   }
-  return `${data.name} ne ab tak total ${data.totalPaid.toLocaleString()} rupees jama karwaye hain.`;
+  return `${data.name} has paid a total of ${data.totalPaid.toLocaleString()} rupees.`;
 }
 
 export function formatStatusResponse(data: {
@@ -64,7 +64,7 @@ export function formatStatusResponse(data: {
 }): string {
   const statusStr = String(data.status).toLowerCase();
   const activeText = data.isActive ? 'active' : 'inactive';
-  return `${data.name} ka current status "${statusStr}" hai, aur unka profile record system me ${activeText} hai.`;
+  return `${data.name}'s current status is "${statusStr}", and their profile record is ${activeText} in the system.`;
 }
 
 // UPGRADE: Format total outstanding remaining balances
@@ -78,10 +78,10 @@ export function formatTodayRemainingOverallResponse(data: {
   grandTotal: number;
 }): string {
   if (data.grandTotal <= 0) {
-    return "Mubarak ho! Tamam departments ka outstanding remaining balance zero hai. Koi fee baki nahi hai.";
+    return "Great news! The outstanding remaining balance for all departments is zero. No fees are pending.";
   }
 
-  return `Khan Hub ka total outstanding remaining balance ${data.grandTotal.toLocaleString()} rupees hai. Breakdown ye hai: Rehab ka ${data.rehabTotal.toLocaleString()} rupees, SPIMS Academy ka ${data.spimsTotal.toLocaleString()} rupees, Hospital ka ${data.hospitalTotal.toLocaleString()} rupees, Welfare ka ${data.welfareTotal.toLocaleString()} rupees, Sukoon ka ${data.sukoonTotal.toLocaleString()} rupees, aur Job Center ka ${data.jobcenterTotal.toLocaleString()} rupees outstanding hai.`;
+  return `The total outstanding remaining balance for Khan Hub is ${data.grandTotal.toLocaleString()} rupees. The breakdown is: Rehab has ${data.rehabTotal.toLocaleString()} rupees, SPIMS Academy has ${data.spimsTotal.toLocaleString()} rupees, Hospital has ${data.hospitalTotal.toLocaleString()} rupees, Welfare has ${data.welfareTotal.toLocaleString()} rupees, Sukoon has ${data.sukoonTotal.toLocaleString()} rupees, and Job Center has ${data.jobcenterTotal.toLocaleString()} rupees outstanding.`;
 }
 
 // UPGRADE: Format today's earnings / collection response
@@ -105,24 +105,24 @@ export function formatTodayEarningsResponse(
   if (deptCode && deptCode !== 'overall') {
     const label = getDeptLabel(deptCode);
     if (data.grandTotal <= 0) {
-      return `Aaj ${label} me ab tak koi approved earning ya collection nahi hui hai.`;
+      return `There are no approved earnings or collections in ${label} today.`;
     }
-    return `Aaj ${label} ki total earning ${data.grandTotal.toLocaleString()} rupees hai.`;
+    return `Today's total earnings for ${label} are ${data.grandTotal.toLocaleString()} rupees.`;
   }
 
   if (data.grandTotal <= 0) {
-    return "Aaj overall Khan Hub me ab tak koi approved earning ya collection nahi hui hai.";
+    return "There are no approved earnings or collections across Khan Hub today.";
   }
 
-  let text = `Aaj Khan Hub ki overall total approved earning ${data.grandTotal.toLocaleString()} rupees hai. `;
+  let text = `Today's total approved earnings for Khan Hub are ${data.grandTotal.toLocaleString()} rupees. `;
   
   // Only display departments that earned greater than zero
   const positiveDepts = Object.entries(data.breakdown)
     .filter(([_, amt]) => amt > 0)
-    .map(([code, amt]) => `${getDeptLabel(code)} ki ${amt.toLocaleString()} rupees`);
+    .map(([code, amt]) => `${getDeptLabel(code)} with ${amt.toLocaleString()} rupees`);
 
   if (positiveDepts.length > 0) {
-    text += `Jis me: ${positiveDepts.join(', ')} collection shamil hai.`;
+    text += `This includes: ${positiveDepts.join(', ')}.`;
   }
 
   return text;
