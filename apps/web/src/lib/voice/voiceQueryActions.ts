@@ -25,6 +25,16 @@ const COLLECTION_MAPPINGS: Record<string, { feeCol: string; refKey: string; pare
   'job_center_seekers': { feeCol: 'jobcenter_fees', refKey: 'seekerId', parentCol: 'job_center_seekers' },
 };
 
+const DEPT_TX_COLLECTIONS: Record<string, string> = {
+  'rehab': 'rehab_transactions',
+  'spims': 'spims_transactions',
+  'hospital': 'hospital_transactions',
+  'sukoon': 'sukoon_transactions',
+  'welfare': 'welfare_transactions',
+  'job-center': 'jobcenter_transactions',
+  'hq': 'cashierTransactions',
+};
+
 function getPakistanDateString(): string {
   const d = new Date();
   const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
@@ -41,7 +51,6 @@ export async function getRemainingFeeForEntity(entityId: string, collectionName:
   const mapping = COLLECTION_MAPPINGS[collectionName];
   if (!mapping) throw new Error('Unsupported collection');
 
-  // 1. Fetch parent document to get general name and overall outstanding
   const parentDoc = await adminDb.collection(mapping.parentCol).doc(entityId).get();
   if (!parentDoc.exists) throw new Error('Entity not found');
   const parentData = parentDoc.data() || {};
@@ -49,7 +58,6 @@ export async function getRemainingFeeForEntity(entityId: string, collectionName:
 
   let overallRemaining = Number(parentData.remaining ?? parentData.overallRemaining ?? parentData.remainingAmount ?? parentData.amountRemaining ?? 0);
   
-  // 2. Fetch the latest fee document to get month specific details
   let amountRemaining = overallRemaining;
   let amountPaid = 0;
   let totalFee = Number(parentData.monthlyPackage ?? parentData.packageAmount ?? parentData.totalPackage ?? parentData.monthlyFee ?? 0);
@@ -62,10 +70,8 @@ export async function getRemainingFeeForEntity(entityId: string, collectionName:
       .get();
 
     if (!feeDocs.empty) {
-      // Find the latest record based on month ("YYYY-MM") or date
       const docsData = feeDocs.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      // Sort by month or date descending
       docsData.sort((a: any, b: any) => {
         if (a.month && b.month) return b.month.localeCompare(a.month);
         const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
@@ -111,7 +117,6 @@ export async function getAttendanceStatusForEntity(entityId: string, collectionN
 
   const queryDate = date || getPakistanDateString();
 
-  // ONLY SPIMS tracks student attendance in spims_student_attendance
   if (collectionName === 'spims_students') {
     try {
       const attId = `${queryDate}_${entityId}`;
@@ -128,7 +133,6 @@ export async function getAttendanceStatusForEntity(entityId: string, collectionN
     }
   }
 
-  // Other departments do not track attendance for patients/seekers
   return { status: 'not_tracked', date: queryDate, name, tracked: false };
 }
 
@@ -145,11 +149,9 @@ export async function getTotalPaidForEntity(entityId: string, collectionName: st
 
   let totalPaid = 0;
 
-  // SPIMS stores totalReceived on student document
   if (collectionName === 'spims_students' && parentData.totalReceived !== undefined) {
     totalPaid = Number(parentData.totalReceived || 0);
   } else {
-    // For others, sum up all monthly fee paid records
     try {
       const feeDocs = await adminDb.collection(mapping.feeCol)
         .where(mapping.refKey, '==', entityId)
@@ -181,4 +183,150 @@ export async function getStatusForEntity(entityId: string, collectionName: strin
     status: parentData.status || 'Active',
     isActive: parentData.isActive !== false,
   };
+}
+
+// UPGRADE: Fetch total remainings across all departments
+export async function getTodayRemainingOverall() {
+  await assertVoiceAccess();
+  
+  const [rehabSnap, spimsSnap, hospitalSnap, sukoonSnap, welfareSnap, jobcenterSnap] = await Promise.all([
+    adminDb.collection('rehab_patients').get().catch(() => ({ docs: [] })),
+    adminDb.collection('spims_students').get().catch(() => ({ docs: [] })),
+    adminDb.collection('hospital_patients').get().catch(() => ({ docs: [] })),
+    adminDb.collection('sukoon_patients').get().catch(() => ({ docs: [] })),
+    adminDb.collection('welfare_children').get().catch(() => ({ docs: [] })),
+    adminDb.collection('job_center_seekers').get().catch(() => ({ docs: [] })),
+  ]);
+
+  let rehabTotal = 0;
+  let spimsTotal = 0;
+  let hospitalTotal = 0;
+  let sukoonTotal = 0;
+  let welfareTotal = 0;
+  let jobcenterTotal = 0;
+
+  rehabSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    if (data.isActive !== false) {
+      rehabTotal += Number(data.remaining ?? data.overallRemaining ?? data.amountRemaining ?? 0);
+    }
+  });
+
+  spimsSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    const status = (data.status || '').toLowerCase();
+    if (status !== 'left' && status !== 'pass' && status !== 'fail' && status !== 'terminated') {
+      spimsTotal += Number(data.remaining ?? data.remainingBalance ?? 0);
+    }
+  });
+
+  hospitalSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    if (data.isActive !== false) {
+      hospitalTotal += Number(data.remaining ?? data.remainingAmount ?? 0);
+    }
+  });
+
+  sukoonSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    if (data.isActive !== false) {
+      sukoonTotal += Number(data.remaining ?? data.amountRemaining ?? 0);
+    }
+  });
+
+  welfareSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    if (data.isActive !== false) {
+      welfareTotal += Number(data.remaining ?? data.amountRemaining ?? 0);
+    }
+  });
+
+  jobcenterSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    if (data.isActive !== false) {
+      jobcenterTotal += Number(data.remaining ?? data.amountRemaining ?? 0);
+    }
+  });
+
+  const grandTotal = rehabTotal + spimsTotal + hospitalTotal + sukoonTotal + welfareTotal + jobcenterTotal;
+
+  return {
+    rehabTotal,
+    spimsTotal,
+    hospitalTotal,
+    sukoonTotal,
+    welfareTotal,
+    jobcenterTotal,
+    grandTotal,
+  };
+}
+
+// Helper to fetch approved income transactions from a collection
+async function fetchApprovedIncomeForCollection(colName: string, start: Date, end: Date): Promise<number> {
+  let income = 0;
+  try {
+    const snap = await adminDb.collection(colName)
+      .where('createdAt', '>=', start)
+      .where('createdAt', '<', end)
+      .get();
+      
+    snap.forEach((doc: any) => {
+      const data = doc.data();
+      const status = data.status || 'pending';
+      const type = data.type || '';
+      
+      const isApproved = status === 'approved';
+      const isExpense = type === 'expense' || String(data.categoryName || data.category || '').toLowerCase().includes('expense');
+      
+      if (isApproved && !isExpense) {
+        income += Number(data.amount || 0);
+      }
+    });
+  } catch (err) {
+    console.error(`[fetchApprovedIncomeForCollection] Error for ${colName}:`, err);
+  }
+  return income;
+}
+
+// UPGRADE: Fetch approved income/earnings for today (PKT timezone)
+export async function getTodayEarnings(deptCode?: string) {
+  await assertVoiceAccess();
+
+  // 1. Calculate boundaries of today in Pakistan Time (UTC+5)
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const pktDate = new Date(utc + (3600000 * 5)); // Pakistan Time
+  
+  const pktStart = new Date(pktDate);
+  pktStart.setHours(0, 0, 0, 0);
+  const pktEnd = new Date(pktDate);
+  pktEnd.setHours(23, 59, 59, 999);
+  
+  // Convert back to UTC to query Firestore Timestamp fields
+  const startTimestamp = new Date(pktStart.getTime() - 5 * 60 * 60 * 1000);
+  const endTimestamp = new Date(pktEnd.getTime() - 5 * 60 * 60 * 1000);
+
+  // If a specific department is requested
+  if (deptCode && deptCode !== 'overall' && DEPT_TX_COLLECTIONS[deptCode]) {
+    const colName = DEPT_TX_COLLECTIONS[deptCode];
+    const total = await fetchApprovedIncomeForCollection(colName, startTimestamp, endTimestamp);
+    return {
+      grandTotal: total,
+      breakdown: { [deptCode]: total }
+    };
+  }
+
+  // Query all departments in parallel
+  const breakdown: Record<string, number> = {};
+  let grandTotal = 0;
+
+  await Promise.all(
+    Object.entries(DEPT_TX_COLLECTIONS).map(async ([code, colName]) => {
+      const total = await fetchApprovedIncomeForCollection(colName, startTimestamp, endTimestamp);
+      breakdown[code] = total;
+      grandTotal += total;
+    })
+  );
+
+  return { grandTotal, breakdown };
 }

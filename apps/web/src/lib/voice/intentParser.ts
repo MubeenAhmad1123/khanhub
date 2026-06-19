@@ -3,13 +3,21 @@
 import { WAKE_WORDS } from './voiceConfig';
 
 export type VoiceIntentType = 'navigate' | 'query' | 'unknown';
-export type VoiceQueryTopic = 'remaining_fee' | 'attendance' | 'total_paid' | 'status' | 'unknown';
+export type VoiceQueryTopic = 
+  | 'remaining_fee' 
+  | 'attendance' 
+  | 'total_paid' 
+  | 'status' 
+  | 'remaining_fee_today' 
+  | 'earnings_today' 
+  | 'unknown';
 
 export interface ParsedVoiceIntent {
   type: VoiceIntentType;
   queryTopic?: VoiceQueryTopic;
-  entityName: string | null;   // extracted name, e.g. "Ahmed"
+  entityName: string | null;   // extracted name or ID, e.g. "Ahmed" or "99"
   rawTranscript: string;
+  departmentCode?: string;     // department code (if query is about a department)
 }
 
 export interface VoicePhrasePattern {
@@ -58,12 +66,72 @@ export const VOICE_PHRASE_PATTERNS: VoicePhrasePattern[] = [
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ka|ki|ko)\s+(?:status|progress|report|kaisa|kaisi)\s*(?:batao|check|kya|show|bataein|hai|kaisa hai|kaisi hai)*/i, type: 'query', topic: 'status' },
 ];
 
-// List of helper Urdu/English stop words to clean up from the extracted entity name
+// Helper Urdu/English stop words to clean up from the extracted entity name
 const STOP_WORDS = new Set([
-  'ka', 'ki', 'ko', 'ne', 'ke', 'of', 'the', 'a', 'an', 'is', 'was', 'are', 'today', 'aj', 'aaj', 'batao', 'bataein', 'check', 'show', 'dikhao', 'kholo', 'open', 'me', 'my'
+  'ka', 'ki', 'ko', 'ne', 'ke', 'of', 'the', 'a', 'an', 'is', 'was', 'are', 'today', 'aj', 'aaj', 'batao', 'bataein', 'check', 'show', 'dikhao', 'kholo', 'open', 'me', 'my',
+  'patient', 'student', 'seeker', 'child', 'client', 'id', 'no', 'number', 'roll', 'in', 'at', 'from'
 ]);
 
-function cleanEntityName(name: string): string {
+const DEPT_KEYWORDS: Record<string, string[]> = {
+  'rehab': ['rehab', 'rehabilitation', 'rehab center'],
+  'spims': ['spims', 'academy', 'spims academy'],
+  'hospital': ['hospital', 'khan hospital', 'ilaj'],
+  'sukoon': ['sukoon', 'sukoon center'],
+  'welfare': ['welfare', 'foundation', 'welfare foundation'],
+  'job-center': ['job center', 'job-center', 'jobs'],
+  'hq': ['hq', 'headquarters', 'central'],
+};
+
+// Normalizes written numbers to digits (e.g. "ninety nine" to "99")
+export function wordsToNumbers(text: string): string {
+  const units: Record<string, number> = {
+    'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
+    'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19
+  };
+  const tens: Record<string, number> = {
+    'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90
+  };
+  const scales: Record<string, number> = {
+    'hundred': 100, 'thousand': 1000
+  };
+
+  const tokens = text.toLowerCase().split(/[\s-]+/);
+  const result: string[] = [];
+  let currentNum = 0;
+  let parsedAny = false;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    if (units[token] !== undefined) {
+      currentNum += units[token];
+      parsedAny = true;
+    } else if (tens[token] !== undefined) {
+      currentNum += tens[token];
+      parsedAny = true;
+    } else if (scales[token] !== undefined) {
+      const scale = scales[token];
+      if (currentNum === 0) currentNum = 1;
+      currentNum *= scale;
+      parsedAny = true;
+    } else {
+      if (parsedAny) {
+        result.push(String(currentNum));
+        currentNum = 0;
+        parsedAny = false;
+      }
+      result.push(token);
+    }
+  }
+
+  if (parsedAny) {
+    result.push(String(currentNum));
+  }
+
+  return result.join(' ');
+}
+
+export function cleanEntityName(name: string): string {
   return name
     .split(/\s+/)
     .filter(token => !STOP_WORDS.has(token.toLowerCase()))
@@ -76,8 +144,10 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     return { type: 'unknown', entityName: null, rawTranscript: '' };
   }
 
+  // Normalize number words to digits first
+  let cleaned = wordsToNumbers(transcript.trim());
+
   // 1. Strip wake word
-  let cleaned = transcript.trim();
   for (const wakeWord of WAKE_WORDS) {
     const regex = new RegExp(`^(?:hey\\s+)?${wakeWord}\\b[\\s,.]*`, 'i');
     if (regex.test(cleaned)) {
@@ -86,15 +156,61 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     }
   }
 
-  // Fallback check to strip wake word from anywhere in the string
   for (const wakeWord of WAKE_WORDS) {
     const regex = new RegExp(`\\b(?:hey\\s+)?${wakeWord}\\b`, 'gi');
     cleaned = cleaned.replace(regex, '');
   }
 
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  const lowercase = cleaned.toLowerCase();
 
-  // 2. Try regex phrase matches
+  // Detect if transcript mentions a department
+  let departmentCode: string | undefined = undefined;
+  for (const [code, keywords] of Object.entries(DEPT_KEYWORDS)) {
+    if (keywords.some(kw => lowercase.includes(kw))) {
+      departmentCode = code;
+      break;
+    }
+  }
+
+  // 2. Query Topics - Financial / Dashboard
+  // check for remaining_fee_today
+  const isRemainingToday = lowercase.includes("today's remaining") || 
+                           lowercase.includes("remaining today") || 
+                           lowercase.includes("total remaining") || 
+                           lowercase.includes("total outstanding") || 
+                           (lowercase.includes("remaining") && lowercase.includes("total")) ||
+                           (lowercase.includes("baki") && lowercase.includes("total"));
+                           
+  if (isRemainingToday) {
+    return {
+      type: 'query',
+      queryTopic: 'remaining_fee_today',
+      entityName: null,
+      rawTranscript: transcript,
+      departmentCode
+    };
+  }
+
+  // check for earnings_today
+  const isEarningsToday = lowercase.includes("earn") || 
+                          lowercase.includes("earnings") || 
+                          lowercase.includes("income") || 
+                          lowercase.includes("collection") || 
+                          lowercase.includes("jama kiya") || 
+                          lowercase.includes("kamaya");
+                          
+  if (isEarningsToday && (lowercase.includes("today") || lowercase.includes("overall") || lowercase.includes("aaj") || lowercase.includes("daily") || departmentCode)) {
+    return {
+      type: 'query',
+      queryTopic: 'earnings_today',
+      entityName: null,
+      rawTranscript: transcript,
+      departmentCode
+    };
+  }
+
+  // 3. Try regex phrase matches
   for (const item of VOICE_PHRASE_PATTERNS) {
     const match = item.pattern.exec(cleaned);
     if (match && match[1]) {
@@ -105,17 +221,16 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
           queryTopic: item.topic || 'unknown',
           entityName: extractedName,
           rawTranscript: transcript,
+          departmentCode
         };
       }
     }
   }
 
-  // 3. Fallback: Keyword Scoring
-  const lowercase = cleaned.toLowerCase();
+  // 4. Fallback: Keyword Scoring for standard single-entity queries
   let intentType: VoiceIntentType = 'unknown';
   let queryTopic: VoiceQueryTopic = 'unknown';
 
-  // Keyword check
   if (lowercase.includes('open') || lowercase.includes('profile') || lowercase.includes('record') || lowercase.includes('kholo') || lowercase.includes('dikhao')) {
     intentType = 'navigate';
   } else if (lowercase.includes('attendance') || lowercase.includes('hazri') || lowercase.includes('present') || lowercase.includes('absent')) {
@@ -149,10 +264,8 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     }
   }
 
-  // Fallback to capitalizing strategy or longest word sequence
   if (!extractedName && cleaned.length > 0) {
     const tokens = cleaned.split(/\s+/).filter(t => !STOP_WORDS.has(t.toLowerCase()));
-    // Try to find capitalized tokens (indicates a name in English transcript)
     const capitalized = tokens.filter(t => /^[A-Z]/.test(t));
     if (capitalized.length > 0) {
       extractedName = capitalized.join(' ');
@@ -166,5 +279,6 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     queryTopic,
     entityName: intentType !== 'unknown' && extractedName ? cleanEntityName(extractedName) : null,
     rawTranscript: transcript,
+    departmentCode
   };
 }

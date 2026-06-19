@@ -16,13 +16,17 @@ import {
   getRemainingFeeForEntity, 
   getAttendanceStatusForEntity, 
   getTotalPaidForEntity, 
-  getStatusForEntity 
+  getStatusForEntity,
+  getTodayRemainingOverall,
+  getTodayEarnings
 } from '@/lib/voice/voiceQueryActions';
 import { 
   formatRemainingFeeResponse, 
   formatAttendanceResponse, 
   formatTotalPaidResponse, 
-  formatStatusResponse 
+  formatStatusResponse,
+  formatTodayRemainingOverallResponse,
+  formatTodayEarningsResponse
 } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
 
@@ -53,7 +57,6 @@ export function useVoiceAssistant() {
   return context;
 }
 
-// Helper to play a clean synthesizer beep using Web Audio API
 function playAudioCue() {
   if (typeof window === 'undefined') return;
   try {
@@ -94,10 +97,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const activeSpeechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const manualStopRef = useRef(false);
 
-  // Read allowed departments from localStorage sessions
   const getScopedDepartments = (): string[] => {
     if (typeof window === 'undefined') return [];
     const depts = ['rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
@@ -106,18 +107,15 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     });
   };
 
-  // Persist mode to localStorage
   const setMode = (newMode: VoiceAssistantMode) => {
     setModeState(newMode);
     localStorage.setItem(MODE_STORAGE_KEY, newMode);
-    // Restart assistant with new mode if listening
     if (listening) {
       stopAssistant();
       setTimeout(() => startAssistant(), 200);
     }
   };
 
-  // Detect browser SpeechRecognition support
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -130,7 +128,6 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     }
   }, []);
 
-  // Web Speech API Voice synthesis cancellation & state tracking
   useEffect(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
@@ -152,13 +149,19 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     setProcessing(true);
     setLiveTranscript(commandText);
     
-    // Stop recognition during processing & speaking to avoid feedback loop
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
 
     try {
       const parsed = parseVoiceIntent(commandText);
+
+      // Bypasses entity resolution for dashboard queries
+      if (parsed.queryTopic === 'remaining_fee_today' || parsed.queryTopic === 'earnings_today') {
+        await executeDashboardQuery(parsed);
+        return;
+      }
+
       if (parsed.type === 'unknown' || !parsed.entityName) {
         speakUtterance("Mujhe samajh nahi aya. Dobara boliye.");
         return;
@@ -175,7 +178,6 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       if (matches.length === 1) {
         await executeResolvedIntent(parsed, matches[0]);
       } else {
-        // Disambiguation needed
         setPendingIntent({ intent: parsed, matches });
         const nameListPrompt = matches
           .map((m, idx) => `number ${idx + 1}, ${m.name} jin ke walid ka naam ${m.fatherName} hai`)
@@ -190,6 +192,26 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       speakUtterance("Server par query process karte hue error aya.");
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const executeDashboardQuery = async (intent: ParsedVoiceIntent) => {
+    try {
+      let answer = '';
+      if (intent.queryTopic === 'remaining_fee_today') {
+        const res = await getTodayRemainingOverall();
+        answer = formatTodayRemainingOverallResponse(res);
+      } else if (intent.queryTopic === 'earnings_today') {
+        const res = await getTodayEarnings(intent.departmentCode);
+        answer = formatTodayEarningsResponse(res, intent.departmentCode);
+      } else {
+        answer = "Mujhe topic samajh nahi aya.";
+      }
+      
+      speakUtterance(answer);
+    } catch (err) {
+      console.error('[VoiceAssistant] Dashboard query failed:', err);
+      speakUtterance("Financial details check karne me error aya.");
     }
   };
 
@@ -220,7 +242,6 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
       
       router.push(path);
-      // Spoken notification confirming navigation
       speakUtterance(`theek hai, ${match.name} ka record khol rahi hoon.`);
     } else if (intent.type === 'query') {
       try {
@@ -261,17 +282,14 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     speakUtterance("Cancel kar diya.");
   };
 
-  // Wrapper for speak utility to capture speech completion and resume background listening if always_on
   const speakUtterance = (text: string) => {
     setSpeaking(true);
     speak(text);
     
-    // Check speech completion using SpeechSynthesisUtterance event or simple interval fallback
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const checkEnd = () => {
         if (!window.speechSynthesis.speaking) {
           setSpeaking(false);
-          // Restart background recognition if mode is always_on and not manually stopped
           if (mode === 'always_on' && !manualStopRef.current && !pendingIntent) {
             startRecognitionInstance();
           }
@@ -293,7 +311,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     }
 
     const rec = new SpeechRecognition();
-    rec.lang = 'en-US'; // Best compatibility for Romanized Urdu/English mixing
+    rec.lang = 'en-US';
     rec.interimResults = true;
     rec.continuous = (mode === 'always_on');
 
@@ -312,13 +330,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
     rec.onend = () => {
       setListening(false);
-      // Auto-restart if always_on and not manually stopped, speaking, processing, or waiting on disambiguation
       if (mode === 'always_on' && !manualStopRef.current && !window.speechSynthesis.speaking && !processing && !pendingIntent) {
         setTimeout(() => {
           if (mode === 'always_on' && !manualStopRef.current) {
             startRecognitionInstance();
           }
-        }, 1000); // 1s cool-down to prevent infinite fast loops
+        }, 1000);
       }
     };
 
@@ -339,7 +356,6 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
       if (mode === 'always_on') {
         if (!capturingCommand) {
-          // Listen for wake word
           const matchedWakeWord = WAKE_WORDS.find(word => 
             combined.toLowerCase().includes(word)
           );
@@ -349,12 +365,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             setCapturingCommand(true);
             setLiveTranscript('');
             
-            // Clear recognition buffers by resetting or restarting
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           }
         } else {
-          // We are capturing the command utterance
-          // Extract the part after the wake word
           let cmdPart = combined;
           for (const word of WAKE_WORDS) {
             const index = cmdPart.toLowerCase().indexOf(word);
@@ -366,15 +379,13 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           
           setLiveTranscript(cmdPart.trim());
 
-          // Reset silence timer on every new speech fragment
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
             setCapturingCommand(false);
             handleCommandComplete(cmdPart.trim());
-          }, 2500); // 2.5 seconds of silence finishes the command
+          }, 2500);
         }
       } else {
-        // Push-to-talk mode
         setLiveTranscript(combined);
         
         if (final) {
@@ -382,7 +393,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           silenceTimerRef.current = setTimeout(() => {
             stopAssistant();
             handleCommandComplete(final.trim());
-          }, 1500); // 1.5 seconds after final speech finishes
+          }, 1500);
         }
       }
     };
@@ -406,7 +417,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     if (mode === 'always_on') {
       setCapturingCommand(false);
     } else {
-      setCapturingCommand(true); // Direct capturing in push to talk
+      setCapturingCommand(true);
     }
 
     startRecognitionInstance();
@@ -429,7 +440,6 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     }
   };
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);

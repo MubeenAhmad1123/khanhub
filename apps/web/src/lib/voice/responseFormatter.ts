@@ -66,3 +66,64 @@ export function formatStatusResponse(data: {
   const activeText = data.isActive ? 'active' : 'inactive';
   return `${data.name} ka current status "${statusStr}" hai, aur unka profile record system me ${activeText} hai.`;
 }
+
+// UPGRADE: Format total outstanding remaining balances
+export function formatTodayRemainingOverallResponse(data: {
+  rehabTotal: number;
+  spimsTotal: number;
+  hospitalTotal: number;
+  sukoonTotal: number;
+  welfareTotal: number;
+  jobcenterTotal: number;
+  grandTotal: number;
+}): string {
+  if (data.grandTotal <= 0) {
+    return "Mubarak ho! Tamam departments ka outstanding remaining balance zero hai. Koi fee baki nahi hai.";
+  }
+
+  return `Khan Hub ka total outstanding remaining balance ${data.grandTotal.toLocaleString()} rupees hai. Breakdown ye hai: Rehab ka ${data.rehabTotal.toLocaleString()} rupees, SPIMS Academy ka ${data.spimsTotal.toLocaleString()} rupees, Hospital ka ${data.hospitalTotal.toLocaleString()} rupees, Welfare ka ${data.welfareTotal.toLocaleString()} rupees, Sukoon ka ${data.sukoonTotal.toLocaleString()} rupees, aur Job Center ka ${data.jobcenterTotal.toLocaleString()} rupees outstanding hai.`;
+}
+
+// UPGRADE: Format today's earnings / collection response
+export function formatTodayEarningsResponse(
+  data: { grandTotal: number; breakdown: Record<string, number> },
+  deptCode?: string
+): string {
+  const getDeptLabel = (code: string): string => {
+    const labels: Record<string, string> = {
+      rehab: 'Rehab Center',
+      spims: 'SPIMS Academy',
+      hospital: 'Khan Hospital',
+      sukoon: 'Sukoon Center',
+      welfare: 'Welfare Foundation',
+      'job-center': 'Job Center',
+      'hq': 'HQ Cashier',
+    };
+    return labels[code] || code.toUpperCase();
+  };
+
+  if (deptCode && deptCode !== 'overall') {
+    const label = getDeptLabel(deptCode);
+    if (data.grandTotal <= 0) {
+      return `Aaj ${label} me ab tak koi approved earning ya collection nahi hui hai.`;
+    }
+    return `Aaj ${label} ki total earning ${data.grandTotal.toLocaleString()} rupees hai.`;
+  }
+
+  if (data.grandTotal <= 0) {
+    return "Aaj overall Khan Hub me ab tak koi approved earning ya collection nahi hui hai.";
+  }
+
+  let text = `Aaj Khan Hub ki overall total approved earning ${data.grandTotal.toLocaleString()} rupees hai. `;
+  
+  // Only display departments that earned greater than zero
+  const positiveDepts = Object.entries(data.breakdown)
+    .filter(([_, amt]) => amt > 0)
+    .map(([code, amt]) => `${getDeptLabel(code)} ki ${amt.toLocaleString()} rupees`);
+
+  if (positiveDepts.length > 0) {
+    text += `Jis me: ${positiveDepts.join(', ')} collection shamil hai.`;
+  }
+
+  return text;
+}

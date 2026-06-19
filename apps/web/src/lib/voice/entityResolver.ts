@@ -36,7 +36,6 @@ export async function resolveEntityByName(
       throw new Error('Unauthorized: insufficient role permissions');
     }
 
-    // Determine departments we are allowed to search
     const permittedDepts = session.role === 'superadmin' 
       ? Object.keys(DEPT_COLLECTIONS) 
       : scopedDepartments;
@@ -59,11 +58,24 @@ export async function resolveEntityByName(
           snapshot.forEach((doc) => {
             const data = doc.data();
             
-            // Skip inactive documents if the collection contains isActive field
+            // Skip inactive documents
             if (data.isActive === false) return;
 
             const docName = String(data.name || data.fullName || '').toLowerCase();
-            if (docName.includes(lowercaseName)) {
+            const docCourse = String(data.course || '').toLowerCase();
+            const docCustomId = String(data.customId || data.rollNo || data.studentId || doc.id || '').toLowerCase();
+            const docDiagnosis = String(data.diagnosis || data.disease || data.diseaseName || '').toLowerCase();
+            
+            // Smarter ID Matching: Extract digits to match "99" with "REHAB-099" or "REHAB-99"
+            const docDigits = docCustomId.replace(/[^0-9]/g, '');
+            const searchDigits = lowercaseName.replace(/[^0-9]/g, '');
+            const isIdMatch = searchDigits.length > 0 && docDigits.endsWith(searchDigits);
+            
+            if (docName.includes(lowercaseName) || 
+                docCourse.includes(lowercaseName) || 
+                docDiagnosis.includes(lowercaseName) ||
+                docCustomId.includes(lowercaseName) ||
+                isIdMatch) {
               matches.push({
                 id: doc.id,
                 name: data.name || data.fullName || 'Unknown',
@@ -80,7 +92,6 @@ export async function resolveEntityByName(
       })
     );
 
-    // Limit to prevent overloading in UI (e.g. max 10 matches)
     return { matches: matches.slice(0, 10) };
   } catch (error: any) {
     console.error('[resolveEntityByName] Server action error:', error?.message);
