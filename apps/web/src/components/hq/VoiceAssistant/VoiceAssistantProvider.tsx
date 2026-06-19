@@ -343,7 +343,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       let interim = '';
       let final = '';
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      for (let i = 0; i < event.results.length; ++i) {
         const trans = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           final += trans;
@@ -355,7 +355,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       const combined = (final + interim).trim();
 
       if (mode === 'always_on') {
-        if (!capturingCommand) {
+        let isActivelyCapturing = capturingCommand;
+
+        if (!isActivelyCapturing) {
           const matchedWakeWord = WAKE_WORDS.find(word => 
             combined.toLowerCase().includes(word)
           );
@@ -363,11 +365,11 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           if (matchedWakeWord) {
             playAudioCue();
             setCapturingCommand(true);
-            setLiveTranscript('');
-            
-            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            isActivelyCapturing = true;
           }
-        } else {
+        }
+
+        if (isActivelyCapturing) {
           let cmdPart = combined;
           for (const word of WAKE_WORDS) {
             const index = cmdPart.toLowerCase().indexOf(word);
