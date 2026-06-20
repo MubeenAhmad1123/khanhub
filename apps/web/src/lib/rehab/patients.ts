@@ -143,19 +143,12 @@ export async function saveDailyActivity(
   markedBy: string,
   extra?: { counsellingNotes?: string; vitalNotes?: string }
 ): Promise<void> {
-  // Check if doc exists for this patientId+date
-  const q = query(
-    collection(db, 'rehab_daily_activities'),
-    where('patientId', '==', patientId),
-    where('date', '==', date),
-    limit(1)
-  );
+  const docId = `${patientId}_${date}`;
+  const docRef = doc(db, 'rehab_daily_activities', docId);
+  const docSnap = await getDoc(docRef);
   
-  const snap = await getDocs(q);
-  
-  if (!snap.empty) {
-    const docId = snap.docs[0].id;
-    await updateDoc(doc(db, 'rehab_daily_activities', docId), {
+  if (docSnap.exists()) {
+    await updateDoc(docRef, {
       activities,
       markedBy,
       updatedAt: Timestamp.now(),
@@ -163,7 +156,7 @@ export async function saveDailyActivity(
       ...(extra?.vitalNotes !== undefined && { vitalSignNotes: extra.vitalNotes })
     });
   } else {
-    await addDoc(collection(db, 'rehab_daily_activities'), {
+    await setDoc(docRef, {
       patientId,
       date,
       activities,

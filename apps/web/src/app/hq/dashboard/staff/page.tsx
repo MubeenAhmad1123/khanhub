@@ -9,7 +9,7 @@ import { db, auth } from '@/lib/firebase';
 import {
   User, Calendar, Star, TrendingUp, LogOut, Award,
   Clock, CheckCircle, XCircle, AlertCircle, Activity,
-  Shield, Phone, Mail, MapPin, CreditCard
+  Shield, Phone, Mail, MapPin, CreditCard, FileText, Eye, Download
 } from 'lucide-react';
 
 interface StaffProfile {
@@ -30,6 +30,7 @@ interface StaffProfile {
   cnic?: string;
   dutyStartTime?: string;
   dutyEndTime?: string;
+  documents?: { title: string; url: string }[];
 }
 
 interface AttendanceSummary {
@@ -113,6 +114,7 @@ export default function HqStaffProfilePage() {
           cnic: data.cnic,
           dutyStartTime: data.dutyStartTime || '09:00',
           dutyEndTime: data.dutyEndTime || '17:00',
+          documents: data.documents || [],
         });
 
         // 2. Fetch this month's attendance
@@ -363,6 +365,63 @@ export default function HqStaffProfilePage() {
             </div>
           </div>
         )}
+
+        {/* Documents */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <FileText size={15} className="text-gray-500" />
+            <h3 className="text-sm font-bold text-gray-900">My Documents</h3>
+            <span className="ml-auto text-[10px] font-bold text-gray-400">
+              {profile.documents?.length || 0} files
+            </span>
+          </div>
+          {profile.documents && profile.documents.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {profile.documents.map((doc: any, idx: number) => (
+                <div key={idx} className="p-3 border border-gray-50 bg-gray-50/50 rounded-xl flex items-center justify-between hover:bg-white hover:border-gray-200 transition-all duration-200">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 bg-gray-100 text-gray-600 rounded-lg flex items-center justify-center shrink-0">
+                      <FileText size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-800 truncate" title={doc.title || `Document ${idx + 1}`}>
+                        {doc.title || `Document ${idx + 1}`}
+                      </p>
+                      <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Attachment</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-900 rounded-lg transition-colors border border-gray-100"
+                      title="View Document"
+                    >
+                      <Eye size={14} />
+                    </a>
+                    <a
+                      href={doc.url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-900 rounded-lg transition-colors border border-gray-100"
+                      title="Download Document"
+                    >
+                      <Download size={14} />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center border border-dashed border-gray-200 rounded-xl bg-gray-50/30">
+              <FileText className="mx-auto text-gray-300 mb-2" size={24} strokeWidth={1.5} />
+              <h4 className="text-xs font-bold text-gray-500">No documents found</h4>
+              <p className="text-[10px] text-gray-400 mt-0.5">Documents uploaded by manager will be shown here.</p>
+            </div>
+          )}
+        </div>
 
         {/* Contact info */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

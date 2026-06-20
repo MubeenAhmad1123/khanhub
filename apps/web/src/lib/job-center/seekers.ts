@@ -122,19 +122,12 @@ export async function saveDailyActivity(
   markedBy: string,
   extra?: { careerCounsellingNotes?: string; placementStatusNotes?: string }
 ): Promise<void> {
-  // Check if doc exists for this seekerId+date
-  const q = query(
-    collection(db, 'jobcenter_daily_activities'),
-    where('seekerId', '==', seekerId),
-    where('date', '==', date),
-    limit(1)
-  );
+  const docId = `${seekerId}_${date}`;
+  const docRef = doc(db, 'jobcenter_daily_activities', docId);
+  const docSnap = await getDoc(docRef);
   
-  const snap = await getDocs(q);
-  
-  if (!snap.empty) {
-    const docId = snap.docs[0].id;
-    await updateDoc(doc(db, 'jobcenter_daily_activities', docId), {
+  if (docSnap.exists()) {
+    await updateDoc(docRef, {
       activities,
       markedBy,
       updatedAt: Timestamp.now(),
@@ -142,7 +135,7 @@ export async function saveDailyActivity(
       ...(extra?.placementStatusNotes !== undefined && { placementStatusNotes: extra.placementStatusNotes })
     });
   } else {
-    await addDoc(collection(db, 'jobcenter_daily_activities'), {
+    await setDoc(docRef, {
       seekerId,
       date,
       activities,

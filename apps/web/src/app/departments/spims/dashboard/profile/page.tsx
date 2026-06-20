@@ -214,6 +214,7 @@ export default function ProfilePage() {
       { id: 'dress' as const, label: 'Dress Code', icon: Shirt, visible: sections.uniform !== false },
       { id: 'score' as const, label: 'Score', icon: Award, visible: sections.growthPoints !== false },
       { id: 'finance' as const, label: 'Financial', icon: DollarSign, visible: sections.salary !== false },
+      { id: 'documents' as const, label: 'Documents', icon: FileText, visible: true },
       { id: 'profile' as const, label: 'Identity', icon: Info, visible: true },
     ];
     return list.filter(t => t.visible);
@@ -398,7 +399,7 @@ export default function ProfilePage() {
       let isLate = false;
       if (att) {
         attStatus = att.status || 'unmarked';
-        isLate = att.isLate === true || attStatus === 'late';
+        isLate = (att.isLate === true || attStatus === 'late') && attStatus !== 'present';
         if (attStatus === 'present' && !isLate) {
           attScore++;
         }
@@ -1168,7 +1169,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {attendance.length > 0 ? attendance.map(log => {
-                    const isLate = log.status === 'late' || !log.arrivedOnTime;
+                    const isLate = (log.status === 'late' || !log.arrivedOnTime) && log.status !== 'present';
                     
                     return (
                       <div key={log.id} className="p-4 border border-gray-100 bg-white rounded-xl flex items-center justify-between shadow-sm hover:border-gray-300 transition-colors">
@@ -1744,6 +1745,70 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+
+            {/* --- DOCUMENTS SECTION --- */}
+            {
+              <div ref={el => { sectionRefs.current['documents'] = el; }} id="section-documents" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
+                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Documents Vault</h3>
+                      <p className="text-xs text-gray-500 font-medium">Uploaded verification files, credentials, and attachments</p>
+                    </div>
+                  </div>
+                </div>
+
+                {profile?.documents && profile.documents.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {profile.documents.map((doc: any, idx: number) => (
+                      <div key={idx} className="p-4 border border-gray-100 bg-white rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                            <FileText size={20} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate" title={doc.title || `Document ${idx + 1}`}>
+                              {doc.title || `Document ${idx + 1}`}
+                            </p>
+                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Attachment</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-gray-50 hover:bg-emerald-50 text-gray-600 hover:text-emerald-600 rounded-xl transition-colors"
+                            title="View Document"
+                          >
+                            <Eye size={16} />
+                          </a>
+                          <a
+                            href={doc.url}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-gray-50 hover:bg-emerald-50 text-gray-600 hover:text-emerald-600 rounded-xl transition-colors"
+                            title="Download Document"
+                          >
+                            <Download size={16} />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-12 text-center border-2 border-dashed border-gray-150 rounded-2xl bg-gray-50/50">
+                    <FileText className="mx-auto text-gray-300 mb-3" size={36} strokeWidth={1.5} />
+                    <h4 className="text-sm font-bold text-gray-700">No Documents Uploaded</h4>
+                    <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">Documents and pictures uploaded by management will be displayed here.</p>
+                  </div>
+                )}
+              </div>
+            }
 
             {/* --- IDENTITY SECTION --- */}
             {

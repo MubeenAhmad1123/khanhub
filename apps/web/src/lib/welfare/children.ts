@@ -132,26 +132,19 @@ export async function saveDailyActivity(
   markedBy: string,
   extra?: { generalNotes?: string }
 ): Promise<void> {
-  // Check if doc exists for this childId+date
-  const q = query(
-    collection(db, 'welfare_daily_activities'),
-    where('childId', '==', childId),
-    where('date', '==', date),
-    limit(1)
-  );
+  const docId = `${childId}_${date}`;
+  const docRef = doc(db, 'welfare_daily_activities', docId);
+  const docSnap = await getDoc(docRef);
   
-  const snap = await getDocs(q);
-  
-  if (!snap.empty) {
-    const docId = snap.docs[0].id;
-    await updateDoc(doc(db, 'welfare_daily_activities', docId), {
+  if (docSnap.exists()) {
+    await updateDoc(docRef, {
       activities,
       markedBy,
       updatedAt: Timestamp.now(),
       ...(extra?.generalNotes !== undefined && { generalNotes: extra.generalNotes })
     });
   } else {
-    await addDoc(collection(db, 'welfare_daily_activities'), {
+    await setDoc(docRef, {
       childId,
       date,
       activities,

@@ -181,7 +181,7 @@ export default function AttendanceMarkingPage() {
         const docId = `${s.id}_${today}`;
         const docRef = doc(db, collectionName, docId);
 
-        batch.set(docRef, {
+        const attendanceData: any = {
           staffId: s.id,
           date: today,
           status: rec.status,
@@ -190,7 +190,15 @@ export default function AttendanceMarkingPage() {
           markedBy: session?.customId || 'system',
           updatedAt: now,
           department: s.department
-        }, { merge: true });
+        };
+
+        if (rec.status === 'present') {
+          attendanceData.isLate = false;
+          attendanceData.arrivedOnTime = true;
+          attendanceData.lateByMinutes = 0;
+        }
+
+        batch.set(docRef, attendanceData, { merge: true });
 
         // Award Point if present
         if (rec.status === 'present') {
