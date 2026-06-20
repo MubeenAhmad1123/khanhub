@@ -63,7 +63,6 @@ export default function StaffProfileReport({ staff }: StaffProfileReportProps) {
     <div
       id="staff-report-root"
       className="bg-white text-gray-900 p-8 md:p-12 w-full max-w-[800px] mx-auto print:block print:p-6 print:max-w-full print:bg-white select-none border border-gray-200 print:border-none shadow-sm print:shadow-none"
-      style={{ contentVisibility: 'auto' }}
     >
       {/* HEADER SECTION */}
       <div className="flex justify-between items-center pb-4 border-b border-gray-200">
@@ -116,6 +115,7 @@ export default function StaffProfileReport({ staff }: StaffProfileReportProps) {
             <img
               src={staff.photoUrl}
               alt={staff.name}
+              crossOrigin="anonymous"
               className="w-28 h-28 rounded-xl object-cover border border-gray-200"
             />
           ) : (
