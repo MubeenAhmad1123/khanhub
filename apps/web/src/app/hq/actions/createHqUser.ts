@@ -4,6 +4,7 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import type { HqUser, HqRole, HqMeta } from '@/types/hq';
+import { isCustomIdTaken } from '@/lib/hq/auth/adminUserChecks';
 
 const DOMAIN = '@hq.Khan Hub.com';
 
@@ -53,6 +54,20 @@ export async function createHqUserServer(data: {
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
     const email = `${data.customId.toLowerCase()}@hq.Khan Hub.com`;
+
+    let existingUid: string | undefined;
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      existingUid = existingUser.uid;
+    } catch {}
+
+    const isTaken = await isCustomIdTaken(app, data.customId, existingUid);
+    if (isTaken) {
+      return {
+        success: false,
+        error: `Login ID "${data.customId}" already exists. Please choose a different Login ID.`,
+      };
+    }
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);

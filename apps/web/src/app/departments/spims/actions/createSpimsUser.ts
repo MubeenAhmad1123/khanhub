@@ -3,6 +3,7 @@
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/hq/auth/adminAuth';
+import { isCustomIdTaken } from '@/lib/hq/auth/adminUserChecks';
 
 const DOMAIN = '@spims.khanhub.com.pk';
 
@@ -43,6 +44,20 @@ export async function createSpimsUserServer(
     }
 
     const email = `${customId.toLowerCase()}${emailDomain}`;
+
+    let existingUid: string | undefined;
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      existingUid = existingUser.uid;
+    } catch {}
+
+    const isTaken = await isCustomIdTaken(app, customId, existingUid);
+    if (isTaken) {
+      return {
+        success: false,
+        error: `Login ID "${customId}" already exists. Please choose a different Login ID.`,
+      };
+    }
 
     try {
       await adminAuth.getUserByEmail(email);
@@ -196,6 +211,20 @@ export async function createStaffMemberServer(
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
     const email = `${customId.toLowerCase()}${emailDomain}`;
+
+    let existingUid: string | undefined;
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      existingUid = existingUser.uid;
+    } catch {}
+
+    const isTaken = await isCustomIdTaken(app, customId, existingUid);
+    if (isTaken) {
+      return {
+        success: false,
+        error: `Login ID "${customId}" already exists. Please choose a different Staff Login ID.`,
+      };
+    }
 
     try {
       await adminAuth.getUserByEmail(email);

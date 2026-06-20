@@ -1,8 +1,10 @@
+// src/app/departments/it/actions/createItUser.ts
 'use server'
 
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp } from '@/lib/hq/auth/adminAuth';
+import { isCustomIdTaken } from '@/lib/hq/auth/adminUserChecks';
 
 const DOMAIN = '@it.khanhub.com.pk';
 
@@ -46,6 +48,20 @@ export async function createItUserServer(
     }
 
     const email = `${customId.toLowerCase()}${emailDomain}`;
+    let existingUid: string | undefined;
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      existingUid = existingUser.uid;
+    } catch {}
+
+    // Check for customId uniqueness across all collections
+    const isTaken = await isCustomIdTaken(app, customId, existingUid);
+    if (isTaken) {
+      return {
+        success: false,
+        error: `Login ID "${customId}" already exists. Please choose a different Login ID.`,
+      };
+    }
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);
