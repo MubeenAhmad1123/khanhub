@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
   LogOut, Menu, X, ArrowLeft, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
-  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound, Lock
+  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound, Lock, Lightbulb
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -42,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Departments', href: '/hq/dashboard/superadmin/departments', icon: <Building2 size={16} />, roles: ['superadmin'] },
   { label: 'SPIMS', href: '/hq/dashboard/superadmin/spims', icon: <GraduationCap size={16} />, roles: ['superadmin'] },
   { label: 'Staff', href: '/hq/dashboard/superadmin/staff', icon: <UserCog size={16} />, roles: ['superadmin'] },
+  { label: 'Growth Ideas', href: '/hq/dashboard/superadmin/growth-ideas', icon: <Lightbulb size={16} />, roles: ['superadmin'] },
   { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} />, roles: ['superadmin'] },
   { label: 'Reconciliation', href: '/hq/dashboard/superadmin/reconciliation', icon: <Calculator size={16} />, roles: ['superadmin'] },
   { label: 'Passwords', href: '/hq/dashboard/superadmin/passwords', icon: <KeyRound size={16} />, roles: ['superadmin'] },
@@ -50,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Staff List', href: '/hq/dashboard/manager/staff', icon: <UserCog size={16} />, roles: ['manager'] },
   { label: 'Mark Attendance', href: '/hq/dashboard/manager/staff/attendance', icon: <CalendarCheck size={16} />, roles: ['manager'] },
   { label: 'Contributions', href: '/hq/dashboard/manager/approvals', icon: <CheckCircle size={16} />, roles: ['manager'] },
+  { label: 'Growth Ideas', href: '/hq/dashboard/manager/growth-ideas', icon: <Lightbulb size={16} />, roles: ['manager'] },
   { label: 'Salary Slips', href: '/hq/dashboard/manager/salary', icon: <DollarSign size={16} />, roles: ['manager'] },
   { label: 'Reports', href: '/hq/dashboard/manager/reports', icon: <BarChart2 size={16} />, roles: ['manager'] },
   { label: 'Profile', href: '/hq/dashboard/manager/profile', icon: <User size={16} />, roles: ['manager'] },

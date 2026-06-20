@@ -498,6 +498,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /rehab_growth_ideas/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqSuperOrManager()
+        || isOwnStaffRecord(resource.data.staffId);
+      allow create: if isRehabRole('staff') || isRehabRole('admin');
+      allow update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
     // ── Leads & CRM Collections ────────────────────────
     // Access restricted to HQ and Kashmala (Receptionist)
     match /leads/{leadId} {

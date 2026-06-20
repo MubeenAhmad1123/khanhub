@@ -28,6 +28,8 @@ export default function StaffSelfPage() {
   const [checkLoading, setCheckLoading] = useState(false);
   const [specialTasks, setSpecialTasks] = useState<any[]>([]);
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
+  const [ideaText, setIdeaText] = useState('');
+  const [submittingIdea, setSubmittingIdea] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const { sections, loading: visibilityLoading } = useVisibleSections('rehab', 'staff', user?.uid || '');
@@ -366,6 +368,71 @@ export default function StaffSelfPage() {
             </div>
           </div>
         )}
+
+        {/* Share Growth Idea / Suggestion Box */}
+        <div className={`p-8 border-4 border-black ${glassStyle}`}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
+              <Lightbulb size={20} className="text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-gray-900 uppercase">Share Growth Point / Idea</h2>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mt-1">
+                No points awarded automatically. Sent to Manager's review.
+              </p>
+            </div>
+          </div>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!ideaText.trim() || !staffProfile) return;
+              setSubmittingIdea(true);
+              try {
+                await addDoc(collection(db, 'rehab_growth_ideas'), {
+                  staffId: staffProfile.id,
+                  staffName: staffProfile.name,
+                  text: ideaText.trim(),
+                  date: today,
+                  createdAt: Timestamp.now(),
+                  department: 'rehab',
+                  status: 'pending',
+                  points: 0
+                });
+                setIdeaText('');
+                toast.success('Your suggestion/idea has been sent!');
+              } catch (err: any) {
+                console.error('Error submitting idea:', err);
+                toast.error('Failed to send suggestion: ' + err.message);
+              } finally {
+                setSubmittingIdea(false);
+              }
+            }}
+            className="space-y-4"
+          >
+            <textarea
+              value={ideaText}
+              onChange={(e) => setIdeaText(e.target.value)}
+              placeholder="Type your idea or suggestion here..."
+              className="w-full p-4 border-4 border-black text-sm font-bold bg-white text-black focus:outline-none placeholder-slate-400 min-h-[120px] resize-y"
+              required
+            />
+            <button
+              type="submit"
+              disabled={submittingIdea || !ideaText.trim()}
+              className="w-full py-4 border-4 border-black bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {submittingIdea ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Submitting...
+                </>
+              ) : (
+                <>
+                  <Send size={14} /> Send Idea / Suggestion
+                </>
+              )}
+            </button>
+          </form>
+        </div>
 
       </div>
     </div>
