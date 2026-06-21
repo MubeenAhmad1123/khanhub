@@ -18,7 +18,7 @@ export interface ParsedVoiceIntent {
   entityName: string | null;   // extracted name or ID, e.g. "Ahmed" or "99"
   rawTranscript: string;
   departmentCode?: string;     // department code (if query is about a department)
-  entityType?: 'patient' | 'student' | 'seeker' | 'child' | 'client';
+  entityType?: 'patient' | 'student' | 'seeker' | 'child' | 'client' | 'staff';
 }
 
 export interface VoicePhrasePattern {
@@ -70,7 +70,7 @@ export const VOICE_PHRASE_PATTERNS: VoicePhrasePattern[] = [
 // Helper Urdu/English stop words to clean up from the extracted entity name
 const STOP_WORDS = new Set([
   'ka', 'ki', 'ko', 'ne', 'ke', 'of', 'the', 'a', 'an', 'is', 'was', 'are', 'today', 'aj', 'aaj', 'batao', 'bataein', 'check', 'show', 'dikhao', 'kholo', 'open', 'me', 'my',
-  'patient', 'student', 'seeker', 'child', 'client', 'id', 'no', 'number', 'roll', 'in', 'at', 'from'
+  'patient', 'student', 'seeker', 'child', 'client', 'staff', 'employee', 'teacher', 'doctor', 'nurse', 'worker', 'id', 'no', 'number', 'roll', 'in', 'at', 'from'
 ]);
 
 const DEPT_KEYWORDS: Record<string, string[]> = {
@@ -175,12 +175,22 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
   }
 
   // Detect if transcript mentions an entity type
-  let entityType: 'patient' | 'student' | 'seeker' | 'child' | 'client' | undefined = undefined;
+  let entityType: 'patient' | 'student' | 'seeker' | 'child' | 'client' | 'staff' | undefined = undefined;
   if (lowercase.includes('patient')) entityType = 'patient';
   else if (lowercase.includes('student')) entityType = 'student';
   else if (lowercase.includes('seeker')) entityType = 'seeker';
   else if (lowercase.includes('child')) entityType = 'child';
   else if (lowercase.includes('client')) entityType = 'client';
+  else if (
+    lowercase.includes('staff') ||
+    lowercase.includes('employee') ||
+    lowercase.includes('teacher') ||
+    lowercase.includes('doctor') ||
+    lowercase.includes('nurse') ||
+    lowercase.includes('worker')
+  ) {
+    entityType = 'staff';
+  }
 
   // 2. Query Topics - Financial / Dashboard
   // check for remaining_fee_today

@@ -22,6 +22,44 @@ const DEPT_COLLECTIONS: Record<string, { collection: string; label: string }> = 
   'job-center': { collection: 'job_center_seekers', label: 'Seeker' },
 };
 
+const STAFF_COLLECTIONS: Record<string, { collection: string; label: string }[]> = {
+  'hq': [
+    { collection: 'hq_users', label: 'Staff' },
+    { collection: 'hq_staff', label: 'Staff' }
+  ],
+  'rehab': [
+    { collection: 'rehab_users', label: 'Staff' },
+    { collection: 'rehab_staff', label: 'Staff' }
+  ],
+  'spims': [
+    { collection: 'spims_users', label: 'Staff' },
+    { collection: 'spims_staff', label: 'Staff' }
+  ],
+  'hospital': [
+    { collection: 'hospital_users', label: 'Staff' },
+    { collection: 'hospital_staff', label: 'Staff' }
+  ],
+  'sukoon': [
+    { collection: 'sukoon_users', label: 'Staff' },
+    { collection: 'sukoon_staff', label: 'Staff' }
+  ],
+  'welfare': [
+    { collection: 'welfare_users', label: 'Staff' },
+    { collection: 'welfare_staff', label: 'Staff' }
+  ],
+  'job-center': [
+    { collection: 'jobcenter_users', label: 'Staff' },
+    { collection: 'jobcenter_staff', label: 'Staff' }
+  ],
+  'social-media': [
+    { collection: 'media_users', label: 'Staff' }
+  ],
+  'it': [
+    { collection: 'it_users', label: 'Staff' },
+    { collection: 'it_staff', label: 'Staff' }
+  ],
+};
+
 export async function resolveEntityByName(
   name: string,
   scopedDepartments: string[],
@@ -43,16 +81,22 @@ export async function resolveEntityByName(
       'child': ['welfare'],
       'seeker': ['job-center'],
       'client': ['sukoon'],
+      'staff': ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'],
     };
 
     let permittedDepts = session.role === 'superadmin' 
       ? Object.keys(DEPT_COLLECTIONS) 
       : scopedDepartments;
 
+    let permittedStaffDepts = (session.role === 'superadmin' || session.role === 'manager')
+      ? ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it']
+      : scopedDepartments;
+
     // Filter permitted departments by entity type if specified
     if (entityType && ENTITY_TYPE_DEPT_MAPPINGS[entityType]) {
       const allowedDepts = ENTITY_TYPE_DEPT_MAPPINGS[entityType];
       permittedDepts = permittedDepts.filter(d => allowedDepts.includes(d));
+      permittedStaffDepts = permittedStaffDepts.filter(d => allowedDepts.includes(d));
     }
 
     const lowercaseName = name.toLowerCase().trim();
@@ -60,25 +104,58 @@ export async function resolveEntityByName(
       return { matches: [] };
     }
 
-    const matches: EntityMatch[] = [];
+    // Build the list of target collections to query
+    const targets: { dept: string; collection: string; label: string; isStaff: boolean }[] = [];
 
-    // Query each permitted department in parallel
-    await Promise.all(
-      permittedDepts.map(async (dept) => {
+    // Add patient/student targets
+    if (!entityType || entityType !== 'staff') {
+      for (const dept of permittedDepts) {
         const config = DEPT_COLLECTIONS[dept];
-        if (!config) return;
+        if (config) {
+          targets.push({
+            dept,
+            collection: config.collection,
+            label: config.label,
+            isStaff: false
+          });
+        }
+      }
+    }
 
+    // Add staff targets
+    if (!entityType || entityType === 'staff') {
+      for (const dept of permittedStaffDepts) {
+        const configs = STAFF_COLLECTIONS[dept];
+        if (configs) {
+          for (const config of configs) {
+            targets.push({
+              dept,
+              collection: config.collection,
+              label: config.label,
+              isStaff: true
+            });
+          }
+        }
+      }
+    }
+
+    const matches: EntityMatch[] = [];
+    const seenMatches = new Set<string>();
+
+    // Query each target collection in parallel
+    await Promise.all(
+      targets.map(async (target) => {
         try {
-          const snapshot = await adminDb.collection(config.collection).get();
+          const snapshot = await adminDb.collection(target.collection).get();
           snapshot.forEach((doc) => {
             const data = doc.data();
             
             // Skip inactive documents
             if (data.isActive === false) return;
 
-            const docName = String(data.name || data.fullName || '').toLowerCase();
+            const docName = String(data.name || data.fullName || data.displayName || '').toLowerCase();
             const docCourse = String(data.course || '').toLowerCase();
-            const docCustomId = String(data.customId || data.rollNo || data.studentId || doc.id || '').toLowerCase();
+            const docCustomId = String(data.customId || data.rollNo || data.studentId || data.employeeId || doc.id || '').toLowerCase();
             const docDiagnosis = String(data.diagnosis || data.disease || data.diseaseName || '').toLowerCase();
             
             // Smarter ID Matching:
@@ -112,18 +189,23 @@ export async function resolveEntityByName(
                 diagnosisMatch ||
                 customIdSubstringMatch ||
                 isIdMatch) {
+              
+              const matchKey = `${target.isStaff ? 'staff' : 'patient'}_${target.dept}_${doc.id}`;
+              if (seenMatches.has(matchKey)) return;
+              seenMatches.add(matchKey);
+
               matches.push({
                 id: doc.id,
-                name: data.name || data.fullName || 'Unknown',
+                name: data.name || data.displayName || data.fullName || 'Unknown',
                 fatherName: data.fatherName || data.guardianName || 'N/A',
-                department: dept,
-                collection: config.collection,
-                identifierLabel: String(data.customId || data.rollNo || data.studentId || doc.id),
+                department: target.dept,
+                collection: target.collection,
+                identifierLabel: String(data.employeeId || data.customId || data.rollNo || data.studentId || doc.id),
               });
             }
           });
         } catch (err) {
-          console.error(`[resolveEntityByName] Error querying collection ${config.collection}:`, err);
+          console.error(`[resolveEntityByName] Error querying collection ${target.collection}:`, err);
         }
       })
     );

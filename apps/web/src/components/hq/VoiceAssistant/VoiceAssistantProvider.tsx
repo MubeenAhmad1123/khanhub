@@ -218,27 +218,32 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const executeResolvedIntent = async (intent: ParsedVoiceIntent, match: EntityMatch) => {
     if (intent.type === 'navigate') {
       let path = '';
-      switch (match.department) {
-        case 'rehab':
-          path = `/departments/rehab/dashboard/admin/patients/${match.id}`;
-          break;
-        case 'spims':
-          path = `/departments/spims/dashboard/admin/students/${match.id}`;
-          break;
-        case 'hospital':
-          path = `/departments/hospital/dashboard/admin/patients/${match.id}`;
-          break;
-        case 'sukoon':
-          path = `/departments/sukoon/dashboard/admin/clients/${match.id}`;
-          break;
-        case 'welfare':
-          path = `/departments/welfare/dashboard/admin/children/${match.id}`;
-          break;
-        case 'job-center':
-          path = `/departments/job-center/dashboard/admin/seekers/${match.id}`;
-          break;
-        default:
-          path = `/hq/dashboard`;
+      const isStaff = match.collection.endsWith('_users') || match.collection.endsWith('_staff');
+      if (isStaff) {
+        path = `/hq/dashboard/manager/staff/${match.department}_${match.id}`;
+      } else {
+        switch (match.department) {
+          case 'rehab':
+            path = `/departments/rehab/dashboard/admin/patients/${match.id}`;
+            break;
+          case 'spims':
+            path = `/departments/spims/dashboard/admin/students/${match.id}`;
+            break;
+          case 'hospital':
+            path = `/departments/hospital/dashboard/admin/patients/${match.id}`;
+            break;
+          case 'sukoon':
+            path = `/departments/sukoon/dashboard/admin/clients/${match.id}`;
+            break;
+          case 'welfare':
+            path = `/departments/welfare/dashboard/admin/children/${match.id}`;
+            break;
+          case 'job-center':
+            path = `/departments/job-center/dashboard/admin/seekers/${match.id}`;
+            break;
+          default:
+            path = `/hq/dashboard`;
+        }
       }
       
       router.push(path);
