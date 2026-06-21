@@ -11,6 +11,7 @@ export interface EntityMatch {
   department: string;
   collection: string;
   identifierLabel: string; // e.g. "REHAB-058" or roll no
+  designation?: string;     // designation/role for staff
 }
 
 const DEPT_COLLECTIONS: Record<string, { collection: string; label: string }> = {
@@ -63,7 +64,8 @@ const STAFF_COLLECTIONS: Record<string, { collection: string; label: string }[]>
 export async function resolveEntityByName(
   name: string,
   scopedDepartments: string[],
-  entityType?: string
+  entityType?: string,
+  departmentCode?: string
 ): Promise<{ matches: EntityMatch[] }> {
   try {
     const session = await readHqSessionCookie();
@@ -97,6 +99,12 @@ export async function resolveEntityByName(
       const allowedDepts = ENTITY_TYPE_DEPT_MAPPINGS[entityType];
       permittedDepts = permittedDepts.filter(d => allowedDepts.includes(d));
       permittedStaffDepts = permittedStaffDepts.filter(d => allowedDepts.includes(d));
+    }
+
+    // Filter permitted departments by explicitly requested departmentCode if specified
+    if (departmentCode) {
+      permittedDepts = permittedDepts.filter(d => d === departmentCode);
+      permittedStaffDepts = permittedStaffDepts.filter(d => d === departmentCode);
     }
 
     const lowercaseName = name.toLowerCase().trim();
@@ -150,8 +158,7 @@ export async function resolveEntityByName(
           snapshot.forEach((doc) => {
             const data = doc.data();
             
-            // Skip inactive documents
-            if (data.isActive === false) return;
+            // Do NOT skip inactive documents so discharged patients can be found
 
             const docName = String(data.name || data.fullName || data.displayName || '').toLowerCase();
             const docCourse = String(data.course || '').toLowerCase();
@@ -201,6 +208,7 @@ export async function resolveEntityByName(
                 department: target.dept,
                 collection: target.collection,
                 identifierLabel: String(data.employeeId || data.customId || data.rollNo || data.studentId || doc.id),
+                designation: data.designation || data.role || undefined,
               });
             }
           });

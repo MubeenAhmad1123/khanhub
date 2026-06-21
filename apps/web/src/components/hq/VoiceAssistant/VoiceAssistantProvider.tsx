@@ -154,6 +154,36 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     }
 
     try {
+      // Check for voice selection or cancellation if there is a pending disambiguation intent
+      if (pendingIntent) {
+        const text = commandText.toLowerCase().trim();
+        
+        if (text === 'cancel' || text === 'no' || text.includes('cancel') || text === 'back') {
+          clearPendingIntent();
+          return;
+        }
+
+        let selectedIdx = -1;
+        if (text.includes('one') || text.includes('1') || text.includes('first') || text.includes('number one') || text.includes('number 1')) {
+          selectedIdx = 0;
+        } else if (text.includes('two') || text.includes('2') || text.includes('second') || text.includes('number two') || text.includes('number 2')) {
+          selectedIdx = 1;
+        } else if (text.includes('three') || text.includes('3') || text.includes('third') || text.includes('number three') || text.includes('number 3')) {
+          selectedIdx = 2;
+        } else if (text.includes('four') || text.includes('4') || text.includes('fourth') || text.includes('number four') || text.includes('number 4')) {
+          selectedIdx = 3;
+        } else if (text.includes('five') || text.includes('5') || text.includes('fifth') || text.includes('number five') || text.includes('number 5')) {
+          selectedIdx = 4;
+        }
+
+        if (selectedIdx >= 0 && selectedIdx < pendingIntent.matches.length) {
+          const match = pendingIntent.matches[selectedIdx];
+          setPendingIntent(null);
+          await executeResolvedIntent(pendingIntent.intent, match);
+          return;
+        }
+      }
+
       const parsed = parseVoiceIntent(commandText);
 
       // Bypasses entity resolution for dashboard queries
@@ -168,10 +198,15 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
 
       const scopedDepts = getScopedDepartments();
-      const { matches } = await resolveEntityByName(parsed.entityName, scopedDepts, parsed.entityType);
+      const { matches } = await resolveEntityByName(
+        parsed.entityName,
+        scopedDepts,
+        parsed.entityType,
+        parsed.departmentCode
+      );
 
       if (matches.length === 0) {
-        speakUtterance(`I couldn't find any active record for "${parsed.entityName}".`);
+        speakUtterance(`I couldn't find any record for "${parsed.entityName}".`);
         return;
       }
 
@@ -180,7 +215,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       } else {
         setPendingIntent({ intent: parsed, matches });
         const nameListPrompt = matches
-          .map((m, idx) => `number ${idx + 1}, ${m.name} whose father is ${m.fatherName}`)
+          .map((m, idx) => {
+            const isStaff = m.collection.endsWith('_users') || m.collection.endsWith('_staff');
+            if (isStaff) {
+              return `number ${idx + 1}, ${m.name}, ${m.designation || 'Staff'} in ${m.department} department`;
+            }
+            if (m.fatherName && m.fatherName !== 'N/A') {
+              return `number ${idx + 1}, ${m.name} whose father is ${m.fatherName}`;
+            }
+            return `number ${idx + 1}, ${m.name} in ${m.department} department`;
+          })
           .join(', and ');
         speakUtterance(
           `I found ${matches.length} matches for ${parsed.entityName}. ${nameListPrompt}. Which one do you mean? Or you can tap the card on the screen.`

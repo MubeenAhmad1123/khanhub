@@ -70,7 +70,9 @@ export const VOICE_PHRASE_PATTERNS: VoicePhrasePattern[] = [
 // Helper Urdu/English stop words to clean up from the extracted entity name
 const STOP_WORDS = new Set([
   'ka', 'ki', 'ko', 'ne', 'ke', 'of', 'the', 'a', 'an', 'is', 'was', 'are', 'today', 'aj', 'aaj', 'batao', 'bataein', 'check', 'show', 'dikhao', 'kholo', 'open', 'me', 'my',
-  'patient', 'student', 'seeker', 'child', 'client', 'staff', 'employee', 'teacher', 'doctor', 'nurse', 'worker', 'id', 'no', 'number', 'roll', 'in', 'at', 'from'
+  'patient', 'student', 'seeker', 'child', 'client', 'staff', 'employee', 'teacher', 'doctor', 'nurse', 'worker', 'id', 'no', 'number', 'roll', 'in', 'at', 'from',
+  'rehab', 'rehabilitation', 'spims', 'academy', 'hospital', 'sukoon', 'welfare', 'foundation', 'job-center', 'job', 'jobs', 'hq', 'headquarters', 'it', 'technology',
+  'media', 'social-media', 'department', 'dept'
 ]);
 
 const DEPT_KEYWORDS: Record<string, string[]> = {
@@ -81,6 +83,8 @@ const DEPT_KEYWORDS: Record<string, string[]> = {
   'welfare': ['welfare', 'foundation', 'welfare foundation'],
   'job-center': ['job center', 'job-center', 'jobs'],
   'hq': ['hq', 'headquarters', 'central'],
+  'it': ['it', 'it department', 'information technology'],
+  'social-media': ['social media', 'media', 'facebook', 'instagram', 'youtube'],
 };
 
 // Normalizes written numbers to digits (e.g. "ninety nine" to "99")
