@@ -194,6 +194,13 @@ export async function addTherapySession(data: Omit<TherapySession, 'id' | 'creat
   return res.id;
 }
 
+export async function updateTherapySession(sessionId: string, sessionNotes: string): Promise<void> {
+  await updateDoc(doc(db, 'rehab_therapy_sessions', sessionId), {
+    sessionNotes,
+    updatedAt: Timestamp.now()
+  });
+}
+
 // ─── MEDICATION RECORDS ──────────────────────────────────────────────────────
 
 export async function getMedicationRecords(patientId: string): Promise<MedicationRecord[]> {

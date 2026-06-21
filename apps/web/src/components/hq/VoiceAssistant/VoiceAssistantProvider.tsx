@@ -164,9 +164,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
 
         let selectedIdx = -1;
-        if (text.includes('one') || text.includes('1') || text.includes('first') || text.includes('number one') || text.includes('number 1')) {
-          selectedIdx = 0;
-        } else if (text.includes('two') || text.includes('2') || text.includes('second') || text.includes('number two') || text.includes('number 2')) {
+        if (text.includes('two') || text.includes('2') || text.includes('second') || text.includes('number two') || text.includes('number 2')) {
           selectedIdx = 1;
         } else if (text.includes('three') || text.includes('3') || text.includes('third') || text.includes('number three') || text.includes('number 3')) {
           selectedIdx = 2;
@@ -174,6 +172,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           selectedIdx = 3;
         } else if (text.includes('five') || text.includes('5') || text.includes('fifth') || text.includes('number five') || text.includes('number 5')) {
           selectedIdx = 4;
+        } else if (text.includes('one') || text.includes('1') || text.includes('first') || text.includes('number one') || text.includes('number 1')) {
+          selectedIdx = 0;
         }
 
         if (selectedIdx >= 0 && selectedIdx < pendingIntent.matches.length) {
@@ -339,7 +339,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       const checkEnd = () => {
         if (!window.speechSynthesis.speaking) {
           setSpeaking(false);
-          if (mode === 'always_on' && !manualStopRef.current && !pendingIntent) {
+          if ((mode === 'always_on' || pendingIntent) && !manualStopRef.current) {
             startRecognitionInstance();
           }
         } else {
@@ -379,9 +379,10 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
     rec.onend = () => {
       setListening(false);
-      if (mode === 'always_on' && !manualStopRef.current && !window.speechSynthesis.speaking && !processing && !pendingIntent) {
+      const shouldRestart = (mode === 'always_on' || pendingIntent) && !manualStopRef.current && !window.speechSynthesis.speaking && !processing;
+      if (shouldRestart) {
         setTimeout(() => {
-          if (mode === 'always_on' && !manualStopRef.current) {
+          if ((mode === 'always_on' || pendingIntent) && !manualStopRef.current) {
             startRecognitionInstance();
           }
         }, 1000);

@@ -164,6 +164,7 @@ export async function resolveEntityByName(
             const docCourse = String(data.course || '').toLowerCase();
             const docCustomId = String(data.customId || data.rollNo || data.studentId || data.employeeId || doc.id || '').toLowerCase();
             const docDiagnosis = String(data.diagnosis || data.disease || data.diseaseName || '').toLowerCase();
+            const docDesignation = String(data.designation || data.role || '').toLowerCase();
             
             // Smarter ID Matching:
             // Check if the query is a pure number.
@@ -190,11 +191,13 @@ export async function resolveEntityByName(
             const courseMatch = !isNumericQuery && docCourse.includes(lowercaseName);
             const diagnosisMatch = !isNumericQuery && docDiagnosis.includes(lowercaseName);
             const customIdSubstringMatch = !isNumericQuery && docCustomId.includes(lowercaseName);
+            const designationMatch = !isNumericQuery && docDesignation.includes(lowercaseName);
 
             if (nameMatch || 
                 courseMatch || 
                 diagnosisMatch ||
                 customIdSubstringMatch ||
+                designationMatch ||
                 isIdMatch) {
               
               const matchKey = `${target.isStaff ? 'staff' : 'patient'}_${target.dept}_${doc.id}`;
