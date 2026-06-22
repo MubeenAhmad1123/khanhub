@@ -8,7 +8,8 @@ import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
-  Phone, DollarSign, CheckCircle, AlertCircle, X, Filter
+  Phone, DollarSign, CheckCircle, AlertCircle, X, Filter,
+  BarChart3, TrendingUp, TrendingDown, Users
 } from 'lucide-react';
 import { Patient } from '@/types/rehab';
 
@@ -32,6 +33,12 @@ export default function PatientsListPage() {
   const [sortMethod, setSortMethod] = useState<string>('newest'); 
   const [yearFilter, setYearFilter] = useState<string>('all');
   
+  // Discharge Analytics State
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analyticsPreset, setAnalyticsPreset] = useState<'this_month' | 'last_month' | 'last_90_days' | 'custom'>('this_month');
+  const [analyticsStartDate, setAnalyticsStartDate] = useState('');
+  const [analyticsEndDate, setAnalyticsEndDate] = useState('');
+
   // Pagination State
   const [page, setPage] = useState(1);
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
@@ -71,6 +78,25 @@ export default function PatientsListPage() {
     setSession(parsed);
     fetchPatients();
   }, [router]);
+
+  useEffect(() => {
+    const today = new Date();
+    if (analyticsPreset === 'this_month') {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      setAnalyticsStartDate(startOfMonth.toISOString().split('T')[0]);
+      setAnalyticsEndDate(today.toISOString().split('T')[0]);
+    } else if (analyticsPreset === 'last_month') {
+      const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      setAnalyticsStartDate(startOfLastMonth.toISOString().split('T')[0]);
+      setAnalyticsEndDate(endOfLastMonth.toISOString().split('T')[0]);
+    } else if (analyticsPreset === 'last_90_days') {
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(today.getDate() - 90);
+      setAnalyticsStartDate(ninetyDaysAgo.toISOString().split('T')[0]);
+      setAnalyticsEndDate(today.toISOString().split('T')[0]);
+    }
+  }, [analyticsPreset]);
 
   const fetchPatients = async (isNext = false, isPrev = false) => {
     try {
@@ -211,7 +237,6 @@ export default function PatientsListPage() {
       });
 
       setPatients(paginatedData);
-      // We don't update allPatients here because it's only for the current page
     } catch (err: any) {
       console.error('Fetch patients error:', err?.message);
     } finally {
@@ -322,7 +347,65 @@ export default function PatientsListPage() {
 
   const totalActive = totalActiveCount;
   const totalDischarged = totalDischargedCount;
-  const totalOutstanding = 0; // Disabled global sum to save reads. Total outstanding is now viewed per-patient.
+
+  // ── DYNAMIC OUTSTANDING DUES COMPUTATION ──
+  const totalOutstanding = allPatients
+    .filter(p => {
+      if (statusFilter === 'active') return p.isActive !== false;
+      if (statusFilter === 'discharged') return p.isActive === false;
+      return true;
+    })
+    .reduce((sum, p) => {
+      const rem = Number(p.remaining ?? p.overallRemaining ?? p.remainingBalance ?? p.amountRemaining ?? 0);
+      return sum + (Number.isNaN(rem) ? 0 : rem);
+    }, 0);
+
+  // ── DISCHARGE ANALYTICS COMPUTATION ──
+  const start = analyticsStartDate ? new Date(analyticsStartDate + 'T00:00:00') : null;
+  const end = analyticsEndDate ? new Date(analyticsEndDate + 'T23:59:59') : null;
+
+  const dischargedInPeriod = allPatients.filter(p => {
+    if (p.isActive !== false) return false;
+    if (!p.dischargeDate) return false;
+    const dDate = toDate(p.dischargeDate);
+    if (start && dDate < start) return false;
+    if (end && dDate > end) return false;
+    return true;
+  });
+
+  let totalStayDays = 0;
+  dischargedInPeriod.forEach(p => {
+    const adm = toDate(p.admissionDate);
+    const dsc = toDate(p.dischargeDate);
+    const diffMs = dsc.getTime() - adm.getTime();
+    const days = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    totalStayDays += days;
+  });
+
+  const avgStayDays = dischargedInPeriod.length > 0 ? Math.round(totalStayDays / dischargedInPeriod.length) : 0;
+
+  const analyticsTotalReceived = dischargedInPeriod.reduce((sum, p) => {
+    return sum + Number(p.totalReceived ?? p.overallReceived ?? 0);
+  }, 0);
+
+  const analyticsTotalRemaining = dischargedInPeriod.reduce((sum, p) => {
+    return sum + Number(p.remaining ?? p.overallRemaining ?? p.remainingBalance ?? p.amountRemaining ?? 0);
+  }, 0);
+
+  const substanceCounts: Record<string, number> = {};
+  dischargedInPeriod.forEach(p => {
+    let sub = (p.substanceOfAddiction || 'Unknown').trim();
+    if (!sub) sub = 'Unknown';
+    const parts = sub.split(/[,+/]/).map((x: string) => x.trim().toUpperCase()).filter(Boolean);
+    parts.forEach((part: string) => {
+      substanceCounts[part] = (substanceCounts[part] || 0) + 1;
+    });
+  });
+
+  const topSubstances = Object.entries(substanceCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] p-4 md:p-8 w-full overflow-x-hidden">
@@ -336,14 +419,229 @@ export default function PatientsListPage() {
             </h1>
             <p className="text-sm text-gray-500 font-medium mt-0.5">Manage all patients and their recovery journey</p>
           </div>
-          <Link 
-            href="/departments/rehab/dashboard/admin/patients/new"
-            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Add Patient
-          </Link>
+          <div className="flex gap-2 self-end sm:self-auto">
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className={`px-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all whitespace-nowrap border ${
+                showAnalytics
+                  ? 'bg-teal-50 border-teal-200 text-teal-700'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              {showAnalytics ? 'Hide Analytics' : 'Discharge Analytics'}
+            </button>
+            <Link 
+              href="/departments/rehab/dashboard/admin/patients/new"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Add Patient
+            </Link>
+          </div>
         </div>
+
+        {/* Expandable Discharge Analytics Section */}
+        {showAnalytics && (
+          <div className="bg-white rounded-3xl p-5 md:p-6 shadow-md border border-gray-100 space-y-6 transition-all duration-300 animate-in slide-in-from-top-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-50 pb-4">
+              <div>
+                <h2 className="text-md font-black text-gray-900 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-teal-600" />
+                  Discharge Analytics & Insights
+                </h2>
+                <p className="text-xs text-gray-400 font-medium">Analyze and inspect discharged patient history and metrics</p>
+              </div>
+              <button 
+                onClick={() => setShowAnalytics(false)}
+                className="self-end sm:self-auto text-gray-400 hover:text-gray-900 transition-colors p-1.5 rounded-lg hover:bg-gray-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Range selection */}
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+              <div className="flex flex-wrap gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                {[
+                  { id: 'this_month', label: 'This Month' },
+                  { id: 'last_month', label: 'Last Month' },
+                  { id: 'last_90_days', label: 'Last 90 Days' },
+                  { id: 'custom', label: 'Custom Range' }
+                ].map(preset => (
+                  <button
+                    key={preset.id}
+                    onClick={() => setAnalyticsPreset(preset.id as any)}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                      analyticsPreset === preset.id
+                        ? 'bg-teal-600 text-white shadow-md'
+                        : 'text-gray-400 hover:text-gray-900'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {analyticsPreset === 'custom' && (
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <div className="flex-1 sm:w-44">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={analyticsStartDate}
+                      onChange={e => setAnalyticsStartDate(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 text-gray-900"
+                    />
+                  </div>
+                  <div className="flex-1 sm:w-44">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={analyticsEndDate}
+                      onChange={e => setAnalyticsEndDate(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 text-gray-900"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* KPI metrics */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-teal-50/50 to-teal-50 border border-teal-100/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-black text-teal-700 uppercase tracking-widest">Total Discharged</span>
+                  <Users className="w-4 h-4 text-teal-600" />
+                </div>
+                <p className="text-2xl font-black text-teal-900">{dischargedInPeriod.length}</p>
+                <p className="text-[9px] text-teal-600 font-bold mt-1">In selected range</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50/50 to-blue-50 border border-blue-100/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Avg. Stay Duration</span>
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                </div>
+                <p className="text-2xl font-black text-blue-900">
+                  {avgStayDays === 0 ? '—' : `${avgStayDays} ${avgStayDays === 1 ? 'Day' : 'Days'}`}
+                </p>
+                <p className="text-[9px] text-blue-600 font-bold mt-1">Admission to Discharge</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50/50 to-green-50 border border-green-100/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-black text-green-700 uppercase tracking-widest">Revenue Liquidated</span>
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                </div>
+                <p className="text-xl font-black text-green-900">₨{analyticsTotalReceived.toLocaleString()}</p>
+                <p className="text-[9px] text-green-600 font-bold mt-1">Total payments collected</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-red-50/50 to-red-50 border border-red-100/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-black text-red-700 uppercase tracking-widest">Pending Dues</span>
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                </div>
+                <p className="text-xl font-black text-red-900">₨{analyticsTotalRemaining.toLocaleString()}</p>
+                <p className="text-[9px] text-red-600 font-bold mt-1">Unpaid balance remaining</p>
+              </div>
+            </div>
+
+            {/* Detailed Patient List & Addiction Profile Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+              {/* Patient List */}
+              <div className="lg:col-span-2 space-y-3">
+                <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider">Discharged Patients List ({dischargedInPeriod.length})</h3>
+                {dischargedInPeriod.length === 0 ? (
+                  <div className="bg-gray-50/50 border border-dashed border-gray-150 rounded-2xl p-8 text-center text-gray-400 text-xs font-bold">
+                    No patients discharged in the selected date range.
+                  </div>
+                ) : (
+                  <div className="max-h-[300px] overflow-y-auto border border-gray-100 rounded-2xl divide-y divide-gray-50 bg-white shadow-sm">
+                    {dischargedInPeriod.map(p => {
+                      const stay = Math.max(0, Math.floor((toDate(p.dischargeDate).getTime() - toDate(p.admissionDate).getTime()) / (1000 * 60 * 60 * 24)));
+                      const pRemaining = Number(p.remaining ?? p.overallRemaining ?? p.remainingBalance ?? p.amountRemaining ?? 0);
+                      return (
+                        <div key={p.id} className="flex items-center justify-between p-3 hover:bg-teal-50/10 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-700 font-black text-xs">
+                              {p.name ? p.name.charAt(0).toUpperCase() : '?'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-gray-800">{p.name}</p>
+                              <p className="text-[9px] text-gray-400 font-mono">
+                                {p.inpatientNumber || `#${p.serialNumber}`} • {stay} Days Stay
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Discharged</p>
+                              <p className="text-[10px] font-black text-gray-600">
+                                {formatDateDMY(toDate(p.dischargeDate))}
+                              </p>
+                            </div>
+
+                            {pRemaining > 0 ? (
+                              <span className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md">
+                                ₨{pRemaining.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-md">
+                                Paid
+                              </span>
+                            )}
+
+                            <Link
+                              href={`/departments/rehab/dashboard/admin/patients/${p.id}`}
+                              className="text-teal-600 hover:text-teal-700 p-1 hover:bg-teal-50 rounded transition-colors"
+                            >
+                              <ChevronRight size={16} />
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Addiction Profile */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider">Substance Breakdown</h3>
+                <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-4">
+                  {topSubstances.length === 0 ? (
+                    <div className="text-center text-gray-400 text-xs font-bold py-8">
+                      No data available
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5">
+                      {topSubstances.map((sub, i) => {
+                        const percent = dischargedInPeriod.length > 0 ? Math.round((sub.count / dischargedInPeriod.length) * 100) : 0;
+                        return (
+                          <div key={sub.name} className="space-y-1">
+                            <div className="flex justify-between text-xs font-bold text-gray-700">
+                              <span className="truncate pr-2">{sub.name}</span>
+                              <span className="text-teal-600 flex-shrink-0">{sub.count} ({percent}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-50 rounded-full h-2 overflow-hidden border border-gray-100/50">
+                              <div 
+                                className="h-full bg-gradient-to-r from-teal-500 to-teal-600 rounded-full transition-all duration-500" 
+                                style={{ width: `${percent}%` }} 
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -361,7 +659,12 @@ export default function PatientsListPage() {
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0"><DollarSign className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Dues</p><p className="text-sm font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p></div>
+              <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  {statusFilter === 'active' ? 'Active Dues' : statusFilter === 'discharged' ? 'Discharged Dues' : 'Total Dues'}
+                </p>
+                <p className="text-sm font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p>
+              </div>
             </div>
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -480,7 +783,7 @@ export default function PatientsListPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {patients.map(patient => (
+            {filteredPatients.map(patient => (
               <Link 
                 href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
                 key={patient.id}
