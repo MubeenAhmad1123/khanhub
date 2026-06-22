@@ -348,7 +348,7 @@ export default function PatientsListPage() {
   const totalActive = totalActiveCount;
   const totalDischarged = totalDischargedCount;
 
-  // ── DYNAMIC OUTSTANDING DUES COMPUTATION ──
+  // ── DYNAMIC OUTSTANDING DUES & EARNED COMPUTATIONS ──
   const totalOutstanding = allPatients
     .filter(p => {
       if (statusFilter === 'active') return p.isActive !== false;
@@ -358,6 +358,17 @@ export default function PatientsListPage() {
     .reduce((sum, p) => {
       const rem = Number(p.remaining ?? p.overallRemaining ?? p.remainingBalance ?? p.amountRemaining ?? 0);
       return sum + (Number.isNaN(rem) ? 0 : rem);
+    }, 0);
+
+  const totalEarned = allPatients
+    .filter(p => {
+      if (statusFilter === 'active') return p.isActive !== false;
+      if (statusFilter === 'discharged') return p.isActive === false;
+      return true;
+    })
+    .reduce((sum, p) => {
+      const rec = Number(p.totalReceived ?? p.overallReceived ?? 0);
+      return sum + (Number.isNaN(rec) ? 0 : rec);
     }, 0);
 
   // ── DISCHARGE ANALYTICS COMPUTATION ──
@@ -643,7 +654,7 @@ export default function PatientsListPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 flex-shrink-0"><User className="w-4 h-4" /></div>
@@ -658,19 +669,30 @@ export default function PatientsListPage() {
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0"><DollarSign className="w-4 h-4" /></div>
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0"><TrendingUp className="w-4 h-4" /></div>
               <div>
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                  {statusFilter === 'active' ? 'Active Dues' : statusFilter === 'discharged' ? 'Discharged Dues' : 'Total Dues'}
+                  {statusFilter === 'active' ? 'Active Earned' : statusFilter === 'discharged' ? 'Discharged Earned' : 'Total Earned'}
                 </p>
-                <p className="text-sm font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p>
+                <p className="text-xl font-black text-emerald-600">₨{totalEarned.toLocaleString()}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0"><DollarSign className="w-4 h-4" /></div>
+              <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  {statusFilter === 'active' ? 'Active Dues' : statusFilter === 'discharged' ? 'Discharged Dues' : 'Total Dues'}
+                </p>
+                <p className="text-xl font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 col-span-2 sm:col-span-1">
+            <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0"><User className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Patients Till Date</p><p className="text-xl font-black text-gray-900">{totalPatientsCount}</p></div>
+              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Patients</p><p className="text-xl font-black text-gray-900">{totalPatientsCount}</p></div>
             </div>
           </div>
         </div>
