@@ -48,7 +48,7 @@ async function assertVoiceAccess() {
 
 // TOOL 1: Get most recent patient/student/child admitted
 export async function getLatestAdmission(
-  department: 'rehab' | 'spims' | 'hospital' | 'welfare' | 'job-center'
+  department: 'rehab' | 'spims' | 'hospital' | 'welfare' | 'job-center' | 'sukoon'
 ): Promise<{ name: string; id: string; admittedAt: string; detail: string }[]> {
   await assertVoiceAccess();
   
@@ -58,6 +58,7 @@ export async function getLatestAdmission(
     hospital: 'hospital_patients',
     welfare: 'welfare_children',
     'job-center': 'job_center_seekers',
+    sukoon: 'sukoon_patients',
   };
   
   const col = collectionMap[department];
@@ -89,10 +90,10 @@ export async function getLatestAdmission(
 
 // TOOL 2: Get admissions count for a specific date
 export async function getAdmissionsByDate(
-  department: 'rehab' | 'spims' | 'hospital' | 'welfare' | 'job-center' | 'all',
+  department: 'rehab' | 'spims' | 'hospital' | 'welfare' | 'job-center' | 'sukoon' | 'all',
   targetDate: string | null,
   daysBack: number | null
-): Promise<{ date: string; count: number; patients: { name: string; id: string }[] }> {
+): Promise<{ date: string; count: number; patients: { name: string; id: string; department: string; type: string }[] }> {
   await assertVoiceAccess();
   
   const { start, end, formattedDate } = getDateBoundariesInUTC(targetDate, daysBack);
@@ -103,13 +104,14 @@ export async function getAdmissionsByDate(
     hospital: 'hospital_patients',
     welfare: 'welfare_children',
     'job-center': 'job_center_seekers',
+    sukoon: 'sukoon_patients',
   };
 
   const collections = department === 'all' 
     ? Object.values(collectionMap)
     : [collectionMap[department]];
   
-  let allPatients: { name: string; id: string }[] = [];
+  let allPatients: { name: string; id: string; department: string; type: string }[] = [];
   
   for (const col of collections) {
     if (!col) continue;
@@ -121,7 +123,20 @@ export async function getAdmissionsByDate(
       
       snap.docs.forEach(doc => {
         const d = doc.data();
-        allPatients.push({ name: d.name || d.displayName || d.fullName || 'Unknown', id: doc.id });
+        let type = 'patient';
+        let deptCode = 'rehab';
+        if (col === 'spims_students') { type = 'student'; deptCode = 'spims'; }
+        else if (col === 'welfare_children') { type = 'child'; deptCode = 'welfare'; }
+        else if (col === 'job_center_seekers') { type = 'seeker'; deptCode = 'job-center'; }
+        else if (col === 'hospital_patients') { type = 'patient'; deptCode = 'hospital'; }
+        else if (col === 'sukoon_patients') { type = 'patient'; deptCode = 'sukoon'; }
+
+        allPatients.push({ 
+          name: d.name || d.displayName || d.fullName || 'Unknown', 
+          id: doc.id,
+          department: deptCode,
+          type
+        });
       });
     } catch (e) {
       console.warn(`[VoiceTools] Error querying admissions for ${col}:`, e);
@@ -153,7 +168,9 @@ export async function getFinancialSummary(
     spims: 'spims_transactions',
     hospital: 'hospital_transactions',
     welfare: 'welfare_transactions',
-    'job-center': 'jobcenter_transactions',
+    'job-center': 'job_center_transactions',
+    sukoon: 'sukoon_transactions',
+    hq: 'cashierTransactions',
   };
   
   const collectionsToQuery = department && txCollections[department]

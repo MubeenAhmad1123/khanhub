@@ -104,6 +104,18 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     });
   };
 
+  const getContextDepartment = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    const path = window.location.pathname;
+    if (path.includes('/departments/rehab')) return 'rehab';
+    if (path.includes('/departments/spims')) return 'spims';
+    if (path.includes('/departments/hospital')) return 'hospital';
+    if (path.includes('/departments/sukoon')) return 'sukoon';
+    if (path.includes('/departments/welfare')) return 'welfare';
+    if (path.includes('/departments/job-center')) return 'job-center';
+    return null;
+  };
+
   const setMode = (newMode: VoiceAssistantMode) => {
     setModeState(newMode);
     localStorage.setItem(MODE_STORAGE_KEY, newMode);
@@ -180,7 +192,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
       }
 
-      const parsed = await parseLlmIntent(commandText);
+      const activeDept = getContextDepartment();
+      const parsed = await parseLlmIntent(commandText, activeDept);
       console.log('[VOICE INTENT RESULT]', JSON.stringify(parsed, null, 2));
 
       await dispatchVoiceTool(parsed);
@@ -205,16 +218,44 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           const dept = departmentCode || 'rehab';
           data = await getLatestAdmission(dept as any);
           topic = 'latest_admission';
+          
+          if (data && data.length > 0) {
+            const match = data[0];
+            let type = 'patient';
+            if (dept === 'spims') type = 'student';
+            else if (dept === 'welfare') type = 'child';
+            else if (dept === 'job-center') type = 'seeker';
+            
+            const spokenText = await generateSpokenResponse(topic, data, match.name);
+            speakUtterance(spokenText);
+            
+            // Automatically open profile of the latest patient
+            const path = buildProfilePath(dept, type, match.id);
+            router.push(path);
+            return;
+          }
           break;
         }
         
         case 'getAdmissionsByDate': {
-          data = await getAdmissionsByDate(
+          const res = await getAdmissionsByDate(
             departmentCode as any || 'all', 
             targetDate, 
             daysBack
           );
+          data = res;
           topic = 'admissions_by_date';
+          
+          if (res.count === 1 && res.patients.length === 1) {
+            const p = res.patients[0];
+            const spokenText = await generateSpokenResponse(topic, res, p.name);
+            speakUtterance(spokenText);
+            
+            // Automatically open profile
+            const path = buildProfilePath(p.department, p.type, p.id);
+            router.push(path);
+            return;
+          }
           break;
         }
         
@@ -256,8 +297,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
                 collection = 'welfare_children';
               } else if (match.type === 'seeker') {
                 collection = 'job_center_seekers';
+              } else if (match.department === 'sukoon') {
+                collection = 'sukoon_patients';
+              } else if (match.department === 'hospital') {
+                collection = 'hospital_patients';
               }
- 
+
               if (intent.queryTopic === 'remaining_fee') {
                 detailData = await getRemainingFeeForEntity(match.id, collection);
               } else if (intent.queryTopic === 'attendance') {
@@ -267,14 +312,18 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               } else if (intent.queryTopic === 'status') {
                 detailData = await getStatusForEntity(match.id, collection);
               }
- 
+
               if (detailData) {
                 const spokenText = await generateSpokenResponse(intent.queryTopic, detailData, match.name);
                 speakUtterance(spokenText);
+                
+                // Automatically open profile of the matched person too!
+                const path = buildProfilePath(match.department, match.type, match.id);
+                router.push(path);
                 return;
               }
             }
- 
+
             // Default: Auto-navigate to the single match
             const path = buildProfilePath(match.department, match.type, match.id);
             speakUtterance(`${match.name} ka profile khol raha hoon.`);
@@ -293,6 +342,10 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               collection = 'welfare_children';
             } else if (r.type === 'seeker') {
               collection = 'job_center_seekers';
+            } else if (r.department === 'sukoon') {
+              collection = 'sukoon_patients';
+            } else if (r.department === 'hospital') {
+              collection = 'hospital_patients';
             }
             
             return {
@@ -304,7 +357,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               identifierLabel: r.id
             };
           });
- 
+
           setPendingIntent({ intent, matches: entityMatches });
           const names = results.slice(0, 3).map((r, i) => 
             `number ${i+1}, ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} in ${r.department} department`
@@ -343,6 +396,10 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
                 collection = 'welfare_children';
               } else if (r.type === 'seeker') {
                 collection = 'job_center_seekers';
+              } else if (r.department === 'sukoon') {
+                collection = 'sukoon_patients';
+              } else if (r.department === 'hospital') {
+                collection = 'hospital_patients';
               }
               
               return {
@@ -354,7 +411,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
                 identifierLabel: r.id
               };
             });
- 
+
             setPendingIntent({ intent, matches: entityMatches });
             const names = results.slice(0, 3).map((r, i) => 
               `number ${i+1}, ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} in ${r.department} department`
@@ -417,7 +474,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     } else if (match.collection === 'job_center_seekers') {
       entityType = 'seeker';
     }
- 
+
     const resolvedIntent: ParsedVoiceIntent = {
       tool: 'navigate',
       entityName: match.name,
@@ -461,21 +518,21 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     if (typeof window === 'undefined') return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
- 
+
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
     }
- 
+
     const rec = new SpeechRecognition();
     rec.lang = 'en-US';
     rec.interimResults = true;
     rec.continuous = (mode === 'always_on');
- 
+
     rec.onstart = () => {
       setListening(true);
       setError(null);
     };
- 
+
     rec.onerror = (e: any) => {
       console.warn('[VoiceAssistant] Speech recognition error event:', e.error);
       if (e.error === 'not-allowed') {
@@ -483,7 +540,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         setListening(false);
       }
     };
- 
+
     rec.onend = () => {
       setListening(false);
       const shouldRestart = (mode === 'always_on' || pendingIntent) && !manualStopRef.current && !window.speechSynthesis.speaking && !processing;
@@ -498,7 +555,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     rec.onresult = (event: any) => {
       let interim = '';
       let final = '';
- 
+
       for (let i = 0; i < event.results.length; ++i) {
         const trans = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
@@ -507,24 +564,24 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           interim += trans;
         }
       }
- 
+
       const combined = (final + interim).trim();
- 
+
       if (mode === 'always_on') {
         let isActivelyCapturing = capturingCommand;
- 
+
         if (!isActivelyCapturing) {
           const matchedWakeWord = WAKE_WORDS.find(word => 
             combined.toLowerCase().includes(word)
           );
- 
+
           if (matchedWakeWord) {
             playAudioCue();
             setCapturingCommand(true);
             isActivelyCapturing = true;
           }
         }
- 
+
         if (isActivelyCapturing) {
           let cmdPart = combined;
           for (const word of WAKE_WORDS) {
@@ -536,7 +593,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           }
           
           setLiveTranscript(cmdPart.trim());
- 
+
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
             setCapturingCommand(false);
@@ -555,7 +612,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
       }
     };
- 
+
     recognitionRef.current = rec;
     rec.start();
   };
@@ -577,10 +634,10 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     } else {
       setCapturingCommand(true);
     }
- 
+
     startRecognitionInstance();
   };
- 
+
   const stopAssistant = () => {
     manualStopRef.current = true;
     setListening(false);
@@ -597,7 +654,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       } catch (e) {}
     }
   };
- 
+
   useEffect(() => {
     return () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);

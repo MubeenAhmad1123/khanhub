@@ -1,4 +1,6 @@
+// apps/web/src/lib/voice/intentParser.ts
 'use server';
+
 import { getGroqClient, GROQ_MODEL } from './groqClient';
 import { WAKE_WORDS } from './voiceConfig';
 
@@ -29,7 +31,9 @@ export interface ParsedVoiceIntent {
   llmConfidence: number;
 }
 
-const SYSTEM_PROMPT = `You are Mubi, an intelligent voice assistant for Khan Hub 
+function getSystemPrompt(contextDepartment: string | null = null): string {
+  const todayStr = new Date(Date.now() + 5 * 3600000).toISOString().split('T')[0];
+  return `You are Mubi, an intelligent voice assistant for Khan Hub 
 ERP — a Pakistani multi-department organization managing rehab center, medical 
 college (SPIMS), hospital, welfare, and job center.
 
@@ -50,7 +54,7 @@ JSON format:
   "entityName": string|null,
   "entityId": string|null,
   "entityType": "patient"|"student"|"staff"|"child"|"seeker"|null,
-  "departmentCode": "rehab"|"spims"|"hospital"|"welfare"|"job-center"|null,
+  "departmentCode": "rehab"|"spims"|"hospital"|"welfare"|"job-center"|"sukoon"|null,
   "targetDate": "YYYY-MM-DD"|null,
   "daysBack": number|null,
   "queryTopic": "remaining_fee"|"attendance"|"total_paid"|"status"|"remaining_fee_today"|"earnings_today"|null,
@@ -66,11 +70,13 @@ Rules for queryTopic:
   * overall dues, total outstanding, today's remaining → remaining_fee_today
   * daily earnings, today's earnings, total income → earnings_today
 
-Date rules (today is ${new Date(Date.now() + 5*3600000).toISOString().split('T')[0]} Pakistan time):
+Date rules (today is ${todayStr} Pakistan time):
 - "kal" / "yesterday" → daysBack: 1
-- "aaj" / "today" → targetDate: today's date
+- "aaj" / "today" → targetDate: "${todayStr}"
 - "5 din pehle" → daysBack: 5
 - "22 June" / "22 tarikh" → targetDate: "2026-06-22"
+
+${contextDepartment ? `CURRENT CONTEXT: The user is currently viewing the "${contextDepartment}" department dashboard. If their query is ambiguous or doesn't specify a department, default the "departmentCode" in your response to "${contextDepartment}".` : ''}
 
 Examples:
 "latest patient kaun hai rehab mein" → tool: getLatestAdmission, departmentCode: rehab
@@ -80,15 +86,20 @@ Examples:
 "Sana present hai?" → tool: searchPersonByName, entityName: Sana, queryTopic: attendance
 "open profile of staff Moeeen" → tool: searchPersonByName, entityName: Moeeen, entityType: staff
 "aaj rehab ne kitna kamaya" → tool: getFinancialSummary, departmentCode: rehab, targetDate: today`;
+}
 
-export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
+export async function parseLlmIntent(
+  transcript: string,
+  contextDepartment: string | null = null
+): Promise<ParsedVoiceIntent> {
   try {
     const groq = getGroqClient();
+    const systemPrompt = getSystemPrompt(contextDepartment);
     
     const completion = await groq.chat.completions.create({
       model: GROQ_MODEL,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript }
       ],
       temperature: 0.1,      // Low temp = more consistent JSON
@@ -319,12 +330,12 @@ function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
   }
 
   const isEarningsToday = lowercase.includes("earn") || 
-                          lowercase.includes("earnings") || 
-                          lowercase.includes("income") || 
-                          lowercase.includes("collection") || 
-                          lowercase.includes("jama kiya") || 
-                          lowercase.includes("kamaya");
-                          
+                           lowercase.includes("earnings") || 
+                           lowercase.includes("income") || 
+                           lowercase.includes("collection") || 
+                           lowercase.includes("jama kiya") || 
+                           lowercase.includes("kamaya");
+                           
   if (isEarningsToday && (lowercase.includes("today") || lowercase.includes("overall") || lowercase.includes("aaj") || lowercase.includes("daily") || departmentCode)) {
     return {
       tool: 'getFinancialSummary',
