@@ -180,6 +180,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
 
       const parsed = await parseLlmIntent(commandText);
+      console.log('[VOICE INTENT RESULT]', JSON.stringify(parsed, null, 2));
 
       // Bypasses entity resolution for dashboard queries
       if (parsed.queryTopic === 'remaining_fee_today' || 

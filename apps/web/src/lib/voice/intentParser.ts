@@ -84,6 +84,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
 
     const raw = completion.choices[0]?.message?.content || '{}';
     const parsed = JSON.parse(raw);
+    console.log('[GROQ INTENT]', JSON.stringify(parsed, null, 2));
 
     return {
       type: parsed.type || 'unknown',
