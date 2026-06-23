@@ -1,25 +1,127 @@
-// apps/web/src/lib/voice/intentParser.ts
-
+'use server';
+import { getGroqClient, GROQ_MODEL } from './groqClient';
 import { WAKE_WORDS } from './voiceConfig';
 
 export type VoiceIntentType = 'navigate' | 'query' | 'unknown';
 export type VoiceQueryTopic = 
   | 'remaining_fee' 
   | 'attendance' 
+  | 'earnings_today'
+  | 'earnings_date'      // NEW: specific date earnings
+  | 'patient_count'      // NEW: how many patients/students on a date
   | 'total_paid' 
   | 'status' 
-  | 'remaining_fee_today' 
-  | 'earnings_today' 
+  | 'remaining_fee_today'
   | 'unknown';
+
+export type EntityType = 'patient' | 'student' | 'staff' | 'child' | 'seeker' | null;
 
 export interface ParsedVoiceIntent {
   type: VoiceIntentType;
   queryTopic?: VoiceQueryTopic;
-  entityName: string | null;   // extracted name or ID, e.g. "Ahmed" or "99"
+  entityName: string | null;
+  entityId: string | null;
+  entityType: EntityType;        // NEW: what TYPE of person
+  departmentCode: string | null;
+  targetDate: string | null;     // NEW: ISO date string e.g. "2026-06-25"
+  daysBack: number | null;       // NEW: e.g. 5 for "5 din pehle"
   rawTranscript: string;
-  departmentCode?: string;     // department code (if query is about a department)
-  entityType?: 'patient' | 'student' | 'seeker' | 'child' | 'client' | 'staff';
+  llmConfidence: number;
 }
+
+const SYSTEM_PROMPT = `You are an intent parser for a Pakistani hospital/college ERP 
+voice assistant called "Mubi". Users speak in Hinglish (mixed Urdu-English).
+
+Your job: parse the transcript and return ONLY a valid JSON object. No explanation. 
+No markdown. No extra text. Only the raw JSON.
+
+JSON structure:
+{
+  "type": "navigate" | "query" | "unknown",
+  "queryTopic": "remaining_fee" | "attendance" | "earnings_today" | "earnings_date" | "patient_count" | "total_paid" | "status" | "remaining_fee_today" | null,
+  "entityName": string | null,
+  "entityId": string | null,
+  "entityType": "patient" | "student" | "staff" | "child" | "seeker" | null,
+  "departmentCode": "rehab" | "spims" | "hospital" | "welfare" | "job-center" | null,
+  "targetDate": "YYYY-MM-DD" | null,
+  "daysBack": number | null,
+  "llmConfidence": 0.0-1.0
+}
+
+Rules:
+- navigate: user wants to OPEN a profile/page (open, kholo, dikhao, show, go to)
+- query: user wants to HEAR information (remaining, kitna, earnings, income, attendance, count)
+- entityType: extract from context words — "staff Moeeen" → staff, "patient Ahmed" → patient, "student Sana" → student
+- entityId: convert word-numbers to digits. "ninety nine" → "99", "twelve" → "12"
+- targetDate: if user says a specific date like "25 June" → "2026-06-25" (assume current year 2026)
+- daysBack: if user says "5 din pehle" or "5 days ago" → 5
+- departmentCode: rehab/spims/hospital/welfare/job-center if mentioned
+- llmConfidence: your confidence 0.0-1.0 in this parse
+
+Examples:
+"open profile of staff Moeeen" → { "type":"navigate", "entityName":"Moeeen", "entityType":"staff", "queryTopic":null, "entityId":null, "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
+"patient ID ninety nine ka profile kholo" → { "type":"navigate", "entityName":null, "entityType":"patient", "queryTopic":null, "entityId":"99", "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
+"Ahmed ka remaining batao" → { "type":"query", "queryTopic":"remaining_fee", "entityName":"Ahmed", "entityType":null, "entityId":null, "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
+"25 June ko hospital mein kitna income hua" → { "type":"query", "queryTopic":"earnings_date", "entityName":null, "entityType":null, "entityId":null, "departmentCode":"hospital", "targetDate":"2026-06-25", "daysBack":null, "llmConfidence":1.0 }
+"5 din pehle rehab mein kitne naye patient aaye" → { "type":"query", "queryTopic":"patient_count", "entityName":null, "entityType":"patient", "entityId":null, "departmentCode":"rehab", "targetDate":null, "daysBack":5, "llmConfidence":1.0 }
+"aaj ka overall remaining" → { "type":"query", "queryTopic":"remaining_fee_today", "entityName":null, "entityType":null, "entityId":null, "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
+"aaj hospital ne kitna kamaya" → { "type":"query", "queryTopic":"earnings_today", "entityName":null, "entityType":null, "entityId":null, "departmentCode":"hospital", "targetDate":null, "daysBack":null, "llmConfidence":1.0 }`;
+
+export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
+  try {
+    const groq = getGroqClient();
+    
+    const completion = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: transcript }
+      ],
+      temperature: 0.1,      // Low temp = more consistent JSON
+      max_tokens: 300,
+      response_format: { type: 'json_object' }  // Forces JSON output
+    });
+
+    const raw = completion.choices[0]?.message?.content || '{}';
+    const parsed = JSON.parse(raw);
+
+    return {
+      type: parsed.type || 'unknown',
+      queryTopic: parsed.queryTopic || undefined,
+      entityName: parsed.entityName || null,
+      entityId: parsed.entityId || null,
+      entityType: parsed.entityType || null,
+      departmentCode: parsed.departmentCode || null,
+      targetDate: parsed.targetDate || null,
+      daysBack: parsed.daysBack || null,
+      rawTranscript: transcript,
+      llmConfidence: parsed.llmConfidence || 0.5,
+    };
+  } catch (err) {
+    console.error('[LLM Intent Parser] Groq error, falling back to regex parser:', err);
+    try {
+      return parseRegexVoiceIntent(transcript);
+    } catch (fallbackErr) {
+      console.error('[LLM Intent Parser] Fallback regex parser also failed:', fallbackErr);
+      return {
+        type: 'unknown',
+        queryTopic: 'unknown',
+        entityName: null,
+        entityId: null,
+        entityType: null,
+        departmentCode: null,
+        targetDate: null,
+        daysBack: null,
+        rawTranscript: transcript,
+        llmConfidence: 0,
+      };
+    }
+  }
+}
+
+// ==========================================
+// REGEX FALLBACK PARSER & HELPER FUNCTIONS
+// ==========================================
 
 export interface VoicePhrasePattern {
   pattern: RegExp;
@@ -27,47 +129,26 @@ export interface VoicePhrasePattern {
   topic?: VoiceQueryTopic;
 }
 
-// English and romanized Urdu (Hinglish) patterns to match queries and extract names
 export const VOICE_PHRASE_PATTERNS: VoicePhrasePattern[] = [
-  // 1. NAVIGATE Intents
-  // English: "open profile of Ahmed", "show me Ahmed's record"
   { pattern: /(?:open|show|go to|view)\s+(?:the\s+)?(?:profile|record)\s+(?:of\s+)?([a-zA-Z0-9\s]+)/i, type: 'navigate' },
   { pattern: /show\s+([a-zA-Z0-9\s]+)'s?\s+(?:profile|record)/i, type: 'navigate' },
-  // Hinglish: "Ahmed ka profile kholo", "Ahmed ki record dikhao"
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ka|ki|ko)\s+(?:profile|record)\s+(?:kholo|dikhao|open\s*karo|show\s*karo)/i, type: 'navigate' },
-  
-  // 2. QUERY: remaining_fee
-  // English: "what is the remaining of Ahmed", "tell me Ahmed's balance"
   { pattern: /(?:what is|tell me|check)\s+(?:the\s+)?(?:remaining|balance|outstanding|baki|fee|fees)\s+(?:of\s+)?([a-zA-Z0-9\s]+)/i, type: 'query', topic: 'remaining_fee' },
   { pattern: /check\s+([a-zA-Z0-9\s]+)'s?\s+(?:remaining|balance|outstanding|fee|fees)/i, type: 'query', topic: 'remaining_fee' },
-  // Hinglish: "Ahmed ka remaining kitna hai", "Ahmed ka outstanding batao", "Ahmed ka balance kya hai"
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ka|ki|ko)\s+(?:remaining|balance|baki|outstanding|fee|fees)\s*(?:batao|check|kitna|show|bataein|kya|hai)*/i, type: 'query', topic: 'remaining_fee' },
-  
-  // 3. QUERY: attendance
-  // English: "tell me Ahmed's attendance", "is Ahmed present today"
   { pattern: /(?:what is|tell me|check)\s+(?:the\s+)?(?:attendance|presence|hazri)\s+(?:of\s+)?([a-zA-Z0-9\s]+)/i, type: 'query', topic: 'attendance' },
   { pattern: /check\s+([a-zA-Z0-9\s]+)'s?\s+(?:attendance|presence|hazri)/i, type: 'query', topic: 'attendance' },
-  // Hinglish: "Ahmed ki attendance batao", "Ahmed present hai kya"
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ki|ka|ko)\s+(?:attendance|hazri|presence)\s*(?:batao|check|kaisi|kya|show|bataein|hai)*/i, type: 'query', topic: 'attendance' },
   { pattern: /is\s+([a-zA-Z0-9\s]+)\s+(?:present|absent|leave)/i, type: 'query', topic: 'attendance' },
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:present|absent)\s+hai/i, type: 'query', topic: 'attendance' },
-
-  // 4. QUERY: total_paid
-  // English: "how much has Ahmed paid", "total paid of Ahmed"
   { pattern: /(?:what is|tell me|check|how much has)\s+([a-zA-Z0-9\s]+)\s+(?:paid|total paid)/i, type: 'query', topic: 'total_paid' },
   { pattern: /(?:what is|tell me|check)\s+(?:the\s+)?(?:total paid|paid amount|paid|jama)\s+(?:of\s+)?([a-zA-Z0-9\s]+)/i, type: 'query', topic: 'total_paid' },
-  // Hinglish: "Ahmed ka total paid kitna hai", "Ahmed ne kitna jama kiya"
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ka|ki|ko|ne)\s+(?:total paid|paid|jama)\s*(?:batao|check|kitna|show|bataein|kya|kiya|hai)*/i, type: 'query', topic: 'total_paid' },
-
-  // 5. QUERY: status
-  // English: "what is the status of Ahmed", "progress of Ahmed"
   { pattern: /(?:what is|tell me|check)\s+(?:the\s+)?(?:status|progress|report)\s+(?:of\s+)?([a-zA-Z0-9\s]+)/i, type: 'query', topic: 'status' },
   { pattern: /check\s+([a-zA-Z0-9\s]+)'s?\s+(?:status|progress|report)/i, type: 'query', topic: 'status' },
-  // Hinglish: "Ahmed ka status kaisa hai", "Ahmed ki report batao"
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ka|ki|ko)\s+(?:status|progress|report|kaisa|kaisi)\s*(?:batao|check|kya|show|bataein|hai|kaisa hai|kaisi hai)*/i, type: 'query', topic: 'status' },
 ];
 
-// Helper Urdu/English stop words to clean up from the extracted entity name
 const STOP_WORDS = new Set([
   'ka', 'ki', 'ko', 'ne', 'ke', 'of', 'the', 'a', 'an', 'is', 'was', 'are', 'today', 'aj', 'aaj', 'batao', 'bataein', 'check', 'show', 'dikhao', 'kholo', 'open', 'me', 'my',
   'patient', 'student', 'seeker', 'child', 'client', 'staff', 'employee', 'teacher', 'doctor', 'nurse', 'worker', 'id', 'no', 'number', 'roll', 'in', 'at', 'from',
@@ -87,7 +168,6 @@ const DEPT_KEYWORDS: Record<string, string[]> = {
   'social-media': ['social media', 'media', 'facebook', 'instagram', 'youtube'],
 };
 
-// Normalizes written numbers to digits (e.g. "ninety nine" to "99")
 export function wordsToNumbers(text: string): string {
   const units: Record<string, number> = {
     'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
@@ -144,15 +224,23 @@ export function cleanEntityName(name: string): string {
     .trim();
 }
 
-export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
+export function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
   if (!transcript) {
-    return { type: 'unknown', entityName: null, rawTranscript: '' };
+    return {
+      type: 'unknown',
+      entityName: null,
+      entityId: null,
+      entityType: null,
+      departmentCode: null,
+      targetDate: null,
+      daysBack: null,
+      rawTranscript: '',
+      llmConfidence: 0
+    };
   }
 
-  // Normalize number words to digits first
   let cleaned = wordsToNumbers(transcript.trim());
 
-  // 1. Strip wake word
   for (const wakeWord of WAKE_WORDS) {
     const regex = new RegExp(`^(?:hey\\s+)?${wakeWord}\\b[\\s,.]*`, 'i');
     if (regex.test(cleaned)) {
@@ -169,8 +257,7 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   const lowercase = cleaned.toLowerCase();
 
-  // Detect if transcript mentions a department
-  let departmentCode: string | undefined = undefined;
+  let departmentCode: string | null = null;
   for (const [code, keywords] of Object.entries(DEPT_KEYWORDS)) {
     if (keywords.some(kw => lowercase.includes(kw))) {
       departmentCode = code;
@@ -178,13 +265,12 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     }
   }
 
-  // Detect if transcript mentions an entity type
-  let entityType: 'patient' | 'student' | 'seeker' | 'child' | 'client' | 'staff' | undefined = undefined;
+  let entityType: EntityType = null;
   if (lowercase.includes('patient')) entityType = 'patient';
   else if (lowercase.includes('student')) entityType = 'student';
   else if (lowercase.includes('seeker')) entityType = 'seeker';
   else if (lowercase.includes('child')) entityType = 'child';
-  else if (lowercase.includes('client')) entityType = 'client';
+  else if (lowercase.includes('client')) entityType = 'patient'; // Map client to patient
   else if (
     lowercase.includes('staff') ||
     lowercase.includes('employee') ||
@@ -196,8 +282,6 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     entityType = 'staff';
   }
 
-  // 2. Query Topics - Financial / Dashboard
-  // check for remaining_fee_today
   const isRemainingToday = lowercase.includes("today's remaining") || 
                            lowercase.includes("remaining today") || 
                            lowercase.includes("total remaining") || 
@@ -210,13 +294,16 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
       type: 'query',
       queryTopic: 'remaining_fee_today',
       entityName: null,
-      rawTranscript: transcript,
+      entityId: null,
+      entityType,
       departmentCode,
-      entityType
+      targetDate: null,
+      daysBack: null,
+      rawTranscript: transcript,
+      llmConfidence: 0.5
     };
   }
 
-  // check for earnings_today
   const isEarningsToday = lowercase.includes("earn") || 
                           lowercase.includes("earnings") || 
                           lowercase.includes("income") || 
@@ -229,13 +316,16 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
       type: 'query',
       queryTopic: 'earnings_today',
       entityName: null,
-      rawTranscript: transcript,
+      entityId: null,
+      entityType,
       departmentCode,
-      entityType
+      targetDate: null,
+      daysBack: null,
+      rawTranscript: transcript,
+      llmConfidence: 0.5
     };
   }
 
-  // 3. Try regex phrase matches
   for (const item of VOICE_PHRASE_PATTERNS) {
     const match = item.pattern.exec(cleaned);
     if (match && match[1]) {
@@ -245,15 +335,18 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
           type: item.type,
           queryTopic: item.topic || 'unknown',
           entityName: extractedName,
-          rawTranscript: transcript,
+          entityId: null,
+          entityType,
           departmentCode,
-          entityType
+          targetDate: null,
+          daysBack: null,
+          rawTranscript: transcript,
+          llmConfidence: 0.5
         };
       }
     }
   }
 
-  // 4. Fallback: Keyword Scoring for standard single-entity queries
   let intentType: VoiceIntentType = 'unknown';
   let queryTopic: VoiceQueryTopic = 'unknown';
 
@@ -273,7 +366,6 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     queryTopic = 'status';
   }
 
-  // Fallback entity name extraction: everything before or after key transition words
   let extractedName: string | null = null;
   const delimiters = [' ka ', ' ki ', ' ko ', ' ne ', ' of ', ' to ', ' for '];
   
@@ -296,7 +388,7 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     if (capitalized.length > 0) {
       extractedName = capitalized.join(' ');
     } else if (tokens.length > 0) {
-      extractedName = tokens.slice(0, 2).join(' '); // Use first 2 non-stop words
+      extractedName = tokens.slice(0, 2).join(' ');
     }
   }
 
@@ -304,8 +396,12 @@ export function parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     type: intentType,
     queryTopic,
     entityName: intentType !== 'unknown' && extractedName ? cleanEntityName(extractedName) : null,
-    rawTranscript: transcript,
+    entityId: null,
+    entityType,
     departmentCode,
-    entityType
+    targetDate: null,
+    daysBack: null,
+    rawTranscript: transcript,
+    llmConfidence: 0.5
   };
 }

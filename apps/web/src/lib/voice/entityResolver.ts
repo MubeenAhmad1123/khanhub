@@ -3,6 +3,7 @@
 
 import { readHqSessionCookie } from '@/app/hq/actions/auth';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { EntityType } from './intentParser';
 
 export interface EntityMatch {
   id: string;
@@ -62,10 +63,10 @@ const STAFF_COLLECTIONS: Record<string, { collection: string; label: string }[]>
 };
 
 export async function resolveEntityByName(
-  name: string,
-  scopedDepartments: string[],
-  entityType?: string,
-  departmentCode?: string
+  name: string | null,
+  entityId: string | null,
+  entityType: EntityType,           // NEW parameter
+  scopedDepartments: string[]
 ): Promise<{ matches: EntityMatch[] }> {
   try {
     const session = await readHqSessionCookie();
@@ -77,15 +78,6 @@ export async function resolveEntityByName(
       throw new Error('Unauthorized: insufficient role permissions');
     }
 
-    const ENTITY_TYPE_DEPT_MAPPINGS: Record<string, string[]> = {
-      'patient': ['rehab', 'hospital', 'sukoon'],
-      'student': ['spims'],
-      'child': ['welfare'],
-      'seeker': ['job-center'],
-      'client': ['sukoon'],
-      'staff': ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'],
-    };
-
     let permittedDepts = session.role === 'superadmin' 
       ? Object.keys(DEPT_COLLECTIONS) 
       : scopedDepartments;
@@ -94,21 +86,24 @@ export async function resolveEntityByName(
       ? ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it']
       : scopedDepartments;
 
-    // Filter permitted departments by entity type if specified
-    if (entityType && ENTITY_TYPE_DEPT_MAPPINGS[entityType]) {
-      const allowedDepts = ENTITY_TYPE_DEPT_MAPPINGS[entityType];
-      permittedDepts = permittedDepts.filter(d => allowedDepts.includes(d));
-      permittedStaffDepts = permittedStaffDepts.filter(d => allowedDepts.includes(d));
-    }
+    // Filter by entityType:
+    // - entityType === 'staff'   → search ONLY hq_staff collection (and dept staff collections)
+    // - entityType === 'patient' → search ONLY rehab_patients, hospital_patients, sukoon_patients
+    // - entityType === 'student' → search ONLY spims_students
+    // - entityType === 'child'   → search ONLY welfare_children
+    // - entityType === 'seeker'  → search ONLY jobcenter_seekers
+    // - entityType === null      → search all collections (current behavior, keep as fallback)
+    const searchPatients = entityType === null || 
+                           entityType === 'patient' || 
+                           entityType === 'student' || 
+                           entityType === 'child' || 
+                           entityType === 'seeker';
 
-    // Filter permitted departments by explicitly requested departmentCode if specified
-    if (departmentCode) {
-      permittedDepts = permittedDepts.filter(d => d === departmentCode);
-      permittedStaffDepts = permittedStaffDepts.filter(d => d === departmentCode);
-    }
+    const searchStaff = entityType === null || entityType === 'staff';
 
-    const lowercaseName = name.toLowerCase().trim();
-    if (!lowercaseName) {
+    const lowercaseName = name ? name.toLowerCase().trim() : '';
+    const searchId = entityId ? entityId.toLowerCase().trim() : '';
+    if (!lowercaseName && !searchId) {
       return { matches: [] };
     }
 
@@ -116,8 +111,13 @@ export async function resolveEntityByName(
     const targets: { dept: string; collection: string; label: string; isStaff: boolean }[] = [];
 
     // Add patient/student targets
-    if (!entityType || entityType !== 'staff') {
+    if (searchPatients) {
       for (const dept of permittedDepts) {
+        if (entityType === 'patient' && !['rehab', 'hospital', 'sukoon'].includes(dept)) continue;
+        if (entityType === 'student' && dept !== 'spims') continue;
+        if (entityType === 'child' && dept !== 'welfare') continue;
+        if (entityType === 'seeker' && dept !== 'job-center') continue;
+
         const config = DEPT_COLLECTIONS[dept];
         if (config) {
           targets.push({
@@ -131,7 +131,7 @@ export async function resolveEntityByName(
     }
 
     // Add staff targets
-    if (!entityType || entityType === 'staff') {
+    if (searchStaff) {
       for (const dept of permittedStaffDepts) {
         const configs = STAFF_COLLECTIONS[dept];
         if (configs) {
@@ -158,48 +158,44 @@ export async function resolveEntityByName(
           snapshot.forEach((doc) => {
             const data = doc.data();
             
-            // Do NOT skip inactive documents so discharged patients can be found
-
-            const docName = String(data.name || data.fullName || data.displayName || '').toLowerCase();
+            const docName = String(data.name || data.displayName || data.fullName || '').toLowerCase();
             const docCourse = String(data.course || '').toLowerCase();
             const docCustomId = String(data.customId || data.rollNo || data.studentId || data.employeeId || doc.id || '').toLowerCase();
             const docDiagnosis = String(data.diagnosis || data.disease || data.diseaseName || '').toLowerCase();
             const docDesignation = String(data.designation || data.role || '').toLowerCase();
             
-            // Smarter ID Matching:
-            // Check if the query is a pure number.
-            const isNumericQuery = /^\d+$/.test(lowercaseName);
-            let isIdMatch = false;
+            let isMatch = false;
 
-            if (isNumericQuery) {
-              // Extract all digit groups from the ID
-              const docDigitsMatch = docCustomId.match(/\d+/g);
-              if (docDigitsMatch) {
-                // Check if the last digit group parses to the exact searched integer
-                const lastDigits = docDigitsMatch[docDigitsMatch.length - 1];
-                const searchVal = parseInt(lowercaseName, 10);
-                const lastVal = parseInt(lastDigits, 10);
-                isIdMatch = !isNaN(searchVal) && !isNaN(lastVal) && searchVal === lastVal;
+            // 1. If we have an entityId, perform ID matching
+            if (searchId) {
+              const isNumericQuery = /^\d+$/.test(searchId);
+              if (isNumericQuery) {
+                const docDigitsMatch = docCustomId.match(/\d+/g);
+                if (docDigitsMatch) {
+                  const lastDigits = docDigitsMatch[docDigitsMatch.length - 1];
+                  const searchVal = parseInt(searchId, 10);
+                  const lastVal = parseInt(lastDigits, 10);
+                  isMatch = !isNaN(searchVal) && !isNaN(lastVal) && searchVal === lastVal;
+                }
+              } else {
+                const docDigits = docCustomId.replace(/[^0-9]/g, '');
+                const searchDigits = searchId.replace(/[^0-9]/g, '');
+                isMatch = searchDigits.length > 0 && docDigits.endsWith(searchDigits);
               }
-            } else {
-              const docDigits = docCustomId.replace(/[^0-9]/g, '');
-              const searchDigits = lowercaseName.replace(/[^0-9]/g, '');
-              isIdMatch = searchDigits.length > 0 && docDigits.endsWith(searchDigits);
             }
-            
-            const nameMatch = !isNumericQuery && docName.includes(lowercaseName);
-            const courseMatch = !isNumericQuery && docCourse.includes(lowercaseName);
-            const diagnosisMatch = !isNumericQuery && docDiagnosis.includes(lowercaseName);
-            const customIdSubstringMatch = !isNumericQuery && docCustomId.includes(lowercaseName);
-            const designationMatch = !isNumericQuery && docDesignation.includes(lowercaseName);
 
-            if (nameMatch || 
-                courseMatch || 
-                diagnosisMatch ||
-                customIdSubstringMatch ||
-                designationMatch ||
-                isIdMatch) {
+            // 2. If we didn't match by ID and have a name, perform name/text matching
+            if (!isMatch && lowercaseName) {
+              const nameMatch = docName.includes(lowercaseName);
+              const courseMatch = docCourse.includes(lowercaseName);
+              const diagnosisMatch = docDiagnosis.includes(lowercaseName);
+              const customIdSubstringMatch = docCustomId.includes(lowercaseName);
+              const designationMatch = docDesignation.includes(lowercaseName);
               
+              isMatch = nameMatch || courseMatch || diagnosisMatch || customIdSubstringMatch || designationMatch;
+            }
+
+            if (isMatch) {
               const matchKey = `${target.isStaff ? 'staff' : 'patient'}_${target.dept}_${doc.id}`;
               if (seenMatches.has(matchKey)) return;
               seenMatches.add(matchKey);

@@ -330,3 +330,176 @@ export async function getTodayEarnings(deptCode?: string) {
 
   return { grandTotal, breakdown };
 }
+
+// ==============================================================
+// DATE-BASED AND HISTORICAL QUERIES
+// ==============================================================
+
+const DEPT_PARENT_COLLECTIONS: Record<string, string> = {
+  'rehab': 'rehab_patients',
+  'spims': 'spims_students',
+  'hospital': 'hospital_patients',
+  'sukoon': 'sukoon_patients',
+  'welfare': 'welfare_children',
+  'job-center': 'job_center_seekers',
+};
+
+function getDateBoundariesInUTC(
+  targetDate: string | null,
+  daysBack: number | null
+): { start: Date; end: Date; formattedDate: string } {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  let pktDate = new Date(utc + (3600000 * 5)); // Pakistan Time (UTC+5)
+
+  if (daysBack !== null && daysBack > 0) {
+    pktDate.setDate(pktDate.getDate() - daysBack);
+  } else if (targetDate) {
+    const [year, month, day] = targetDate.split('-').map(Number);
+    pktDate = new Date(year, month - 1, day);
+  }
+
+  const pktStart = new Date(pktDate);
+  pktStart.setHours(0, 0, 0, 0);
+  const pktEnd = new Date(pktDate);
+  pktEnd.setHours(23, 59, 59, 999);
+
+  const start = new Date(pktStart.getTime() - 5 * 60 * 60 * 1000);
+  const end = new Date(pktEnd.getTime() - 5 * 60 * 60 * 1000);
+
+  const formattedDate = pktDate.toLocaleDateString('en-PK', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  return { start, end, formattedDate };
+}
+
+async function fetchApprovedTransactionsForCollection(
+  colName: string,
+  start: Date,
+  end: Date
+): Promise<{ income: number; expense: number }> {
+  let income = 0;
+  let expense = 0;
+  try {
+    const snap = await adminDb.collection(colName)
+      .where('createdAt', '>=', start)
+      .where('createdAt', '<', end)
+      .get();
+      
+    snap.forEach((doc: any) => {
+      const data = doc.data();
+      const status = data.status || 'pending';
+      const type = data.type || '';
+      
+      const isApproved = status === 'approved';
+      const isExpense = type === 'expense' || String(data.categoryName || data.category || '').toLowerCase().includes('expense');
+      const amount = Number(data.amount || 0);
+      
+      if (isApproved) {
+        if (isExpense) {
+          expense += amount;
+        } else {
+          income += amount;
+        }
+      }
+    });
+  } catch (err) {
+    console.error(`[fetchApprovedTransactionsForCollection] Error for ${colName}:`, err);
+  }
+  return { income, expense };
+}
+
+async function fetchAdmissionsCount(colName: string, start: Date, end: Date): Promise<number> {
+  let count = 0;
+  try {
+    const snap = await adminDb.collection(colName)
+      .where('createdAt', '>=', start)
+      .where('createdAt', '<', end)
+      .get();
+    count = snap.size;
+  } catch (err) {
+    console.error(`[fetchAdmissionsCount] Error for ${colName}:`, err);
+  }
+  return count;
+}
+
+export async function getEarningsByDate(
+  deptCode: string | null,
+  targetDate: string | null,
+  daysBack: number | null
+): Promise<{
+  date: string;
+  departmentBreakdown: { dept: string; income: number; expense: number }[];
+  totalIncome: number;
+  totalExpense: number;
+}> {
+  await assertVoiceAccess();
+
+  const { start, end, formattedDate } = getDateBoundariesInUTC(targetDate, daysBack);
+
+  const breakdown: { dept: string; income: number; expense: number }[] = [];
+  let totalIncome = 0;
+  let totalExpense = 0;
+
+  const targetDepts = deptCode && deptCode !== 'overall' && DEPT_TX_COLLECTIONS[deptCode]
+    ? [[deptCode, DEPT_TX_COLLECTIONS[deptCode]]]
+    : Object.entries(DEPT_TX_COLLECTIONS);
+
+  await Promise.all(
+    targetDepts.map(async ([code, colName]) => {
+      const res = await fetchApprovedTransactionsForCollection(colName, start, end);
+      breakdown.push({ dept: code, income: res.income, expense: res.expense });
+      totalIncome += res.income;
+      totalExpense += res.expense;
+    })
+  );
+
+  return {
+    date: formattedDate,
+    departmentBreakdown: breakdown,
+    totalIncome,
+    totalExpense
+  };
+}
+
+export async function getPatientCountByDate(
+  deptCode: string | null,
+  targetDate: string | null,
+  daysBack: number | null
+): Promise<{
+  date: string;
+  newAdmissions: number;
+  department: string;
+}> {
+  await assertVoiceAccess();
+
+  const { start, end, formattedDate } = getDateBoundariesInUTC(targetDate, daysBack);
+
+  let newAdmissions = 0;
+  let departmentLabel = 'overall';
+
+  const targetCols: string[] = [];
+  if (deptCode && deptCode !== 'overall' && DEPT_PARENT_COLLECTIONS[deptCode]) {
+    targetCols.push(DEPT_PARENT_COLLECTIONS[deptCode]);
+    departmentLabel = deptCode;
+  } else {
+    targetCols.push(...Object.values(DEPT_PARENT_COLLECTIONS));
+  }
+
+  await Promise.all(
+    targetCols.map(async (colName) => {
+      const c = await fetchAdmissionsCount(colName, start, end);
+      newAdmissions += c;
+    })
+  );
+
+  return {
+    date: formattedDate,
+    newAdmissions,
+    department: departmentLabel
+  };
+}
+

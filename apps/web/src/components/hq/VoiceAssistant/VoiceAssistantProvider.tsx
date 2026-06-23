@@ -10,7 +10,7 @@ import {
   VoiceAssistantMode, 
   WAKE_WORDS 
 } from '@/lib/voice/voiceConfig';
-import { parseVoiceIntent, ParsedVoiceIntent } from '@/lib/voice/intentParser';
+import { parseLlmIntent, ParsedVoiceIntent } from '@/lib/voice/intentParser';
 import { resolveEntityByName, EntityMatch } from '@/lib/voice/entityResolver';
 import { 
   getRemainingFeeForEntity, 
@@ -18,16 +18,11 @@ import {
   getTotalPaidForEntity, 
   getStatusForEntity,
   getTodayRemainingOverall,
-  getTodayEarnings
+  getTodayEarnings,
+  getEarningsByDate,
+  getPatientCountByDate
 } from '@/lib/voice/voiceQueryActions';
-import { 
-  formatRemainingFeeResponse, 
-  formatAttendanceResponse, 
-  formatTotalPaidResponse, 
-  formatStatusResponse,
-  formatTodayRemainingOverallResponse,
-  formatTodayEarningsResponse
-} from '@/lib/voice/responseFormatter';
+import { generateSpokenResponse } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
 
 interface VoiceAssistantContextType {
@@ -184,29 +179,33 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
       }
 
-      const parsed = parseVoiceIntent(commandText);
+      const parsed = await parseLlmIntent(commandText);
 
       // Bypasses entity resolution for dashboard queries
-      if (parsed.queryTopic === 'remaining_fee_today' || parsed.queryTopic === 'earnings_today') {
+      if (parsed.queryTopic === 'remaining_fee_today' || 
+          parsed.queryTopic === 'earnings_today' || 
+          parsed.queryTopic === 'earnings_date' || 
+          parsed.queryTopic === 'patient_count') {
         await executeDashboardQuery(parsed);
         return;
       }
 
-      if (parsed.type === 'unknown' || !parsed.entityName) {
+      if (parsed.type === 'unknown' || (!parsed.entityName && !parsed.entityId)) {
         speakUtterance("I didn't understand that. Please say it again.");
         return;
       }
 
       const scopedDepts = getScopedDepartments();
+      const depts = parsed.departmentCode ? [parsed.departmentCode] : scopedDepts;
       const { matches } = await resolveEntityByName(
         parsed.entityName,
-        scopedDepts,
+        parsed.entityId,
         parsed.entityType,
-        parsed.departmentCode
+        depts
       );
 
       if (matches.length === 0) {
-        speakUtterance(`I couldn't find any record for "${parsed.entityName}".`);
+        speakUtterance(`I couldn't find any record for "${parsed.entityName || parsed.entityId}".`);
         return;
       }
 
@@ -227,7 +226,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           })
           .join(', and ');
         speakUtterance(
-          `I found ${matches.length} matches for ${parsed.entityName}. ${nameListPrompt}. Which one do you mean? Or you can tap the card on the screen.`
+          `I found ${matches.length} matches for ${parsed.entityName || parsed.entityId}. ${nameListPrompt}. Which one do you mean? Or you can tap the card on the screen.`
         );
       }
     } catch (err: any) {
@@ -244,10 +243,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       let answer = '';
       if (intent.queryTopic === 'remaining_fee_today') {
         const res = await getTodayRemainingOverall();
-        answer = formatTodayRemainingOverallResponse(res);
+        answer = await generateSpokenResponse('remaining_fee_today', res);
       } else if (intent.queryTopic === 'earnings_today') {
-        const res = await getTodayEarnings(intent.departmentCode);
-        answer = formatTodayEarningsResponse(res, intent.departmentCode);
+        const res = await getTodayEarnings(intent.departmentCode || undefined);
+        answer = await generateSpokenResponse('earnings_today', { ...res, departmentCode: intent.departmentCode });
+      } else if (intent.queryTopic === 'earnings_date') {
+        const res = await getEarningsByDate(intent.departmentCode, intent.targetDate, intent.daysBack);
+        answer = await generateSpokenResponse('earnings_date', { ...res, departmentCode: intent.departmentCode });
+      } else if (intent.queryTopic === 'patient_count') {
+        const res = await getPatientCountByDate(intent.departmentCode, intent.targetDate, intent.daysBack);
+        answer = await generateSpokenResponse('patient_count', res);
       } else {
         answer = "I couldn't understand the topic.";
       }
@@ -297,16 +302,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         let answer = '';
         if (intent.queryTopic === 'remaining_fee') {
           const res = await getRemainingFeeForEntity(match.id, match.collection);
-          answer = formatRemainingFeeResponse(res);
+          answer = await generateSpokenResponse('remaining_fee', res, match.name);
         } else if (intent.queryTopic === 'attendance') {
           const res = await getAttendanceStatusForEntity(match.id, match.collection);
-          answer = formatAttendanceResponse(res);
+          answer = await generateSpokenResponse('attendance', res, match.name);
         } else if (intent.queryTopic === 'total_paid') {
           const res = await getTotalPaidForEntity(match.id, match.collection);
-          answer = formatTotalPaidResponse(res);
+          answer = await generateSpokenResponse('total_paid', res, match.name);
         } else if (intent.queryTopic === 'status') {
           const res = await getStatusForEntity(match.id, match.collection);
-          answer = formatStatusResponse(res);
+          answer = await generateSpokenResponse('status', res, match.name);
         } else {
           answer = "I couldn't understand the topic.";
         }
@@ -390,6 +395,24 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     };
 
     rec.onresult = (event: any) => {
+      const lastResultIndex = event.results.length - 1;
+      const lastResult = event.results[lastResultIndex];
+      
+      if (lastResult && lastResult.isFinal) {
+        const speechConfidence = lastResult[0].confidence;
+        if (speechConfidence < 0.45) {
+          speakUtterance('Sahi se nahi suna, dobara boliye');
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          if (mode === 'push_to_talk') {
+            stopAssistant();
+          } else {
+            setCapturingCommand(false);
+            setLiveTranscript('');
+          }
+          return;
+        }
+      }
+
       let interim = '';
       let final = '';
 
