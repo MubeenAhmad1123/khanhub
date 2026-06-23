@@ -393,25 +393,27 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }, 1000);
       }
     };
-
     rec.onresult = (event: any) => {
-      const lastResultIndex = event.results.length - 1;
-      const lastResult = event.results[lastResultIndex];
+      // Confidence check removed — Web Speech API returns unreliable
+      // confidence values in continuous/always-on mode (often 0.0 even
+      // when transcript is perfectly correct). LLM handles bad input instead.
       
-      if (lastResult && lastResult.isFinal) {
-        const speechConfidence = lastResult[0].confidence;
-        if (speechConfidence < 0.45) {
-          speakUtterance('Sahi se nahi suna, dobara boliye');
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          if (mode === 'push_to_talk') {
-            stopAssistant();
-          } else {
-            setCapturingCommand(false);
-            setLiveTranscript('');
-          }
-          return;
-        }
-      }
+      // const lastResultIndex = event.results.length - 1;
+      // const lastResult = event.results[lastResultIndex];
+      // if (lastResult && lastResult.isFinal) {
+      //   const speechConfidence = lastResult[0].confidence;
+      //   if (speechConfidence < 0.45) {
+      //     speakUtterance('Sahi se nahi suna, dobara boliye');
+      //     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      //     if (mode === 'push_to_talk') {
+      //       stopAssistant();
+      //     } else {
+      //       setCapturingCommand(false);
+      //       setLiveTranscript('');
+      //     }
+      //     return;
+      //   }
+      // }
 
       let interim = '';
       let final = '';
