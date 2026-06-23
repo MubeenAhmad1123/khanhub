@@ -112,7 +112,7 @@ function fallbackFormatter(queryTopic: string, data: Record<string, any>, entity
 // LOCAL FORMATTERS (FALLBACKS)
 // ==========================================
 
-export function formatRemainingFeeResponse(data: {
+function formatRemainingFeeResponse(data: {
   name: string;
   amountRemaining: number;
   amountPaid: number;
@@ -133,7 +133,7 @@ export function formatRemainingFeeResponse(data: {
   return text;
 }
 
-export function formatAttendanceResponse(data: {
+function formatAttendanceResponse(data: {
   status: string;
   date: string;
   name: string;
@@ -159,7 +159,7 @@ export function formatAttendanceResponse(data: {
   }
 }
 
-export function formatTotalPaidResponse(data: {
+function formatTotalPaidResponse(data: {
   name: string;
   totalPaid: number;
 }): string {
@@ -169,7 +169,7 @@ export function formatTotalPaidResponse(data: {
   return `${data.name} has paid a total of ${data.totalPaid.toLocaleString()} rupees.`;
 }
 
-export function formatStatusResponse(data: {
+function formatStatusResponse(data: {
   name: string;
   status: string;
   isActive: boolean;
@@ -179,7 +179,7 @@ export function formatStatusResponse(data: {
   return `${data.name}'s current status is "${statusStr}", and their profile record is ${activeText} in the system.`;
 }
 
-export function formatTodayRemainingOverallResponse(data: {
+function formatTodayRemainingOverallResponse(data: {
   rehabTotal: number;
   spimsTotal: number;
   hospitalTotal: number;
@@ -195,7 +195,7 @@ export function formatTodayRemainingOverallResponse(data: {
   return `The total outstanding remaining balance for Khan Hub is ${data.grandTotal.toLocaleString()} rupees. The breakdown is: Rehab has ${data.rehabTotal.toLocaleString()} rupees, SPIMS Academy has ${data.spimsTotal.toLocaleString()} rupees, Hospital has ${data.hospitalTotal.toLocaleString()} rupees, Welfare has ${data.welfareTotal.toLocaleString()} rupees, Sukoon has ${data.sukoonTotal.toLocaleString()} rupees, and Job Center has ${data.jobcenterTotal.toLocaleString()} rupees outstanding.`;
 }
 
-export function formatTodayEarningsResponse(
+function formatTodayEarningsResponse(
   data: { grandTotal: number; breakdown: Record<string, number> },
   deptCode?: string
 ): string {

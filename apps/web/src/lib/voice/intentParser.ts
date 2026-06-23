@@ -123,13 +123,13 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
 // REGEX FALLBACK PARSER & HELPER FUNCTIONS
 // ==========================================
 
-export interface VoicePhrasePattern {
+interface VoicePhrasePattern {
   pattern: RegExp;
   type: VoiceIntentType;
   topic?: VoiceQueryTopic;
 }
 
-export const VOICE_PHRASE_PATTERNS: VoicePhrasePattern[] = [
+const VOICE_PHRASE_PATTERNS: VoicePhrasePattern[] = [
   { pattern: /(?:open|show|go to|view)\s+(?:the\s+)?(?:profile|record)\s+(?:of\s+)?([a-zA-Z0-9\s]+)/i, type: 'navigate' },
   { pattern: /show\s+([a-zA-Z0-9\s]+)'s?\s+(?:profile|record)/i, type: 'navigate' },
   { pattern: /([a-zA-Z0-9\s]+)\s+(?:ka|ki|ko)\s+(?:profile|record)\s+(?:kholo|dikhao|open\s*karo|show\s*karo)/i, type: 'navigate' },
@@ -168,7 +168,7 @@ const DEPT_KEYWORDS: Record<string, string[]> = {
   'social-media': ['social media', 'media', 'facebook', 'instagram', 'youtube'],
 };
 
-export function wordsToNumbers(text: string): string {
+function wordsToNumbers(text: string): string {
   const units: Record<string, number> = {
     'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
     'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19
@@ -216,7 +216,7 @@ export function wordsToNumbers(text: string): string {
   return result.join(' ');
 }
 
-export function cleanEntityName(name: string): string {
+function cleanEntityName(name: string): string {
   return name
     .split(/\s+/)
     .filter(token => !STOP_WORDS.has(token.toLowerCase()))
@@ -224,7 +224,7 @@ export function cleanEntityName(name: string): string {
     .trim();
 }
 
-export function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
+function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
   if (!transcript) {
     return {
       type: 'unknown',

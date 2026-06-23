@@ -1,4 +1,3 @@
-'use server';
 import Groq from 'groq-sdk';
 
 let _groq: Groq | null = null;
