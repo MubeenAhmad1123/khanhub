@@ -17,55 +17,69 @@ export type VoiceQueryTopic =
 export type EntityType = 'patient' | 'student' | 'staff' | 'child' | 'seeker' | null;
 
 export interface ParsedVoiceIntent {
-  type: VoiceIntentType;
-  queryTopic?: VoiceQueryTopic;
+  tool: 'getLatestAdmission' | 'getAdmissionsByDate' | 'getFinancialSummary' | 'searchPersonByName' | 'navigate' | 'unknown';
   entityName: string | null;
   entityId: string | null;
-  entityType: EntityType;        // NEW: what TYPE of person
+  entityType: EntityType;
   departmentCode: string | null;
-  targetDate: string | null;     // NEW: ISO date string e.g. "2026-06-25"
-  daysBack: number | null;       // NEW: e.g. 5 for "5 din pehle"
+  targetDate: string | null;     // ISO date string e.g. "2026-06-25"
+  daysBack: number | null;       // e.g. 5 for "5 din pehle"
+  queryTopic?: 'remaining_fee' | 'attendance' | 'total_paid' | 'status' | 'remaining_fee_today' | 'earnings_today' | 'unknown' | null;
   rawTranscript: string;
   llmConfidence: number;
 }
 
-const SYSTEM_PROMPT = `You are an intent parser for a Pakistani hospital/college ERP 
-voice assistant called "Mubi". Users speak in Hinglish (mixed Urdu-English).
+const SYSTEM_PROMPT = `You are Mubi, an intelligent voice assistant for Khan Hub 
+ERP — a Pakistani multi-department organization managing rehab center, medical 
+college (SPIMS), hospital, welfare, and job center.
 
-Your job: parse the transcript and return ONLY a valid JSON object. No explanation. 
-No markdown. No extra text. Only the raw JSON.
+Users speak in Hinglish (Urdu-English mix). Parse their command and return ONLY 
+valid JSON — no explanation, no markdown, just raw JSON.
 
-JSON structure:
+AVAILABLE TOOLS (pick ONE that best matches the request):
+- "getLatestAdmission": user wants most recent patient/student name
+- "getAdmissionsByDate": user wants count or names of admissions on a specific date
+- "getFinancialSummary": user wants income/expense/earnings data
+- "searchPersonByName": user wants to find or open a specific person's profile, or ask a question about their record
+- "navigate": user wants to open a profile page (entityId or entityName known)
+- "unknown": cannot determine intent
+
+JSON format:
 {
-  "type": "navigate" | "query" | "unknown",
-  "queryTopic": "remaining_fee" | "attendance" | "earnings_today" | "earnings_date" | "patient_count" | "total_paid" | "status" | "remaining_fee_today" | null,
-  "entityName": string | null,
-  "entityId": string | null,
-  "entityType": "patient" | "student" | "staff" | "child" | "seeker" | null,
-  "departmentCode": "rehab" | "spims" | "hospital" | "welfare" | "job-center" | null,
-  "targetDate": "YYYY-MM-DD" | null,
-  "daysBack": number | null,
+  "tool": "getLatestAdmission"|"getAdmissionsByDate"|"getFinancialSummary"|"searchPersonByName"|"navigate"|"unknown",
+  "entityName": string|null,
+  "entityId": string|null,
+  "entityType": "patient"|"student"|"staff"|"child"|"seeker"|null,
+  "departmentCode": "rehab"|"spims"|"hospital"|"welfare"|"job-center"|null,
+  "targetDate": "YYYY-MM-DD"|null,
+  "daysBack": number|null,
+  "queryTopic": "remaining_fee"|"attendance"|"total_paid"|"status"|"remaining_fee_today"|"earnings_today"|null,
   "llmConfidence": 0.0-1.0
 }
 
-Rules:
-- navigate: user wants to OPEN a profile/page (open, kholo, dikhao, show, go to)
-- query: user wants to HEAR information (remaining, kitna, earnings, income, attendance, count)
-- entityType: extract from context words — "staff Moeeen" → staff, "patient Ahmed" → patient, "student Sana" → student
-- entityId: convert word-numbers to digits. "ninety nine" → "99", "twelve" → "12"
-- targetDate: if user says a specific date like "25 June" → "2026-06-25" (assume current year 2026)
-- daysBack: if user says "5 din pehle" or "5 days ago" → 5
-- departmentCode: rehab/spims/hospital/welfare/job-center if mentioned
-- llmConfidence: your confidence 0.0-1.0 in this parse
+Rules for queryTopic:
+- queryTopic: set ONLY if the user is asking a specific question about a person or overall stats:
+  * dues, outstanding, remaining, balance, baki → remaining_fee
+  * attendance, presence, hazri, present, absent → attendance
+  * paid, total paid, jama, payments → total_paid
+  * status, progress, report, kaisa hai → status
+  * overall dues, total outstanding, today's remaining → remaining_fee_today
+  * daily earnings, today's earnings, total income → earnings_today
+
+Date rules (today is ${new Date(Date.now() + 5*3600000).toISOString().split('T')[0]} Pakistan time):
+- "kal" / "yesterday" → daysBack: 1
+- "aaj" / "today" → targetDate: today's date
+- "5 din pehle" → daysBack: 5
+- "22 June" / "22 tarikh" → targetDate: "2026-06-22"
 
 Examples:
-"open profile of staff Moeeen" → { "type":"navigate", "entityName":"Moeeen", "entityType":"staff", "queryTopic":null, "entityId":null, "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
-"patient ID ninety nine ka profile kholo" → { "type":"navigate", "entityName":null, "entityType":"patient", "queryTopic":null, "entityId":"99", "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
-"Ahmed ka remaining batao" → { "type":"query", "queryTopic":"remaining_fee", "entityName":"Ahmed", "entityType":null, "entityId":null, "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
-"25 June ko hospital mein kitna income hua" → { "type":"query", "queryTopic":"earnings_date", "entityName":null, "entityType":null, "entityId":null, "departmentCode":"hospital", "targetDate":"2026-06-25", "daysBack":null, "llmConfidence":1.0 }
-"5 din pehle rehab mein kitne naye patient aaye" → { "type":"query", "queryTopic":"patient_count", "entityName":null, "entityType":"patient", "entityId":null, "departmentCode":"rehab", "targetDate":null, "daysBack":5, "llmConfidence":1.0 }
-"aaj ka overall remaining" → { "type":"query", "queryTopic":"remaining_fee_today", "entityName":null, "entityType":null, "entityId":null, "departmentCode":null, "targetDate":null, "daysBack":null, "llmConfidence":1.0 }
-"aaj hospital ne kitna kamaya" → { "type":"query", "queryTopic":"earnings_today", "entityName":null, "entityType":null, "entityId":null, "departmentCode":"hospital", "targetDate":null, "daysBack":null, "llmConfidence":1.0 }`;
+"latest patient kaun hai rehab mein" → tool: getLatestAdmission, departmentCode: rehab
+"kal kitne patient admit hue" → tool: getAdmissionsByDate, daysBack: 1
+"22 June ko hospital mein income kya thi" → tool: getFinancialSummary, departmentCode: hospital, targetDate: 2026-06-22
+"Ahmed ka remaining batao" → tool: searchPersonByName, entityName: Ahmed, queryTopic: remaining_fee
+"Sana present hai?" → tool: searchPersonByName, entityName: Sana, queryTopic: attendance
+"open profile of staff Moeeen" → tool: searchPersonByName, entityName: Moeeen, entityType: staff
+"aaj rehab ne kitna kamaya" → tool: getFinancialSummary, departmentCode: rehab, targetDate: today`;
 
 export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
   try {
@@ -87,14 +101,14 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
     console.log('[GROQ INTENT]', JSON.stringify(parsed, null, 2));
 
     return {
-      type: parsed.type || 'unknown',
-      queryTopic: parsed.queryTopic || undefined,
+      tool: parsed.tool || 'unknown',
       entityName: parsed.entityName || null,
       entityId: parsed.entityId || null,
       entityType: parsed.entityType || null,
       departmentCode: parsed.departmentCode || null,
       targetDate: parsed.targetDate || null,
       daysBack: parsed.daysBack || null,
+      queryTopic: parsed.queryTopic || null,
       rawTranscript: transcript,
       llmConfidence: parsed.llmConfidence || 0.5,
     };
@@ -105,14 +119,14 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
     } catch (fallbackErr) {
       console.error('[LLM Intent Parser] Fallback regex parser also failed:', fallbackErr);
       return {
-        type: 'unknown',
-        queryTopic: 'unknown',
+        tool: 'unknown',
         entityName: null,
         entityId: null,
         entityType: null,
         departmentCode: null,
         targetDate: null,
         daysBack: null,
+        queryTopic: null,
         rawTranscript: transcript,
         llmConfidence: 0,
       };
@@ -228,7 +242,7 @@ function cleanEntityName(name: string): string {
 function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
   if (!transcript) {
     return {
-      type: 'unknown',
+      tool: 'unknown',
       entityName: null,
       entityId: null,
       entityType: null,
@@ -292,8 +306,7 @@ function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
                            
   if (isRemainingToday) {
     return {
-      type: 'query',
-      queryTopic: 'remaining_fee_today',
+      tool: 'getFinancialSummary',
       entityName: null,
       entityId: null,
       entityType,
@@ -314,8 +327,7 @@ function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
                           
   if (isEarningsToday && (lowercase.includes("today") || lowercase.includes("overall") || lowercase.includes("aaj") || lowercase.includes("daily") || departmentCode)) {
     return {
-      type: 'query',
-      queryTopic: 'earnings_today',
+      tool: 'getFinancialSummary',
       entityName: null,
       entityId: null,
       entityType,
@@ -333,8 +345,7 @@ function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
       const extractedName = cleanEntityName(match[1]);
       if (extractedName) {
         return {
-          type: item.type,
-          queryTopic: item.topic || 'unknown',
+          tool: item.type === 'navigate' ? 'navigate' : 'searchPersonByName',
           entityName: extractedName,
           entityId: null,
           entityType,
@@ -349,22 +360,14 @@ function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
   }
 
   let intentType: VoiceIntentType = 'unknown';
-  let queryTopic: VoiceQueryTopic = 'unknown';
 
   if (lowercase.includes('open') || lowercase.includes('profile') || lowercase.includes('record') || lowercase.includes('kholo') || lowercase.includes('dikhao')) {
     intentType = 'navigate';
-  } else if (lowercase.includes('attendance') || lowercase.includes('hazri') || lowercase.includes('present') || lowercase.includes('absent')) {
+  } else if (lowercase.includes('attendance') || lowercase.includes('hazri') || lowercase.includes('present') || lowercase.includes('absent') ||
+             lowercase.includes('remaining') || lowercase.includes('balance') || lowercase.includes('outstanding') || lowercase.includes('baki') ||
+             lowercase.includes('paid') || lowercase.includes('jama') || lowercase.includes('payment') ||
+             lowercase.includes('status') || lowercase.includes('progress') || lowercase.includes('report') || lowercase.includes('kaisa')) {
     intentType = 'query';
-    queryTopic = 'attendance';
-  } else if (lowercase.includes('remaining') || lowercase.includes('balance') || lowercase.includes('outstanding') || lowercase.includes('baki')) {
-    intentType = 'query';
-    queryTopic = 'remaining_fee';
-  } else if (lowercase.includes('paid') || lowercase.includes('jama') || lowercase.includes('payment')) {
-    intentType = 'query';
-    queryTopic = 'total_paid';
-  } else if (lowercase.includes('status') || lowercase.includes('progress') || lowercase.includes('report') || lowercase.includes('kaisa')) {
-    intentType = 'query';
-    queryTopic = 'status';
   }
 
   let extractedName: string | null = null;
@@ -394,8 +397,7 @@ function parseRegexVoiceIntent(transcript: string): ParsedVoiceIntent {
   }
 
   return {
-    type: intentType,
-    queryTopic,
+    tool: intentType === 'navigate' ? 'navigate' : (intentType === 'query' ? 'searchPersonByName' : 'unknown'),
     entityName: intentType !== 'unknown' && extractedName ? cleanEntityName(extractedName) : null,
     entityId: null,
     entityType,

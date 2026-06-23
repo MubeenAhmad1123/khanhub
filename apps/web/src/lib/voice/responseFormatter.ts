@@ -14,7 +14,16 @@ Rules:
 - For financial data: always mention remaining + paid + total if available
 - For date queries: mention the specific date clearly in the response
 - Never say "According to the data" or "The system shows" — speak directly
-- Respond ONLY with the spoken text. No JSON. No markdown. Just the sentence(s).`;
+- Respond ONLY with the spoken text. No JSON. No markdown. Just the sentence(s).
+
+Data shapes you may receive:
+- latest_admission: array of {name, id, admittedAt, detail} — speak the most recent one
+- admissions_by_date: {date, count, patients[]} — mention date and count and names if few
+- financial_summary: {date, income, expense, net, department} — speak all three numbers
+  Always say income, expense, AND net profit/loss in one sentence.
+  Format numbers with commas: 25,000 not 25000
+  Say 'rupees' not 'PKR'
+Always respond in natural Hinglish. Never say 'data shows' or 'according to records'.`;
 
 export async function generateSpokenResponse(
   queryTopic: string,

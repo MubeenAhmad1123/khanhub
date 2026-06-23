@@ -10,18 +10,20 @@ import {
   VoiceAssistantMode, 
   WAKE_WORDS 
 } from '@/lib/voice/voiceConfig';
-import { parseLlmIntent, ParsedVoiceIntent } from '@/lib/voice/intentParser';
+import { parseLlmIntent, ParsedVoiceIntent, EntityType } from '@/lib/voice/intentParser';
 import { resolveEntityByName, EntityMatch } from '@/lib/voice/entityResolver';
 import { 
   getRemainingFeeForEntity, 
   getAttendanceStatusForEntity, 
   getTotalPaidForEntity, 
   getStatusForEntity,
-  getTodayRemainingOverall,
-  getTodayEarnings,
-  getEarningsByDate,
-  getPatientCountByDate
 } from '@/lib/voice/voiceQueryActions';
+import { 
+  getLatestAdmission, 
+  getAdmissionsByDate, 
+  getFinancialSummary,
+  searchPersonByName 
+} from '@/lib/voice/voiceTools';
 import { generateSpokenResponse } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
 
@@ -173,8 +175,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
         if (selectedIdx >= 0 && selectedIdx < pendingIntent.matches.length) {
           const match = pendingIntent.matches[selectedIdx];
-          setPendingIntent(null);
-          await executeResolvedIntent(pendingIntent.intent, match);
+          await resolveDisambiguation(match);
           return;
         }
       }
@@ -182,54 +183,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       const parsed = await parseLlmIntent(commandText);
       console.log('[VOICE INTENT RESULT]', JSON.stringify(parsed, null, 2));
 
-      // Bypasses entity resolution for dashboard queries
-      if (parsed.queryTopic === 'remaining_fee_today' || 
-          parsed.queryTopic === 'earnings_today' || 
-          parsed.queryTopic === 'earnings_date' || 
-          parsed.queryTopic === 'patient_count') {
-        await executeDashboardQuery(parsed);
-        return;
-      }
-
-      if (parsed.type === 'unknown' || (!parsed.entityName && !parsed.entityId)) {
-        speakUtterance("I didn't understand that. Please say it again.");
-        return;
-      }
-
-      const scopedDepts = getScopedDepartments();
-      const depts = parsed.departmentCode ? [parsed.departmentCode] : scopedDepts;
-      const { matches } = await resolveEntityByName(
-        parsed.entityName,
-        parsed.entityId,
-        parsed.entityType,
-        depts
-      );
-
-      if (matches.length === 0) {
-        speakUtterance(`I couldn't find any record for "${parsed.entityName || parsed.entityId}".`);
-        return;
-      }
-
-      if (matches.length === 1) {
-        await executeResolvedIntent(parsed, matches[0]);
-      } else {
-        setPendingIntent({ intent: parsed, matches });
-        const nameListPrompt = matches
-          .map((m, idx) => {
-            const isStaff = m.collection.endsWith('_users') || m.collection.endsWith('_staff');
-            if (isStaff) {
-              return `number ${idx + 1}, ${m.name}, ${m.designation || 'Staff'} in ${m.department} department`;
-            }
-            if (m.fatherName && m.fatherName !== 'N/A') {
-              return `number ${idx + 1}, ${m.name} whose father is ${m.fatherName}`;
-            }
-            return `number ${idx + 1}, ${m.name} in ${m.department} department`;
-          })
-          .join(', and ');
-        speakUtterance(
-          `I found ${matches.length} matches for ${parsed.entityName || parsed.entityId}. ${nameListPrompt}. Which one do you mean? Or you can tap the card on the screen.`
-        );
-      }
+      await dispatchVoiceTool(parsed);
     } catch (err: any) {
       console.error('[VoiceAssistant] Command execution failed:', err);
       setError('An error occurred performing the command.');
@@ -239,97 +193,244 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     }
   };
 
-  const executeDashboardQuery = async (intent: ParsedVoiceIntent) => {
+  const dispatchVoiceTool = async (intent: ParsedVoiceIntent) => {
+    const { tool, entityName, entityId, entityType, departmentCode, targetDate, daysBack } = intent;
+    
     try {
-      let answer = '';
-      if (intent.queryTopic === 'remaining_fee_today') {
-        const res = await getTodayRemainingOverall();
-        answer = await generateSpokenResponse('remaining_fee_today', res);
-      } else if (intent.queryTopic === 'earnings_today') {
-        const res = await getTodayEarnings(intent.departmentCode || undefined);
-        answer = await generateSpokenResponse('earnings_today', { ...res, departmentCode: intent.departmentCode });
-      } else if (intent.queryTopic === 'earnings_date') {
-        const res = await getEarningsByDate(intent.departmentCode, intent.targetDate, intent.daysBack);
-        answer = await generateSpokenResponse('earnings_date', { ...res, departmentCode: intent.departmentCode });
-      } else if (intent.queryTopic === 'patient_count') {
-        const res = await getPatientCountByDate(intent.departmentCode, intent.targetDate, intent.daysBack);
-        answer = await generateSpokenResponse('patient_count', res);
-      } else {
-        answer = "I couldn't understand the topic.";
+      let data: any;
+      let topic: string;
+      
+      switch (tool) {
+        case 'getLatestAdmission': {
+          const dept = departmentCode || 'rehab';
+          data = await getLatestAdmission(dept as any);
+          topic = 'latest_admission';
+          break;
+        }
+        
+        case 'getAdmissionsByDate': {
+          data = await getAdmissionsByDate(
+            departmentCode as any || 'all', 
+            targetDate, 
+            daysBack
+          );
+          topic = 'admissions_by_date';
+          break;
+        }
+        
+        case 'getFinancialSummary': {
+          data = await getFinancialSummary(departmentCode, targetDate, daysBack);
+          topic = 'financial_summary';
+          break;
+        }
+        
+        case 'searchPersonByName': {
+          if (!entityName && !entityId) {
+            speakUtterance('Kripya naam bataiye jise dhundna hai.');
+            return;
+          }
+          
+          const results = await searchPersonByName(
+            entityName || entityId || '', 
+            entityType, 
+            departmentCode
+          );
+          
+          if (results.length === 0) {
+            speakUtterance(`Maafi chahta hoon, ${entityName || entityId} naam ka koi record nahi mila.`);
+            return;
+          }
+          
+          if (results.length === 1) {
+            const match = results[0];
+            
+            // If there is a specific queryTopic, fetch details instead of navigating
+            if (intent.queryTopic && intent.queryTopic !== 'unknown' && intent.queryTopic !== 'remaining_fee_today' && intent.queryTopic !== 'earnings_today') {
+              let detailData: any;
+              let collection = 'rehab_patients';
+              if (match.type === 'staff') {
+                collection = `${match.department}_staff`;
+              } else if (match.type === 'student') {
+                collection = 'spims_students';
+              } else if (match.type === 'child') {
+                collection = 'welfare_children';
+              } else if (match.type === 'seeker') {
+                collection = 'job_center_seekers';
+              }
+
+              if (intent.queryTopic === 'remaining_fee') {
+                detailData = await getRemainingFeeForEntity(match.id, collection);
+              } else if (intent.queryTopic === 'attendance') {
+                detailData = await getAttendanceStatusForEntity(match.id, collection);
+              } else if (intent.queryTopic === 'total_paid') {
+                detailData = await getTotalPaidForEntity(match.id, collection);
+              } else if (intent.queryTopic === 'status') {
+                detailData = await getStatusForEntity(match.id, collection);
+              }
+
+              if (detailData) {
+                const spokenText = await generateSpokenResponse(intent.queryTopic, detailData, match.name);
+                speakUtterance(spokenText);
+                return;
+              }
+            }
+
+            // Default: Auto-navigate to the single match
+            const path = buildProfilePath(match.department, match.type, match.id);
+            speakUtterance(`${match.name} ka profile khol raha hoon.`);
+            router.push(path);
+            return;
+          }
+          
+          // Multiple matches — show disambiguation
+          const entityMatches: EntityMatch[] = results.map(r => {
+            let collection = 'rehab_patients';
+            if (r.type === 'staff') {
+              collection = `${r.department}_staff`;
+            } else if (r.type === 'student') {
+              collection = 'spims_students';
+            } else if (r.type === 'child') {
+              collection = 'welfare_children';
+            } else if (r.type === 'seeker') {
+              collection = 'job_center_seekers';
+            }
+            
+            return {
+              id: r.id,
+              name: r.name,
+              fatherName: r.fatherName || 'N/A',
+              department: r.department,
+              collection,
+              identifierLabel: r.id
+            };
+          });
+
+          setPendingIntent({ intent, matches: entityMatches });
+          const names = results.slice(0, 3).map((r, i) => 
+            `number ${i+1}, ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} in ${r.department} department`
+          ).join(', and ');
+          speakUtterance(`I found ${results.length} matches. ${names}. Which one do you mean? Or you can tap the card on the screen.`);
+          return;
+        }
+        
+        case 'navigate': {
+          if (entityId && entityType && departmentCode) {
+            const path = buildProfilePath(departmentCode, entityType, entityId);
+            speakUtterance('Profile khol raha hoon.');
+            router.push(path);
+          } else if (entityName) {
+            const results = await searchPersonByName(entityName, entityType, departmentCode);
+            if (results.length === 0) {
+              speakUtterance(`Maafi chahta hoon, ${entityName} naam ka koi record nahi mila.`);
+              return;
+            }
+            if (results.length === 1) {
+              const match = results[0];
+              const path = buildProfilePath(match.department, match.type, match.id);
+              speakUtterance(`${match.name} ka profile khol raha hoon.`);
+              router.push(path);
+              return;
+            }
+            
+            // Multiple matches
+            const entityMatches: EntityMatch[] = results.map(r => {
+              let collection = 'rehab_patients';
+              if (r.type === 'staff') {
+                collection = `${r.department}_staff`;
+              } else if (r.type === 'student') {
+                collection = 'spims_students';
+              } else if (r.type === 'child') {
+                collection = 'welfare_children';
+              } else if (r.type === 'seeker') {
+                collection = 'job_center_seekers';
+              }
+              
+              return {
+                id: r.id,
+                name: r.name,
+                fatherName: r.fatherName || 'N/A',
+                department: r.department,
+                collection,
+                identifierLabel: r.id
+              };
+            });
+
+            setPendingIntent({ intent, matches: entityMatches });
+            const names = results.slice(0, 3).map((r, i) => 
+              `number ${i+1}, ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} in ${r.department} department`
+            ).join(', and ');
+            speakUtterance(`I found ${results.length} matches. ${names}. Which one do you mean? Or you can tap the card on the screen.`);
+          } else {
+            speakUtterance('Kripya naam ya ID bataiye jise open karna hai.');
+          }
+          return;
+        }
+        
+        default:
+          speakUtterance('Maafi chahta hoon, yeh command samajh nahi aaya. Dobara boliye.');
+          return;
       }
       
-      speakUtterance(answer);
+      const spokenText = await generateSpokenResponse(topic, data, entityName || undefined);
+      speakUtterance(spokenText);
+      
     } catch (err) {
-      console.error('[VoiceAssistant] Dashboard query failed:', err);
-      speakUtterance("There was an error checking the financial details.");
+      console.error('[Voice Dispatch] Error:', err);
+      speakUtterance('Kuch masla aa gaya, dobara koshish karein.');
     }
   };
 
-  const executeResolvedIntent = async (intent: ParsedVoiceIntent, match: EntityMatch) => {
-    if (intent.type === 'navigate') {
-      let path = '';
-      const isStaff = match.collection.endsWith('_users') || match.collection.endsWith('_staff');
-      if (isStaff) {
-        path = `/hq/dashboard/manager/staff/${match.department}_${match.id}`;
-      } else {
-        switch (match.department) {
-          case 'rehab':
-            path = `/departments/rehab/dashboard/admin/patients/${match.id}`;
-            break;
-          case 'spims':
-            path = `/departments/spims/dashboard/admin/students/${match.id}`;
-            break;
-          case 'hospital':
-            path = `/departments/hospital/dashboard/admin/patients/${match.id}`;
-            break;
-          case 'sukoon':
-            path = `/departments/sukoon/dashboard/admin/clients/${match.id}`;
-            break;
-          case 'welfare':
-            path = `/departments/welfare/dashboard/admin/children/${match.id}`;
-            break;
-          case 'job-center':
-            path = `/departments/job-center/dashboard/admin/seekers/${match.id}`;
-            break;
-          default:
-            path = `/hq/dashboard`;
-        }
-      }
-      
-      router.push(path);
-      speakUtterance(`Sure, opening the record for ${match.name}.`);
-    } else if (intent.type === 'query') {
-      try {
-        let answer = '';
-        if (intent.queryTopic === 'remaining_fee') {
-          const res = await getRemainingFeeForEntity(match.id, match.collection);
-          answer = await generateSpokenResponse('remaining_fee', res, match.name);
-        } else if (intent.queryTopic === 'attendance') {
-          const res = await getAttendanceStatusForEntity(match.id, match.collection);
-          answer = await generateSpokenResponse('attendance', res, match.name);
-        } else if (intent.queryTopic === 'total_paid') {
-          const res = await getTotalPaidForEntity(match.id, match.collection);
-          answer = await generateSpokenResponse('total_paid', res, match.name);
-        } else if (intent.queryTopic === 'status') {
-          const res = await getStatusForEntity(match.id, match.collection);
-          answer = await generateSpokenResponse('status', res, match.name);
-        } else {
-          answer = "I couldn't understand the topic.";
-        }
-        
-        speakUtterance(answer);
-      } catch (err) {
-        console.error('[VoiceAssistant] Query detail fetch failed:', err);
-        speakUtterance("There was an error checking their record.");
-      }
+  function buildProfilePath(department: string, entityType: string, id: string): string {
+    if (entityType === 'staff') {
+      return `/hq/dashboard/manager/staff/${department}_${id}`;
     }
-  };
+    
+    switch (department) {
+      case 'rehab':
+        return `/departments/rehab/dashboard/admin/patients/${id}`;
+      case 'spims':
+        return `/departments/spims/dashboard/admin/students/${id}`;
+      case 'hospital':
+        return `/departments/hospital/dashboard/admin/patients/${id}`;
+      case 'sukoon':
+        return `/departments/sukoon/dashboard/admin/clients/${id}`;
+      case 'welfare':
+        return `/departments/welfare/dashboard/admin/children/${id}`;
+      case 'job-center':
+        return `/departments/job-center/dashboard/admin/seekers/${id}`;
+      default:
+        return `/hq/dashboard`;
+    }
+  }
 
   const resolveDisambiguation = async (match: EntityMatch) => {
     if (!pendingIntent) return;
-    const intent = pendingIntent.intent;
     setPendingIntent(null);
-    await executeResolvedIntent(intent, match);
+    
+    let entityType: EntityType = 'patient';
+    if (match.collection.endsWith('_users') || match.collection.endsWith('_staff')) {
+      entityType = 'staff';
+    } else if (match.collection === 'spims_students') {
+      entityType = 'student';
+    } else if (match.collection === 'welfare_children') {
+      entityType = 'child';
+    } else if (match.collection === 'job_center_seekers') {
+      entityType = 'seeker';
+    }
+
+    const resolvedIntent: ParsedVoiceIntent = {
+      tool: 'navigate',
+      entityName: match.name,
+      entityId: match.id,
+      entityType,
+      departmentCode: match.department,
+      targetDate: null,
+      daysBack: null,
+      rawTranscript: '',
+      llmConfidence: 1.0
+    };
+    
+    await dispatchVoiceTool(resolvedIntent);
   };
 
   const clearPendingIntent = () => {
