@@ -11,7 +11,7 @@ import {
   WAKE_WORDS 
 } from '@/lib/voice/voiceConfig';
 import { parseLlmIntent, ParsedVoiceIntent, EntityType } from '@/lib/voice/intentParser';
-import { resolveEntityByName, EntityMatch } from '@/lib/voice/entityResolver';
+import type { EntityMatch } from '@/lib/voice/entityResolver';
 import { 
   getRemainingFeeForEntity, 
   getAttendanceStatusForEntity, 
@@ -257,7 +257,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               } else if (match.type === 'seeker') {
                 collection = 'job_center_seekers';
               }
-
+ 
               if (intent.queryTopic === 'remaining_fee') {
                 detailData = await getRemainingFeeForEntity(match.id, collection);
               } else if (intent.queryTopic === 'attendance') {
@@ -267,14 +267,14 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               } else if (intent.queryTopic === 'status') {
                 detailData = await getStatusForEntity(match.id, collection);
               }
-
+ 
               if (detailData) {
                 const spokenText = await generateSpokenResponse(intent.queryTopic, detailData, match.name);
                 speakUtterance(spokenText);
                 return;
               }
             }
-
+ 
             // Default: Auto-navigate to the single match
             const path = buildProfilePath(match.department, match.type, match.id);
             speakUtterance(`${match.name} ka profile khol raha hoon.`);
@@ -304,7 +304,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               identifierLabel: r.id
             };
           });
-
+ 
           setPendingIntent({ intent, matches: entityMatches });
           const names = results.slice(0, 3).map((r, i) => 
             `number ${i+1}, ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} in ${r.department} department`
@@ -354,7 +354,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
                 identifierLabel: r.id
               };
             });
-
+ 
             setPendingIntent({ intent, matches: entityMatches });
             const names = results.slice(0, 3).map((r, i) => 
               `number ${i+1}, ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} in ${r.department} department`
@@ -417,7 +417,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     } else if (match.collection === 'job_center_seekers') {
       entityType = 'seeker';
     }
-
+ 
     const resolvedIntent: ParsedVoiceIntent = {
       tool: 'navigate',
       entityName: match.name,
@@ -461,21 +461,21 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     if (typeof window === 'undefined') return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
-
+ 
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
     }
-
+ 
     const rec = new SpeechRecognition();
     rec.lang = 'en-US';
     rec.interimResults = true;
     rec.continuous = (mode === 'always_on');
-
+ 
     rec.onstart = () => {
       setListening(true);
       setError(null);
     };
-
+ 
     rec.onerror = (e: any) => {
       console.warn('[VoiceAssistant] Speech recognition error event:', e.error);
       if (e.error === 'not-allowed') {
@@ -483,7 +483,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         setListening(false);
       }
     };
-
+ 
     rec.onend = () => {
       setListening(false);
       const shouldRestart = (mode === 'always_on' || pendingIntent) && !manualStopRef.current && !window.speechSynthesis.speaking && !processing;
@@ -496,30 +496,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
     };
     rec.onresult = (event: any) => {
-      // Confidence check removed — Web Speech API returns unreliable
-      // confidence values in continuous/always-on mode (often 0.0 even
-      // when transcript is perfectly correct). LLM handles bad input instead.
-      
-      // const lastResultIndex = event.results.length - 1;
-      // const lastResult = event.results[lastResultIndex];
-      // if (lastResult && lastResult.isFinal) {
-      //   const speechConfidence = lastResult[0].confidence;
-      //   if (speechConfidence < 0.45) {
-      //     speakUtterance('Sahi se nahi suna, dobara boliye');
-      //     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      //     if (mode === 'push_to_talk') {
-      //       stopAssistant();
-      //     } else {
-      //       setCapturingCommand(false);
-      //       setLiveTranscript('');
-      //     }
-      //     return;
-      //   }
-      // }
-
       let interim = '';
       let final = '';
-
+ 
       for (let i = 0; i < event.results.length; ++i) {
         const trans = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
@@ -528,24 +507,24 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           interim += trans;
         }
       }
-
+ 
       const combined = (final + interim).trim();
-
+ 
       if (mode === 'always_on') {
         let isActivelyCapturing = capturingCommand;
-
+ 
         if (!isActivelyCapturing) {
           const matchedWakeWord = WAKE_WORDS.find(word => 
             combined.toLowerCase().includes(word)
           );
-
+ 
           if (matchedWakeWord) {
             playAudioCue();
             setCapturingCommand(true);
             isActivelyCapturing = true;
           }
         }
-
+ 
         if (isActivelyCapturing) {
           let cmdPart = combined;
           for (const word of WAKE_WORDS) {
@@ -557,7 +536,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           }
           
           setLiveTranscript(cmdPart.trim());
-
+ 
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
             setCapturingCommand(false);
@@ -576,7 +555,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
       }
     };
-
+ 
     recognitionRef.current = rec;
     rec.start();
   };
@@ -598,10 +577,10 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     } else {
       setCapturingCommand(true);
     }
-
+ 
     startRecognitionInstance();
   };
-
+ 
   const stopAssistant = () => {
     manualStopRef.current = true;
     setListening(false);
@@ -618,7 +597,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       } catch (e) {}
     }
   };
-
+ 
   useEffect(() => {
     return () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);

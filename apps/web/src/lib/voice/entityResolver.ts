@@ -1,5 +1,4 @@
 // apps/web/src/lib/voice/entityResolver.ts
-'use server';
 
 import { readHqSessionCookie } from '@/app/hq/actions/auth';
 import { adminDb } from '@/lib/firebaseAdmin';
