@@ -635,6 +635,8 @@ export default function PatientDetailPage() {
               isMedicineCharge: true,
               isPendingTransaction: txData.status !== 'approved' && txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
               method: txData.paymentMethod || txData.method || 'Credit',
+              discount: Number(txData.discount || 0),
+              returnAmount: Number(txData.returnAmount || txData.return || 0),
               _collection: 'rehab_transactions'
             });
           } else if (isApproved && !isSynced) {
@@ -646,6 +648,8 @@ export default function PatientDetailPage() {
               note: txData.description || txData.categoryName || '',
               status: 'approved',
               method: txData.paymentMethod || txData.method || 'Cash',
+              discount: Number(txData.discount || 0),
+              returnAmount: Number(txData.returnAmount || txData.return || 0),
               _collection: 'rehab_transactions'
             });
           } else if (!isApproved && !isSynced) {
@@ -658,6 +662,8 @@ export default function PatientDetailPage() {
               status: txData.status || 'pending',
               isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
               method: txData.paymentMethod || txData.method || 'Cash',
+              discount: Number(txData.discount || 0),
+              returnAmount: Number(txData.returnAmount || txData.return || 0),
               _collection: 'rehab_transactions'
             });
           }
@@ -927,6 +933,8 @@ export default function PatientDetailPage() {
             isMedicineCharge: true,
             isPendingTransaction: txData.status !== 'approved' && txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
             method: txData.paymentMethod || txData.method || 'Credit',
+            discount: Number(txData.discount || 0),
+            returnAmount: Number(txData.returnAmount || txData.return || 0),
             _collection: 'rehab_transactions'
           });
         } else if (isApproved && !isSynced) {
@@ -938,6 +946,8 @@ export default function PatientDetailPage() {
             note: txData.description || txData.categoryName || '',
             status: 'approved',
             method: txData.paymentMethod || txData.method || 'Cash',
+            discount: Number(txData.discount || 0),
+            returnAmount: Number(txData.returnAmount || txData.return || 0),
             _collection: 'rehab_transactions'
           });
         } else if (!isApproved && !isSynced) {
@@ -950,6 +960,8 @@ export default function PatientDetailPage() {
             status: txData.status || 'pending',
             isPendingTransaction: txData.status !== 'rejected' && txData.status !== 'rejected_cashier',
             method: txData.paymentMethod || txData.method || 'Cash',
+            discount: Number(txData.discount || 0),
+            returnAmount: Number(txData.returnAmount || txData.return || 0),
             _collection: 'rehab_transactions'
           });
         }
@@ -2707,6 +2719,7 @@ export default function PatientDetailPage() {
               <FinanceHistory
                 patientName={patient?.name || "Patient"}
                 totalPackage={(patient?.dueTillDate || 0) + (patient?.medicineCharges || 0)}
+                overallRemaining={patient?.overallRemaining}
                 records={(() => {
                   const records: MonthRecord[] = [];
                   const monthlyPkg = Number(patient?.monthlyPackage || 40000);
@@ -2723,7 +2736,9 @@ export default function PatientDetailPage() {
                       receivedBy: p.cashierId || p.receivedBy || p.receiver || "Office",
                       note: p.note || p.receivedByNote || "",
                       verifiedByHQ: p.status === 'approved',
-                      status: p.status === 'approved' ? "Approved" : "Pending"
+                      status: p.status === 'approved' ? "Approved" : "Pending",
+                      discount: Number(p.discount || 0),
+                      returnAmount: Number(p.returnAmount || p.return || 0)
                     });
                   });
 

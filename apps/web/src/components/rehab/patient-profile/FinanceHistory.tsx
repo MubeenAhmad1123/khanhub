@@ -11,6 +11,8 @@ export type Payment = {
   verifiedByHQ: boolean;
   status: "Approved" | "Pending" | "Rejected";
   note?: string;         // Additional comments
+  discount?: number;
+  returnAmount?: number;
 };
 
 export type MonthRecord = {
@@ -26,15 +28,16 @@ export type FinanceHistoryProps = {
   records: MonthRecord[];
   onDeletePayments?: (paymentIds: string[]) => void;
   totalPackage?: number;
+  overallRemaining?: number;
 };
 
-const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records, onDeletePayments, totalPackage }) => {
+const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records, onDeletePayments, totalPackage, overallRemaining }) => {
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
 
   // Overall totals
   const totalPackageOverall = useMemo(() => totalPackage !== undefined ? totalPackage : records.reduce((acc, curr) => acc + curr.package, 0), [records, totalPackage]);
   const totalPaidOverall = useMemo(() => records.reduce((acc, curr) => acc + curr.totalPaid, 0), [records]);
-  const totalRemainingOverall = useMemo(() => Math.max(0, totalPackageOverall - totalPaidOverall), [totalPackageOverall, totalPaidOverall]);
+  const totalRemainingOverall = useMemo(() => overallRemaining !== undefined ? overallRemaining : Math.max(0, totalPackageOverall - totalPaidOverall), [totalPackageOverall, totalPaidOverall, overallRemaining]);
 
   // Aggregate all payments across months
   const allPayments = useMemo(() => {
@@ -73,7 +76,10 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records, o
     
     let runningBalance = totalPackageOverall;
     const computed = sorted.map(payment => {
-      runningBalance -= payment.amount;
+      const amt = Number(payment.amount || 0);
+      const disc = Number(payment.discount || 0);
+      const ret = Number(payment.returnAmount || 0);
+      runningBalance = runningBalance - amt - disc + ret;
       return {
         ...payment,
         remainingAfter: Math.max(0, runningBalance)

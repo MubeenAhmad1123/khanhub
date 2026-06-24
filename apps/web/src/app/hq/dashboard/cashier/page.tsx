@@ -2545,7 +2545,7 @@ export default function CashierStationPage() {
 }
 
 function EntityProfileModal({ 
-  entity, 
+  entity: propEntity, 
   onClose,
   allTransactions,
   onDeleteTransaction,
@@ -2561,6 +2561,27 @@ function EntityProfileModal({
   allCategories?: readonly any[];
   onAddCustomCategory?: (cat: any) => void;
 }) {
+  const [entity, setEntity] = useState(propEntity);
+
+  useEffect(() => {
+    setEntity(propEntity);
+  }, [propEntity]);
+
+  useEffect(() => {
+    const deptCode = propEntity._deptCode || 'rehab';
+    const dept = DEPARTMENTS.find(d => d.code === deptCode);
+    if (!dept) return;
+
+    const unsub = onSnapshot(doc(db, dept.entityCollection, propEntity.id), (snap) => {
+      if (snap.exists()) {
+        setEntity((prev: any) => ({
+          ...prev,
+          ...snap.data()
+        }));
+      }
+    });
+    return () => unsub();
+  }, [propEntity]);
   const [localTxns, setLocalTxns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
