@@ -745,7 +745,9 @@ export default function PatientDetailPage() {
 
       const totalStayPackage = dueTillDate + historicalStayPackage;
       const finalMedicineCharges = typeof data.medicineCharges === 'number' ? data.medicineCharges : totalMedicineCharges;
-      const overallRemaining = (totalStayPackage + finalMedicineCharges) - overallReceived;
+      const overallRemaining = typeof data.overallRemaining === 'number'
+        ? data.overallRemaining
+        : (totalStayPackage + finalMedicineCharges) - overallReceived - Number(data.totalDiscount || 0) + Number(data.manualRemainingAdjustment || 0);
 
       setPatient({
         id: pDoc.id,
@@ -1032,7 +1034,9 @@ export default function PatientDetailPage() {
 
       const totalStayPackage = dueTillDate + historicalStayPackage;
       const finalMedicineCharges = typeof currentPatientData.medicineCharges === 'number' ? currentPatientData.medicineCharges : totalMedicineCharges;
-      const overallRemaining = (totalStayPackage + finalMedicineCharges) - overallReceived;
+      const overallRemaining = typeof currentPatientData.overallRemaining === 'number'
+        ? currentPatientData.overallRemaining
+        : (totalStayPackage + finalMedicineCharges) - overallReceived - Number(currentPatientData.totalDiscount || 0) + Number(currentPatientData.manualRemainingAdjustment || 0);
 
       setPatient({
         id: patientId,
@@ -1504,7 +1508,9 @@ export default function PatientDetailPage() {
           dailyRate,
           dueTillDate,
           billableMonths,
-          overallRemaining: (dueTillDate + Number(prev.medicineCharges || 0)) - (prev.overallReceived || 0),
+          overallRemaining: typeof prev.overallRemaining === 'number'
+            ? prev.overallRemaining
+            : (dueTillDate + Number(prev.medicineCharges || 0)) - (prev.overallReceived || 0) - Number(prev.totalDiscount || 0) + Number(prev.manualRemainingAdjustment || 0),
           photoUrl: photoUrl,
           dischargeDate: form.dischargeDate ? Timestamp.fromDate(new Date(form.dischargeDate)) : null
         };
