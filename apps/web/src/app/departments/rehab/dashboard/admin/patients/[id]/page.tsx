@@ -1940,48 +1940,70 @@ export default function PatientDetailPage() {
     try {
       setIsDeletingTransaction(true);
 
-      const sourceCollection = deletingPayment._collection || (deletingPayment.id.includes('_') ? 'rehab_fees' : 'rehab_transactions');
-
-      if (sourceCollection === 'rehab_transactions') {
-        // Delete directly from rehab_transactions collection
-        await deleteDoc(doc(db, 'rehab_transactions', deletingPayment.id));
-      } else {
-        // 1. Find the fee doc id
-        const [feeDocId] = deletingPayment.id.split('_');
-        const feeRef = doc(db, 'rehab_fees', feeDocId);
-        const feeSnap = await getDoc(feeRef);
-
-        if (!feeSnap.exists()) {
-          toast.error("Original fee record not found");
-          return;
-        }
-
-        const feeData = feeSnap.data();
-        const currentPayments = feeData.payments || [];
-
-        // 2. Filter out the payment
-        const newPayments = currentPayments.filter((p: any) => {
-          // Match by date and amount exactly as they are in the database
-          const pDateStr = p.date;
-          const pAmount = Number(p.amount);
-
-          const isMatch = pAmount === Number(deletingPayment.amount) && pDateStr === deletingPayment.date;
-          return !isMatch;
-        });
-
-        if (newPayments.length === currentPayments.length) {
-          toast.error("Payment not found in the record");
-          return;
-        }
-
-        // 3. Update the fee record
-        const totalPaid = newPayments.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
-        await updateDoc(feeRef, {
-          payments: newPayments,
-          totalPaid: totalPaid,
-          remaining: Math.max(0, Number(feeData.package || 0) - totalPaid)
-        });
+      // Determine transaction ID if available
+      let txId: string | null = deletingPayment.transactionId || null;
+      if (!txId && deletingPayment._collection === 'rehab_transactions') {
+        txId = deletingPayment.id;
       }
+      if (!txId && deletingPayment.id && deletingPayment.id.includes('_')) {
+        const parts = deletingPayment.id.split('_');
+        if (parts[1] && parts[1] !== 'undefined' && parts[1] !== 'null') {
+          txId = parts[1];
+        }
+      }
+
+      // 1. Delete from rehab_transactions if there is a transaction ID
+      if (txId) {
+        try {
+          await deleteDoc(doc(db, 'rehab_transactions', txId));
+        } catch (err) {
+          console.warn("Could not delete from rehab_transactions (might not exist):", err);
+        }
+      }
+
+      // 2. Scan and remove from rehab_fees payments array for any fee record of this patient
+      const feesQ = query(
+        collection(db, 'rehab_fees'),
+        where('patientId', '==', patientId)
+      );
+      const feesSnap = await getDocs(feesQ);
+
+      for (const feeDoc of feesSnap.docs) {
+        const feeData = feeDoc.data();
+        const currentPayments = feeData.payments || [];
+        let updated = false;
+
+        const newPayments = currentPayments.filter((p: any) => {
+          // If transaction ID matches, filter it out
+          if (txId && p.transactionId === txId) {
+            updated = true;
+            return false;
+          }
+          // Fallback matching by date and amount (for legacy or manual fees records)
+          const pAmount = Number(p.amount);
+          const pDateStr = p.date;
+          const isMatch = pAmount === Number(deletingPayment.amount) && pDateStr === deletingPayment.date;
+          if (isMatch) {
+            updated = true;
+            return false;
+          }
+          return true;
+        });
+
+        if (updated) {
+          const totalPaid = newPayments.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
+          await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+            payments: newPayments,
+            amountPaid: totalPaid,
+            amountRemaining: Math.max(0, Number(feeData.packageAmount || feeData.monthlyPackage || 0) - totalPaid)
+          });
+        }
+      }
+
+      // 3. Force recalc/sync of patient finance overall totals
+      await syncRehabPatientFinance(patientId).catch((err) => {
+        console.warn("Recalc after delete failed:", err);
+      });
 
       // 4. Log the deletion in a separate collection for audit
       await addDoc(collection(db, 'rehab_deletion_logs'), {

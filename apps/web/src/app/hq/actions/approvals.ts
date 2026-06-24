@@ -178,7 +178,8 @@ async function syncPatientFinance(
   const totalStayPackage = currentStayPackage + historicalStayPackage;
   const finalMedicineCharges = typeof patientData.medicineCharges === 'number' ? patientData.medicineCharges : totalMedicineCharges;
   const totalObligation = totalStayPackage + finalMedicineCharges;
-  const remaining = Math.max(0, totalObligation - totalReceived - totalDiscount);
+  const manualAdjustment = Number(patientData.manualRemainingAdjustment || 0);
+  const remaining = Math.max(0, totalObligation - totalReceived - totalDiscount + manualAdjustment);
 
   // Calculate daysAdmitted for active stay
   const diffTimeMs = endDate.getTime() - admissionDate.getTime();

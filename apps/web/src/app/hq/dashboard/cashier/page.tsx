@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, deleteDoc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight, ArrowUp, ArrowDown, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import { db, auth } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -2570,6 +2570,11 @@ function EntityProfileModal({
   const [profileSortConfig, setProfileSortConfig] = useState<{ key: 'date' | 'amount'; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set());
+  const [showAdjustDuesForm, setShowAdjustDuesForm] = useState(false);
+  const [newDuesAmount, setNewDuesAmount] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjusting, setAdjusting] = useState(false);
+  const [duesLogs, setDuesLogs] = useState<any[]>([]);
 
   const todayIso = new Date().toISOString().split('T')[0];
   const yesterdayIso = (() => {
@@ -2870,6 +2875,200 @@ function EntityProfileModal({
     }
   }, [entity]);
 
+  const fetchDuesLogs = useCallback(async () => {
+    if (entity._deptCode !== 'rehab') return;
+    try {
+      const q = query(
+        collection(db, 'rehab_remaining_logs'),
+        where('patientId', '==', entity.id)
+      );
+      const snap = await getDocs(q);
+      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      logs.sort((a: any, b: any) => {
+        const tA = a.changedAt?.toDate?.() ? a.changedAt.toDate().getTime() : new Date(a.changedAt || 0).getTime();
+        const tB = b.changedAt?.toDate?.() ? b.changedAt.toDate().getTime() : new Date(b.changedAt || 0).getTime();
+        return tB - tA;
+      });
+      setDuesLogs(logs);
+    } catch (err) {
+      console.error("Could not fetch dues logs:", err);
+    }
+  }, [entity]);
+
+  const handleAdjustDues = async () => {
+    const newDues = Number(newDuesAmount);
+    if (isNaN(newDues) || newDuesAmount.trim() === '') {
+      toast.error('Please enter a valid number for dues');
+      return;
+    }
+
+    setAdjusting(true);
+    try {
+      const patientId = entity.id;
+
+      // 1. Fetch patient document to get current calculation parameters
+      const patientRef = doc(db, 'rehab_patients', patientId);
+      const patientSnap = await getDoc(patientRef);
+      if (!patientSnap.exists()) {
+        toast.error('Patient document not found');
+        return;
+      }
+      const patientData = patientSnap.data() as any;
+
+      // 2. Fetch approved transactions (excluding canteen) to get calculated values
+      const txQ = query(
+        collection(db, 'rehab_transactions'),
+        where('patientId', '==', patientId),
+        where('status', '==', 'approved')
+      );
+      const txSnap = await getDocs(txQ);
+
+      let totalReceived = 0;
+      let totalMedicineCharges = 0;
+      let totalDiscount = 0;
+
+      txSnap.docs.forEach((doc) => {
+        const tx = doc.data();
+        const amount = Number(tx.amount) || 0;
+        const discount = Number(tx.discount || 0);
+        const returnAmount = Number(tx.returnAmount || tx.return || 0);
+        const netAmount = amount - returnAmount;
+
+        if (tx.category === 'medicine_charge') {
+          totalMedicineCharges += netAmount;
+        } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
+          // Exclude canteen
+        } else {
+          totalReceived += netAmount;
+          totalDiscount += discount;
+        }
+      });
+
+      // Calculate stay package fee for current stay
+      const monthlyPkg = Number(patientData.monthlyPackage || patientData.packageAmount || 0);
+      
+      const safeToDate = (d: any) => {
+        if (!d) return new Date();
+        if (d.toDate) return d.toDate();
+        return new Date(d);
+      };
+
+      let admissionDate = safeToDate(patientData.admissionDate);
+      let endDate = new Date();
+      if (patientData.isActive === false && patientData.dischargeDate) {
+        endDate = safeToDate(patientData.dischargeDate);
+      }
+
+      const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+      let completedMonths = rawMonths;
+      let hasExtraDays = false;
+
+      if (endDate.getDate() < admissionDate.getDate()) {
+        completedMonths = rawMonths - 1;
+        hasExtraDays = true;
+      } else if (endDate.getDate() > admissionDate.getDate()) {
+        completedMonths = rawMonths;
+        hasExtraDays = true;
+      } else {
+        completedMonths = rawMonths;
+        hasExtraDays = false;
+      }
+
+      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const currentStayPackage = billableMonths * monthlyPkg;
+
+      // Calculate historical stays
+      let historicalStayPackage = 0;
+      const history = patientData.rejoinHistory || [];
+      history.forEach((stay: any) => {
+        const sAdmission = safeToDate(stay.admissionDate);
+        const sDischarge = stay.dischargeDate ? safeToDate(stay.dischargeDate) : new Date();
+        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+        const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+        let sCompletedMonths = sRawMonths;
+        let sHasExtraDays = false;
+
+        if (sDischarge.getDate() < sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths - 1;
+          sHasExtraDays = true;
+        } else if (sDischarge.getDate() > sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = true;
+        } else {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = false;
+        }
+
+        const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+        historicalStayPackage += sBillableMonths * sMonthlyPkg;
+      });
+
+      const totalStayPackage = currentStayPackage + historicalStayPackage;
+      const finalMedicineCharges = typeof patientData.medicineCharges === 'number' ? patientData.medicineCharges : totalMedicineCharges;
+      const totalObligation = totalStayPackage + finalMedicineCharges;
+
+      // Calculate calculatedRemaining without manualAdjustment
+      const calculatedRemaining = totalObligation - totalReceived - totalDiscount;
+
+      // manualRemainingAdjustment = X - calculatedRemaining
+      const adjustment = newDues - calculatedRemaining;
+      const oldDues = Number(patientData.remaining ?? patientData.remainingBalance ?? patientData.overallRemaining ?? calculatedRemaining);
+
+      // 3. Update patient document
+      await updateDoc(patientRef, {
+        manualRemainingAdjustment: adjustment,
+        remaining: newDues,
+        remainingBalance: newDues,
+        overallRemaining: newDues
+      });
+
+      // 4. Record remaining dues change log
+      const logData = {
+        patientId,
+        patientName: patientData.name || '',
+        oldAmount: oldDues,
+        newAmount: newDues,
+        changedBy: session?.uid || 'unknown',
+        changedByName: session?.displayName || session?.name || 'Cashier/Admin',
+        changedAt: Timestamp.now(),
+        reason: adjustReason.trim() || 'Manual adjustment'
+      };
+
+      // Write to flat log collection
+      await addDoc(collection(db, 'rehab_remaining_logs'), logData);
+
+      // Write to subcollection under patient
+      await addDoc(collection(db, 'rehab_patients', patientId, 'remaining_logs'), logData);
+
+      // 5. Trigger sync action to make sure everything is completely aligned
+      const { syncRehabPatientFinance } = await import('@/app/hq/actions/approvals');
+      await syncRehabPatientFinance(patientId);
+
+      toast.success('Remaining dues adjusted successfully ✓');
+      setNewDuesAmount('');
+      setAdjustReason('');
+      setShowAdjustDuesForm(false);
+
+      // Refresh data
+      fetchAll();
+      fetchDuesLogs();
+      if (onRefetch) onRefetch();
+
+    } catch (err: any) {
+      console.error('Failed to adjust dues:', err);
+      toast.error('Adjustment failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setAdjusting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showAdjustDuesForm) {
+      fetchDuesLogs();
+    }
+  }, [showAdjustDuesForm, fetchDuesLogs]);
+
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
@@ -3033,7 +3232,9 @@ function EntityProfileModal({
   const totalPending = localTxns
     .filter(t => t.type === 'income' && ['pending', 'pending_cashier'].includes(t.status))
     .reduce((s, t) => s + Number(t.amount || 0), 0);
-  const remaining = totalPackage - totalApproved;
+  const remaining = entity._deptCode === 'rehab' 
+    ? (entity.remainingBalance ?? entity.overallRemaining ?? entity.remaining ?? (totalPackage - totalApproved)) 
+    : (totalPackage - totalApproved);
 
   return (
     <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-10 lg:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
@@ -3120,6 +3321,22 @@ function EntityProfileModal({
               {isSelectMode ? "Exit Select" : "Select"}
             </button>
 
+            {entity._deptCode === 'rehab' && (
+              <button
+                onClick={() => {
+                  setShowAdjustDuesForm(!showAdjustDuesForm);
+                  setShowAddForm(false);
+                }}
+                className={cn(
+                  "flex-1 md:flex-none px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                  showAdjustDuesForm ? "bg-rose-100 text-rose-600" : "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
+                )}
+              >
+                {showAdjustDuesForm ? <X size={14} /> : <Calculator size={14} />}
+                {showAdjustDuesForm ? "Dismiss Adjust" : "Adjust Dues"}
+              </button>
+            )}
+
             <button
               onClick={() => {
                 const isOpening = !showAddForm;
@@ -3134,6 +3351,7 @@ function EntityProfileModal({
                     category: hasPaidAdmission ? 'monthly_fee' : 'fee',
                     categoryName: hasPaidAdmission ? 'Monthly Fee' : 'Admission Fee'
                   }));
+                  setShowAdjustDuesForm(false);
                 }
                 setShowAddForm(isOpening);
               }}
@@ -3147,6 +3365,68 @@ function EntityProfileModal({
             </button>
           </div>
         </div>
+
+        {showAdjustDuesForm && entity._deptCode === 'rehab' && (
+          <div className="p-6 bg-purple-50 border-b border-purple-100 animate-in slide-in-from-top-4 duration-500 overflow-y-auto max-h-[300px] text-gray-900">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-purple-400">Current Dues</label>
+                <div className="w-full h-12 bg-white border border-purple-100 rounded-xl px-4 flex items-center text-xs font-black text-purple-700">
+                  Rs {remaining.toLocaleString()}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-purple-400">New Dues Amount (Rs)</label>
+                <input 
+                  type="number" 
+                  placeholder="0.00"
+                  value={newDuesAmount}
+                  onChange={(e) => setNewDuesAmount(e.target.value)}
+                  className="w-full h-12 bg-white border border-purple-100 rounded-xl px-4 text-xs font-black outline-none focus:border-purple-400 tabular-nums bg-white text-zinc-900"
+                />
+              </div>
+              <button 
+                onClick={handleAdjustDues}
+                disabled={adjusting}
+                className="h-12 bg-purple-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-600/20 hover:bg-purple-700 transition-all flex items-center justify-center gap-2"
+              >
+                {adjusting ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
+                Adjust Balance
+              </button>
+            </div>
+            <div className="mt-4">
+              <input 
+                placeholder="Reason for manual adjustment (e.g. Package discount, manual waiver)..."
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                className="w-full h-10 bg-white/50 border border-purple-100 rounded-xl px-4 text-[10px] font-bold outline-none focus:bg-white bg-white text-zinc-900"
+              />
+            </div>
+
+            {duesLogs.length > 0 && (
+              <div className="mt-6 border-t border-purple-100 pt-4">
+                <p className="text-[9px] font-black uppercase text-purple-400 mb-2">Adjustment Audit Logs</p>
+                <div className="space-y-2 max-h-[120px] overflow-y-auto">
+                  {duesLogs.map((log) => (
+                    <div key={log.id} className="bg-white/80 p-2.5 rounded-lg border border-purple-100/50 flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] gap-2">
+                      <div>
+                        <span className="font-bold text-zinc-900">Rs {log.oldAmount?.toLocaleString()}</span>
+                        <span className="text-zinc-400 mx-1">→</span>
+                        <span className="font-black text-purple-700">Rs {log.newAmount?.toLocaleString()}</span>
+                        {log.reason && (
+                          <span className="text-zinc-500 ml-2 font-medium">({log.reason})</span>
+                        )}
+                      </div>
+                      <div className="text-[9px] text-zinc-400 font-bold self-end sm:self-auto">
+                        by {log.changedByName} on {log.changedAt?.toDate?.() ? log.changedAt.toDate().toLocaleDateString('en-PK') : new Date(log.changedAt || 0).toLocaleDateString('en-PK')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {showAddForm && (
           <div className="p-6 bg-indigo-50 border-b border-indigo-100 animate-in slide-in-from-top-4 duration-500">
