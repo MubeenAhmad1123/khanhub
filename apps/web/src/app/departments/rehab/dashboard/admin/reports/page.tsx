@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, downloadElementAsPng, toDate } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
-  ArrowUpDown, ArrowUp, ArrowDown
+  ArrowUpDown, ArrowUp, ArrowDown, Download, Users
 } from 'lucide-react';
 
 const MONTHS = [
@@ -53,7 +53,20 @@ export default function AdminReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  const [reportFocus, setReportFocus] = useState<'income' | 'remaining'>('income');
+  const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'patients'>('income');
+  const [patientGroup, setPatientGroup] = useState<'all' | 'active' | 'discharged'>('all');
+  const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission' | 'discharge'>('none');
+  const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
+    name: true,
+    inpatientNumber: true,
+    address: true,
+    admissionDate: true,
+    dischargeDate: true,
+    remaining: true,
+    substanceOfAddiction: false,
+    monthlyPackage: true,
+    guardianPhone: false
+  });
 
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
@@ -138,6 +151,37 @@ export default function AdminReportsPage() {
     return list;
   };
 
+  const getSortedPatients = () => {
+    if (!reportData?.patients) return [];
+    let list = [...reportData.patients];
+    if (sortField) {
+      list.sort((a: any, b: any) => {
+        let valA = a[sortField];
+        let valB = b[sortField];
+
+        // Handle numeric fields
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortDirection === 'asc' ? valA - valB : valB - valA;
+        }
+
+        // Handle Date fields
+        if (sortField === 'admissionDate' || sortField === 'dischargeDate') {
+          const dateA = valA ? toDate(valA).getTime() : 0;
+          const dateB = valB ? toDate(valB).getTime() : 0;
+          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+        }
+
+        // Handle string fields
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return list;
+  };
+
   const handleGenerate = async () => {
     try {
       setGenerating(true);
@@ -168,6 +212,63 @@ export default function AdminReportsPage() {
         firstDay = new Date(selectedYear, selectedMonth, 1, 0, 0, 0);
         lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
         label = `Monthly Report — ${MONTHS[selectedMonth]} ${selectedYear}`;
+      }
+
+      if (reportFocus === 'patients') {
+        const patientsSnap = await getDocs(collection(db, 'rehab_patients'));
+        let patients = patientsSnap.docs.map(doc => {
+          const data = doc.data() as any;
+          return {
+            id: doc.id,
+            name: data.name || '—',
+            fatherName: data.fatherName || '—',
+            inpatientNumber: data.inpatientNumber || data.patientId || data.serialNumber || '—',
+            address: data.address || '—',
+            guardianName: data.guardianName || '—',
+            guardianPhone: data.guardianPhone || data.contactNumber || '—',
+            isActive: data.isActive !== false,
+            admissionDate: data.admissionDate,
+            dischargeDate: data.dischargeDate,
+            substanceOfAddiction: data.substanceOfAddiction || (data.reasonsForAdmission?.join(', ') || '—'),
+            monthlyPackage: Number(data.monthlyPackage ?? data.packageAmount ?? 60000),
+            overallRemaining: Number(data.remaining ?? data.overallRemaining ?? data.remainingBalance ?? data.amountRemaining ?? 0),
+          };
+        });
+
+        // 1. Filter by patientGroup
+        if (patientGroup === 'active') {
+          patients = patients.filter(p => p.isActive === true);
+        } else if (patientGroup === 'discharged') {
+          patients = patients.filter(p => p.isActive === false);
+        }
+
+        // 2. Filter by date if filterByDateType is not 'none'
+        if (filterByDateType !== 'none') {
+          patients = patients.filter(p => {
+            const dateVal = filterByDateType === 'admission' ? p.admissionDate : p.dischargeDate;
+            if (!dateVal) return false;
+            const dateObj = toDate(dateVal);
+            return dateObj >= firstDay && dateObj <= lastDay;
+          });
+        }
+
+        const totalPatientsCount = patients.length;
+        const totalActiveCount = patients.filter(p => p.isActive).length;
+        const totalDischargedCount = patients.filter(p => !p.isActive).length;
+        const totalOutstandingDues = patients.reduce((s, p) => s + p.overallRemaining, 0);
+
+        setReportData({
+          patients,
+          totalPatientsCount,
+          totalActiveCount,
+          totalDischargedCount,
+          totalOutstandingDues,
+          reportLabel: label,
+          reportFocus,
+          generatedAt: new Date().toLocaleString(),
+        });
+        setGenerated(true);
+        return;
       }
 
       const q = query(
@@ -271,6 +372,20 @@ export default function AdminReportsPage() {
 
   const handlePrint = () => window.print();
 
+  const handleDownloadImage = async () => {
+    if (!printRef.current) return;
+    try {
+      const filename = `rehab-report-${reportFocus}-${reportType}-${Date.now()}.png`;
+      await downloadElementAsPng(printRef.current, filename, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+    } catch (err) {
+      console.error('Image export failed:', err);
+      alert('Failed to export report as image.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <style>{`
@@ -293,6 +408,9 @@ export default function AdminReportsPage() {
           </div>
           {generated && (
             <div className="flex gap-3">
+              <button onClick={handleDownloadImage} className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-teal-700">
+                <Download className="w-4 h-4" /> Download as Image
+              </button>
               <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-900">
                 <Printer className="w-4 h-4" /> Print / Save PDF
               </button>
@@ -343,8 +461,83 @@ export default function AdminReportsPage() {
               >
                 Remaining Dues Report
               </button>
+              <button
+                onClick={() => setReportFocus('patients')}
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  reportFocus === 'patients' ? 'bg-white shadow-sm text-teal-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Patient List Report
+              </button>
             </div>
           </div>
+
+          {reportFocus === 'patients' && (
+            <div className="border-t border-gray-100 pt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Patient Status Group Filter */}
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Patient Status Filter</label>
+                  <div className="flex bg-gray-150 p-1 rounded-xl w-full">
+                    {(['all', 'active', 'discharged'] as const).map(group => (
+                      <button
+                        key={group}
+                        type="button"
+                        onClick={() => setPatientGroup(group)}
+                        className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                          patientGroup === group ? 'bg-white shadow-sm text-teal-600 font-bold' : 'text-gray-400 hover:text-gray-700'
+                        }`}
+                      >
+                        {group}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Filter by Date Range Selector */}
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date Range Filter Type</label>
+                  <select
+                    value={filterByDateType}
+                    onChange={e => setFilterByDateType(e.target.value as any)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 text-black font-bold"
+                  >
+                    <option value="none">Show All Matching Patients (No Date Filter)</option>
+                    <option value="admission">Filter by Admission Date falling in Selected Period</option>
+                    <option value="discharge">Filter by Discharge Date falling in Selected Period</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Column Selector Checkboxes */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Include Columns in Report</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  {[
+                    { key: 'name', label: 'Patient Name' },
+                    { key: 'inpatientNumber', label: 'Inpatient #' },
+                    { key: 'address', label: 'Address' },
+                    { key: 'admissionDate', label: 'Admission Date' },
+                    { key: 'dischargeDate', label: 'Discharge Date' },
+                    { key: 'remaining', label: 'Remaining Dues' },
+                    { key: 'substanceOfAddiction', label: 'Substance' },
+                    { key: 'monthlyPackage', label: 'Monthly Package' },
+                    { key: 'guardianPhone', label: 'Guardian Phone' },
+                  ].map(col => (
+                    <label key={col.key} className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedColumns[col.key] || false}
+                        onChange={e => setSelectedColumns(prev => ({ ...prev, [col.key]: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      {col.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 items-end pt-2">
             {reportType === 'daily' && (
@@ -421,31 +614,221 @@ export default function AdminReportsPage() {
             <div className="text-center border-b border-gray-200 pb-6">
               <h2 className="text-2xl font-black text-gray-900">Khan Hub Rehab Center</h2>
               <p className="text-lg font-bold text-teal-700 mt-1">
-                {reportData.reportLabel} — {reportData.reportFocus === 'income' ? 'Income Report' : 'Remaining Dues Report'}
+                {reportData.reportLabel} — {
+                  reportData.reportFocus === 'income' 
+                    ? 'Income Report' 
+                    : reportData.reportFocus === 'remaining' 
+                    ? 'Remaining Dues Report' 
+                    : 'Patient List Report'
+                }
               </p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
-            {/* Summary Stats (Hide expenses/balance in Remaining report if preferred, or keep them) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Income</div>
-                <div className="text-2xl font-black text-teal-800">{formatPKR(reportData.totalIncome)}</div>
+            {/* Summary Stats */}
+            {reportData.reportFocus === 'patients' ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
+                  <Users className="w-6 h-6 text-teal-600 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Matching</div>
+                  <div className="text-2xl font-black text-teal-800">{reportData.totalPatientsCount}</div>
+                </div>
+                <div className="bg-green-50 border border-green-100 p-5 rounded-2xl text-center">
+                  <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Active Patients</div>
+                  <div className="text-2xl font-black text-green-800">{reportData.totalActiveCount}</div>
+                </div>
+                <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
+                  <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Discharged</div>
+                  <div className="text-2xl font-black text-red-750">{reportData.totalDischargedCount}</div>
+                </div>
+                <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center">
+                  <DollarSign className="w-6 h-6 text-orange-600 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Dues</div>
+                  <div className="text-2xl font-black text-orange-850">{formatPKR(reportData.totalOutstandingDues)}</div>
+                </div>
               </div>
-              <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
-                <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Total Expenses</div>
-                <div className="text-2xl font-black text-red-700">{formatPKR(reportData.totalExpenses)}</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
+                  <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Income</div>
+                  <div className="text-2xl font-black text-teal-800">{formatPKR(reportData.totalIncome)}</div>
+                </div>
+                <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
+                  <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Total Expenses</div>
+                  <div className="text-2xl font-black text-red-700">{formatPKR(reportData.totalExpenses)}</div>
+                </div>
+                <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
+                  <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-600'}`} />
+                  <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
+                  <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-600'}`}>{formatPKR(reportData.netBalance)}</div>
+                </div>
               </div>
-              <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
-                <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-600'}`} />
-                <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
-                <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-600'}`}>{formatPKR(reportData.netBalance)}</div>
-              </div>
-            </div>
+            )}
 
-            {reportData.txns.length === 0 && reportData.reportFocus === 'income' ? (
+            {reportData.reportFocus === 'patients' ? (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-teal-600" /> Patient List Details
+                  </h3>
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <table className="w-full text-xs border-collapse">
+                      <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
+                        <tr>
+                          {selectedColumns.name && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
+                              <div className="flex items-center gap-1">
+                                Patient Name
+                                {sortField === 'name' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.inpatientNumber && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('inpatientNumber')}>
+                              <div className="flex items-center gap-1">
+                                Inpatient Number
+                                {sortField === 'inpatientNumber' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.address && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('address')}>
+                              <div className="flex items-center gap-1">
+                                Address
+                                {sortField === 'address' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.guardianPhone && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('guardianPhone')}>
+                              <div className="flex items-center gap-1">
+                                Contact
+                                {sortField === 'guardianPhone' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.admissionDate && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('admissionDate')}>
+                              <div className="flex items-center gap-1">
+                                Admission Date
+                                {sortField === 'admissionDate' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.dischargeDate && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('dischargeDate')}>
+                              <div className="flex items-center gap-1">
+                                Discharge Date
+                                {sortField === 'dischargeDate' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.substanceOfAddiction && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('substanceOfAddiction')}>
+                              <div className="flex items-center gap-1">
+                                Substance of Addiction
+                                {sortField === 'substanceOfAddiction' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.monthlyPackage && (
+                            <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('monthlyPackage')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Monthly Package
+                                {sortField === 'monthlyPackage' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.remaining && (
+                            <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('overallRemaining')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Remaining Dues
+                                {sortField === 'overallRemaining' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-450" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-150">
+                        {getSortedPatients().map((p: any) => (
+                          <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                            {selectedColumns.name && (
+                              <td className="px-3 py-2.5 text-gray-850 font-bold">
+                                {p.name}
+                                {!p.isActive && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Discharged</span>}
+                              </td>
+                            )}
+                            {selectedColumns.inpatientNumber && <td className="px-3 py-2.5 text-gray-550 font-mono">{p.inpatientNumber}</td>}
+                            {selectedColumns.address && <td className="px-3 py-2.5 text-gray-600">{p.address}</td>}
+                            {selectedColumns.guardianPhone && <td className="px-3 py-2.5 text-gray-600">{p.guardianPhone}</td>}
+                            {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-650">{formatDateDMY(p.admissionDate)}</td>}
+                            {selectedColumns.dischargeDate && (
+                              <td className="px-3 py-2.5 text-gray-650">
+                                {p.dischargeDate ? formatDateDMY(p.dischargeDate) : '—'}
+                              </td>
+                            )}
+                            {selectedColumns.substanceOfAddiction && <td className="px-3 py-2.5 text-gray-600">{p.substanceOfAddiction}</td>}
+                            {selectedColumns.monthlyPackage && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(p.monthlyPackage)}</td>}
+                            {selectedColumns.remaining && (
+                              <td className={`px-3 py-2.5 text-right font-black ${p.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>
+                                {formatPKR(p.overallRemaining)}
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                        {getSortedPatients().length === 0 && (
+                          <tr>
+                            <td colSpan={Object.values(selectedColumns).filter(Boolean).length} className="px-3 py-8 text-center text-gray-400 italic">
+                              No patient records found matching the criteria.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : reportData.txns.length === 0 && reportData.reportFocus === 'income' ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-500">
                 No approved transactions found for the selected period.
               </div>
