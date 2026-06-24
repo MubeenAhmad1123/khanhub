@@ -147,6 +147,9 @@ export default function CashierStationPage() {
     category: 'Check-up Patient',
     reason: '',
   });
+  const [hospitalShift, setHospitalShift] = useState<'morning_shift' | 'night_shift' | 'combine'>('combine');
+  const [hospitalIncomeAmount, setHospitalIncomeAmount] = useState('');
+  const [hospitalExpenseAmount, setHospitalExpenseAmount] = useState('');
 
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
@@ -236,6 +239,7 @@ export default function CashierStationPage() {
   }, [departmentCode, selectedEntity]);
 
   const isStaffMode = selectedEntity?._entityType === 'staff';
+  const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
   
   useEffect(() => {
     if (selectedCategoryId === 'medicine_charge') {
@@ -705,6 +709,10 @@ export default function CashierStationPage() {
     setSearchOpen(false);
     setSearchQuery('');
     setCustomTargetName('');
+    setHospitalMode('none');
+    setHospitalShift('combine');
+    setHospitalIncomeAmount('');
+    setHospitalExpenseAmount('');
   }, [departmentCode]);
 
   useEffect(() => {
@@ -893,10 +901,23 @@ export default function CashierStationPage() {
     e.preventDefault();
     if (processing) return;
     setMessage(null);
-    if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) return setMessage({ type: 'error', text: 'Select account or enter a Target Person / Purpose Name.' });
-    if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
-    if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
-    if (!proofFile && !proofReason.trim()) {
+
+    const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
+    const missingReason = proofReason.trim();
+
+    if (!isHospitalDayClose) {
+      if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) return setMessage({ type: 'error', text: 'Select account or enter a Target Person / Purpose Name.' });
+      if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
+      if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
+    } else {
+      const inc = Number(hospitalIncomeAmount) || 0;
+      const exp = Number(hospitalExpenseAmount) || 0;
+      if (inc <= 0 && exp <= 0) {
+        return setMessage({ type: 'error', text: 'Enter a valid Income Amount or Expense Amount.' });
+      }
+    }
+
+    if (!proofFile && !missingReason) {
       return setMessage({ type: 'error', text: 'Upload proof OR enter reason if proof is missing.' });
     }
 
@@ -909,6 +930,131 @@ export default function CashierStationPage() {
       }
 
       const isSuperadmin = session?.role === 'superadmin';
+
+      const commonPayload: Record<string, any> = {
+        departmentCode: activeDepartment.code,
+        departmentName: activeDepartment.label,
+        paymentMethod,
+        referenceNo,
+        status: isSuperadmin ? 'approved' : 'pending',
+        ...(isSuperadmin ? {
+          approvedAt: Timestamp.now(),
+          approvedBy: session?.customId || 'SUPERADMIN',
+          processedAt: Timestamp.now(),
+          processedBy: session?.customId || 'SUPERADMIN',
+        } : {}),
+        cashierId: session?.customId || 'HQ-CASHIER',
+        proofRequired: true,
+        date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
+        transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
+        createdBy: session?.uid,
+        createdByName: session?.displayName || session?.name || 'HQ Cashier',
+        createdAt: Timestamp.now(),
+        discount: 0,
+        returnAmount: 0,
+      };
+      if (proofUrl) commonPayload.proofUrl = proofUrl;
+      if (!proofUrl && missingReason) commonPayload.proofMissingReason = missingReason;
+
+      if (isHospitalDayClose) {
+        const inc = Number(hospitalIncomeAmount) || 0;
+        const exp = Number(hospitalExpenseAmount) || 0;
+
+        if (inc > 0) {
+          const incPayload = {
+            ...commonPayload,
+            type: 'income',
+            amount: inc,
+            category: 'day_close',
+            categoryName: 'Hospital Day Close',
+            patientId: 'hospital-day-close',
+            patientName: 'Day Close Transaction',
+            hospitalDayCloseShift: hospitalShift,
+            description: description ? `${description} | Shift: ${hospitalShift === 'morning_shift' ? 'Morning' : hospitalShift === 'night_shift' ? 'Night' : 'Combine'}` : `Hospital Day Close Income - Shift: ${hospitalShift === 'morning_shift' ? 'Morning' : hospitalShift === 'night_shift' ? 'Night' : 'Combine'}`,
+          };
+          const txRef = await addDoc(collection(db, activeDepartment.txCollection), incPayload);
+
+          if (!isSuperadmin) {
+            void sendHqPushNotification({
+              recipientId: superadminRecipient.customId,
+              recipientUid: superadminRecipient.id,
+              recipientRole: 'superadmin',
+              type: 'tx_forwarded',
+              title: 'New Transaction Submitted',
+              body: `${session?.name || 'Cashier'} submitted a Rs ${inc.toLocaleString()} Day Close Income for Khan Hospital.`,
+              relatedId: txRef.id,
+              actionUrl: '/hq/dashboard/superadmin/approvals',
+            });
+          } else {
+            try {
+              const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+              await syncDirectApprovedTransaction({ 
+                dept: activeDepartment.code as any, 
+                txId: txRef.id,
+                approvedBy: session?.customId || 'SUPERADMIN'
+              });
+            } catch (syncErr) {
+              console.error('[HQ Cashier] Sync direct approved transaction failed:', syncErr);
+            }
+          }
+        }
+
+        if (exp > 0) {
+          const expPayload = {
+            ...commonPayload,
+            type: 'expense',
+            amount: exp,
+            category: 'day_close',
+            categoryName: 'Hospital Day Close',
+            patientId: 'hospital-day-close',
+            patientName: 'Day Close Transaction',
+            hospitalDayCloseShift: hospitalShift,
+            description: description ? `${description} | Shift: ${hospitalShift === 'morning_shift' ? 'Morning' : hospitalShift === 'night_shift' ? 'Night' : 'Combine'}` : `Hospital Day Close Expense - Shift: ${hospitalShift === 'morning_shift' ? 'Morning' : hospitalShift === 'night_shift' ? 'Night' : 'Combine'}`,
+          };
+          const txRef = await addDoc(collection(db, activeDepartment.txCollection), expPayload);
+
+          if (!isSuperadmin) {
+            void sendHqPushNotification({
+              recipientId: superadminRecipient.customId,
+              recipientUid: superadminRecipient.id,
+              recipientRole: 'superadmin',
+              type: 'tx_forwarded',
+              title: 'New Transaction Submitted',
+              body: `${session?.name || 'Cashier'} submitted a Rs ${exp.toLocaleString()} Day Close Expense for Khan Hospital.`,
+              relatedId: txRef.id,
+              actionUrl: '/hq/dashboard/superadmin/approvals',
+            });
+          } else {
+            try {
+              const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+              await syncDirectApprovedTransaction({ 
+                dept: activeDepartment.code as any, 
+                txId: txRef.id,
+                approvedBy: session?.customId || 'SUPERADMIN'
+              });
+            } catch (syncErr) {
+              console.error('[HQ Cashier] Sync direct approved transaction failed:', syncErr);
+            }
+          }
+        }
+
+        toast.success(isSuperadmin ? 'Transaction approved & synced successfully ✓' : 'Transaction submitted successfully ✓');
+        
+        setHospitalIncomeAmount('');
+        setHospitalExpenseAmount('');
+        setHospitalShift('combine');
+        setDescription('');
+        setReferenceNo('');
+        setProofFile(null);
+        setProofReason('');
+        setSearchQuery('');
+        setProofUploading(false);
+        await fetchHistory();
+        setProcessing(false);
+        return;
+      }
+
+      if (!selectedCategory) return;
 
       const createPayload: Record<string, any> = {
         type: txnType,
@@ -970,7 +1116,6 @@ export default function CashierStationPage() {
         ...(departmentCode === 'spims' && selectedCategory.id === 'fee' ? { spimsFeeSubtype } : {}),
       };
       if (proofUrl) createPayload.proofUrl = proofUrl;
-      const missingReason = proofReason.trim();
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
 
 
@@ -1622,140 +1767,241 @@ export default function CashierStationPage() {
                       />
                     </div>
  
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount (PKR)</label>
-                        <div className="flex items-center gap-3">
-                          <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
-                          <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Calculated</span>
-                        </div>
-                      </div>
-                      <div className="relative group/amount">
-                        <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
-                          <DollarSign size={20} className="sm:w-6 sm:h-6 text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
-                        </div>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
-                        />
-                      </div>
-                    </div>
- 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between px-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Discount</label>
-                        </div>
-                        <input
-                          type="number"
-                          value={discount}
-                          onChange={(e) => setDiscount(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-sm font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
-                        />
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between px-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Refund</label>
-                        </div>
-                        <input
-                          type="number"
-                          value={returnAmount}
-                          onChange={(e) => setReturnAmount(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-sm font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
-                        />
-                      </div>
-                      {mainStayOptions.length > 1 && (
-                        <div className="space-y-3">
+                    {isHospitalDayClose ? (
+                      <>
+                        {/* Shift Selector */}
+                        <div className="space-y-6">
                           <div className="flex items-center justify-between px-4">
-                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Stay Duration</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Shift</label>
+                            <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
                           </div>
-                          <select
-                            value={stayDurationIndex}
-                            onChange={(e) => setStayDurationIndex(e.target.value)}
-                            className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-xs font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
-                          >
-                            <option value="">Select Stay...</option>
-                            {mainStayOptions.map((opt: any) => (
-                              <option key={opt.index} value={opt.index}>{opt.label}</option>
+                          <div className="grid grid-cols-3 gap-3">
+                            {([
+                              { id: 'morning_shift', label: 'Morning Shift' },
+                              { id: 'night_shift', label: 'Night Shift' },
+                              { id: 'combine', label: 'Combine' },
+                            ] as const).map((s) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => setHospitalShift(s.id)}
+                                className={cn(
+                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                  hospitalShift === s.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                )}
+                              >
+                                {s.label}
+                              </button>
                             ))}
-                          </select>
+                          </div>
                         </div>
-                      )}
-                    </div>
- 
-                    <div className="space-y-6">
-                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Payment Method</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {([
-                          { id: 'cash', label: 'Cash' },
-                          { id: 'bank_transfer', label: 'Bank Transfer' },
-                          { id: 'jazzcash', label: 'JazzCash' },
-                          { id: 'easypaisa', label: 'EasyPaisa' },
-                          { id: 'credit', label: 'Credit' },
-                          { id: 'other', label: 'Other' },
-                        ] as const).map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => setPaymentMethod(m.id)}
-                            className={cn(
-                              "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                              paymentMethod === m.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
-                            )}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
 
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between px-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Category</label>
-                        <button type="button" onClick={() => createCategory()} className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Custom</button>
-                      </div>
-                      <div className="relative">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={20} />
-                        <input 
-                          value={categorySearch} 
-                          onChange={(e) => setCategorySearch(e.target.value)} 
-                          placeholder="Search classification..." 
-                          className="w-full h-14 md:h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] md:rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2 max-h-36 md:max-h-48 overflow-y-auto pr-2 no-scrollbar">
-                        {categorySearch.trim() && !visibleCategories.some(c => c.name.toLowerCase() === categorySearch.trim().toLowerCase()) && (
-                          <button
-                            type="button"
-                            onClick={() => createCategory()}
-                            className="px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2 bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white cursor-pointer"
-                          >
-                            + Create "{categorySearch}"
-                          </button>
-                        )}
-                        {visibleCategories.map((c) => (
-                          <button 
-                            key={c.id} 
-                            type="button" 
-                            onClick={() => setSelectedCategoryId(c.id)} 
-                            className={cn(
-                              'px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
-                              selectedCategoryId === c.id 
-                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 -translate-y-0.5' 
-                                : 'bg-white border-zinc-100 text-zinc-500 hover:border-indigo-200'
+                        {/* Income and Expense Amounts */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between px-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Income Amount (PKR)</label>
+                            </div>
+                            <div className="relative group/income-amount">
+                              <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
+                                <DollarSign size={20} className="sm:w-6 sm:h-6 text-emerald-600/20 group-focus-within/income-amount:text-emerald-600 transition-colors" />
+                              </div>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={hospitalIncomeAmount}
+                                onChange={(e) => setHospitalIncomeAmount(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full h-12 sm:h-14 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-sm sm:text-base font-black text-zinc-900 outline-none focus:ring-8 focus:ring-emerald-600/5 focus:bg-white focus:border-emerald-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between px-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Expense Amount (PKR)</label>
+                            </div>
+                            <div className="relative group/expense-amount">
+                              <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
+                                <DollarSign size={20} className="sm:w-6 sm:h-6 text-rose-600/20 group-focus-within/expense-amount:text-rose-600 transition-colors" />
+                              </div>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={hospitalExpenseAmount}
+                                onChange={(e) => setHospitalExpenseAmount(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full h-12 sm:h-14 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-sm sm:text-base font-black text-zinc-900 outline-none focus:ring-8 focus:ring-rose-600/5 focus:bg-white focus:border-rose-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Payment Method */}
+                        <div className="space-y-6">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Payment Method</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {([
+                              { id: 'cash', label: 'Cash' },
+                              { id: 'bank_transfer', label: 'Bank Transfer' },
+                              { id: 'jazzcash', label: 'JazzCash' },
+                              { id: 'easypaisa', label: 'EasyPaisa' },
+                              { id: 'credit', label: 'Credit' },
+                              { id: 'other', label: 'Other' },
+                            ] as const).map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setPaymentMethod(m.id)}
+                                className={cn(
+                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                  paymentMethod === m.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                )}
+                              >
+                                {m.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-6">
+                          <div className="flex items-center justify-between px-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount (PKR)</label>
+                            <div className="flex items-center gap-3">
+                              <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
+                              <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Calculated</span>
+                            </div>
+                          </div>
+                          <div className="relative group/amount">
+                            <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
+                              <DollarSign size={20} className="sm:w-6 sm:h-6 text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
+                            </div>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={amount}
+                              onChange={(e) => setAmount(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between px-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Discount</label>
+                            </div>
+                            <input
+                              type="number"
+                              value={discount}
+                              onChange={(e) => setDiscount(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-sm font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between px-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Refund</label>
+                            </div>
+                            <input
+                              type="number"
+                              value={returnAmount}
+                              onChange={(e) => setReturnAmount(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-sm font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tabular-nums"
+                            />
+                          </div>
+                          {mainStayOptions.length > 1 && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between px-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Stay Duration</label>
+                              </div>
+                              <select
+                                value={stayDurationIndex}
+                                onChange={(e) => setStayDurationIndex(e.target.value)}
+                                className="w-full h-12 bg-zinc-50 border-2 border-transparent rounded-xl px-4 text-xs font-bold outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
+                              >
+                                <option value="">Select Stay...</option>
+                                {mainStayOptions.map((opt: any) => (
+                                  <option key={opt.index} value={opt.index}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-6">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Payment Method</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {([
+                              { id: 'cash', label: 'Cash' },
+                              { id: 'bank_transfer', label: 'Bank Transfer' },
+                              { id: 'jazzcash', label: 'JazzCash' },
+                              { id: 'easypaisa', label: 'EasyPaisa' },
+                              { id: 'credit', label: 'Credit' },
+                              { id: 'other', label: 'Other' },
+                            ] as const).map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setPaymentMethod(m.id)}
+                                className={cn(
+                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                  paymentMethod === m.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                )}
+                              >
+                                {m.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                          <div className="flex items-center justify-between px-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Category</label>
+                            <button type="button" onClick={() => createCategory()} className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Custom</button>
+                          </div>
+                          <div className="relative">
+                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={20} />
+                            <input 
+                              value={categorySearch} 
+                              onChange={(e) => setCategorySearch(e.target.value)} 
+                              placeholder="Search classification..." 
+                              className="w-full h-14 md:h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] md:rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2 max-h-36 md:max-h-48 overflow-y-auto pr-2 no-scrollbar">
+                            {categorySearch.trim() && !visibleCategories.some(c => c.name.toLowerCase() === categorySearch.trim().toLowerCase()) && (
+                              <button
+                                type="button"
+                                onClick={() => createCategory()}
+                                className="px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2 bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white cursor-pointer"
+                              >
+                                + Create "{categorySearch}"
+                              </button>
                             )}
-                          >
-                            {c.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                            {visibleCategories.map((c) => (
+                              <button 
+                                key={c.id} 
+                                type="button" 
+                                onClick={() => setSelectedCategoryId(c.id)} 
+                                className={cn(
+                                  'px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
+                                  selectedCategoryId === c.id 
+                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 -translate-y-0.5' 
+                                    : 'bg-white border-zinc-100 text-zinc-500 hover:border-indigo-200'
+                                )}
+                              >
+                                {c.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
  
                     <div className="space-y-8 pt-6 border-t border-zinc-100">
                       <div className="space-y-4">
@@ -1769,7 +2015,7 @@ export default function CashierStationPage() {
                       </div>
                       <button 
                         type="submit" 
-                        disabled={processing || (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
+                        disabled={processing || (!isHospitalDayClose && !selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
                         className="w-full h-16 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-sm md:text-xl uppercase tracking-[0.4em] rounded-[1.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 md:gap-8 group/submit active:scale-[0.98]"
                       >
                         {processing ? <Loader2 size={24} className="animate-spin md:w-8 md:h-8" /> : (
@@ -2209,7 +2455,7 @@ export default function CashierStationPage() {
               </div>
 
               <div className="space-y-8">
-                <div className="grid grid-cols-2 gap-6">
+                <div className={cn("grid gap-6", detailModalTx.hospitalDayCloseShift ? "grid-cols-3" : "grid-cols-2")}>
                   <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Date</p>
                     <p className="text-sm font-[1000] text-zinc-900">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
@@ -2218,6 +2464,14 @@ export default function CashierStationPage() {
                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Department</p>
                     <p className="text-sm font-[1000] text-zinc-900 uppercase">{detailModalTx.departmentCode || 'HQ-MAIN'}</p>
                   </div>
+                  {detailModalTx.hospitalDayCloseShift && (
+                    <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Shift</p>
+                      <p className="text-sm font-[1000] text-zinc-900 uppercase">
+                        {detailModalTx.hospitalDayCloseShift === 'morning_shift' ? 'Morning' : detailModalTx.hospitalDayCloseShift === 'night_shift' ? 'Night' : 'Combine'}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-8 rounded-[2.5rem] bg-indigo-600 shadow-2xl shadow-indigo-600/30 group text-white">
