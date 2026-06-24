@@ -2676,8 +2676,12 @@ function EntityProfileModal({
   };
 
   const handleAddTransaction = async () => {
-    if (!newTx.amount || Number(newTx.amount) <= 0) {
-      toast.error('Please enter a valid amount');
+    const amt = Number(newTx.amount) || 0;
+    const disc = Number(newTx.discount) || 0;
+    const ret = Number(newTx.returnAmount) || 0;
+
+    if (amt <= 0 && disc <= 0 && ret <= 0) {
+      toast.error('Please enter a valid amount, discount, or return');
       return;
     }
     setAdding(true);
