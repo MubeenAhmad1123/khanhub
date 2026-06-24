@@ -1120,7 +1120,7 @@ export default function SuperAdminReportsPage() {
             )}
 
             {/* Staff Salary Summary */}
-            {reportData.staffSalaries.length > 0 && (
+            {reportData.reportFocus !== 'patients' && reportData.staffSalaries && reportData.staffSalaries.length > 0 && (
               <div>
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary ({reportData.monthLabel})</h3>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
