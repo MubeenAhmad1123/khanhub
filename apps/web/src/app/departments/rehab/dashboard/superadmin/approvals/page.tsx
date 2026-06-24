@@ -58,6 +58,8 @@ export default function ApprovalsPage() {
             category: data.category || '',
             description: data.description || '',
             amount: Number(data.amount) || 0,
+            discount: Number(data.discount) || 0,
+            returnAmount: Number(data.returnAmount || data.return || 0),
             status: data.status || 'pending',
             cashierId: data.cashierId || '',
             patientId: data.patientId || null,
@@ -117,6 +119,8 @@ export default function ApprovalsPage() {
             category: data.category || '',
             description: data.description || '',
             amount: Number(data.amount) || 0,
+            discount: Number(data.discount) || 0,
+            returnAmount: Number(data.returnAmount || data.return || 0),
             status: data.status || '',
             cashierId: data.cashierId || '',
             approvedBy: data.approvedBy || '',
@@ -167,60 +171,70 @@ export default function ApprovalsPage() {
             const month = txDate.toISOString().slice(0, 7); // "2026-03"
 
             if (tx.category === 'patient_fee' || tx.category === 'fee') {
-            // Find or CREATE the fee record for this patient+month
-            const feesQ = query(
-              collection(db, 'rehab_fees'),
-              where('patientId', '==', tx.patientId),
-              where('month', '==', month)
-            );
-            const feesSnap = await getDocs(feesQ);
+              const amount = Number(tx.amount) || 0;
+              const discount = Number(tx.discount || 0);
+              const returnAmount = Number(tx.returnAmount || tx.return || 0);
+              const creditAmount = amount + discount - returnAmount;
 
-            if (feesSnap.empty) {
-              // Auto-create fee record — fetch patient package amount first
-              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
-              const packageAmount = patientSnap.exists()
-                ? (patientSnap.data().packageAmount || 60000)
-                : 60000;
-              const amountPaid = tx.amount;
-              const amountRemaining = Math.max(0, packageAmount - amountPaid);
-              await addDoc(collection(db, 'rehab_fees'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
-                month,
-                packageAmount,
-                amountPaid,
-                amountRemaining,
-                payments: [{
-                  amount: tx.amount,
-                  date: txDate,
-                  transactionId: txId,
-                  approvedBy: session?.uid,
-                }],
-                lastPaymentDate: serverTimestamp(),
-                lastPaymentAmount: tx.amount,
-                createdAt: serverTimestamp(),
-              });
-            } else {
-              // Update existing fee record
-              const feeDoc = feesSnap.docs[0];
-              const current = feeDoc.data();
-              const newPaid = (current.amountPaid || 0) + tx.amount;
-              const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
-              const existingPayments = current.payments || [];
-              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
-                amountPaid: newPaid,
-                amountRemaining: newRemaining,
-                lastPaymentDate: serverTimestamp(),
-                lastPaymentAmount: tx.amount,
-                payments: [...existingPayments, {
-                  amount: tx.amount,
-                  date: txDate,
-                  transactionId: txId,
-                  approvedBy: session?.uid,
-                }],
-              });
+              // Find or CREATE the fee record for this patient+month
+              const feesQ = query(
+                collection(db, 'rehab_fees'),
+                where('patientId', '==', tx.patientId),
+                where('month', '==', month)
+              );
+              const feesSnap = await getDocs(feesQ);
+
+              if (feesSnap.empty) {
+                // Auto-create fee record — fetch patient package amount first
+                const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
+                const packageAmount = patientSnap.exists()
+                  ? (Number(patientSnap.data().packageAmount || patientSnap.data().monthlyPackage) || 60000)
+                  : 60000;
+                const amountRemaining = Math.max(0, packageAmount - creditAmount);
+                await addDoc(collection(db, 'rehab_fees'), {
+                  patientId: tx.patientId,
+                  patientName: tx.patientName || '',
+                  month,
+                  packageAmount,
+                  amountPaid: creditAmount,
+                  amountRemaining,
+                  payments: [{
+                    amount,
+                    discount,
+                    returnAmount,
+                    date: txDate,
+                    transactionId: txId,
+                    approvedBy: session?.uid,
+                    status: 'approved',
+                  }],
+                  lastPaymentDate: serverTimestamp(),
+                  lastPaymentAmount: amount,
+                  createdAt: serverTimestamp(),
+                });
+              } else {
+                // Update existing fee record
+                const feeDoc = feesSnap.docs[0];
+                const current = feeDoc.data();
+                const newPaid = (Number(current.amountPaid) || 0) + creditAmount;
+                const newRemaining = Math.max(0, (Number(current.packageAmount || current.monthlyPackage) || 60000) - newPaid);
+                const existingPayments = current.payments || [];
+                await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+                  amountPaid: newPaid,
+                  amountRemaining: newRemaining,
+                  lastPaymentDate: serverTimestamp(),
+                  lastPaymentAmount: amount,
+                  payments: [...existingPayments, {
+                    amount,
+                    discount,
+                    returnAmount,
+                    date: txDate,
+                    transactionId: txId,
+                    approvedBy: session?.uid,
+                    status: 'approved',
+                  }],
+                });
+              }
             }
-          }
 
           if (tx.category === 'canteen_deposit') {
             const canteenQ = query(
@@ -406,9 +420,30 @@ export default function ApprovalsPage() {
               )}
             </div>
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
-              {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
+              {tx.amount > 0 ? (
+                <>
+                  {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
+                  {tx.discount > 0 && (
+                    <span className="ml-2 text-sm font-bold text-amber-600 bg-amber-50 px-2.5 py-1.5 rounded-lg">
+                      + Rs {tx.discount.toLocaleString('en-PK')} (Discount)
+                    </span>
+                  )}
+                </>
+              ) : tx.discount > 0 ? (
+                <span className="text-amber-650 font-black">
+                  Rs {tx.discount.toLocaleString('en-PK')} <span className="text-xs font-bold text-amber-650 bg-amber-50 px-2.5 py-1.5 rounded-lg uppercase tracking-widest ml-1">Discount Waiver</span>
+                </span>
+              ) : tx.returnAmount > 0 ? (
+                <span className="text-blue-650 font-black">
+                  Rs {tx.returnAmount.toLocaleString('en-PK')} <span className="text-xs font-bold text-blue-650 bg-blue-50 px-2.5 py-1.5 rounded-lg uppercase tracking-widest ml-1">Refund</span>
+                </span>
+              ) : (
+                <>
+                  0 <span className="text-sm font-bold text-gray-400">PKR</span>
+                </>
+              )}
               {tx.patientName && (
-                <span className="ml-3 text-sm font-black text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
+                <span className="ml-3 text-sm font-black text-teal-600 bg-teal-50 px-2.5 py-1.5 rounded-lg uppercase tracking-widest">
                   Patient: {tx.patientName}
                 </span>
               )}

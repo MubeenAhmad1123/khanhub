@@ -239,11 +239,20 @@ service cloud.firestore {
              ('role' in request.auth.token ? request.auth.token.role : '');
     }
     function isRehabRole(role) {
-      return isRehabAuth() && rehabRole() == role;
+      let r = rehabRole();
+      return isRehabAuth() && (r == role || r.lower() == role.lower());
     }
     function isRehabAdminOrAbove() {
       let role = rehabRole();
-      return isRehabAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
+      return isRehabAuth() && (
+        role == 'admin' || 
+        role == 'Admin' || 
+        role == 'rehab-admin' || 
+        role == 'rehab_admin' || 
+        role == 'superadmin' || 
+        role == 'Superadmin' || 
+        isHqSuperOrManager()
+      );
     }
     function isRehabSuperAdmin() {
       return isRehabRole('superadmin');
