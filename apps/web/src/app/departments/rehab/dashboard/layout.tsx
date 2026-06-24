@@ -98,6 +98,11 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     setMounted(true);
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        console.warn('[RehabLayout] No authenticated Firebase user, redirecting to login');
+        handleSignOut();
+        return;
+      }
       let session = localStorage.getItem('rehab_session');
       const hqSessionStr = localStorage.getItem('hq_session');
       

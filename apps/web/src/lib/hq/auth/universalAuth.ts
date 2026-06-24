@@ -416,7 +416,16 @@ export async function loginUniversal(customId: string, password: string, deptHin
     // Set Custom Claims for ALL users to enable zero-cost routing (Free Firestore Reads)
     const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
     try {
-      await setUserDashboardClaims(uid, redirectPath);
+      const extraClaims = {
+        role: finalData.role,
+        patientId: finalData.patientId || null,
+        studentId: finalData.studentId || null,
+        seekerId: finalData.seekerId || null,
+        childId: finalData.childId || null,
+        customId: finalData.customId || null,
+        deptId: dept.id
+      };
+      await setUserDashboardClaims(uid, redirectPath, extraClaims);
     } catch (err) {
       console.warn('[UniversalAuth] Failed to set custom claims:', err);
     }
