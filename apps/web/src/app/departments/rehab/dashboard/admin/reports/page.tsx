@@ -271,16 +271,22 @@ export default function AdminReportsPage() {
         return;
       }
 
-      const q = query(
-        collection(db, 'rehab_transactions'),
-        where('date', '>=', Timestamp.fromDate(firstDay)),
-        where('date', '<=', Timestamp.fromDate(lastDay)),
-        where('status', '==', 'approved'),
-        orderBy('date', 'asc')
-      );
+      const snap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved')));
+      let txns = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
 
-      const snap = await getDocs(q);
-      const txns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Filter by date range client-side
+      txns = txns.filter((t: any) => {
+        if (!t.date) return false;
+        const dateObj = toDate(t.date);
+        return dateObj >= firstDay && dateObj <= lastDay;
+      });
+
+      // Sort by date asc client-side
+      txns.sort((a: any, b: any) => {
+        const dateA = toDate(a.date).getTime();
+        const dateB = toDate(b.date).getTime();
+        return dateA - dateB;
+      });
 
       const income = txns.filter((t: any) => t.type === 'income');
       const expense = txns.filter((t: any) => t.type === 'expense');

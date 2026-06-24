@@ -908,7 +908,13 @@ export default function CashierStationPage() {
     if (!isHospitalDayClose) {
       if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) return setMessage({ type: 'error', text: 'Select account or enter a Target Person / Purpose Name.' });
       if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
-      if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
+      
+      const amt = Number(amount) || 0;
+      const disc = Number(discount) || 0;
+      const ret = Number(returnAmount) || 0;
+      if (amt <= 0 && disc <= 0 && ret <= 0) {
+        return setMessage({ type: 'error', text: 'Please enter a valid amount, discount, or refund.' });
+      }
     } else {
       const inc = Number(hospitalIncomeAmount) || 0;
       const exp = Number(hospitalExpenseAmount) || 0;
@@ -1149,13 +1155,21 @@ export default function CashierStationPage() {
       }
 
       if (!isSuperadmin) {
+        let bodyAmountText = `Rs ${Number(amount).toLocaleString()}`;
+        if (Number(amount) <= 0 && Number(discount) > 0) {
+          bodyAmountText = `Rs ${Number(discount).toLocaleString()} discount`;
+        } else if (Number(amount) <= 0 && Number(returnAmount) > 0) {
+          bodyAmountText = `Rs ${Number(returnAmount).toLocaleString()} refund`;
+        } else if (Number(discount) > 0) {
+          bodyAmountText += ` (with Rs ${Number(discount).toLocaleString()} discount)`;
+        }
         void sendHqPushNotification({
           recipientId: superadminRecipient.customId,
           recipientUid: superadminRecipient.id,
           recipientRole: 'superadmin',
           type: 'tx_forwarded',
           title: 'New Transaction Submitted',
-          body: `${session?.name || 'Cashier'} submitted a Rs ${Number(amount).toLocaleString()} transaction for ${selectedEntity?.name || 'General Hospital'}.`,
+          body: `${session?.name || 'Cashier'} submitted a ${bodyAmountText} transaction for ${selectedEntity?.name || 'General Hospital'}.`,
           relatedId: txRef.id,
           actionUrl: '/hq/dashboard/superadmin/approvals',
         });

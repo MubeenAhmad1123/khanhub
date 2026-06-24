@@ -271,25 +271,32 @@ export default function SuperAdminReportsPage() {
       }
 
       // Approved transactions in period
-      const txnQ = query(
-        collection(db, 'rehab_transactions'),
-        where('date', '>=', Timestamp.fromDate(firstDay)),
-        where('date', '<=', Timestamp.fromDate(lastDay)),
-        where('status', '==', 'approved'),
-        orderBy('date', 'asc')
-      );
-      const txnSnap = await getDocs(txnQ);
-      const txns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const txnSnap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved')));
+      let txns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+
+      // Filter by date range client-side
+      txns = txns.filter((t: any) => {
+        if (!t.date) return false;
+        const dateObj = toDate(t.date);
+        return dateObj >= firstDay && dateObj <= lastDay;
+      });
+
+      // Sort by date asc client-side
+      txns.sort((a: any, b: any) => {
+        const dateA = toDate(a.date).getTime();
+        const dateB = toDate(b.date).getTime();
+        return dateA - dateB;
+      });
 
       // Pending transactions in period
-      const pendingQ = query(
-        collection(db, 'rehab_transactions'),
-        where('date', '>=', Timestamp.fromDate(firstDay)),
-        where('date', '<=', Timestamp.fromDate(lastDay)),
-        where('status', '==', 'pending')
-      );
-      const pendingSnap = await getDocs(pendingQ);
-      const pendingCount = pendingSnap.size;
+      const pendingSnap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending')));
+      const pendingCount = pendingSnap.docs
+        .map(d => d.data() as any)
+        .filter((t: any) => {
+          if (!t.date) return false;
+          const dateObj = toDate(t.date);
+          return dateObj >= firstDay && dateObj <= lastDay;
+        }).length;
 
       const income = txns.filter((t: any) => t.type === 'income');
       const expense = txns.filter((t: any) => t.type === 'expense');
@@ -318,12 +325,10 @@ export default function SuperAdminReportsPage() {
       const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
-      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'),
-        where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`),
-        where('status', '==', 'absent')
-      ));
-      const allAbsences = attendanceSnap.docs.map(d => d.data());
+      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'), where('status', '==', 'absent')));
+      const allAbsences = attendanceSnap.docs
+        .map(d => d.data() as any)
+        .filter((a: any) => a.date >= `${monthStr}-01` && a.date <= `${monthStr}-31`);
 
       const staffSalaries = allStaff.map((staff: any) => {
         const gross = staff.salary || 0;

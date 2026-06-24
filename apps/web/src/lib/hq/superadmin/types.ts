@@ -88,6 +88,7 @@ export type UnifiedTx = {
   rollNo?: string;
   rehabDepartmentLabel?: string;
   discount?: number;
+  originalAmount?: number;
   returnAmount?: number;
   stayDurationIndex?: number;
   /** Internal: the Firestore collection this tx was fetched from (e.g. 'spims_fees' vs 'spims_transactions') */

@@ -81,6 +81,10 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
   const rejectionReason =
     (data.rejectionReason as string | undefined) || (data.rejectedReason as string | undefined);
 
+  const rawAmount = Number(data.amount) || 0;
+  const discount = Number(data.discount || 0);
+  const returnAmount = Number(data.returnAmount || data.return || 0);
+
   return {
     id,
     dept,
@@ -88,7 +92,10 @@ function normalizeTx(dept: DeptFilter, id: string, data: Record<string, unknown>
     createdAt: data.createdAt,
     date: data.date,
     transactionDate: data.transactionDate,
-    amount: Number(data.amount) || 0,
+    amount: rawAmount || discount || returnAmount || 0,
+    originalAmount: rawAmount,
+    discount,
+    returnAmount,
     type: data.type as string | undefined,
     category: data.category as string | undefined,
     categoryName: data.categoryName as string | undefined,

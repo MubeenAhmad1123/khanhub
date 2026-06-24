@@ -266,7 +266,7 @@ function EditTransactionModal({
   busy: boolean;
   enrich?: EntityEnrich;
 }) {
-  const [amount, setAmount] = useState(String(tx.amount || ''));
+  const [amount, setAmount] = useState(tx.originalAmount !== undefined ? String(tx.originalAmount) : String(tx.amount || ''));
   const [date, setDate] = useState(() => {
     const raw = (tx.transactionDate || tx.date || tx.createdAt) as any;
     if (!raw) return new Date().toISOString().split('T')[0];
@@ -455,8 +455,10 @@ function EditTransactionModal({
         <button
           type="button"
           onClick={() => {
-            const numAmt = Number(amount);
-            if (numAmt > 0 && date) {
+            const numAmt = Number(amount) || 0;
+            const numDisc = Number(discount) || 0;
+            const numRet = Number(returnAmount) || 0;
+            if ((numAmt > 0 || numDisc > 0 || numRet > 0) && date) {
               const selectedOpt = listOptions.find(o => o.id === category);
               const categoryName = selectedOpt ? selectedOpt.label : category;
               onConfirm(
@@ -466,13 +468,13 @@ function EditTransactionModal({
                 category,
                 categoryName,
                 tx.dept === 'spims' && category === 'fee' ? spimsFeeSubtype : '',
-                Number(discount) || 0,
-                Number(returnAmount) || 0,
+                numDisc,
+                numRet,
                 stayDurationIndex !== '' ? Number(stayDurationIndex) : undefined
               );
             }
           }}
-          disabled={!amount || Number(amount) <= 0 || !date || busy}
+          disabled={((Number(amount) || 0) <= 0 && (Number(discount) || 0) <= 0 && (Number(returnAmount) || 0) <= 0) || !date || busy}
           className="w-full h-14 rounded-2xl bg-black text-white hover:bg-zinc-800 text-xs font-black uppercase tracking-widest transition disabled:opacity-50 disabled:cursor-not-allowed mt-6 shadow-xl shadow-zinc-800/10 flex items-center justify-center gap-2"
         >
           {busy ? (
@@ -811,8 +813,14 @@ function TxCard({
 
   const runningPaid = enrich?.totalReceived;
   const pkg = enrich?.totalPackage;
-  const remAfter =
-    enrich?.remaining != null ? Math.max(0, enrich.remaining - (isPending ? Number(tx.amount || 0) : 0)) : undefined;
+  const remAfter = (() => {
+    if (enrich?.remaining == null) return undefined;
+    if (!isPending) return undefined;
+    const amt = Number(tx.originalAmount !== undefined ? tx.originalAmount : tx.amount) || 0;
+    const disc = Number(tx.discount || 0);
+    const ret = Number(tx.returnAmount || 0);
+    return Math.max(0, enrich.remaining - amt - disc + ret);
+  })();
 
   const phref = profileHref(tx);
 
@@ -1777,20 +1785,7 @@ export default function HqApprovalsPage() {
 
   const entitySummary = selectedEntity ? enriched[`${selectedEntity.dept}_${selectedEntity.id}`] : undefined;
 
-  const computedSummary = useMemo(() => {
-    if (!selectedEntity || !entitySummary) return null;
-    const approvedPayments = entityRows.filter((tx) => tx.status === 'approved');
-    const totalReceived = approvedPayments.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-    const totalPackage = entitySummary.totalPackage || 0;
-    const remaining = totalPackage - totalReceived;
-    return {
-      ...entitySummary,
-      totalReceived,
-      remaining,
-    };
-  }, [selectedEntity, entitySummary, entityRows]);
-
-  const summary = computedSummary || entitySummary;
+  const summary = entitySummary;
 
   if (sessionLoading) {
     return (
