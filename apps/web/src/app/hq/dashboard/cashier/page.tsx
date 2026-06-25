@@ -203,6 +203,16 @@ export default function CashierStationPage() {
 
 
   const [detailModalTx, setDetailModalTx] = useState<any | null>(null);
+  const [isEditingDetail, setIsEditingDetail] = useState(false);
+  const [editDetailForm, setEditDetailForm] = useState({
+    amount: '',
+    date: '',
+    description: '',
+    category: '',
+    categoryName: '',
+    hospitalShift: 'combine',
+  });
+  const [updatingDetail, setUpdatingDetail] = useState(false);
   const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
   const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
   const [forwardProofReason, setForwardProofReason] = useState('');
@@ -1226,6 +1236,86 @@ export default function CashierStationPage() {
       setProofUploading(false);
     }
   }
+
+  const handleSaveDetailEdit = async () => {
+    if (!detailModalTx) return;
+    const amt = Number(editDetailForm.amount) || 0;
+    if (amt <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    setUpdatingDetail(true);
+    try {
+      const deptCode = detailModalTx.departmentCode;
+      const dept = DEPARTMENTS.find(d => d.code === deptCode);
+      if (!dept) throw new Error('Invalid Department');
+
+      const isApproved = detailModalTx.status === 'approved';
+
+      if (isApproved) {
+        // If it is approved, call the server action
+        const { editApprovedTransaction } = await import('@/app/hq/actions/approvals');
+        const res = await editApprovedTransaction({
+          dept: deptCode as any,
+          txId: detailModalTx.id,
+          amount: amt,
+          date: editDetailForm.date,
+          description: editDetailForm.description,
+          category: editDetailForm.category || undefined,
+          categoryName: editDetailForm.categoryName || undefined,
+          hospitalDayCloseShift: detailModalTx.hospitalDayCloseShift ? editDetailForm.hospitalShift : undefined,
+          _collection: detailModalTx._collection,
+        });
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to update approved transaction');
+        }
+      } else {
+        // If it is not approved, update it directly in firestore
+        const coll = detailModalTx._collection || dept.txCollection;
+        const docRef = doc(db, coll, detailModalTx.id);
+        const newDate = new Date(`${editDetailForm.date}T12:00:00`);
+        const updatePayload: Record<string, any> = {
+          amount: amt,
+          date: Timestamp.fromDate(newDate),
+          transactionDate: Timestamp.fromDate(newDate),
+          description: editDetailForm.description,
+          updatedAt: Timestamp.now(),
+        };
+        if (editDetailForm.category) {
+          updatePayload.category = editDetailForm.category;
+          if (editDetailForm.categoryName) {
+            updatePayload.categoryName = editDetailForm.categoryName;
+          }
+        }
+        if (detailModalTx.hospitalDayCloseShift) {
+          updatePayload.hospitalDayCloseShift = editDetailForm.hospitalShift;
+        }
+        await updateDoc(docRef, updatePayload);
+      }
+
+      // Update local state
+      const updatedTx = {
+        ...detailModalTx,
+        amount: amt,
+        date: Timestamp.fromDate(new Date(`${editDetailForm.date}T12:00:00`)),
+        transactionDate: Timestamp.fromDate(new Date(`${editDetailForm.date}T12:00:00`)),
+        description: editDetailForm.description,
+        ...(detailModalTx.hospitalDayCloseShift ? { hospitalDayCloseShift: editDetailForm.hospitalShift } : {}),
+        ...(editDetailForm.category ? { category: editDetailForm.category } : {}),
+        ...(editDetailForm.categoryName ? { categoryName: editDetailForm.categoryName } : {}),
+      };
+
+      setDetailModalTx(updatedTx);
+      setIsEditingDetail(false);
+      toast.success('Transaction updated successfully ✓');
+      await fetchHistory();
+    } catch (err: any) {
+      console.error('[Cashier] Edit detail error:', err);
+      toast.error('Update failed: ' + (err.message || 'Error'));
+    } finally {
+      setUpdatingDetail(false);
+    }
+  };
 
   const todayStr = getLocalDateString(new Date());
   
@@ -2595,109 +2685,220 @@ export default function CashierStationPage() {
         </div>
       )}
 
-      {detailModalTx && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">
-          <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[4rem] overflow-hidden shadow-2xl shadow-indigo-600/10">
-            <div className="relative p-12">
-              <button 
-                onClick={() => setDetailModalTx(null)}
-                className="absolute top-10 right-10 w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900 hover:bg-zinc-900 hover:text-white transition-all group"
-              >
-                <X size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
-              </button>
+      {detailModalTx && (() => {
+        const canEdit = !['approved', 'rejected'].includes(detailModalTx.status) || session?.role === 'superadmin';
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">
+            <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[4rem] overflow-hidden shadow-2xl shadow-indigo-600/10">
+              <div className="relative p-12">
+                <button 
+                  onClick={() => { setDetailModalTx(null); setIsEditingDetail(false); }}
+                  className="absolute top-10 right-10 w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900 hover:bg-zinc-900 hover:text-white transition-all group"
+                >
+                  <X size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
+                </button>
 
-              <div className="flex flex-col items-center text-center mb-12">
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white mb-6 shadow-2xl shadow-indigo-600/20">
-                  <FileText size={32} className="md:w-10 md:h-10" strokeWidth={2.5} />
+                <div className="flex flex-col items-center text-center mb-12">
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white mb-6 shadow-2xl shadow-indigo-600/20">
+                    <FileText size={32} className="md:w-10 md:h-10" strokeWidth={2.5} />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">
+                    {isEditingDetail ? 'Edit Transaction' : 'Transaction Details'}
+                  </h3>
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">{detailModalTx.id}</p>
                 </div>
-                <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Transaction Details</h3>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">{detailModalTx.id}</p>
-              </div>
 
-              <div className="space-y-8">
-                <div className={cn("grid gap-6", detailModalTx.hospitalDayCloseShift ? "grid-cols-3" : "grid-cols-2")}>
-                  <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Date</p>
-                    <p className="text-sm font-[1000] text-zinc-900">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
-                  </div>
-                  <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Department</p>
-                    <p className="text-sm font-[1000] text-zinc-900 uppercase">{detailModalTx.departmentCode || 'HQ-MAIN'}</p>
-                  </div>
-                  {detailModalTx.hospitalDayCloseShift && (
-                    <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Shift</p>
-                      <p className="text-sm font-[1000] text-zinc-900 uppercase">
-                        {detailModalTx.hospitalDayCloseShift === 'morning_shift' ? 'Morning' : detailModalTx.hospitalDayCloseShift === 'night_shift' ? 'Night' : 'Combine'}
-                      </p>
+                {isEditingDetail ? (
+                  <div className="space-y-8 max-h-[50vh] overflow-y-auto pr-2 no-scrollbar">
+                    {/* Date Input */}
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Transaction Date</label>
+                      <BrutalistCalendar
+                        value={editDetailForm.date}
+                        onChange={(iso) => setEditDetailForm({ ...editDetailForm, date: iso })}
+                        className="bg-zinc-50 border border-zinc-100 rounded-2xl"
+                      />
                     </div>
-                  )}
-                </div>
 
-                <div className="p-8 rounded-[2.5rem] bg-indigo-600 shadow-2xl shadow-indigo-600/30 group text-white">
-                  <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-3">Name</p>
-                  <p className="text-2xl font-[1000] text-white tracking-tight">{detailModalTx.patientName || detailModalTx.staffName || 'General'}</p>
-                  <p className="text-xs font-black text-white/60 mt-2 font-mono uppercase tracking-widest">{detailModalTx.patientId || detailModalTx.staffId || 'N/A'}</p>
-                </div>
+                    {/* Amount Input */}
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Amount (Rs)</label>
+                      <input
+                        type="number"
+                        value={editDetailForm.amount}
+                        onChange={(e) => setEditDetailForm({ ...editDetailForm, amount: e.target.value })}
+                        className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] px-6 text-sm font-bold text-zinc-900 outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
+                        placeholder="Enter amount..."
+                      />
+                    </div>
 
-                <div className="grid grid-cols-2 gap-8 px-4">
-                  <div>
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Category</p>
-                    <p className="text-base font-[1000] text-zinc-900">{detailModalTx.categoryName || detailModalTx.category || 'Undefined'}</p>
+                    {/* Description Input */}
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Notes / Description</label>
+                      <textarea
+                        value={editDetailForm.description}
+                        onChange={(e) => setEditDetailForm({ ...editDetailForm, description: e.target.value })}
+                        placeholder="Enter notes..."
+                        className="w-full h-28 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] px-6 py-4 text-xs font-bold text-zinc-900 outline-none focus:bg-white focus:border-indigo-600/20 resize-none transition-all shadow-inner"
+                      />
+                    </div>
+
+                    {/* Shift Selector (Only for Hospital Day Close) */}
+                    {detailModalTx.hospitalDayCloseShift && (
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Hospital Day Close Shift</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {([
+                            { id: 'morning_shift', label: 'Morning' },
+                            { id: 'night_shift', label: 'Night' },
+                            { id: 'combine', label: 'Combine' },
+                          ] as const).map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setEditDetailForm({ ...editDetailForm, hospitalShift: s.id })}
+                              className={cn(
+                                "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                editDetailForm.hospitalShift === s.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                              )}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Amount</p>
-                    <p className="text-2xl font-[1000] text-zinc-900 tabular-nums">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {detailModalTx.description && (
-                  <div className="p-8 rounded-[2.5rem] bg-zinc-50 border-2 border-dashed border-zinc-200">
-                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4 text-center">Notes / Description</p>
-                    <p className="text-sm font-black text-zinc-600 text-center leading-relaxed italic">
-                      "{detailModalTx.description}"
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-12 grid grid-cols-2 gap-4">
-                {((['pending', 'pending_cashier'].includes(detailModalTx.status)) ||
-                  ((detailModalTx.status === 'approved' || detailModalTx.status === 'rejected') && 
-                   (detailModalTx.cashierId === session?.customId || session?.role === 'superadmin'))) && (
-                  <button 
-                    onClick={() => {
-                      setDetailModalTx(null);
-                      handleDeleteTransaction(detailModalTx);
-                    }}
-                    className="h-16 bg-rose-50 text-rose-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-600 hover:text-white transition-all shadow-xl shadow-rose-600/5"
-                  >
-                    Purge Record
-                  </button>
-                )}
-                {detailModalTx.status === 'pending_cashier' ? (
-                  <button 
-                    onClick={() => {
-                      setDetailModalTx(null);
-                      openForwardModal(detailModalTx);
-                    }}
-                    className="h-16 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all"
-                  >
-                    Authorize Node
-                  </button>
                 ) : (
-                  <button 
-                    onClick={() => setDetailModalTx(null)}
-                    className="h-16 bg-zinc-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all shadow-xl"
-                  >
-                    Dismiss
-                  </button>
+                  <div className="space-y-8">
+                    <div className={cn("grid gap-6", detailModalTx.hospitalDayCloseShift ? "grid-cols-3" : "grid-cols-2")}>
+                      <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Date</p>
+                        <p className="text-sm font-[1000] text-zinc-900">{formatDateDMY(detailModalTx.createdAt || detailModalTx.date)}</p>
+                      </div>
+                      <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Department</p>
+                        <p className="text-sm font-[1000] text-zinc-900 uppercase">{detailModalTx.departmentCode || 'HQ-MAIN'}</p>
+                      </div>
+                      {detailModalTx.hospitalDayCloseShift && (
+                        <div className="p-6 rounded-[2rem] bg-zinc-50 border border-zinc-100">
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-2">Shift</p>
+                          <p className="text-sm font-[1000] text-zinc-900 uppercase">
+                            {detailModalTx.hospitalDayCloseShift === 'morning_shift' ? 'Morning' : detailModalTx.hospitalDayCloseShift === 'night_shift' ? 'Night' : 'Combine'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-8 rounded-[2.5rem] bg-indigo-600 shadow-2xl shadow-indigo-600/30 group text-white">
+                      <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em] mb-3">Name</p>
+                      <p className="text-2xl font-[1000] text-white tracking-tight">{detailModalTx.patientName || detailModalTx.staffName || 'General'}</p>
+                      <p className="text-xs font-black text-white/60 mt-2 font-mono uppercase tracking-widest">{detailModalTx.patientId || detailModalTx.staffId || 'N/A'}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 px-4">
+                      <div>
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Category</p>
+                        <p className="text-base font-[1000] text-zinc-900">{detailModalTx.categoryName || detailModalTx.category || 'Undefined'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-2">Amount</p>
+                        <p className="text-2xl font-[1000] text-zinc-900 tabular-nums">Rs {Number(detailModalTx.amount || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {detailModalTx.description && (
+                      <div className="p-8 rounded-[2.5rem] bg-zinc-50 border-2 border-dashed border-zinc-200">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-4 text-center">Notes / Description</p>
+                        <p className="text-sm font-black text-zinc-600 text-center leading-relaxed italic">
+                          "{detailModalTx.description}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isEditingDetail ? (
+                  <div className="mt-12 grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      disabled={updatingDetail}
+                      onClick={() => setIsEditingDetail(false)}
+                      className="h-16 bg-zinc-100 text-zinc-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-zinc-200 transition-all disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updatingDetail}
+                      onClick={handleSaveDetailEdit}
+                      className="h-16 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {updatingDetail ? <Loader2 size={16} className="animate-spin" /> : 'Save Changes'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-12 flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingDetail(true);
+                            setEditDetailForm({
+                              amount: String(detailModalTx.amount || 0),
+                              date: toDate(detailModalTx.date || detailModalTx.transactionDate || detailModalTx.createdAt).toISOString().split('T')[0],
+                              description: detailModalTx.description || '',
+                              category: detailModalTx.category || '',
+                              categoryName: detailModalTx.categoryName || '',
+                              hospitalShift: detailModalTx.hospitalDayCloseShift || 'combine',
+                            });
+                          }}
+                          className="h-16 bg-indigo-50 text-indigo-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-600/5"
+                        >
+                          Edit Details
+                        </button>
+                      )}
+                      {((['pending', 'pending_cashier'].includes(detailModalTx.status)) ||
+                        ((detailModalTx.status === 'approved' || detailModalTx.status === 'rejected') && 
+                         (detailModalTx.cashierId === session?.customId || session?.role === 'superadmin'))) && (
+                        <button 
+                          onClick={() => {
+                            setDetailModalTx(null);
+                            handleDeleteTransaction(detailModalTx);
+                          }}
+                          className="h-16 bg-rose-50 text-rose-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-600 hover:text-white transition-all shadow-xl shadow-rose-600/5"
+                        >
+                          Purge Record
+                        </button>
+                      )}
+                    </div>
+                    {detailModalTx.status === 'pending_cashier' ? (
+                      <button 
+                        onClick={() => {
+                          setDetailModalTx(null);
+                          setIsEditingDetail(false);
+                          openForwardModal(detailModalTx);
+                        }}
+                        className="w-full h-16 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all"
+                      >
+                        Authorize Node
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => { setDetailModalTx(null); setIsEditingDetail(false); }}
+                        className="w-full h-16 bg-zinc-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all shadow-xl"
+                      >
+                        Dismiss
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       </div>
     </div>
   </div>

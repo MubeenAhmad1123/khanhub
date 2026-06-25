@@ -948,6 +948,7 @@ export async function editApprovedTransaction(params: {
   discount?: number;
   returnAmount?: number;
   stayDurationIndex?: number;
+  hospitalDayCloseShift?: string;
   /** Optional: override which Firestore collection to look in (e.g. 'spims_fees') */
   _collection?: string;
 }): Promise<{ success: boolean; error?: string }> {
@@ -1002,6 +1003,9 @@ export async function editApprovedTransaction(params: {
     }
     if (params.spimsFeeSubtype !== undefined) {
       updatePayload.spimsFeeSubtype = params.spimsFeeSubtype;
+    }
+    if (params.hospitalDayCloseShift !== undefined) {
+      updatePayload.hospitalDayCloseShift = params.hospitalDayCloseShift;
     }
     await ref.set(updatePayload, { merge: true });
 
