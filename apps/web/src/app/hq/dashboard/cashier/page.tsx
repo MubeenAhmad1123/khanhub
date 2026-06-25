@@ -1246,6 +1246,26 @@ export default function CashierStationPage() {
     return { income, expense, net: income - expense };
   }, [historyFiltered, historyStats, historyTxns.length]);
 
+  const departmentBreakdown = useMemo(() => {
+    const breakdown: Record<string, { income: number; expense: number }> = {};
+    DEPARTMENTS.forEach(d => {
+      breakdown[d.code] = { income: 0, expense: 0 };
+    });
+
+    historyFiltered.forEach(tx => {
+      const code = tx.departmentCode;
+      if (breakdown[code]) {
+        if (tx.type === 'income') {
+          breakdown[code].income += Number(tx.amount || 0);
+        } else if (tx.type === 'expense') {
+          breakdown[code].expense += Number(tx.amount || 0);
+        }
+      }
+    });
+
+    return breakdown;
+  }, [historyFiltered]);
+
   if (sessionLoading || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
@@ -1540,13 +1560,75 @@ export default function CashierStationPage() {
         <div className="grid grid-cols-2 gap-4 md:gap-6">
           <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
-            <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">Revenue Today</p>
+            <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">
+              {historyDateMode === 'today' ? 'Revenue Today' : 
+               historyDateMode === 'yesterday' ? 'Revenue Yesterday' : 
+               historyDateMode === 'range' ? 'Revenue (Selected Range)' : 
+               'Total Revenue (All Time)'}
+            </p>
             <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.income.toLocaleString()}</h4>
           </div>
           <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 group overflow-hidden relative">
             <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
-            <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">Payouts Today</p>
+            <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 relative z-10">
+              {historyDateMode === 'today' ? 'Payouts Today' : 
+               historyDateMode === 'yesterday' ? 'Payouts Yesterday' : 
+               historyDateMode === 'range' ? 'Payouts (Selected Range)' : 
+               'Total Payouts (All Time)'}
+            </p>
             <h4 className="text-xl md:text-3xl font-[1000] text-zinc-900 tracking-tighter relative z-10">Rs {totals.expense.toLocaleString()}</h4>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40">
+          <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-6">
+            Department Breakdown ({
+              historyDateMode === 'today' ? 'Today' : 
+              historyDateMode === 'yesterday' ? 'Yesterday' : 
+              historyDateMode === 'range' ? 'Custom Range' : 
+              'All Time'
+            })
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {DEPARTMENTS.map(dept => {
+              const stats = departmentBreakdown[dept.code] || { income: 0, expense: 0 };
+              if (historyDepartment !== 'all' && historyDepartment !== dept.code) return null;
+              if (stats.income === 0 && stats.expense === 0) return null;
+              return (
+                <div key={dept.code} className="bg-zinc-50 rounded-2xl p-5 border border-zinc-100 hover:shadow-md transition-all">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-black uppercase text-zinc-700 tracking-wider">{dept.label}</span>
+                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase">
+                      {((stats.income - stats.expense) >= 0 ? '+' : '')}Rs {(stats.income - stats.expense).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-zinc-400">Income:</span>
+                      <span className="text-emerald-600 font-extrabold">Rs {stats.income.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between font-bold">
+                      <span className="text-zinc-400">Expense:</span>
+                      <span className="text-rose-500 font-extrabold">Rs {stats.expense.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {(() => {
+              const activeStats = historyDepartment === 'all' 
+                ? Object.values(departmentBreakdown)
+                : [departmentBreakdown[historyDepartment]];
+              const hasActivity = activeStats.some(s => s && (s.income > 0 || s.expense > 0));
+              if (!hasActivity) {
+                return (
+                  <div className="col-span-full py-4 text-center">
+                    <p className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">No transaction records found for the selected department and date range.</p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
         
@@ -2711,6 +2793,7 @@ function EntityProfileModal({
   };
 
   const handleAddTransaction = async () => {
+    if (adding) return;
     const amt = Number(newTx.amount) || 0;
     const disc = Number(newTx.discount) || 0;
     const ret = Number(newTx.returnAmount) || 0;
