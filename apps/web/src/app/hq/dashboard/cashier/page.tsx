@@ -2727,6 +2727,8 @@ function EntityProfileModal({
 
       const txDate = new Date(`${newTx.date}T12:00:00`);
       
+      const isSuperadmin = session?.role === 'superadmin';
+
       const payload: any = {
         amount: Number(newTx.amount),
         category: newTx.category,
@@ -2734,12 +2736,18 @@ function EntityProfileModal({
         date: Timestamp.fromDate(txDate),
         createdAt: Timestamp.now(),
         description: newTx.description,
-        status: 'pending_cashier',
+        status: isSuperadmin ? 'approved' : 'pending_cashier',
         type: 'income',
         departmentCode: deptCode,
-        cashierId: 'CASHIER',
+        cashierId: isSuperadmin ? (session?.customId || 'SUPERADMIN') : 'CASHIER',
         discount: Number(newTx.discount) || 0,
         returnAmount: Number(newTx.returnAmount) || 0,
+        ...(isSuperadmin ? {
+          approvedAt: Timestamp.now(),
+          approvedBy: session?.customId || 'SUPERADMIN',
+          processedAt: Timestamp.now(),
+          processedBy: session?.customId || 'SUPERADMIN',
+        } : {}),
       };
       if (newTx.stayDurationIndex !== '') {
         payload.stayDurationIndex = Number(newTx.stayDurationIndex);
@@ -2759,6 +2767,19 @@ function EntityProfileModal({
 
       const docRef = await addDoc(collection(db, dept.txCollection), payload);
       
+      if (isSuperadmin) {
+        try {
+          const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+          await syncDirectApprovedTransaction({ 
+            dept: deptCode as any, 
+            txId: docRef.id,
+            approvedBy: session?.customId || 'SUPERADMIN'
+          });
+        } catch (syncErr) {
+          console.error('[HQ Cashier] Sync direct approved transaction failed:', syncErr);
+        }
+      }
+
       const freshDoc = { id: docRef.id, ...payload, _collection: dept.txCollection };
       setLocalTxns(prev => [freshDoc, ...prev]);
       
@@ -2780,7 +2801,7 @@ function EntityProfileModal({
         returnAmount: '',
         stayDurationIndex: ''
       });
-      toast.success('Transaction added successfully ✓');
+      toast.success(isSuperadmin ? 'Transaction approved & synced successfully ✓' : 'Transaction added successfully ✓');
       if (onRefetch) onRefetch();
     } catch (err: any) {
       toast.error('Failed to add: ' + (err.message || 'Error'));
