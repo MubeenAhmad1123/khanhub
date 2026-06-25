@@ -906,25 +906,39 @@ export default function CashierStationPage() {
     const missingReason = proofReason.trim();
 
     if (!isHospitalDayClose) {
-      if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) return setMessage({ type: 'error', text: 'Select account or enter a Target Person / Purpose Name.' });
-      if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
+      if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) {
+        const txt = 'Select account or enter a Target Person / Purpose Name.';
+        toast.error(txt);
+        return setMessage({ type: 'error', text: txt });
+      }
+      if (!selectedCategory) {
+        const txt = 'Select category field.';
+        toast.error(txt);
+        return setMessage({ type: 'error', text: txt });
+      }
       
       const amt = Number(amount) || 0;
       const disc = Number(discount) || 0;
       const ret = Number(returnAmount) || 0;
       if (amt <= 0 && disc <= 0 && ret <= 0) {
-        return setMessage({ type: 'error', text: 'Please enter a valid amount, discount, or refund.' });
+        const txt = 'Please enter a valid amount, discount, or refund.';
+        toast.error(txt);
+        return setMessage({ type: 'error', text: txt });
       }
     } else {
       const inc = Number(hospitalIncomeAmount) || 0;
       const exp = Number(hospitalExpenseAmount) || 0;
       if (inc <= 0 && exp <= 0) {
-        return setMessage({ type: 'error', text: 'Enter a valid Income Amount or Expense Amount.' });
+        const txt = 'Enter a valid Income Amount or Expense Amount.';
+        toast.error(txt);
+        return setMessage({ type: 'error', text: txt });
       }
     }
 
     if (!proofFile && !missingReason) {
-      return setMessage({ type: 'error', text: 'Upload proof OR enter reason if proof is missing.' });
+      const txt = 'Upload proof OR enter reason if proof is missing.';
+      toast.error(txt);
+      return setMessage({ type: 'error', text: txt });
     }
 
     setProcessing(true);
@@ -2100,6 +2114,45 @@ export default function CashierStationPage() {
                     )}
  
                     <div className="space-y-8 pt-6 border-t border-zinc-100">
+                      {/* Proof File and Compliance Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Proof File (IMG/PDF)</label>
+                          <div className="relative group/proof">
+                            <input
+                              type="file"
+                              accept="image/webp,application/pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file && file.type.startsWith('image/') && file.type !== 'image/webp') {
+                                  toast.error("Only .webp images are allowed");
+                                  e.target.value = '';
+                                  return;
+                                }
+                                setProofFile(file || null);
+                              }}
+                              className="w-full opacity-0 absolute inset-0 cursor-pointer z-10 h-28"
+                            />
+                            <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-[1.5rem] px-6 py-6 text-center transition-all group-hover/proof:border-indigo-500 group-hover/proof:bg-indigo-500/5 h-28 flex flex-col justify-center items-center">
+                              <p className="text-xs font-[1000] text-zinc-900 truncate max-w-xs px-2">
+                                {proofFile ? proofFile.name : 'Upload Receipt/Proof'}
+                              </p>
+                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Max Payload: 5MB (.webp / .pdf)</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Proof Missing Reason</label>
+                          <textarea
+                            value={proofReason}
+                            onChange={(e) => setProofReason(e.target.value)}
+                            placeholder="Enter reason if proof is not uploaded..."
+                            className="w-full h-28 bg-zinc-50 border border-zinc-205 rounded-[1.5rem] px-6 py-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 resize-none transition-all placeholder:text-gray-400"
+                          />
+                        </div>
+                      </div>
+
                       <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Notes / Description</label>
                         <textarea
@@ -2109,6 +2162,17 @@ export default function CashierStationPage() {
                           className="w-full bg-zinc-50 border-2 border-transparent rounded-[1.5rem] md:rounded-[2rem] px-6 md:px-8 py-6 md:py-8 text-sm md:text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner min-h-[120px] md:min-h-[140px] resize-none"
                         />
                       </div>
+
+                      {message && (
+                        <div className={cn(
+                          "p-5 rounded-[1.5rem] border-2 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2",
+                          message.type === 'error' ? "bg-rose-50 border-rose-100 text-rose-800" : "bg-emerald-50 border-emerald-100 text-emerald-800"
+                        )}>
+                          {message.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle2 className="w-5 h-5 flex-shrink-0" />}
+                          <span className="text-xs font-black uppercase tracking-wider">{message.text}</span>
+                        </div>
+                      )}
+
                       <button 
                         type="submit" 
                         disabled={processing || (!isHospitalDayClose && !selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
