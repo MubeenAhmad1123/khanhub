@@ -59,6 +59,7 @@ export default function AdminDashboardPage() {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [submittingStats, setSubmittingStats] = useState(false);
   const [statsForm, setStatsForm] = useState({
+    date: new Date().toISOString().split('T')[0],
     checkupCount: '',
     usgCount: '',
     labTestsCount: '',
@@ -74,7 +75,8 @@ export default function AdminDashboardPage() {
     address: '',
     phone: '',
     remaining: '',
-    disease: ''
+    disease: '',
+    date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -168,6 +170,7 @@ export default function AdminDashboardPage() {
         const ds = dailyDocSnap.data();
         setDailyStats(ds);
         setStatsForm({
+          date: todayStr,
           checkupCount: String(ds.checkupCount || 0),
           usgCount: String(ds.usgCount || 0),
           labTestsCount: String(ds.labTestsCount || 0),
@@ -176,6 +179,7 @@ export default function AdminDashboardPage() {
       } else {
         setDailyStats(null);
         setStatsForm({
+          date: todayStr,
           checkupCount: String(opdCount),
           usgCount: '0',
           labTestsCount: String(labCount),
@@ -250,12 +254,79 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleDateChangeInStatsForm = async (selectedDateStr: string) => {
+    try {
+      setStatsForm(prev => ({
+        ...prev,
+        date: selectedDateStr
+      }));
+      
+      const dailyDocRef = doc(db, 'hospital_daily_stats', selectedDateStr);
+      const dailyDocSnap = await getDoc(dailyDocRef);
+      if (dailyDocSnap.exists()) {
+        const ds = dailyDocSnap.data();
+        setStatsForm({
+          date: selectedDateStr,
+          checkupCount: String(ds.checkupCount || 0),
+          usgCount: String(ds.usgCount || 0),
+          labTestsCount: String(ds.labTestsCount || 0),
+          operationsCount: String(ds.operationsCount || 0)
+        });
+      } else {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (selectedDateStr === todayStr) {
+          setStatsForm({
+            date: selectedDateStr,
+            checkupCount: String(stats.opdCount),
+            usgCount: '0',
+            labTestsCount: String(stats.labCount),
+            operationsCount: String(stats.opCount)
+          });
+        } else {
+          const dateStart = new Date(selectedDateStr); dateStart.setHours(0, 0, 0, 0);
+          const dateEnd = new Date(selectedDateStr); dateEnd.setHours(23, 59, 59, 999);
+          
+          const customQuery = query(
+            collection(db, 'hospital_transactions'),
+            where('departmentCode', '==', 'hospital'),
+            where('date', '>=', Timestamp.fromDate(dateStart)),
+            where('date', '<=', Timestamp.fromDate(dateEnd)),
+            orderBy('date', 'desc')
+          );
+          const customSnap = await getDocs(customQuery);
+          
+          let opdC = 0;
+          let labC = 0;
+          let opC = 0;
+          
+          customSnap.docs.forEach(doc => {
+            const tx = doc.data();
+            const category = tx.category;
+            if (category === 'opd_reception') opdC++;
+            else if (category === 'lab_test') labC++;
+            else if (category === 'operation') opC++;
+          });
+          
+          setStatsForm({
+            date: selectedDateStr,
+            checkupCount: String(opdC),
+            usgCount: '0',
+            labTestsCount: String(labC),
+            operationsCount: String(opC)
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSaveStats = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setSubmittingStats(true);
-      const todayStr = new Date().toISOString().split('T')[0];
-      const dailyDocRef = doc(db, 'hospital_daily_stats', todayStr);
+      const targetDateStr = statsForm.date || new Date().toISOString().split('T')[0];
+      const dailyDocRef = doc(db, 'hospital_daily_stats', targetDateStr);
       
       const checkupCount = Number(statsForm.checkupCount) || 0;
       const usgCount = Number(statsForm.usgCount) || 0;
@@ -290,6 +361,13 @@ export default function AdminDashboardPage() {
       setAddingLeftPatient(true);
       const remainingAmount = Number(leftPatientForm.remaining);
       const newPatientRef = doc(collection(db, 'hospital_patients'));
+
+      // Construct a Timestamp representing the selected date at the current time
+      const dateObj = new Date(leftPatientForm.date);
+      const now = new Date();
+      dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      const createdAtTimestamp = Timestamp.fromDate(dateObj);
+
       await setDoc(newPatientRef, {
         fullName: leftPatientForm.fullName,
         address: leftPatientForm.address,
@@ -298,13 +376,20 @@ export default function AdminDashboardPage() {
         remaining: remainingAmount,
         totalPackageAmount: remainingAmount,
         totalReceived: 0,
-        createdAt: Timestamp.now(),
+        createdAt: createdAtTimestamp,
         createdBy: session.uid,
         isActive: true
       });
       toast.success('Left patient added successfully');
       setShowLeftPatientModal(false);
-      setLeftPatientForm({ fullName: '', address: '', phone: '', remaining: '', disease: '' });
+      setLeftPatientForm({ 
+        fullName: '', 
+        address: '', 
+        phone: '', 
+        remaining: '', 
+        disease: '',
+        date: new Date().toISOString().split('T')[0]
+      });
       loadDashboard();
     } catch (err) {
       console.error(err);
@@ -419,7 +504,11 @@ export default function AdminDashboardPage() {
             </p>
           </div>
           <button
-            onClick={() => setShowStatsModal(true)}
+            onClick={() => {
+              setShowStatsModal(true);
+              const todayStr = new Date().toISOString().split('T')[0];
+              handleDateChangeInStatsForm(todayStr);
+            }}
             className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black transition-all shadow-lg shadow-indigo-900/40 hover:shadow-indigo-900/60 whitespace-nowrap border border-indigo-500/20"
           >
             <Plus size={16} />
@@ -716,9 +805,16 @@ export default function AdminDashboardPage() {
                       <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[200px]">
                         {patient.fullName || patient.name || 'Unknown Patient'}
                       </p>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                        {patient.disease || 'No disease specified'}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          {patient.disease || 'No disease specified'}
+                        </span>
+                        {patient.createdAt && (
+                          <span className="text-[9px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {formatDateDMY(patient.createdAt)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-xs font-bold text-slate-700 dark:text-gray-300">{patient.phone || '—'}</p>
@@ -763,6 +859,17 @@ export default function AdminDashboardPage() {
             </div>
 
             <form onSubmit={handleSaveStats} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Date *</label>
+                <input
+                  type="date"
+                  value={statsForm.date}
+                  onChange={e => handleDateChangeInStatsForm(e.target.value)}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white transition-all"
+                  required
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Check-up Patients *</label>
@@ -893,15 +1000,27 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Disease</label>
-                <input
-                  type="text"
-                  value={leftPatientForm.disease}
-                  onChange={e => setLeftPatientForm({ ...leftPatientForm, disease: e.target.value })}
-                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
-                  placeholder="Condition / Disease"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Disease</label>
+                  <input
+                    type="text"
+                    value={leftPatientForm.disease}
+                    onChange={e => setLeftPatientForm({ ...leftPatientForm, disease: e.target.value })}
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
+                    placeholder="Condition / Disease"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-wider">Date *</label>
+                  <input
+                    type="date"
+                    value={leftPatientForm.date}
+                    onChange={e => setLeftPatientForm({ ...leftPatientForm, date: e.target.value })}
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 bg-gray-50 focus:bg-white transition-all"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
