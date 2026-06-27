@@ -54,6 +54,45 @@ const getSimpleId = (id: string) => {
   return id;
 };
 
+const parseTimeToMinutes = (timeStr?: string): number | null => {
+  if (!timeStr) return null;
+  const clean = timeStr.trim().toUpperCase();
+  const isPM = clean.includes('PM');
+  const isAM = clean.includes('AM');
+  const numeric = clean.replace(/[^0-9:]/g, '');
+  const parts = numeric.split(':');
+  if (parts.length < 2) return null;
+  let h = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+  return h * 60 + m;
+};
+
+const addMinutesToTime = (timeStr?: string, minutes: number = 5): string => {
+  if (!timeStr) return '09:05';
+  const clean = timeStr.trim().toUpperCase();
+  const isPM = clean.includes('PM');
+  const isAM = clean.includes('AM');
+  const numeric = clean.replace(/[^0-9:]/g, '');
+  const parts = numeric.split(':');
+  if (parts.length < 2) return '09:05';
+  let h = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return '09:05';
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+  
+  m += minutes;
+  h += Math.floor(m / 60);
+  m = m % 60;
+  h = h % 24;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}`;
+};
+
 export default function DailyReportPage() {
   const router = useRouter();
   const { session: hqSession, loading: sessionLoading } = useHqSession();
@@ -541,14 +580,11 @@ export default function DailyReportPage() {
 
   const calculateLateMinutes = (startTime: string, arrivalTime: string) => {
     if (!startTime || !arrivalTime) return 0;
-    const [sH, sM] = startTime.split(':').map(Number);
-    const [aH, aM] = arrivalTime.split(':').map(Number);
-    if (isNaN(sH) || isNaN(sM) || isNaN(aH) || isNaN(aM)) return 0;
+    const startMins = parseTimeToMinutes(startTime);
+    const arrivalMins = parseTimeToMinutes(arrivalTime);
+    if (startMins === null || arrivalMins === null) return 0;
 
-    const startMinutes = sH * 60 + sM;
-    const arrivalMinutes = aH * 60 + aM;
-    
-    let diff = arrivalMinutes - startMinutes;
+    let diff = arrivalMins - startMins;
     if (diff < 0) diff += 24 * 60;
     return diff > 0 ? diff : 0;
   };
@@ -576,12 +612,15 @@ export default function DailyReportPage() {
         if (field === 'attendance') {
           if (value === 'late') {
             const start = updatedRow.dutyStartTime || '09:00';
+            const defaultArrival = addMinutesToTime(start, 5);
             setLatePicker({
               id: updatedRow.id,
               dutyStartTime: start,
-              arrivalTime: start,
-              lateMinutes: 0
+              arrivalTime: defaultArrival,
+              lateMinutes: calculateLateMinutes(start, defaultArrival)
             });
+          } else {
+            updatedRow.arrivalTime = undefined;
           }
         }
 
@@ -741,6 +780,7 @@ export default function DailyReportPage() {
           status: row.attendance === 'late' ? 'present' : row.attendance,
           isLate: row.attendance === 'late',
           arrivalTime: (row as any).arrivalTime || null,
+          arrivedOnTime: row.attendance === 'late' ? false : (row.attendance === 'present' ? true : null),
           updatedAt: Timestamp.now(),
           markedBy: session?.uid
         }, { merge: true });
@@ -1326,11 +1366,12 @@ export default function DailyReportPage() {
                             <span
                               onClick={() => {
                                 const start = row.dutyStartTime || '09:00';
+                                const defaultArrival = (row as any).arrivalTime || addMinutesToTime(start, 5);
                                 setLatePicker({
                                   id: row.id,
                                   dutyStartTime: start,
-                                  arrivalTime: (row as any).arrivalTime || start,
-                                  lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
+                                  arrivalTime: defaultArrival,
+                                  lateMinutes: calculateLateMinutes(start, defaultArrival)
                                 });
                               }}
                               className="font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100 hover:bg-gray-100 cursor-pointer select-none"
@@ -1595,11 +1636,12 @@ export default function DailyReportPage() {
                           <span
                             onClick={() => {
                               const start = row.dutyStartTime || '09:00';
+                              const defaultArrival = (row as any).arrivalTime || addMinutesToTime(start, 5);
                               setLatePicker({
                                 id: row.id,
                                 dutyStartTime: start,
-                                arrivalTime: (row as any).arrivalTime || start,
-                                lateMinutes: calculateLateMinutes(start, (row as any).arrivalTime || start)
+                                arrivalTime: defaultArrival,
+                                lateMinutes: calculateLateMinutes(start, defaultArrival)
                               });
                             }}
                             className="inline-block font-mono text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 cursor-pointer select-none"
