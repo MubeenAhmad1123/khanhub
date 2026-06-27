@@ -1913,6 +1913,21 @@ export default function ProfilePage() {
                     )}
                   </div>
                 )}
+
+                {profile?.skills && profile.skills.length > 0 && (
+                  <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 mt-6">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Award size={14} className="text-amber-500" /> Key Skills & Expertise
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.map((skill: string, idx: number) => (
+                        <span key={skill || idx} className="px-3 py-1 bg-white border border-gray-100 text-amber-700 rounded-lg text-xs font-bold uppercase tracking-wider">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             }
 

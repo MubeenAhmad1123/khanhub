@@ -196,13 +196,14 @@ export default function StaffProfileReport({ staff }: StaffProfileReportProps) {
             <InfoRow label="Address" value={staff.address} />
             <InfoRow
               label="Emergency"
-              value={
-                staff.emergencyContactName
-                  ? `${staff.emergencyContactName} ${
-                      staff.emergencyPhone ? `(${staff.emergencyPhone})` : ''
-                    }`
-                  : staff.emergencyPhone || '—'
-              }
+              value={(() => {
+                const name = staff.emergencyContactName || (typeof staff.emergencyContact === 'object' && staff.emergencyContact ? (staff.emergencyContact as any).name : '') || '';
+                const phone = staff.emergencyPhone || (typeof staff.emergencyContact === 'object' && staff.emergencyContact ? (staff.emergencyContact as any).phone : '') || '';
+                if (name || phone) {
+                  return `${name || 'Contact'} ${phone ? `(${phone})` : ''}`.trim();
+                }
+                return '—';
+              })()}
             />
 
             {/* Custom fields iteration */}
@@ -237,6 +238,7 @@ export default function StaffProfileReport({ staff }: StaffProfileReportProps) {
                 }
               />
               <InfoRow label="Designation" value={staff.designation} />
+              <InfoRow label="Category / Role" value={staff.role} />
               <InfoRow label="Seniority Level" value={staff.seniority} />
               <InfoRow
                 label="Monthly Salary"
@@ -305,6 +307,68 @@ export default function StaffProfileReport({ staff }: StaffProfileReportProps) {
           </div>
         </div>
       </div>
+
+      {/* Education, Experience & Skills Report Section */}
+      {(((staff.education?.length ?? 0) > 0) || ((staff.experience?.length ?? 0) > 0) || ((staff.skills?.length ?? 0) > 0)) && (
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-6">
+            {/* Education & Experience */}
+            <div className="space-y-4">
+              {staff.education && staff.education.length > 0 && (
+                <div>
+                  <div className="border-l-4 border-indigo-600 pl-3 mb-3">
+                    <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Education</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {staff.education.map((edu: any, idx: number) => (
+                      <div key={idx} className="text-xs">
+                        <span className="font-extrabold text-gray-900 uppercase block">{edu.degree}</span>
+                        <span className="text-gray-500 font-bold uppercase text-[9px]">{edu.institution} {edu.year ? `• ${edu.year}` : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {staff.experience && staff.experience.length > 0 && (
+                <div className="pt-2">
+                  <div className="border-l-4 border-teal-600 pl-3 mb-3">
+                    <h3 className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Work Experience</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {staff.experience.map((exp: any, idx: number) => (
+                      <div key={idx} className="text-xs">
+                        <span className="font-extrabold text-gray-900 uppercase block">{exp.title}</span>
+                        <span className="text-gray-500 font-bold uppercase text-[9px]">{exp.company} {exp.duration ? `• ${exp.duration}` : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Skills */}
+            <div className="space-y-4">
+              {staff.skills && staff.skills.length > 0 && (
+                <div>
+                  <div className="border-l-4 border-amber-500 pl-3 mb-3">
+                    <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Key Skills & Expertise</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {staff.skills.map((skill: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 rounded"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Thin Divider Above Footer */}
       <hr className="my-8 print:my-6 border-t border-gray-200" />

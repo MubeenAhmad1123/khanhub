@@ -18,7 +18,7 @@ import {
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle, X, UserMinus,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle,
   Sparkles, Save, CheckCircle, Info, Download, Printer, Eye, EyeOff, FileText, Loader2,
-  Briefcase
+  Briefcase, BookOpen
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import {
@@ -151,12 +151,17 @@ export default function StaffProfilePage() {
     defaultPassword: '',
     documents: [] as { title: string; url: string }[],
     education: [] as { degree: string; institution: string; year: string }[],
-    experience: [] as { title: string; company: string; duration: string }[]
+    experience: [] as { title: string; company: string; duration: string }[],
+    skills: [] as string[],
+    role: '',
   });
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
   const [newDocTitle, setNewDocTitle] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [newEdu, setNewEdu] = useState({ degree: '', institution: '', year: '' });
+  const [newExp, setNewExp] = useState({ title: '', company: '', duration: '' });
+  const [newSkill, setNewSkill] = useState('');
 
   // States to track document deletion confirmation and countdown timers
   const [docStates, setDocStates] = useState<Record<number, {
@@ -647,9 +652,9 @@ export default function StaffProfilePage() {
         dob: profile.dob || '',
         gender: (profile.gender as any) || 'male',
         bloodGroup: profile.bloodGroup || '',
-        emergencyContact: profile.emergencyContact || '',
-        emergencyContactName: profile.emergencyContactName || profile.emergencyContact || '',
-        emergencyPhone: profile.emergencyPhone || '',
+        emergencyContact: typeof profile.emergencyContact === 'string' ? profile.emergencyContact : '',
+        emergencyContactName: profile.emergencyContactName || (typeof profile.emergencyContact === 'object' && profile.emergencyContact ? (profile.emergencyContact as any).name : '') || '',
+        emergencyPhone: profile.emergencyPhone || (typeof profile.emergencyContact === 'object' && profile.emergencyContact ? (profile.emergencyContact as any).phone : '') || '',
         address: profile.address || '',
         userId: profile.staffId || '',
         dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : []),
@@ -661,7 +666,9 @@ export default function StaffProfilePage() {
         defaultPassword: profile.defaultPassword || '',
         documents: profile.documents || [],
         education: profile.education || [],
-        experience: profile.experience || []
+        experience: profile.experience || [],
+        skills: profile.skills || [],
+        role: profile.role || 'Worker'
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -1930,6 +1937,64 @@ export default function StaffProfilePage() {
     }
   };
 
+  const addEdu = () => {
+    if (!newEdu.degree.trim() || !newEdu.institution.trim()) {
+      toast.error("Degree and Institution are required");
+      return;
+    }
+    setEditForm(prev => ({
+      ...prev,
+      education: [...(prev.education || []), { ...newEdu }]
+    }));
+    setNewEdu({ degree: '', institution: '', year: '' });
+  };
+
+  const removeEdu = (index: number) => {
+    setEditForm(prev => ({
+      ...prev,
+      education: (prev.education || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const addExp = () => {
+    if (!newExp.title.trim() || !newExp.company.trim()) {
+      toast.error("Job Title and Company are required");
+      return;
+    }
+    setEditForm(prev => ({
+      ...prev,
+      experience: [...(prev.experience || []), { ...newExp }]
+    }));
+    setNewExp({ title: '', company: '', duration: '' });
+  };
+
+  const removeExp = (index: number) => {
+    setEditForm(prev => ({
+      ...prev,
+      experience: (prev.experience || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const addSkill = () => {
+    const val = newSkill.trim();
+    if (!val) return;
+    if (editForm.skills?.includes(val)) {
+      toast.error("Skill already added");
+      return;
+    }
+    setEditForm(prev => ({
+      ...prev,
+      skills: [...(prev.skills || []), val]
+    }));
+    setNewSkill('');
+  };
+
+  const removeSkill = (skill: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      skills: (prev.skills || []).filter(s => s !== skill)
+    }));
+  };
 
   const handleSaveProfile = async () => {
     try {
@@ -2388,6 +2453,25 @@ export default function StaffProfilePage() {
                       <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Employee ID</p>
                       <p className="text-sm font-black font-mono">{staff?.employeeId || '—'}</p>
                     </div>
+                    {staff?.role && (
+                      <div>
+                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Category / Role</p>
+                        <p className="text-sm font-black uppercase">{staff.role}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Emergency Contact</p>
+                      <p className="text-sm font-black">
+                        {(() => {
+                          const name = staff?.emergencyContactName || (typeof staff?.emergencyContact === 'object' && staff?.emergencyContact ? (staff.emergencyContact as any).name : '') || '';
+                          const phone = staff?.emergencyPhone || (typeof staff?.emergencyContact === 'object' && staff?.emergencyContact ? (staff.emergencyContact as any).phone : '') || '';
+                          if (name || phone) {
+                            return `${name || 'Contact'} ${phone ? `(${phone})` : ''}`.trim();
+                          }
+                          return '—';
+                        })()}
+                      </p>
+                    </div>
                     {staff?.address && (
                       <div className="md:col-span-2 lg:col-span-3">
                         <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Residential Address</p>
@@ -2488,6 +2572,22 @@ export default function StaffProfilePage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Skills Section */}
+                {((staff?.skills?.length ?? 0) > 0) && (
+                  <div className="p-8 rounded-[2.5rem] border bg-white border-gray-100 shadow-sm mt-6">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-black mb-4 flex items-center gap-2">
+                      <Award size={14} className="text-amber-500" /> Key Skills & Expertise
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {staff?.skills?.map((skill: string, idx: number) => (
+                        <span key={idx} className="px-3.5 py-2 bg-amber-50/50 text-amber-800 border border-amber-100/60 rounded-xl text-xs font-bold uppercase tracking-wider">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -3330,6 +3430,25 @@ export default function StaffProfilePage() {
                       />
                     </div>
                     <div>
+                      <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Category / Role</label>
+                      <select
+                        value={editForm.role}
+                        onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500`}
+                      >
+                        <option value="Worker">Worker / Junior</option>
+                        <option value="Internee Staff">Internee Staff</option>
+                        <option value="Trial Base Staff">Trial Base Staff</option>
+                        <option value="Contract Staff">Contract Staff</option>
+                        <option value="Volunteer">Volunteer</option>
+                        <option value="Doctor">Doctor / Clinical</option>
+                        <option value="Nurse">Medical Staff / Nurse</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Manager">Management</option>
+                        <option value="Executive">Executive</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Seniority Status</label>
                       <select
                         value={editForm.seniority}
@@ -3800,6 +3919,167 @@ export default function StaffProfilePage() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Education, Experience & Skills */}
+                <div className="mt-8 rounded-[2.5rem] p-10 border transition-all bg-white border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                      <BookOpen size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-gray-900">Education, Experience & Skills</h4>
+                      <p className="text-[10px] font-bold text-black uppercase tracking-widest">Manage academic, professional background and skillsets</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    {/* Education Builder */}
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 block">Academic Background</label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input
+                          type="text"
+                          placeholder="Degree (e.g. BS IT)"
+                          value={newEdu.degree}
+                          onChange={(e) => setNewEdu({ ...newEdu, degree: e.target.value })}
+                          className="w-full h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500 transition-all"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Institution"
+                          value={newEdu.institution}
+                          onChange={(e) => setNewEdu({ ...newEdu, institution: e.target.value })}
+                          className="w-full h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500 transition-all"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Year"
+                            value={newEdu.year}
+                            onChange={(e) => setNewEdu({ ...newEdu, year: e.target.value })}
+                            className="flex-1 min-w-0 h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500 transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={addEdu}
+                            className="px-6 h-12 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {(editForm.education || []).map((edu, idx) => (
+                          <div key={idx} className="p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100/50 flex items-center justify-between group transition-all">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-wider text-gray-800">{edu.degree}</p>
+                              <p className="text-[10px] font-bold text-gray-500 uppercase">{edu.institution} • {edu.year}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeEdu(idx)}
+                              className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-50 hover:text-white transition-all shadow-sm"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Experience Builder */}
+                    <div className="space-y-4 pt-6 border-t border-dashed border-gray-200">
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 block">Professional Experience</label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input
+                          type="text"
+                          placeholder="Job Title"
+                          value={newExp.title}
+                          onChange={(e) => setNewExp({ ...newExp, title: e.target.value })}
+                          className="w-full h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500 transition-all"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Company"
+                          value={newExp.company}
+                          onChange={(e) => setNewExp({ ...newExp, company: e.target.value })}
+                          className="w-full h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500 transition-all"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Duration"
+                            value={newExp.duration}
+                            onChange={(e) => setNewExp({ ...newExp, duration: e.target.value })}
+                            className="flex-1 min-w-0 h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500 transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={addExp}
+                            className="px-6 h-12 bg-teal-500 hover:bg-teal-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {(editForm.experience || []).map((exp, idx) => (
+                          <div key={idx} className="p-4 rounded-2xl bg-teal-50/30 border border-teal-100/50 flex items-center justify-between group transition-all">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-wider text-gray-800">{exp.title}</p>
+                              <p className="text-[10px] font-bold text-gray-500 uppercase">{exp.company} • {exp.duration}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeExp(idx)}
+                              className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-50 hover:text-white transition-all shadow-sm"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Skills Builder */}
+                    <div className="space-y-4 pt-6 border-t border-dashed border-gray-200">
+                      <label className="text-[10px] font-black text-black uppercase tracking-[0.2em] ml-2 block">Key Skills & Expertises</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type a skill and click Add..."
+                          value={newSkill}
+                          onChange={(e) => setNewSkill(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                          className="flex-1 min-w-0 h-12 px-5 rounded-xl text-sm font-black outline-none border bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={addSkill}
+                          className="px-6 h-12 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
+                        >
+                          Add
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {(!editForm.skills || editForm.skills.length === 0) && (
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2">No skills added yet</p>
+                        )}
+                        {(editForm.skills || []).map(s => (
+                          <span key={s} className="px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 shadow-sm">
+                            {s}
+                            <button type="button" onClick={() => removeSkill(s)} className="hover:text-rose-500 transition-colors">
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

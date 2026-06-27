@@ -758,6 +758,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     documents: data.documents || [],
     education: data.education || [],
     experience: data.experience || [],
+    skills: data.skills || [],
   };
 }
 
@@ -791,6 +792,7 @@ export type StaffProfile = StaffCardRow & {
   documents?: { title: string; url: string }[];
   education?: { degree: string; institution: string; year: string }[];
   experience?: { title: string; company: string; duration: string }[];
+  skills?: string[];
 };
 
 export async function updateStaffProfile(
