@@ -885,11 +885,11 @@ export default function StaffProfilePage() {
     }
   }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable // Removed router as it's not needed for fetch and can be unstable
 
-  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy') => {
+  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy' | 'executive') => {
     if (!staff) return;
     try {
       setSaving(true);
-      const isActive = newStatus === 'active';
+      const isActive = newStatus === 'active' || newStatus === 'executive';
       await updateStaffProfile(staffId, { 
         status: newStatus,
         isActive
@@ -2225,6 +2225,7 @@ export default function StaffProfilePage() {
                       staff?.status === 'active_vacancy' ? 'text-indigo-500' : 
                       staff?.status === 'resigned' ? 'text-amber-500' : 
                       staff?.status === 'terminated' ? 'text-rose-500' : 
+                      staff?.status === 'executive' ? 'text-purple-600' :
                       'text-slate-900'
                     }`}
                     value={staff?.status || (staff?.isActive !== false ? 'active' : 'inactive')}
@@ -2235,6 +2236,7 @@ export default function StaffProfilePage() {
                     <option value="resigned">Resigned</option>
                     <option value="terminated">Terminated</option>
                     <option value="active_vacancy">Active Vacancy</option>
+                    <option value="executive">Executive</option>
                   </select>
                 </div>
                 <div className={`rounded-2xl p-4 text-left bg-gray-50`}>

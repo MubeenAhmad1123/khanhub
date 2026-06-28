@@ -84,6 +84,7 @@ export default function ManagerStaffPage() {
         if (statusFilter === 'active') queryStatus = 'active';
         else if (statusFilter === 'inactive') queryStatus = 'inactive';
         else if (statusFilter === 'active_vacancy') queryStatus = 'active_vacancy';
+        else if (statusFilter === 'executive') queryStatus = 'all';
 
         // Unified personnel registry fetch (7 departments) - Basic data only
         const unified = await listStaffCards({
@@ -130,6 +131,7 @@ export default function ManagerStaffPage() {
       if (statusFilter === 'active') queryStatus = 'active';
       else if (statusFilter === 'inactive') queryStatus = 'inactive';
       else if (statusFilter === 'active_vacancy') queryStatus = 'active_vacancy';
+      else if (statusFilter === 'executive') queryStatus = 'all';
 
       listStaffCards({ dept: 'all', status: queryStatus, role: 'personnel', fullEnrichment: true })
         .then(enrichedRows => {
@@ -148,12 +150,13 @@ export default function ManagerStaffPage() {
         (s.designation || '').toLowerCase().includes(search.toLowerCase());
 
       const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
-      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.status !== 'active_vacancy' && s.isActive !== false)) ||
-        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false) && s.status !== 'active_vacancy') ||
+      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.status !== 'active_vacancy' && s.isActive !== false && s.status !== 'executive')) ||
+        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false) && s.status !== 'active_vacancy' && s.status !== 'executive') ||
         (statusFilter === 'inactive' && s.status === 'inactive') ||
         (statusFilter === 'resigned' && s.status === 'resigned') ||
         (statusFilter === 'terminated' && s.status === 'terminated') ||
-        (statusFilter === 'active_vacancy' && s.status === 'active_vacancy');
+        (statusFilter === 'active_vacancy' && s.status === 'active_vacancy') ||
+        (statusFilter === 'executive' && s.status === 'executive');
 
       const matchesAttendance = attendanceFilter === 'all' ||
         (attendanceFilter === 'present' && (s.todayAttendanceStatus === 'present' || s.todayAttendanceStatus === 'late')) ||
@@ -445,6 +448,19 @@ export default function ManagerStaffPage() {
               >
                 <div className={`w-2 h-2 rounded-full ${statusFilter === 'terminated' ? 'bg-white animate-pulse' : 'bg-red-650'}`} />
                 <span>Terminated</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('executive')}
+                className={`h-12 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 hover:scale-[1.02] flex-shrink-0 ${
+                  statusFilter === 'executive'
+                    ? 'bg-purple-650 text-white border-purple-650 shadow-md shadow-purple-650/10'
+                    : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-200'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${statusFilter === 'executive' ? 'bg-white animate-pulse' : 'bg-purple-500'}`} />
+                <span>Executives</span>
               </button>
 
               <button

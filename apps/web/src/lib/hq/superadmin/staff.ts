@@ -6,7 +6,7 @@ import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'personnel' | 'student' | 'other';
-export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy';
+export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy' | 'executive';
 
 export function getDeptCollection(dept: StaffDept): string {
   if (dept === 'hq') return 'hq_users';
@@ -368,7 +368,7 @@ export async function listStaffCards({
   includeTodayStats = true,
 }: {
   dept: 'all' | StaffDept;
-  status: 'all' | 'active' | 'inactive' | 'active_vacancy';
+  status: 'all' | 'active' | 'inactive' | 'active_vacancy' | 'executive';
   role: 'all' | 'admin' | 'staff' | 'cashier' | 'personnel';
   fullEnrichment?: boolean;
   includeTodayStats?: boolean;
@@ -402,11 +402,13 @@ export async function listStaffCards({
     const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'active_vacancy';
     
     if (status === 'active') {
-      if (!isActuallyActive || statusStr === 'active_vacancy') return false;
+      if (!isActuallyActive || statusStr === 'active_vacancy' || statusStr === 'executive') return false;
     } else if (status === 'inactive') {
       if (isActuallyActive || statusStr === 'active_vacancy') return false;
     } else if (status === 'active_vacancy') {
       if (statusStr !== 'active_vacancy') return false;
+    } else if (status === 'executive') {
+      if (statusStr !== 'executive') return false;
     } else if (status === 'all') {
       if (statusStr === 'active_vacancy') return false;
     }

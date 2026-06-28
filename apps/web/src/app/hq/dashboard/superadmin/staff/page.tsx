@@ -52,7 +52,7 @@ export default function SuperadminStaffPage() {
   const sp = useSearchParams();
   const { session, loading: sessionLoading } = useHqSession();
   const [dept, setDept] = useState<'all' | StaffDept>((sp.get('dept') as any) || 'all');
-  const [status, setStatus] = useState<'all' | 'active' | 'inactive' | 'active_vacancy'>('active');
+  const [status, setStatus] = useState<'all' | 'active' | 'inactive' | 'active_vacancy' | 'executive'>('active');
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<StaffCardRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -509,6 +509,19 @@ export default function SuperadminStaffPage() {
               >
                 <div className={cn("w-2 h-2 rounded-full", status === 'inactive' ? 'bg-white animate-pulse' : 'bg-amber-500')} />
                 <span>Inactive</span>
+              </button>
+
+              <button
+                onClick={() => setStatus('executive')}
+                className={cn(
+                  "h-16 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 shadow-sm hover:scale-[1.02]",
+                  status === 'executive'
+                    ? 'bg-purple-650 text-white border-purple-650 hover:bg-purple-700 shadow-md shadow-purple-650/10'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 shadow-sm'
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", status === 'executive' ? 'bg-white animate-pulse' : 'bg-purple-500')} />
+                <span>Executives</span>
               </button>
 
               <button
