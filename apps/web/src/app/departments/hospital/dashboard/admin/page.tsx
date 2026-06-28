@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import {
-  collection, getDocs, query, where, orderBy, limit, Timestamp, doc, getDoc, setDoc
+  collection, getDocs, query, where, orderBy, Timestamp, doc, getDoc, setDoc
 } from 'firebase/firestore';
 import {
   TrendingUp, TrendingDown, Users, Activity, Loader2,
@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area
 } from 'recharts';
 import { toast } from 'react-hot-toast';
 
@@ -37,29 +38,78 @@ const CATEGORY_LABELS: Record<string, string> = {
   canteen: 'Canteen Ledger'
 };
 
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const isSameDay = (d1: Date, d2: Date) => {
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+};
+
+const formatTxDateTime = (timestamp: any) => {
+  if (!timestamp) return '—';
+  const d = toDate(timestamp);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '—';
+  const dateStr = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return `${dateStr} - ${timeStr}`;
+};
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsTab, setAnalyticsTab] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  
+  const [selectedDateStr, setSelectedDateStr] = useState(() => getLocalDateString());
+
   const [stats, setStats] = useState({
-    todayIncome: 0,
-    todayExpense: 0,
-    opdCount: 0,
-    labCount: 0,
-    opCount: 0,
-    opdBreakdown: { morning: { count: 0, amount: 0 }, evening: { count: 0, amount: 0 } },
-    labBreakdown: { count: 0, amount: 0 },
-    opBreakdown: { count: 0, amount: 0 }
+    // Daily
+    dailyIncome: 0,
+    dailyExpense: 0,
+    dailyOpdCount: 0,
+    dailyLabCount: 0,
+    dailyOpCount: 0,
+    dailyOpdBreakdown: { morning: { count: 0, amount: 0 }, evening: { count: 0, amount: 0 } },
+    dailyLabBreakdown: { count: 0, amount: 0 },
+    dailyOpBreakdown: { count: 0, amount: 0 },
+    
+    // Weekly
+    weeklyIncome: 0,
+    weeklyExpense: 0,
+    weeklyOpdCount: 0,
+    weeklyLabCount: 0,
+    weeklyOpCount: 0,
+    weeklyOpdAmount: 0,
+    weeklyLabAmount: 0,
+    weeklyOpAmount: 0,
+    
+    // Monthly
+    monthlyIncome: 0,
+    monthlyExpense: 0,
+    monthlyOpdCount: 0,
+    monthlyLabCount: 0,
+    monthlyOpCount: 0,
+    monthlyOpdAmount: 0,
+    monthlyLabAmount: 0,
+    monthlyOpAmount: 0,
   });
+
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [weeklyChartData, setWeeklyChartData] = useState<any[]>([]);
+  const [monthlyChartData, setMonthlyChartData] = useState<any[]>([]);
 
   // Day-Close Stats State
   const [dailyStats, setDailyStats] = useState<any>(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [submittingStats, setSubmittingStats] = useState(false);
   const [statsForm, setStatsForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
     checkupCount: '',
     usgCount: '',
     labTestsCount: '',
@@ -76,7 +126,7 @@ export default function AdminDashboardPage() {
     phone: '',
     remaining: '',
     disease: '',
-    date: new Date().toISOString().split('T')[0]
+    date: getLocalDateString()
   });
 
   useEffect(() => {
@@ -91,86 +141,214 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (!session) return;
-    loadDashboard();
-  }, [session]);
+    loadDashboard(selectedDateStr);
+  }, [session, selectedDateStr]);
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (targetDateStr?: string) => {
     try {
       setLoading(true);
-      
-      // Today range
-      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-      const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+      const dateStr = targetDateStr || selectedDateStr;
 
-      // Query hospital_transactions for today
-      const todayQuery = query(
+      // Selected date components
+      const parts = dateStr.split('-');
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1;
+      const day = parseInt(parts[2]);
+
+      const selectedDate = new Date(year, month, day);
+
+      // Boundaries for the containing calendar month
+      const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
+      const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+      // Boundaries for the 7-day week ending on the selected date
+      const weeklyStart = new Date(year, month, day - 6, 0, 0, 0, 0);
+      const weeklyEnd = new Date(year, month, day, 23, 59, 59, 999);
+
+      // Query hospital_transactions for the entire month
+      const monthQuery = query(
         collection(db, 'hospital_transactions'),
         where('departmentCode', '==', 'hospital'),
-        where('date', '>=', Timestamp.fromDate(todayStart)),
-        where('date', '<=', Timestamp.fromDate(todayEnd)),
-        orderBy('date', 'desc')
+        where('date', '>=', Timestamp.fromDate(monthStart)),
+        where('date', '<=', Timestamp.fromDate(monthEnd)),
+        orderBy('date', 'asc')
       );
+      const monthSnap = await getDocs(monthQuery);
 
-      const todaySnap = await getDocs(todayQuery);
-      
-      let income = 0;
-      let expense = 0;
-      let opdCount = 0;
-      let labCount = 0;
-      let opCount = 0;
-      
-      const opdBreakdown = { morning: { count: 0, amount: 0 }, evening: { count: 0, amount: 0 } };
-      const labBreakdown = { count: 0, amount: 0 };
-      const opBreakdown = { count: 0, amount: 0 };
+      let dailyInc = 0, dailyExp = 0;
+      let dailyOpd = 0, dailyLab = 0, dailyOp = 0;
+      const dailyOpdBr = { morning: { count: 0, amount: 0 }, evening: { count: 0, amount: 0 } };
+      const dailyLabBr = { count: 0, amount: 0 };
+      const dailyOpBr = { count: 0, amount: 0 };
 
-      todaySnap.docs.forEach(doc => {
+      let weeklyInc = 0, weeklyExp = 0;
+      let weeklyOpd = 0, weeklyLab = 0, weeklyOp = 0;
+      let weeklyOpdAm = 0, weeklyLabAm = 0, weeklyOpAm = 0;
+
+      let monthlyInc = 0, monthlyExp = 0;
+      let monthlyOpd = 0, monthlyLab = 0, monthlyOp = 0;
+      let monthlyOpdAm = 0, monthlyLabAmount = 0, monthlyOpAmount = 0;
+
+      // Setup charts maps
+      const weeklyDays: Record<string, { name: string, income: number, expense: number }> = {};
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(year, month, day - (6 - i));
+        const dStr = getLocalDateString(d);
+        weeklyDays[dStr] = {
+          name: dayNames[d.getDay()],
+          income: 0,
+          expense: 0
+        };
+      }
+
+      const monthlyDays: Record<string, { dateStr: string, dayNum: number, income: number, expense: number }> = {};
+      const numDays = monthEnd.getDate();
+      for (let i = 1; i <= numDays; i++) {
+        const d = new Date(year, month, i);
+        const dStr = getLocalDateString(d);
+        monthlyDays[dStr] = {
+          dateStr: `${i} ${selectedDate.toLocaleString('en-US', { month: 'short' })}`,
+          dayNum: i,
+          income: 0,
+          expense: 0
+        };
+      }
+
+      monthSnap.docs.forEach(doc => {
         const tx = doc.data();
         const amount = Number(tx.amount) || 0;
         const category = tx.category;
         const status = tx.status;
+        const txDate = toDate(tx.date);
+        const dStr = getLocalDateString(txDate);
+
+        const isDaily = isSameDay(txDate, selectedDate);
+        const isWeekly = txDate.getTime() >= weeklyStart.getTime() && txDate.getTime() <= weeklyEnd.getTime();
+        const isMonthly = true; 
 
         if (status === 'approved') {
-          if (tx.type === 'income') income += amount;
-          else if (tx.type === 'expense') expense += amount;
+          // Accumulate sums
+          if (tx.type === 'income') {
+            if (isDaily) dailyInc += amount;
+            if (isWeekly) weeklyInc += amount;
+            if (isMonthly) monthlyInc += amount;
+          } else if (tx.type === 'expense') {
+            if (isDaily) dailyExp += amount;
+            if (isWeekly) weeklyExp += amount;
+            if (isMonthly) monthlyExp += amount;
+          }
+
+          // Populate charts
+          if (weeklyDays[dStr]) {
+            if (tx.type === 'income') weeklyDays[dStr].income += amount;
+            else if (tx.type === 'expense') weeklyDays[dStr].expense += amount;
+          }
+          if (monthlyDays[dStr]) {
+            if (tx.type === 'income') monthlyDays[dStr].income += amount;
+            else if (tx.type === 'expense') monthlyDays[dStr].expense += amount;
+          }
         }
 
+        // Categorized counts
         if (category === 'opd_reception') {
-          opdCount++;
-          const shift = tx.hospitalMeta?.shift === 'evening' ? 'evening' : 'morning';
-          opdBreakdown[shift].count++;
-          opdBreakdown[shift].amount += amount;
+          if (isDaily) {
+            dailyOpd++;
+            const shift = tx.hospitalMeta?.shift === 'evening' ? 'evening' : 'morning';
+            dailyOpdBr[shift].count++;
+            dailyOpdBr[shift].amount += amount;
+          }
+          if (isWeekly) {
+            weeklyOpd++;
+            if (status === 'approved') weeklyOpdAm += amount;
+          }
+          if (isMonthly) {
+            monthlyOpd++;
+            if (status === 'approved') monthlyOpdAm += amount;
+          }
         } else if (category === 'lab_test') {
-          labCount++;
-          labBreakdown.count++;
-          labBreakdown.amount += amount;
+          if (isDaily) {
+            dailyLab++;
+            dailyLabBr.count++;
+            dailyLabBr.amount += amount;
+          }
+          if (isWeekly) {
+            weeklyLab++;
+            if (status === 'approved') weeklyLabAm += amount;
+          }
+          if (isMonthly) {
+            monthlyLab++;
+            if (status === 'approved') monthlyLabAmount += amount;
+          }
         } else if (category === 'operation') {
-          opCount++;
-          opBreakdown.count++;
-          opBreakdown.amount += amount;
+          if (isDaily) {
+            dailyOp++;
+            dailyOpBr.count++;
+            dailyOpBr.amount += amount;
+          }
+          if (isWeekly) {
+            weeklyOp++;
+            if (status === 'approved') weeklyOpAm += amount;
+          }
+          if (isMonthly) {
+            monthlyOp++;
+            if (status === 'approved') monthlyOpAmount += amount;
+          }
         }
       });
 
       setStats({
-        todayIncome: income,
-        todayExpense: expense,
-        opdCount,
-        labCount,
-        opCount,
-        opdBreakdown,
-        labBreakdown,
-        opBreakdown
+        dailyIncome: dailyInc,
+        dailyExpense: dailyExp,
+        dailyOpdCount: dailyOpd,
+        dailyLabCount: dailyLab,
+        dailyOpCount: dailyOp,
+        dailyOpdBreakdown: dailyOpdBr,
+        dailyLabBreakdown: dailyLabBr,
+        dailyOpBreakdown: dailyOpBr,
+
+        weeklyIncome: weeklyInc,
+        weeklyExpense: weeklyExp,
+        weeklyOpdCount: weeklyOpd,
+        weeklyLabCount: weeklyLab,
+        weeklyOpCount: weeklyOp,
+        weeklyOpdAmount: weeklyOpdAm,
+        weeklyLabAmount: weeklyLabAm,
+        weeklyOpAmount: weeklyOpAm,
+
+        monthlyIncome: monthlyInc,
+        monthlyExpense: monthlyExp,
+        monthlyOpdCount: monthlyOpd,
+        monthlyLabCount: monthlyLab,
+        monthlyOpCount: monthlyOp,
+        monthlyOpdAmount: monthlyOpdAm,
+        monthlyLabAmount: monthlyLabAmount,
+        monthlyOpAmount: monthlyOpAmount,
       });
 
-      // Fetch Day-Close Stats for today
-      const todayStr = new Date().toISOString().split('T')[0];
-      const dailyDocRef = doc(db, 'hospital_daily_stats', todayStr);
+      setWeeklyChartData(Object.values(weeklyDays));
+      setMonthlyChartData(Object.values(monthlyDays));
+
+      // Filter transactions for the selected date to show in the table
+      const dailyTxList = monthSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((tx: any) => {
+          const txDate = toDate(tx.date);
+          return isSameDay(txDate, selectedDate);
+        })
+        .sort((a: any, b: any) => toDate(b.date).getTime() - toDate(a.date).getTime());
+      
+      setRecentTransactions(dailyTxList);
+
+      // Fetch Day-Close Stats for the selected date
+      const dailyDocRef = doc(db, 'hospital_daily_stats', dateStr);
       const dailyDocSnap = await getDoc(dailyDocRef);
       
       if (dailyDocSnap.exists()) {
         const ds = dailyDocSnap.data();
         setDailyStats(ds);
         setStatsForm({
-          date: todayStr,
+          date: dateStr,
           checkupCount: String(ds.checkupCount || 0),
           usgCount: String(ds.usgCount || 0),
           labTestsCount: String(ds.labTestsCount || 0),
@@ -179,11 +357,11 @@ export default function AdminDashboardPage() {
       } else {
         setDailyStats(null);
         setStatsForm({
-          date: todayStr,
-          checkupCount: String(opdCount),
+          date: dateStr,
+          checkupCount: String(dailyOpd),
           usgCount: '0',
-          labTestsCount: String(labCount),
-          operationsCount: String(opCount)
+          labTestsCount: String(dailyLab),
+          operationsCount: String(dailyOp)
         });
       }
 
@@ -197,55 +375,6 @@ export default function AdminDashboardPage() {
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a: any, b: any) => Number(b.remaining) - Number(a.remaining));
       setLeftPatients(leftList);
-
-      // Recent Transactions (Last 10)
-      const recentQuery = query(
-        collection(db, 'hospital_transactions'),
-        where('departmentCode', '==', 'hospital'),
-        orderBy('date', 'desc'),
-        limit(10)
-      );
-      const recentSnap = await getDocs(recentQuery);
-      setRecentTransactions(recentSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      // 7-day chart data
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-      sevenDaysAgo.setHours(0,0,0,0);
-
-      const chartQuery = query(
-        collection(db, 'hospital_transactions'),
-        where('departmentCode', '==', 'hospital'),
-        where('date', '>=', Timestamp.fromDate(sevenDaysAgo)),
-        orderBy('date', 'asc')
-      );
-      const chartSnap = await getDocs(chartQuery);
-      
-      const days: Record<string, { name: string, income: number, expense: number }> = {};
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      
-      for (let i = 0; i < 7; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        const dateStr = d.toISOString().split('T')[0];
-        days[dateStr] = {
-          name: dayNames[d.getDay()],
-          income: 0,
-          expense: 0
-        };
-      }
-
-      chartSnap.docs.forEach(doc => {
-        const tx = doc.data();
-        if (tx.status !== 'approved') return;
-        const dateStr = toDate(tx.date).toISOString().split('T')[0];
-        if (days[dateStr]) {
-          if (tx.type === 'income') days[dateStr].income += Number(tx.amount) || 0;
-          else if (tx.type === 'expense') days[dateStr].expense += Number(tx.amount) || 0;
-        }
-      });
-
-      setChartData(Object.values(days));
 
     } catch (error) {
       console.error('Dashboard load error:', error);
@@ -273,48 +402,43 @@ export default function AdminDashboardPage() {
           operationsCount: String(ds.operationsCount || 0)
         });
       } else {
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (selectedDateStr === todayStr) {
-          setStatsForm({
-            date: selectedDateStr,
-            checkupCount: String(stats.opdCount),
-            usgCount: '0',
-            labTestsCount: String(stats.labCount),
-            operationsCount: String(stats.opCount)
-          });
-        } else {
-          const dateStart = new Date(selectedDateStr); dateStart.setHours(0, 0, 0, 0);
-          const dateEnd = new Date(selectedDateStr); dateEnd.setHours(23, 59, 59, 999);
-          
-          const customQuery = query(
-            collection(db, 'hospital_transactions'),
-            where('departmentCode', '==', 'hospital'),
-            where('date', '>=', Timestamp.fromDate(dateStart)),
-            where('date', '<=', Timestamp.fromDate(dateEnd)),
-            orderBy('date', 'desc')
-          );
-          const customSnap = await getDocs(customQuery);
-          
-          let opdC = 0;
-          let labC = 0;
-          let opC = 0;
-          
-          customSnap.docs.forEach(doc => {
-            const tx = doc.data();
-            const category = tx.category;
-            if (category === 'opd_reception') opdC++;
-            else if (category === 'lab_test') labC++;
-            else if (category === 'operation') opC++;
-          });
-          
-          setStatsForm({
-            date: selectedDateStr,
-            checkupCount: String(opdC),
-            usgCount: '0',
-            labTestsCount: String(labC),
-            operationsCount: String(opC)
-          });
-        }
+        // Query dynamic transactions for that date
+        const parts = selectedDateStr.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1;
+        const day = parseInt(parts[2]);
+
+        const dateStart = new Date(year, month, day, 0, 0, 0, 0);
+        const dateEnd = new Date(year, month, day, 23, 59, 59, 999);
+        
+        const customQuery = query(
+          collection(db, 'hospital_transactions'),
+          where('departmentCode', '==', 'hospital'),
+          where('date', '>=', Timestamp.fromDate(dateStart)),
+          where('date', '<=', Timestamp.fromDate(dateEnd)),
+          orderBy('date', 'desc')
+        );
+        const customSnap = await getDocs(customQuery);
+        
+        let opdC = 0;
+        let labC = 0;
+        let opC = 0;
+        
+        customSnap.docs.forEach(doc => {
+          const tx = doc.data();
+          const category = tx.category;
+          if (category === 'opd_reception') opdC++;
+          else if (category === 'lab_test') labC++;
+          else if (category === 'operation') opC++;
+        });
+        
+        setStatsForm({
+          date: selectedDateStr,
+          checkupCount: String(opdC),
+          usgCount: '0',
+          labTestsCount: String(labC),
+          operationsCount: String(opC)
+        });
       }
     } catch (err) {
       console.error(err);
@@ -325,7 +449,7 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     try {
       setSubmittingStats(true);
-      const targetDateStr = statsForm.date || new Date().toISOString().split('T')[0];
+      const targetDateStr = statsForm.date || getLocalDateString();
       const dailyDocRef = doc(db, 'hospital_daily_stats', targetDateStr);
       
       const checkupCount = Number(statsForm.checkupCount) || 0;
@@ -346,7 +470,7 @@ export default function AdminDashboardPage() {
       await setDoc(dailyDocRef, dataToSave);
       toast.success('Day-Close operational report saved successfully ✓');
       setShowStatsModal(false);
-      loadDashboard();
+      loadDashboard(selectedDateStr);
     } catch (error) {
       console.error('Error saving stats:', error);
       toast.error('Failed to save day-close stats');
@@ -362,7 +486,6 @@ export default function AdminDashboardPage() {
       const remainingAmount = Number(leftPatientForm.remaining);
       const newPatientRef = doc(collection(db, 'hospital_patients'));
 
-      // Construct a Timestamp representing the selected date at the current time
       const dateObj = new Date(leftPatientForm.date);
       const now = new Date();
       dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
@@ -388,9 +511,9 @@ export default function AdminDashboardPage() {
         phone: '', 
         remaining: '', 
         disease: '',
-        date: new Date().toISOString().split('T')[0]
+        date: getLocalDateString()
       });
-      loadDashboard();
+      loadDashboard(selectedDateStr);
     } catch (err) {
       console.error(err);
       toast.error('Failed to add left patient');
@@ -438,46 +561,117 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const netProfit = stats.todayIncome - stats.todayExpense;
+  // Analytics tab calculations
+  const currentIncome = 
+    analyticsTab === 'daily' ? stats.dailyIncome :
+    analyticsTab === 'weekly' ? stats.weeklyIncome : stats.monthlyIncome;
+
+  const currentExpense = 
+    analyticsTab === 'daily' ? stats.dailyExpense :
+    analyticsTab === 'weekly' ? stats.weeklyExpense : stats.monthlyExpense;
+
+  const currentNet = currentIncome - currentExpense;
+
+  const currentOPD = 
+    analyticsTab === 'daily' 
+      ? (dailyStats ? dailyStats.patientsCount : stats.dailyOpdCount)
+      : (analyticsTab === 'weekly' ? stats.weeklyOpdCount : stats.monthlyOpdCount);
+
+  const currentLabs = 
+    analyticsTab === 'daily'
+      ? (dailyStats ? dailyStats.labTestsCount : stats.dailyLabCount)
+      : (analyticsTab === 'weekly' ? stats.weeklyLabCount : stats.monthlyLabCount);
+
+  const currentOps = 
+    analyticsTab === 'daily'
+      ? (dailyStats ? dailyStats.operationsCount : stats.dailyOpCount)
+      : (analyticsTab === 'weekly' ? stats.weeklyOpCount : stats.monthlyOpCount);
+
+  const currentOPDAmount = 
+    analyticsTab === 'daily'
+      ? (stats.dailyOpdBreakdown.morning.amount + stats.dailyOpdBreakdown.evening.amount)
+      : (analyticsTab === 'weekly' ? stats.weeklyOpdAmount : stats.monthlyOpdAmount);
+
+  const currentLabAmount = 
+    analyticsTab === 'daily'
+      ? stats.dailyLabBreakdown.amount
+      : (analyticsTab === 'weekly' ? stats.weeklyLabAmount : stats.monthlyLabAmount);
+
+  const currentOpAmount = 
+    analyticsTab === 'daily'
+      ? stats.dailyOpBreakdown.amount
+      : (analyticsTab === 'weekly' ? stats.weeklyOpAmount : stats.monthlyOpAmount);
 
   return (
     <div className="space-y-6 pb-10 w-full overflow-x-hidden">
 
       {/* Greeting & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            {getGreeting()}, {session?.displayName?.split(' ')?.[0] || session?.name?.split(' ')?.[0] || 'Admin'} 👋
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+            {getGreeting()}, {session?.displayName?.split(' ')?.[0] || 'Admin'} 👋
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-1">
+            {new Date(selectedDateStr).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 w-full sm:w-auto">
           <Link 
             href={session?.role === 'superadmin' ? "/departments/hospital/dashboard/superadmin/reports" : "/departments/hospital/dashboard/admin/reports"}
-            className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl text-[11px] font-black hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 dark:shadow-none text-center"
           >
-            <BarChart3 size={14} /> Finance Reports
+            <BarChart3 size={14} /> Reports
           </Link>
           <Link 
             href="/hq/dashboard/cashier"
-            className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-black transition-all shadow-lg shadow-slate-100 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md shadow-slate-100 dark:shadow-none text-center"
           >
-            Go to Cashier Station
+            <Wallet size={14} /> Cashier
           </Link>
           <Link 
             href="/departments/hospital/dashboard/admin/patients"
-            className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-blue-700 transition-all shadow-md shadow-blue-100 dark:shadow-none text-center"
           >
-            View Transaction Records
+            <FileText size={14} /> Records
           </Link>
           <Link 
             href="/departments/hospital/dashboard/profile"
-            className="flex items-center gap-2 px-5 py-3 bg-gray-500 text-white rounded-xl text-xs font-black hover:bg-gray-600 transition-all shadow-lg shadow-gray-100 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-500 text-white rounded-xl text-[11px] font-black hover:bg-gray-600 transition-all shadow-md shadow-gray-100 dark:shadow-none text-center"
           >
-            My Profile
+            <UserCircle size={14} /> Profile
           </Link>
+        </div>
+      </div>
+
+      {/* Control Panel: Date Selector & Analytics Tabs */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-white/5 p-4 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm">
+        {/* Toggle tabs */}
+        <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-2xl w-full lg:w-auto">
+          {(['daily', 'weekly', 'monthly'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setAnalyticsTab(tab)}
+              className={`flex-1 lg:flex-none px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                analyticsTab === tab
+                  ? 'bg-white dark:bg-emerald-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        
+        {/* Date Selector input */}
+        <div className="flex items-center gap-3 bg-gray-50 dark:bg-white/10 p-2.5 rounded-2xl border border-gray-200/50 dark:border-white/5 w-full lg:w-auto justify-center lg:justify-start">
+          <Calendar className="w-4 h-4 text-emerald-500" />
+          <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Selected Date:</span>
+          <input 
+            type="date"
+            value={selectedDateStr}
+            onChange={(e) => setSelectedDateStr(e.target.value)}
+            className="bg-transparent border-none outline-none text-xs font-black text-gray-700 dark:text-white cursor-pointer"
+          />
         </div>
       </div>
 
@@ -495,19 +689,18 @@ export default function AdminDashboardPage() {
               <span className="text-xs text-slate-400 font-bold">Official Operational Stats</span>
             </div>
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
-              {dailyStats ? "Today's verified report has been filed" : "Today's Day-Close report is pending submission"}
+              {dailyStats ? "Verified report has been filed" : "Day-Close report is pending submission"}
             </h2>
             <p className="text-xs text-slate-300 font-medium max-w-xl">
               {dailyStats 
                 ? `Filed by ${dailyStats.reportedByName || 'Admin'} at ${dailyStats.reportedAt?.toDate?.() ? dailyStats.reportedAt.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}. These values override dynamic transaction counts.`
-                : "As Admin, file verified daily patient visits, conducted lab tests, and completed operations to seal today's record."}
+                : `Submit verified patient visits, conducted lab tests, and completed operations for ${new Date(selectedDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`}
             </p>
           </div>
           <button
             onClick={() => {
               setShowStatsModal(true);
-              const todayStr = new Date().toISOString().split('T')[0];
-              handleDateChangeInStatsForm(todayStr);
+              handleDateChangeInStatsForm(selectedDateStr);
             }}
             className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black transition-all shadow-lg shadow-indigo-900/40 hover:shadow-indigo-900/60 whitespace-nowrap border border-indigo-500/20"
           >
@@ -538,8 +731,9 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      {/* Row 1: 4 Stat Cards */}
+      {/* Row 1: 4 Stat Cards (Dynamic based on selected tab) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Income Card */}
         <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -547,10 +741,13 @@ export default function AdminDashboardPage() {
             </div>
             <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">Income</span>
           </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">₨ {stats.todayIncome.toLocaleString()}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">Today's Total</div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">₨ {currentIncome.toLocaleString()}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">
+            {analyticsTab === 'daily' ? "Day's Total" : analyticsTab === 'weekly' ? "Week's Total" : "Month's Total"}
+          </div>
         </div>
 
+        {/* Expense Card */}
         <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -558,48 +755,55 @@ export default function AdminDashboardPage() {
             </div>
             <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">Expense</span>
           </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">₨ {stats.todayExpense.toLocaleString()}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">Today's Total</div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">₨ {currentExpense.toLocaleString()}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">
+            {analyticsTab === 'daily' ? "Day's Total" : analyticsTab === 'weekly' ? "Week's Total" : "Month's Total"}
+          </div>
         </div>
 
-        <div className={`bg-white dark:bg-white/5 p-6 rounded-3xl border ${netProfit >= 0 ? 'border-emerald-100 dark:border-emerald-500/30' : 'border-rose-100 dark:border-rose-500/30'} shadow-sm transition-all hover:shadow-md group`}>
+        {/* Net Status Card */}
+        <div className={`bg-white dark:bg-white/5 p-6 rounded-3xl border ${currentNet >= 0 ? 'border-emerald-100 dark:border-emerald-500/30' : 'border-rose-100 dark:border-rose-500/30'} shadow-sm transition-all hover:shadow-md group`}>
           <div className="flex items-center justify-between mb-4">
-            <div className={`w-12 h-12 rounded-2xl ${netProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-              {netProfit >= 0 ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
+            <div className={`w-12 h-12 rounded-2xl ${currentNet >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+              {currentNet >= 0 ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
             </div>
-            <span className={`text-[10px] font-black ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10'} px-2.5 py-1 rounded-full uppercase tracking-widest`}>Net status</span>
+            <span className={`text-[10px] font-black ${currentNet >= 0 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10'} px-2.5 py-1 rounded-full uppercase tracking-widest`}>Net status</span>
           </div>
-          <div className={`text-2xl font-black ${netProfit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'} truncate`}>
-            ₨ {Math.abs(netProfit).toLocaleString()}
+          <div className={`text-2xl font-black ${currentNet >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'} truncate`}>
+            ₨ {Math.abs(currentNet).toLocaleString()}
           </div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">{netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">{currentNet >= 0 ? 'Net Profit' : 'Net Loss'}</div>
         </div>
 
+        {/* Patient Volume Card */}
         <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users size={24} />
             </div>
             <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
-              {dailyStats ? 'Day-Close verified' : 'Dynamic OPD'}
+              {analyticsTab === 'daily' ? (dailyStats ? 'Verified' : 'Dynamic') : 'Total'}
             </span>
           </div>
           <div className="text-2xl font-black text-gray-900 dark:text-white truncate">
-            {dailyStats ? dailyStats.patientsCount : stats.opdCount}
+            {currentOPD}
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">
-            {dailyStats ? 'Verified Patients Today' : 'Total OPD Today'}
+            {analyticsTab === 'daily' ? "Today's OPD" : analyticsTab === 'weekly' ? "Week's OPD" : "Month's OPD"}
           </div>
         </div>
       </div>
 
       {/* Row 2: Chart & Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left (2/3 width): Bar Chart */}
+        {/* Left (2/3 width): Analytics Charts */}
         <div className="lg:col-span-2 bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden p-6 md:p-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
-              <Activity className="w-5 h-5 text-emerald-500" /> Income vs Expense (Last 7 Days)
+              <Activity className="w-5 h-5 text-emerald-500" /> 
+              {analyticsTab === 'daily' && "Daily Trend (Selected Week)"}
+              {analyticsTab === 'weekly' && "Weekly Trend (7 Days Ending Selected Date)"}
+              {analyticsTab === 'monthly' && `Monthly Trend (${new Date(selectedDateStr).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})`}
             </h2>
             <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-500" /> Income</div>
@@ -608,75 +812,118 @@ export default function AdminDashboardPage() {
           </div>
           
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={session?.darkMode ? '#333' : '#f1f5f9'} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }}
-                  tickFormatter={(val) => `₨${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`}
-                />
-                <Tooltip 
-                  cursor={{ fill: '#f8fafc', opacity: 0.1 }}
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#1f2937', color: '#fff' }}
-                  itemStyle={{ color: '#fff' }}
-                  formatter={(val: any) => [`₨ ${val.toLocaleString()}`, '']}
-                />
-                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} barSize={16} />
-                <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
+            {analyticsTab === 'monthly' ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyChartData}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
+                  <XAxis 
+                    dataKey="dayNum" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                    tickFormatter={(val) => `₨${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc', opacity: 0.1 }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#1f2937', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                    formatter={(val: any) => [`₨ ${val.toLocaleString()}`, '']}
+                    labelFormatter={(label) => `Day ${label}`}
+                  />
+                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorIncome)" />
+                  <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorExpense)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                    tickFormatter={(val) => `₨${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc', opacity: 0.1 }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#1f2937', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                    formatter={(val: any) => [`₨ ${val.toLocaleString()}`, '']}
+                  />
+                  <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} barSize={16} />
+                  <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
-        {/* Right (1/3 width): Today's Breakdown */}
-        <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm p-6 md:p-8">
-          <h2 className="font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-            <LayoutDashboard className="w-5 h-5 text-blue-500" /> Today's Breakdown
-          </h2>
-          
-          <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
-              <div>
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Patients</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {dailyStats ? `${dailyStats.patientsCount} (Verified)` : `${stats.opdCount} (Dynamic)`}
-                </p>
+        {/* Right (1/3 width): Period's Breakdown */}
+        <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm p-6 md:p-8 flex flex-col justify-between">
+          <div>
+            <h2 className="font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+              <LayoutDashboard className="w-5 h-5 text-blue-500" /> 
+              {analyticsTab === 'daily' ? "Today's Breakdown" : analyticsTab === 'weekly' ? "Weekly Breakdown" : "Monthly Breakdown"}
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Patients</p>
+                  <p className="font-bold text-gray-900 dark:text-white">
+                    {currentOPD} {analyticsTab === 'daily' && (dailyStats ? '(Verified)' : '(Dynamic)')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {currentOPDAmount.toLocaleString()}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {(stats.opdBreakdown.morning.amount + stats.opdBreakdown.evening.amount).toLocaleString()}</p>
-              </div>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-blue-100 dark:hover:border-blue-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
-              <div>
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lab Tests</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {dailyStats ? `${dailyStats.labTestsCount} (Verified)` : `${stats.labCount} (Dynamic)`}
-                </p>
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-blue-100 dark:hover:border-blue-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lab Tests</p>
+                  <p className="font-bold text-gray-900 dark:text-white">
+                    {currentLabs} {analyticsTab === 'daily' && (dailyStats ? '(Verified)' : '(Dynamic)')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-blue-600 dark:text-blue-400 font-black">₨ {currentLabAmount.toLocaleString()}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-blue-600 dark:text-blue-400 font-black">₨ {stats.labBreakdown.amount.toLocaleString()}</p>
-              </div>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-purple-100 dark:hover:border-purple-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
-              <div>
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Operations</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {dailyStats ? `${dailyStats.operationsCount} (Verified)` : `${stats.opCount} (Dynamic)`}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-purple-600 dark:text-purple-400 font-black">₨ {stats.opBreakdown.amount.toLocaleString()}</p>
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-purple-100 dark:hover:border-purple-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Operations</p>
+                  <p className="font-bold text-gray-900 dark:text-white">
+                    {currentOps} {analyticsTab === 'daily' && (dailyStats ? '(Verified)' : '(Dynamic)')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-purple-600 dark:text-purple-400 font-black">₨ {currentOpAmount.toLocaleString()}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -695,15 +942,20 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Row 3: Recent Transactions Table */}
+      {/* Row 3: Daily Transactions Table */}
       <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="p-6 md:p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
-          <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
-            <FileText className="w-5 h-5 text-emerald-500" /> Recent Daily Transactions
-          </h2>
+        <div className="p-6 md:p-8 border-b border-gray-50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
+              <FileText className="w-5 h-5 text-emerald-500" /> Daily Transactions
+            </h2>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+              Transactions for {new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
           <Link 
             href="/departments/hospital/dashboard/admin/patients" 
-            className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full uppercase tracking-widest hover:bg-emerald-100 transition-colors"
+            className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2 rounded-full uppercase tracking-widest hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors text-center w-full sm:w-auto"
           >
             View Full Log
           </Link>
@@ -713,9 +965,9 @@ export default function AdminDashboardPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-white/5">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Time</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Date / Time</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Service</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Patient Name</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Patient / Recipient</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Amount</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-center">Status</th>
               </tr>
@@ -724,34 +976,36 @@ export default function AdminDashboardPage() {
               {recentTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-400 text-sm font-medium">
-                    No recent transactions found.
+                    No transactions found for this date.
                   </td>
                 </tr>
               ) : (
                 recentTransactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <p className="text-xs font-bold text-slate-900 dark:text-white">
-                        {toDate(tx.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                        {formatTxDateTime(tx.date)}
                       </p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <p className="text-xs font-bold text-slate-700 dark:text-gray-300">{CATEGORY_LABELS[tx.category] || tx.category}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-medium text-slate-600 dark:text-gray-400">{tx.patientName || tx.otherMeta?.paidTo || '—'}</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-gray-400 truncate max-w-[150px]">
+                        {tx.patientName || tx.otherMeta?.paidTo || '—'}
+                      </p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <p className={`text-xs font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {tx.type === 'income' ? '+' : '-'}₨ {Number(tx.amount).toLocaleString()}
                       </p>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <span className={`
                         inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider
-                        ${tx.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 
-                          tx.status === 'rejected' ? 'bg-rose-50 text-rose-600' : 
-                          'bg-amber-50 text-amber-600'}
+                        ${tx.status === 'approved' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 
+                          tx.status === 'rejected' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' : 
+                          'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'}
                       `}>
                         {tx.status}
                       </span>
@@ -766,7 +1020,7 @@ export default function AdminDashboardPage() {
 
       {/* Row 4: Left Patients (Outstanding Amounts) */}
       <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden mt-6">
-        <div className="p-6 md:p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
+        <div className="p-6 md:p-8 border-b border-gray-50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
               <Wallet className="w-5 h-5 text-rose-500" /> Left Patients / Outstanding Amounts
@@ -775,7 +1029,7 @@ export default function AdminDashboardPage() {
           </div>
           <button 
             onClick={() => setShowLeftPatientModal(true)}
-            className="flex items-center gap-2 text-[10px] font-black text-white bg-rose-600 px-4 py-2 rounded-full uppercase tracking-widest hover:bg-rose-700 transition-colors shadow-md shadow-rose-200"
+            className="flex items-center justify-center gap-2 text-[10px] font-black text-white bg-rose-600 px-4 py-2.5 rounded-full uppercase tracking-widest hover:bg-rose-700 transition-colors shadow-md shadow-rose-200 w-full sm:w-auto"
           >
             <Plus size={14} /> Add Left Patient
           </button>
@@ -825,10 +1079,10 @@ export default function AdminDashboardPage() {
                         ₨ {Number(patient.remaining).toLocaleString()}
                       </p>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <button
                         onClick={() => handleMarkAsPaid(patient)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors border border-emerald-200"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors border border-emerald-200 dark:border-emerald-500/30"
                       >
                         <CheckCircle2 size={14} /> Mark as Paid
                       </button>
