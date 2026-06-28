@@ -819,6 +819,12 @@ service cloud.firestore {
       allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
     }
 
+    // ── Daily operational stats ─────────────────────────
+    match /hospital_daily_stats/{docId} {
+      allow read: if isHospitalAdminOrAbove() || isHqTier1();
+      allow write: if isHospitalAdminOrAbove() || isHqTier1();
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  SPIMS COLLEGE PORTAL COLLECTIONS
     // ═══════════════════════════════════════════════════════════
@@ -1557,6 +1563,12 @@ service cloud.firestore {
       allow read: if isSukoonAdminOrAbove() || isHqTier1();
       allow write: if isSukoonAdminOrAbove() || isHqTier1();
       allow delete: if isSukoonAdminOrAbove() || isHqSuperOrManager();
+    }
+
+    // ── Daily operational stats ─────────────────────────
+    match /sukoon_daily_stats/{docId} {
+      allow read: if isSukoonAdminOrAbove() || isHqTier1();
+      allow write: if isSukoonAdminOrAbove() || isHqTier1();
     }
 
 
