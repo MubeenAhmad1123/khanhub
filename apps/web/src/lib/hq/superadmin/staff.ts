@@ -6,7 +6,7 @@ import { toDate, formatDateDMY } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'personnel' | 'student' | 'other';
-export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy' | 'executive';
+export type StaffStatus = 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy' | 'executive' | 'hide';
 
 export function getDeptCollection(dept: StaffDept): string {
   if (dept === 'hq') return 'hq_users';
