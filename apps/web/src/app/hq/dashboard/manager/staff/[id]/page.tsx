@@ -2236,7 +2236,7 @@ export default function StaffProfilePage() {
                     <option value="resigned">Resigned</option>
                     <option value="terminated">Terminated</option>
                     <option value="active_vacancy">Active Vacancy</option>
-                    <option value="executive">Executive</option>
+                    <option value="executive">Hide Status</option>
                   </select>
                 </div>
                 <div className={`rounded-2xl p-4 text-left bg-gray-50`}>

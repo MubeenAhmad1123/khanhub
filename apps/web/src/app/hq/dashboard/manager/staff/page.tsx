@@ -460,7 +460,7 @@ export default function ManagerStaffPage() {
                 }`}
               >
                 <div className={`w-2 h-2 rounded-full ${statusFilter === 'executive' ? 'bg-white animate-pulse' : 'bg-purple-500'}`} />
-                <span>Executives</span>
+                <span>Hide Status</span>
               </button>
 
               <button

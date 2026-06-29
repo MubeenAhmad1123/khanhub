@@ -172,7 +172,7 @@ export default function ManagerReportsPage() {
 
         // Active Logic: Must explicitly NOT be false and status must NOT suggest inactivity
         const statusStr = String(s.status || '').toLowerCase();
-        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated';
+        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'executive';
 
         return isActive;
       };

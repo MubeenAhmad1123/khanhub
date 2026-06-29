@@ -130,8 +130,7 @@ export default function SuperAdminReportsPage() {
       };
 
       // === STAFF SALARY ===
-      const staffSnap = await getDocs(query(collection(db, 'sukoon_staff'), where('isActive', '==', true)));
-      const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() as any })).filter((s: any) => String(s.status || '').toLowerCase() !== 'executive');
 
       const finesSnap = await getDocs(query(collection(db, 'sukoon_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
