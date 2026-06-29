@@ -63,14 +63,14 @@ export default function AttendanceMarkingPage() {
           return { id: d.id, ...data, _origin: 'hq', department: data.department || 'hq' };
         }).filter((s: any) => {
           const nameLower = String(s.name || s.displayName || '').toLowerCase();
-          return nameLower !== 'vacant' && !nameLower.includes('vacant') && s.status !== 'vacant' && s.status !== 'executive';
+          return nameLower !== 'vacant' && !nameLower.includes('vacant') && s.status !== 'vacant' && s.status !== 'executive' && s.status !== 'hide';
         });
         const rehabStaff = rehabStaffSnap.docs.map(d => {
           const data = d.data() || {};
           return { id: d.id, ...data, _origin: 'rehab', department: data.department || 'rehab' };
         }).filter((s: any) => {
           const nameLower = String(s.name || s.displayName || '').toLowerCase();
-          return nameLower !== 'vacant' && !nameLower.includes('vacant') && s.status !== 'vacant' && s.status !== 'executive';
+          return nameLower !== 'vacant' && !nameLower.includes('vacant') && s.status !== 'vacant' && s.status !== 'executive' && s.status !== 'hide';
         });
 
         const unified = [...hqStaff, ...rehabStaff].sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));

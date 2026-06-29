@@ -81,7 +81,7 @@ export default function SalarySlipsPage() {
             
             // Active Logic: Must explicitly NOT be false and status must NOT suggest inactivity
             const statusStr = String(s.status || '').toLowerCase();
-            return s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'executive';
+            return s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'executive' && statusStr !== 'hide';
           });
 
           allStaff = [...allStaff, ...filtered];

@@ -201,7 +201,7 @@ export default function HospitalSuperAdminReportsPage() {
       const staffSnap = await getDocs(query(collection(db, 'hospital_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs
         .map(d => ({ id: d.id, ...d.data() as any }))
-        .filter((s: any) => String(s.status || '').toLowerCase() !== 'executive')
+        .filter((s: any) => String(s.status || '').toLowerCase() !== 'executive' && String(s.status || '').toLowerCase() !== 'hide')
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
       const finesSnap = await getDocs(query(collection(db, 'hospital_fines'), where('month', '==', monthStr)));

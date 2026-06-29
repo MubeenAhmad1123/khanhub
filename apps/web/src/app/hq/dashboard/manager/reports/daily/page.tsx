@@ -241,7 +241,7 @@ export default function DailyReportPage() {
           return false;
         }
 
-        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'executive';
+        const isActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'executive' && statusStr !== 'hide';
 
         return isActive;
       };

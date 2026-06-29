@@ -521,7 +521,7 @@ export default function SuperadminStaffPage() {
                 )}
               >
                 <div className={cn("w-2 h-2 rounded-full", status === 'executive' ? 'bg-white animate-pulse' : 'bg-purple-500')} />
-                <span>Hide Status</span>
+                <span>Hide</span>
               </button>
 
               <button

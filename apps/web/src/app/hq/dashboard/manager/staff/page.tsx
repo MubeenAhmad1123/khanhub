@@ -150,13 +150,13 @@ export default function ManagerStaffPage() {
         (s.designation || '').toLowerCase().includes(search.toLowerCase());
 
       const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
-      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.status !== 'active_vacancy' && s.isActive !== false && s.status !== 'executive')) ||
-        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false) && s.status !== 'active_vacancy' && s.status !== 'executive') ||
+      const matchesStatus = (statusFilter === 'all' && (s.status !== 'resigned' && s.status !== 'terminated' && s.status !== 'active_vacancy' && s.isActive !== false && s.status !== 'executive' && s.status !== 'hide')) ||
+        (statusFilter === 'active' && (s.status === 'active' || s.isActive !== false) && s.status !== 'active_vacancy' && s.status !== 'executive' && s.status !== 'hide') ||
         (statusFilter === 'inactive' && s.status === 'inactive') ||
         (statusFilter === 'resigned' && s.status === 'resigned') ||
         (statusFilter === 'terminated' && s.status === 'terminated') ||
         (statusFilter === 'active_vacancy' && s.status === 'active_vacancy') ||
-        (statusFilter === 'executive' && s.status === 'executive');
+        (statusFilter === 'executive' && (s.status === 'executive' || s.status === 'hide'));
 
       const matchesAttendance = attendanceFilter === 'all' ||
         (attendanceFilter === 'present' && (s.todayAttendanceStatus === 'present' || s.todayAttendanceStatus === 'late')) ||
@@ -460,7 +460,7 @@ export default function ManagerStaffPage() {
                 }`}
               >
                 <div className={`w-2 h-2 rounded-full ${statusFilter === 'executive' ? 'bg-white animate-pulse' : 'bg-purple-500'}`} />
-                <span>Hide Status</span>
+                <span>Hide</span>
               </button>
 
               <button

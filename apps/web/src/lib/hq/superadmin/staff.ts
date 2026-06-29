@@ -402,13 +402,13 @@ export async function listStaffCards({
     const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'active_vacancy';
     
     if (status === 'active') {
-      if (!isActuallyActive || statusStr === 'active_vacancy' || statusStr === 'executive') return false;
+      if (!isActuallyActive || statusStr === 'active_vacancy' || statusStr === 'executive' || statusStr === 'hide') return false;
     } else if (status === 'inactive') {
       if (isActuallyActive || statusStr === 'active_vacancy') return false;
     } else if (status === 'active_vacancy') {
       if (statusStr !== 'active_vacancy') return false;
     } else if (status === 'executive') {
-      if (statusStr !== 'executive') return false;
+      if (statusStr !== 'executive' && statusStr !== 'hide') return false;
     } else if (status === 'all') {
       if (statusStr === 'active_vacancy') return false;
     }

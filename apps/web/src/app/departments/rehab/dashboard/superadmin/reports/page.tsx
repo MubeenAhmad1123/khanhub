@@ -320,7 +320,7 @@ export default function SuperAdminReportsPage() {
 
       // === STAFF SALARY (Always monthly billing summary) ===
       const staffSnap = await getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)));
-      const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() as any })).filter((s: any) => String(s.status || '').toLowerCase() !== 'executive');
+      const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() as any })).filter((s: any) => String(s.status || '').toLowerCase() !== 'executive' && String(s.status || '').toLowerCase() !== 'hide');
 
       const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());

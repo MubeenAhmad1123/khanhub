@@ -885,11 +885,11 @@ export default function StaffProfilePage() {
     }
   }, [staffId, daysInMonth]); // Removed router as it's not needed for fetch and can be unstable // Removed router as it's not needed for fetch and can be unstable
 
-  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy' | 'executive') => {
+  const handleUpdateStatus = async (newStatus: 'active' | 'inactive' | 'resigned' | 'terminated' | 'active_vacancy' | 'executive' | 'hide') => {
     if (!staff) return;
     try {
       setSaving(true);
-      const isActive = newStatus === 'active' || newStatus === 'executive';
+      const isActive = newStatus === 'active' || newStatus === 'executive' || newStatus === 'hide';
       await updateStaffProfile(staffId, { 
         status: newStatus,
         isActive
@@ -2225,7 +2225,7 @@ export default function StaffProfilePage() {
                       staff?.status === 'active_vacancy' ? 'text-indigo-500' : 
                       staff?.status === 'resigned' ? 'text-amber-500' : 
                       staff?.status === 'terminated' ? 'text-rose-500' : 
-                      staff?.status === 'executive' ? 'text-purple-600' :
+                      (staff?.status === 'executive' || staff?.status === 'hide') ? 'text-purple-600' :
                       'text-slate-900'
                     }`}
                     value={staff?.status || (staff?.isActive !== false ? 'active' : 'inactive')}
@@ -2236,7 +2236,7 @@ export default function StaffProfilePage() {
                     <option value="resigned">Resigned</option>
                     <option value="terminated">Terminated</option>
                     <option value="active_vacancy">Active Vacancy</option>
-                    <option value="executive">Hide Status</option>
+                    <option value="hide">Hide</option>
                   </select>
                 </div>
                 <div className={`rounded-2xl p-4 text-left bg-gray-50`}>
