@@ -219,7 +219,7 @@ export default function DailyReportPage() {
           return false;
         }
 
-        const statusStr = String(s.status || '').toLowerCase();
+        const statusStr = String(s.status || '').toLowerCase().trim();
 
         if (showVacancies) {
           return statusStr === 'active_vacancy' || n === 'vacant' || n.includes('vacant') || statusStr === 'vacant';

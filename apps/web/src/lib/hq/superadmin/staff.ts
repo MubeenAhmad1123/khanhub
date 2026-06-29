@@ -398,7 +398,7 @@ export async function listStaffCards({
     }
 
     // 2. Strict Active Check
-    const statusStr = String(s.status || '').toLowerCase();
+    const statusStr = String(s.status || '').toLowerCase().trim();
     const isActuallyActive = s.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'active_vacancy';
     
     if (status === 'active') {

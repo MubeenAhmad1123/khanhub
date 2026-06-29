@@ -212,6 +212,7 @@ export default function SuperAdminReportsPage() {
       };
 
       // === STAFF SALARY ===
+      const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() as any })).filter((s: any) => String(s.status || '').toLowerCase() !== 'executive' && String(s.status || '').toLowerCase() !== 'hide');
 
       const finesSnap = await getDocs(query(collection(db, 'spims_fines'), where('month', '==', monthStr)));
