@@ -8,6 +8,7 @@ export type VoiceTool =
   | 'getLatestAdmission'
   | 'getMostRecentDischarge'
   | 'getAdmissionsByDate'
+  | 'getDischargesByDate'
   | 'getFinancialSummary'
   | 'getRemainingFee'
   | 'searchPersonByName'
@@ -50,7 +51,7 @@ Return ONLY valid JSON — no explanation, no markdown, no extra text.
 
 JSON format:
 {
-  "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | 
+  "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | "getDischargesByDate" | 
           "getFinancialSummary" | "getRemainingFee" | "searchPersonByName" | 
           "getAttendanceSummary" | "getStudentsByCourse" | "navigate" | "unknown",
   "entityName": string or null,
@@ -67,8 +68,9 @@ JSON format:
 Tool selection guide:
 - getLatestAdmission     → "latest patient", "last admitted", "recent admission", "naya patient"
 - getMostRecentDischarge → "recently discharged", "last discharge", "most recent discharge", "discharge hua"
-- getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients"
-- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch"
+- getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients", "new clients"
+- getDischargesByDate    → "how many discharges", "discharges last week", "discharged from rehab last week"
+- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch", "stats of 24 of June"
 - getRemainingFee        → "remaining", "balance", "fee left"
 - searchPersonByName     → name mentioned + open/profile/find (e.g., "open profile of Raman", "profile of Rehman")
 - getAttendanceSummary   → "attendance", "present", "absent"
@@ -79,7 +81,7 @@ Examples:
 "open the profile of last discharge patient" → tool: "getMostRecentDischarge", thinkingMessage: "Finding most recently discharged patient..."
 "open the profile of patient Raman" → tool: "searchPersonByName", entityName: "Raman", entityType: "patient", thinkingMessage: "Searching for patient Raman..."
 "how much did rehab earn yesterday" → tool: "getFinancialSummary", departmentCode: "rehab", daysBack: 1, thinkingMessage: "Calculating rehab revenue..."
-"open profile of student ninety nine" → tool: "searchPersonByName", entityId: "99", entityType: "student", thinkingMessage: "Searching for student 99..."
+"how many patient goes discharge last week from rehab" → tool: "getDischargesByDate", departmentCode: "rehab", daysBack: 7, thinkingMessage: "Checking Rehab discharges..."
 "who was the latest patient admitted to hospital" → tool: "getLatestAdmission", departmentCode: "hospital", thinkingMessage: "Finding latest hospital admission..."
 `;
 

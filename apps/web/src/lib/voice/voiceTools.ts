@@ -146,12 +146,31 @@ export async function getAdmissionsByDate(
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-  const date = targetDate || getPKTDate(daysBack || 0);
 
-  const [year, month, day] = date.split('-').map(Number);
-  // Construct start and end of that day in PKT (UTC+5) converted to UTC Dates (which Firestore handles as Timestamps)
-  const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-  const end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+  let start: Date;
+  let end: Date;
+  let dateLabel: string;
+
+  if (targetDate) {
+    const [year, month, day] = targetDate.split('-').map(Number);
+    start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = targetDate;
+  } else if (daysBack && daysBack > 0) {
+    const todayStr = getPKTDate(0);
+    const [tY, tM, tD] = todayStr.split('-').map(Number);
+    const pastStr = getPKTDate(daysBack);
+    const [pY, pM, pD] = pastStr.split('-').map(Number);
+    start = new Date(Date.UTC(pY, pM - 1, pD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = `last ${daysBack} days (${pastStr} to ${todayStr})`;
+  } else {
+    const todayStr = getPKTDate(0);
+    const [tY, tM, tD] = todayStr.split('-').map(Number);
+    start = new Date(Date.UTC(tY, tM - 1, tD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = todayStr;
+  }
 
   const collMap: Record<string, string> = {
     rehab: 'rehab_patients',
@@ -199,7 +218,86 @@ export async function getAdmissionsByDate(
     }
   }
 
-  return { date, count: admissions.length, admissions };
+  return { date: dateLabel, count: admissions.length, admissions };
+}
+
+// ─── TOOL 9: Discharges by date ───────────────────────────────────────────────
+export async function getDischargesByDate(
+  department: string | null,
+  targetDate: string | null,
+  daysBack: number | null
+) {
+  await assertVoiceAccess();
+  
+  let start: Date;
+  let end: Date;
+  let dateLabel: string;
+
+  if (targetDate) {
+    const [year, month, day] = targetDate.split('-').map(Number);
+    start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = targetDate;
+  } else if (daysBack && daysBack > 0) {
+    const todayStr = getPKTDate(0);
+    const [tY, tM, tD] = todayStr.split('-').map(Number);
+    const pastStr = getPKTDate(daysBack);
+    const [pY, pM, pD] = pastStr.split('-').map(Number);
+    start = new Date(Date.UTC(pY, pM - 1, pD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = `last ${daysBack} days (${pastStr} to ${todayStr})`;
+  } else {
+    const todayStr = getPKTDate(0);
+    const [tY, tM, tD] = todayStr.split('-').map(Number);
+    start = new Date(Date.UTC(tY, tM - 1, tD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = todayStr;
+  }
+
+  const collMap: Record<string, string> = {
+    rehab: 'rehab_patients',
+    hospital: 'hospital_patients',
+    spims: 'spims_students',
+    welfare: 'welfare_children',
+  };
+
+  const collections = department && collMap[department]
+    ? [{ col: collMap[department], dept: department }]
+    : Object.entries(collMap).map(([dept, col]) => ({ col, dept }));
+
+  const discharges: { name: string; id: string; department: string; type: string }[] = [];
+
+  const typeMap: Record<string, string> = {
+    rehab: 'patient',
+    hospital: 'patient',
+    spims: 'student',
+    welfare: 'child',
+  };
+
+  for (const { col, dept } of collections) {
+    try {
+      const snap = await adminDb.collection(col)
+        .where('dischargeDate', '>=', start)
+        .where('dischargeDate', '<=', end)
+        .get();
+
+      const type = typeMap[dept] || 'patient';
+
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        discharges.push({
+          name: d.name || 'Unknown',
+          id: doc.id,
+          department: dept,
+          type,
+        });
+      });
+    } catch (e) {
+      console.warn(`[voiceTools] getDischargesByDate skipping ${col}:`, e);
+    }
+  }
+
+  return { date: dateLabel, count: discharges.length, discharges };
 }
 
 // ─── TOOL 4: Financial summary ────────────────────────────────────────────────
@@ -209,12 +307,31 @@ export async function getFinancialSummary(
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-  const date = targetDate || getPKTDate(daysBack || 0);
+  
+  let start: Date;
+  let end: Date;
+  let dateLabel: string;
 
-  const [year, month, day] = date.split('-').map(Number);
-  // Construct start and end of that day in PKT (UTC+5) converted to UTC Dates (which Firestore handles as Timestamps)
-  const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-  const end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+  if (targetDate) {
+    const [year, month, day] = targetDate.split('-').map(Number);
+    start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = targetDate;
+  } else if (daysBack && daysBack > 0) {
+    const todayStr = getPKTDate(0);
+    const [tY, tM, tD] = todayStr.split('-').map(Number);
+    const pastStr = getPKTDate(daysBack);
+    const [pY, pM, pD] = pastStr.split('-').map(Number);
+    start = new Date(Date.UTC(pY, pM - 1, pD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = `last ${daysBack} days (${pastStr} to ${todayStr})`;
+  } else {
+    const todayStr = getPKTDate(0);
+    const [tY, tM, tD] = todayStr.split('-').map(Number);
+    start = new Date(Date.UTC(tY, tM - 1, tD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+    dateLabel = todayStr;
+  }
 
   const txCollMap: Record<string, string> = {
     rehab: 'rehab_transactions',
@@ -263,7 +380,7 @@ export async function getFinancialSummary(
   }
 
   return {
-    date,
+    date: dateLabel,
     income: totalIncome,
     expense: totalExpense,
     net: totalIncome - totalExpense,

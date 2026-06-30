@@ -3,7 +3,8 @@
 
 import React from 'react';
 import { useVoiceAssistant } from './VoiceAssistantProvider';
-import { Mic, Loader2, Volume2, AlertCircle } from 'lucide-react';
+import { Mic, Loader2, Volume2, AlertCircle, X, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function VoiceCommandBar() {
   const {
@@ -16,18 +17,21 @@ export default function VoiceCommandBar() {
     mode,
     voiceState,
     thinkingMessage,
-    spokenResponse
+    spokenResponse,
+    activeData,
+    closeAssistantCard
   } = useVoiceAssistant();
 
   // Determine if we should show the bar
-  // We show it if we are actively capturing, processing, speaking, thinking, or if an error is active
   const isActive = (mode === 'always_on' && capturingCommand) || 
                    (mode === 'push_to_talk' && listening) || 
                    processing || 
                    speaking || 
                    (error && liveTranscript) ||
                    voiceState === 'thinking' ||
-                   voiceState === 'speaking';
+                   voiceState === 'speaking' ||
+                   spokenResponse !== null ||
+                   activeData !== null;
 
   if (!isActive) return null;
 
@@ -49,6 +53,230 @@ export default function VoiceCommandBar() {
     barBorderColor = 'border-rose-200';
   }
 
+  function renderActiveDataCard(topic: string, data: any) {
+    switch (topic) {
+      case 'financial_summary': {
+        const netColor = data.net >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        return (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Date/Range:</span>
+              <span className="font-mono text-slate-200">{data.date}</span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/50">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[8px] mb-0.5">Total Income</p>
+                <p className="text-sm font-black text-emerald-400">Rs {data.income.toLocaleString()}</p>
+              </div>
+              <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/50">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[8px] mb-0.5">Total Expense</p>
+                <p className="text-sm font-black text-rose-400">Rs {data.expense.toLocaleString()}</p>
+              </div>
+              <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/50">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[8px] mb-0.5">Net Profit</p>
+                <p className={`text-sm font-black ${netColor}`}>Rs {data.net.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {data.breakdown && data.breakdown.length > 0 && (
+              <div className="space-y-2">
+                <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Department Breakdown</p>
+                <div className="space-y-2">
+                  {data.breakdown.map((b: any, idx: number) => {
+                    const totalDept = b.income + b.expense;
+                    const incPercent = totalDept > 0 ? (b.income / totalDept) * 100 : 0;
+                    return (
+                      <div key={idx} className="bg-slate-950/30 p-2 rounded-lg border border-slate-800/30 flex items-center justify-between gap-4">
+                        <span className="font-bold uppercase tracking-wider text-[9px] text-slate-300 min-w-[70px]">{b.dept}</span>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex justify-between text-[9px] text-slate-400">
+                            <span>Inc: Rs {b.income.toLocaleString()}</span>
+                            <span>Exp: Rs {b.expense.toLocaleString()}</span>
+                          </div>
+                          <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden flex">
+                            <div className="bg-emerald-400 h-full" style={{ width: `${incPercent}%` }} />
+                            <div className="bg-rose-400 h-full" style={{ width: `${100 - incPercent}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case 'admissions_by_date':
+      case 'discharges_by_date': {
+        const list = topic === 'admissions_by_date' ? data.admissions : data.discharges;
+        const actionLabel = topic === 'admissions_by_date' ? 'Admitted' : 'Discharged';
+        const colorLabel = topic === 'admissions_by_date' ? 'text-blue-400 border-blue-900/50 bg-blue-950/30' : 'text-purple-400 border-purple-900/50 bg-purple-950/30';
+        
+        return (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Date/Range:</span>
+              <span className="font-mono text-slate-200">{data.date}</span>
+            </div>
+            
+            <div className={`p-2.5 rounded-xl border ${colorLabel} flex items-center justify-between`}>
+              <span className="font-bold uppercase tracking-wider text-[9px]">{actionLabel} Count</span>
+              <span className="text-sm font-black">{data.count}</span>
+            </div>
+
+            {list && list.length > 0 && (
+              <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                {list.map((item: any, idx: number) => {
+                  const profilePath = buildItemProfilePath(item.department, item.type, item.id);
+                  return (
+                    <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-slate-200">{item.name}</p>
+                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">{item.type} • {item.department}</p>
+                      </div>
+                      <Link 
+                        href={profilePath}
+                        onClick={closeAssistantCard}
+                        className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-0.5"
+                      >
+                        View Profile <ArrowRight size={10} />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case 'attendance_summary': {
+        return (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Date:</span>
+              <span className="font-mono text-slate-200">{data.date}</span>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="bg-emerald-950/20 p-2 rounded-lg border border-emerald-900/30">
+                <p className="text-emerald-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Present</p>
+                <p className="text-base font-black text-emerald-400">{data.present}</p>
+              </div>
+              <div className="bg-rose-950/20 p-2 rounded-lg border border-rose-900/30">
+                <p className="text-rose-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Absent</p>
+                <p className="text-base font-black text-rose-400">{data.absent}</p>
+              </div>
+              <div className="bg-amber-950/20 p-2 rounded-lg border border-amber-900/30">
+                <p className="text-amber-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Leave</p>
+                <p className="text-base font-black text-amber-400">{data.leave}</p>
+              </div>
+              <div className="bg-indigo-950/20 p-2 rounded-lg border border-indigo-900/30">
+                <p className="text-indigo-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Total</p>
+                <p className="text-base font-black text-indigo-400">{data.total}</p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'students_by_course': {
+        return (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between bg-slate-950/40 p-2 rounded-lg border border-slate-800">
+              <span className="font-bold text-slate-400">Course:</span>
+              <span className="font-bold text-slate-200 uppercase tracking-wide">{data.course}</span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Total Active Students:</span>
+              <span className="font-bold text-slate-200">{data.count}</span>
+            </div>
+
+            {data.students && data.students.length > 0 && (
+              <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                {data.students.map((student: any, idx: number) => {
+                  const profilePath = buildItemProfilePath('spims', 'student', student.id);
+                  return (
+                    <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-200">{student.name}</p>
+                        <p className="text-[9px] text-slate-500">Roll No: {student.rollNo}</p>
+                      </div>
+                      <Link 
+                        href={profilePath}
+                        onClick={closeAssistantCard}
+                        className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-0.5"
+                      >
+                        View Profile <ArrowRight size={10} />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case 'remaining_fee': {
+        const paidPercent = data.totalAmount > 0 ? (data.amountPaid / data.totalAmount) * 100 : 0;
+        return (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Client Name:</span>
+              <span className="font-bold text-slate-200">{data.name}</span>
+            </div>
+            
+            <div className="space-y-1 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+              <div className="flex justify-between font-bold text-slate-400 text-[10px] uppercase mb-1">
+                <span>Paid (Rs {data.amountPaid.toLocaleString()})</span>
+                <span>Remaining (Rs {data.amountRemaining.toLocaleString()})</span>
+              </div>
+              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                <div className="bg-emerald-400 h-full" style={{ width: `${paidPercent}%` }} />
+                <div className="bg-rose-400 h-full" style={{ width: `${100 - paidPercent}%` }} />
+              </div>
+              <div className="flex justify-between text-[9px] text-slate-500 mt-1">
+                <span>Total Package: Rs {data.totalAmount.toLocaleString()}</span>
+                <span>Dept: {data.department}</span>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      default:
+        return null;
+    }
+  }
+
+  function buildItemProfilePath(department: string, entityType: string, id: string): string {
+    if (entityType === 'staff') {
+      return `/hq/dashboard/manager/staff/${department}_${id}`;
+    }
+    
+    switch (department) {
+      case 'rehab':
+        return `/departments/rehab/dashboard/admin/patients/${id}`;
+      case 'spims':
+        return `/departments/spims/dashboard/admin/students/${id}`;
+      case 'hospital':
+        return `/departments/hospital/dashboard/admin/patients/${id}`;
+      case 'sukoon':
+        return `/departments/sukoon/dashboard/admin/clients/${id}`;
+      case 'welfare':
+        return `/departments/welfare/dashboard/admin/children/${id}`;
+      case 'job-center':
+        return `/departments/job-center/dashboard/admin/seekers/${id}`;
+      default:
+        return `/hq/dashboard`;
+    }
+  }
+
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 animate-in slide-in-from-bottom-5 duration-300 space-y-2">
       {voiceState === 'thinking' && thinkingMessage && (
@@ -63,23 +291,45 @@ export default function VoiceCommandBar() {
         </div>
       )}
 
-      {voiceState === 'speaking' && (
-        <div className="flex items-start gap-3 px-4 py-3 bg-green-950 border border-green-700 rounded-xl shadow-2xl">
-          {/* Sound wave animation */}
-          <div className="flex gap-0.5 items-center shrink-0 mt-1">
-            {[1, 2, 3, 4, 3, 2, 1].map((h, i) => (
-              <span
-                key={i}
-                className="w-1 bg-green-400 rounded-full animate-pulse"
-                style={{ height: `${h * 6}px`, animationDelay: `${i * 80}ms` }}
-              />
-            ))}
-          </div>
-          <p className="text-green-200 text-sm font-medium leading-relaxed">{spokenResponse || 'Speaking...'}</p>
+      {(spokenResponse || activeData) && (
+        <div className="bg-slate-900/95 border border-slate-800/80 shadow-2xl rounded-2xl p-5 pr-12 relative animate-in fade-in zoom-in-95 duration-200 text-slate-100 max-h-[380px] overflow-y-auto space-y-4">
+          <button 
+            onClick={closeAssistantCard}
+            className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all"
+            title="Close Assistant Card"
+          >
+            <X size={16} />
+          </button>
+          
+          {/* Mubi Spoken Response */}
+          {spokenResponse && (
+            <div className="flex items-start gap-2.5">
+              <div className="flex gap-0.5 items-center shrink-0 mt-1">
+                {[1, 2, 3, 2, 1].map((h, i) => (
+                  <span
+                    key={i}
+                    className={`w-0.5 bg-emerald-400 rounded-full ${voiceState === 'speaking' ? 'animate-pulse' : ''}`}
+                    style={{ height: `${h * 4}px`, animationDelay: `${i * 80}ms` }}
+                  />
+                ))}
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-0.5">Mubi Assistant</p>
+                <p className="text-sm font-semibold leading-relaxed text-slate-100">{spokenResponse}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Visual Data Content */}
+          {activeData && (
+            <div className="border-t border-slate-800/80 pt-4 mt-2">
+              {renderActiveDataCard(activeData.topic, activeData.data)}
+            </div>
+          )}
         </div>
       )}
 
-      {!(voiceState === 'thinking' || voiceState === 'speaking') && (
+      {!(voiceState === 'thinking' || voiceState === 'speaking' || spokenResponse || activeData) && (
         <div className={`bg-white/95 backdrop-blur-md border ${barBorderColor} shadow-2xl rounded-2xl p-4 flex items-center gap-4 transition-all duration-300`}>
           {/* Status indicator badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-50 bg-gray-50/50 text-[9px] font-black uppercase tracking-widest text-gray-500 flex-shrink-0">

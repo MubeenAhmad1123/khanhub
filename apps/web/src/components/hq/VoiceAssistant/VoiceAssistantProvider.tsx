@@ -16,6 +16,7 @@ import {
   getLatestAdmission,
   getMostRecentDischarge,
   getAdmissionsByDate,
+  getDischargesByDate,
   getFinancialSummary,
   getRemainingFee,
   searchPersonByName,
@@ -43,6 +44,8 @@ interface VoiceAssistantContextType {
   voiceState: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
   thinkingMessage: string | null;
   spokenResponse: string | null;
+  activeData: { topic: string; data: any } | null;
+  closeAssistantCard: () => void;
 }
 
 const VoiceAssistantContext = createContext<VoiceAssistantContextType | undefined>(undefined);
@@ -95,6 +98,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'thinking' | 'speaking' | 'error'>('idle');
   const [thinkingMessage, setThinkingMessage] = useState<string | null>(null);
   const [spokenResponse, setSpokenResponse] = useState<string | null>(null);
+  const [activeData, setActiveData] = useState<{ topic: string; data: any } | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -162,6 +166,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     setProcessing(true);
     setLiveTranscript(commandText);
     setSpokenResponse(null);
+    setActiveData(null);
     
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
@@ -278,6 +283,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           break;
         }
 
+        case 'getDischargesByDate': {
+          data = await getDischargesByDate(departmentCode, targetDate, daysBack);
+          topic = 'discharges_by_date';
+          break;
+        }
+
         case 'getFinancialSummary': {
           data = await getFinancialSummary(departmentCode, targetDate, daysBack);
           topic = 'financial_summary';
@@ -298,6 +309,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               topic = 'remaining_fee';
               const spokenText = await generateSpokenResponse(topic, data, results[0].name);
               setThinkingMessage(null);
+              setActiveData({ topic, data: { ...data, name: results[0].name } });
               speakUtterance(spokenText);
               return;
             }
@@ -418,6 +430,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       // Generate AI spoken response
       const spokenText = await generateSpokenResponse(topic, data, entityName || undefined);
       setThinkingMessage(null);
+      setActiveData({ topic, data });
       speakUtterance(spokenText);
 
     } catch (err: any) {
@@ -489,6 +502,14 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const clearPendingIntent = () => {
     setPendingIntent(null);
     speakUtterance("Cancelled.");
+  };
+
+  const closeAssistantCard = () => {
+    setSpokenResponse(null);
+    setActiveData(null);
+    if (voiceState === 'speaking') {
+      setVoiceState('idle');
+    }
   };
 
   const speakUtterance = (text: string) => {
@@ -620,6 +641,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     setLiveTranscript('');
     setPendingIntent(null);
     setSpokenResponse(null);
+    setActiveData(null);
     
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -681,7 +703,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         clearPendingIntent,
         voiceState,
         thinkingMessage,
-        spokenResponse
+        spokenResponse,
+        activeData,
+        closeAssistantCard
       }}
     >
       {children}
