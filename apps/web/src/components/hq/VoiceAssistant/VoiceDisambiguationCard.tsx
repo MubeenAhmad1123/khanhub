@@ -54,7 +54,7 @@ export default function VoiceDisambiguationCard() {
         </div>
 
         <p className="text-xs font-semibold text-gray-500 mb-4 normal-case leading-relaxed">
-          Mujhe is naam ke do ya zyada records mile hain. Niche diye gaye logo me se sahi record select karein:
+          I found two or more records matching this name. Please select the correct record from below:
         </p>
 
         {/* Matches List */}

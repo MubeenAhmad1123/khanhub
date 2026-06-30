@@ -1,6 +1,8 @@
 // apps/web/src/lib/voice/speak.ts
 
-export function speak(text: string, lang: string = 'ur-PK') {
+import { LANGUAGE_SETTINGS } from './voiceConfig';
+
+export function speak(text: string, lang: string = LANGUAGE_SETTINGS.synthesis) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     console.warn('[speak] SpeechSynthesis is not supported in this browser.');
     return;

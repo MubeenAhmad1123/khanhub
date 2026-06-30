@@ -61,10 +61,88 @@ const STAFF_COLLECTIONS: Record<string, { collection: string; label: string }[]>
   ],
 };
 
+function getLevenshteinDistance(a: string, b: string): number {
+  const tmp = [];
+  let i, j;
+  for (i = 0; i <= a.length; i++) {
+    tmp.push([i]);
+  }
+  for (j = 0; j <= b.length; j++) {
+    tmp[0][j] = j;
+  }
+  for (i = 1; i <= a.length; i++) {
+    for (j = 1; j <= b.length; j++) {
+      tmp[i][j] = Math.min(
+        tmp[i - 1][j] + 1,
+        tmp[i][j - 1] + 1,
+        tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return tmp[a.length][b.length];
+}
+
+function getSoundex(s: string): string {
+  const a = s.toLowerCase().replace(/[^a-z]/g, '');
+  if (!a) return '';
+  const first = a[0].toUpperCase();
+  const mapping: Record<string, string> = {
+    b: '1', f: '1', p: '1', v: '1',
+    c: '2', g: '2', j: '2', k: '2', q: '2', s: '2', x: '2', z: '2',
+    d: '3', t: '3',
+    l: '4',
+    m: '5', n: '5',
+    r: '6'
+  };
+  let code = first;
+  let prevCode = mapping[a[0]] || '';
+  for (let i = 1; i < a.length; i++) {
+    const char = a[i];
+    if ('aeiouyhw'.includes(char)) {
+      prevCode = ''; // vowel separators
+      continue;
+    }
+    const currentCode = mapping[char];
+    if (currentCode && currentCode !== prevCode) {
+      code += currentCode;
+      prevCode = currentCode;
+    }
+  }
+  return (code + '0000').substring(0, 4);
+}
+
+function fuzzyMatch(name1: string, name2: string): boolean {
+  const n1 = name1.toLowerCase().trim();
+  const n2 = name2.toLowerCase().trim();
+  if (!n1 || !n2) return false;
+
+  // Exact substring match
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+
+  const words1 = n1.split(/\s+/).filter(w => w.length > 1);
+  const words2 = n2.split(/\s+/).filter(w => w.length > 1);
+
+  for (const w1 of words1) {
+    const s1 = getSoundex(w1);
+    for (const w2 of words2) {
+      if (w1.includes(w2) || w2.includes(w1)) return true;
+      
+      const s2 = getSoundex(w2);
+      if (s1 === s2 && s1 !== '') return true;
+
+      // Edit distance check on words
+      const dist = getLevenshteinDistance(w1, w2);
+      const maxLen = Math.max(w1.length, w2.length);
+      if (dist / maxLen <= 0.35) return true; // max 35% edit distance difference
+    }
+  }
+  return false;
+}
+
 export async function resolveEntityByName(
   name: string | null,
   entityId: string | null,
-  entityType: EntityType,           // NEW parameter
+  entityType: EntityType,
   scopedDepartments: string[]
 ): Promise<{ matches: EntityMatch[] }> {
   try {
@@ -185,11 +263,11 @@ export async function resolveEntityByName(
 
             // 2. If we didn't match by ID and have a name, perform name/text matching
             if (!isMatch && lowercaseName) {
-              const nameMatch = docName.includes(lowercaseName);
-              const courseMatch = docCourse.includes(lowercaseName);
-              const diagnosisMatch = docDiagnosis.includes(lowercaseName);
+              const nameMatch = docName.includes(lowercaseName) || fuzzyMatch(docName, lowercaseName);
+              const courseMatch = docCourse.includes(lowercaseName) || fuzzyMatch(docCourse, lowercaseName);
+              const diagnosisMatch = docDiagnosis.includes(lowercaseName) || fuzzyMatch(docDiagnosis, lowercaseName);
               const customIdSubstringMatch = docCustomId.includes(lowercaseName);
-              const designationMatch = docDesignation.includes(lowercaseName);
+              const designationMatch = docDesignation.includes(lowercaseName) || fuzzyMatch(docDesignation, lowercaseName);
               
               isMatch = nameMatch || courseMatch || diagnosisMatch || customIdSubstringMatch || designationMatch;
             }

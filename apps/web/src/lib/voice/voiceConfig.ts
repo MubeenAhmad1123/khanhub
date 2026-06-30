@@ -9,5 +9,5 @@ export const DEFAULT_MODE: VoiceAssistantMode = 'push_to_talk';
 
 export const LANGUAGE_SETTINGS = {
   recognition: 'en-US', // Speech recognition language
-  synthesis: 'ur-PK',   // Speech synthesis/output language
+  synthesis: 'en-US',   // Speech synthesis/output language
 };

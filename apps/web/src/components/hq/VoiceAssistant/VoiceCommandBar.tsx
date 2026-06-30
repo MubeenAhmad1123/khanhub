@@ -74,7 +74,7 @@ export default function VoiceCommandBar() {
               />
             ))}
           </div>
-          <p className="text-green-200 text-sm font-medium">Bol raha hoon...</p>
+          <p className="text-green-200 text-sm font-medium">Speaking...</p>
         </div>
       )}
 
@@ -94,7 +94,7 @@ export default function VoiceCommandBar() {
               </p>
             ) : (
               <p className="text-xs font-bold text-gray-400 italic">
-                {mode === 'always_on' ? 'Boliye, main sun rahi hoon...' : 'Boliye...'}
+                {mode === 'always_on' ? "Speak, I'm listening..." : 'Speak...'}
               </p>
             )}
           </div>

@@ -212,7 +212,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
     // Show thinking state with LLM-generated message
     setVoiceState('thinking');
-    setThinkingMessage(intent.thinkingMessage || 'Data dhundh raha hoon...');
+    setThinkingMessage(intent.thinkingMessage || 'Searching...');
 
     try {
       let data: any;
@@ -222,12 +222,52 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         case 'getLatestAdmission': {
           data = await getLatestAdmission(departmentCode);
           topic = 'latest_admission';
+
+          if (data && (
+            intent.rawTranscript.toLowerCase().includes('open') ||
+            intent.rawTranscript.toLowerCase().includes('profile') ||
+            intent.rawTranscript.toLowerCase().includes('show') ||
+            intent.rawTranscript.toLowerCase().includes('navigate') ||
+            intent.rawTranscript.toLowerCase().includes('kholo')
+          )) {
+            let type = 'patient';
+            if (data.department === 'spims') type = 'student';
+            else if (data.department === 'welfare') type = 'child';
+            else if (data.department === 'job-center') type = 'seeker';
+            
+            const profilePath = buildProfilePath(data.department, type, data.id);
+            setVoiceState('speaking');
+            speak(`Opening the profile of the latest admitted patient, ${data.name}.`);
+            setThinkingMessage(null);
+            router.push(profilePath);
+            return;
+          }
           break;
         }
 
         case 'getMostRecentDischarge': {
           data = await getMostRecentDischarge(departmentCode);
           topic = 'most_recent_discharge';
+
+          if (data && (
+            intent.rawTranscript.toLowerCase().includes('open') ||
+            intent.rawTranscript.toLowerCase().includes('profile') ||
+            intent.rawTranscript.toLowerCase().includes('show') ||
+            intent.rawTranscript.toLowerCase().includes('navigate') ||
+            intent.rawTranscript.toLowerCase().includes('kholo')
+          )) {
+            let type = 'patient';
+            if (data.department === 'spims') type = 'student';
+            else if (data.department === 'welfare') type = 'child';
+            else if (data.department === 'job-center') type = 'seeker';
+            
+            const profilePath = buildProfilePath(data.department, type, data.id);
+            setVoiceState('speaking');
+            speak(`Opening the profile of the last discharged patient, ${data.name}.`);
+            setThinkingMessage(null);
+            router.push(profilePath);
+            return;
+          }
           break;
         }
 
@@ -249,7 +289,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             const results = await searchPersonByName(entityName, null, entityType, departmentCode);
             if (results.length === 0) {
               setVoiceState('speaking');
-              speak(`Maafi chahta hoon, ${entityName} naam ka koi record nahi mila.`);
+              speak(`Sorry, no record found for ${entityName}.`);
               setThinkingMessage(null);
               return;
             }
@@ -289,9 +329,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
               };
             });
             setPendingIntent({ intent, matches: entityMatches });
-            const names = results.slice(0, 3).map((r, i) => `${i + 1}. ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''}`).join(', ');
+            const names = results.slice(0, 3).map((r, i) => `${i + 1}. ${r.name}${r.fatherName ? `, son of ${r.fatherName}` : ''}`).join(', ');
             setVoiceState('speaking');
-            speak(`${results.length} log mile hain. ${names}. Kaunsa wala?`);
+            speak(`Found ${results.length} matches. ${names}. Which one do you mean?`);
             setThinkingMessage(null);
             return;
           }
@@ -305,7 +345,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
           if (results.length === 0) {
             setVoiceState('speaking');
-            speak(`Maafi chahta hoon, ${entityName || entityId} naam ka koi record nahi mila.`);
+            speak(`Sorry, no record found for ${entityName || entityId}.`);
             setThinkingMessage(null);
             return;
           }
@@ -314,7 +354,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             const match = results[0];
             const path = buildProfilePath(match.department, match.type, match.id);
             setVoiceState('speaking');
-            speak(`${match.name} ka profile khol raha hoon.`);
+            speak(`Opening profile for ${match.name}.`);
             setThinkingMessage(null);
             router.push(path);
             return;
@@ -348,10 +388,10 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           });
           setPendingIntent({ intent, matches: entityMatches });
           const names = results.slice(0, 3).map((r, i) =>
-            `${i + 1}. ${r.name}${r.fatherName ? `, walid ${r.fatherName}` : ''} — ${r.department}`
+            `${i + 1}. ${r.name}${r.fatherName ? `, son of ${r.fatherName}` : ''} - ${r.department}`
           ).join('. ');
           setVoiceState('speaking');
-          speak(`${results.length} log mile hain. ${names}. Kaunsa wala chahiye?`);
+          speak(`Found ${results.length} matches: ${names}. Which one do you want to open?`);
           setThinkingMessage(null);
           return;
         }
@@ -365,7 +405,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         case 'getStudentsByCourse': {
           if (!course) {
             setVoiceState('speaking');
-            speak('Kripya course ka naam bataiye.');
+            speak('Please specify the course name.');
             setThinkingMessage(null);
             return;
           }
@@ -376,7 +416,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
         default: {
           setVoiceState('speaking');
-          speak('Yeh command samajh nahi aaya. Dobara boliye ya alag tarike se puchiye.');
+          speak("I did not understand that command. Please say it again or ask differently.");
           setThinkingMessage(null);
           return;
         }
@@ -391,9 +431,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     } catch (err: any) {
       console.error('[Voice Dispatch] Error:', err);
       if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('rate limit')) {
-        speak('Thoda busy hoon, 10 second baad dobara boliye.');
+        speak("I am a bit busy, please try again in 10 seconds.");
       } else {
-        speak('Kuch masla aa gaya. Dobara koshish karein.');
+        speak("Something went wrong. Please try again.");
       }
       setVoiceState('error');
       setThinkingMessage(null);
@@ -451,7 +491,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       course: null,
       rawTranscript: '',
       llmConfidence: 1.0,
-      thinkingMessage: 'Profile khol raha hoon...'
+      thinkingMessage: 'Opening profile...'
     };
     
     await dispatchVoiceTool(resolvedIntent);

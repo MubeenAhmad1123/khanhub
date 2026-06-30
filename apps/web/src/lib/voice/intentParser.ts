@@ -50,9 +50,9 @@ Return ONLY valid JSON — no explanation, no markdown, no extra text.
 
 JSON format:
 {
-  "tool": one of: getLatestAdmission | getMostRecentDischarge | getAdmissionsByDate | 
-          getFinancialSummary | getRemainingFee | searchPersonByName | 
-          getAttendanceSummary | getStudentsByCourse | navigate | unknown,
+  "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | 
+          "getFinancialSummary" | "getRemainingFee" | "searchPersonByName" | 
+          "getAttendanceSummary" | "getStudentsByCourse" | "navigate" | "unknown",
   "entityName": string or null,
   "entityId": string or null (convert word-numbers: "ninety nine" → "99"),
   "entityType": "patient"|"student"|"staff"|"child"|"seeker" or null,
@@ -61,28 +61,26 @@ JSON format:
   "daysBack": number or null,
   "course": exact course name from SPIMS list or null,
   "llmConfidence": 0.0 to 1.0,
-  "thinkingMessage": short Hinglish message shown in UI while fetching (e.g. "Rehab ka data dhundh raha hoon..." or "Patient record check kar raha hoon...")
+  "thinkingMessage": short English message shown in UI while fetching (e.g. "Searching Rehab data..." or "Checking patient records...")
 }
 
 Tool selection guide:
-- getLatestAdmission     → "latest patient", "naya patient", "abhi abhi admit", "most recent admission"
-- getMostRecentDischarge → "recently discharged", "discharge hua", "last discharge"  
-- getAdmissionsByDate    → "kitne patient aaye", "admissions on [date]", "count of patients"
-- getFinancialSummary    → "income", "expense", "earnings", "kamaya", "kharch"
-- getRemainingFee        → "remaining", "bacha hua", "balance", "fee kitni bachi"
-- searchPersonByName     → name mentioned + open/profile/find
-- getAttendanceSummary   → "attendance", "present", "absent", "kaun aaya"
-- getStudentsByCourse    → "dental mein kaun hai", "students in [course]"
-- navigate               → "open profile", "show me", "profile kholo" WITH a specific name/ID
+- getLatestAdmission     → "latest patient", "last admitted", "recent admission", "naya patient"
+- getMostRecentDischarge → "recently discharged", "last discharge", "most recent discharge", "discharge hua"
+- getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients"
+- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch"
+- getRemainingFee        → "remaining", "balance", "fee left"
+- searchPersonByName     → name mentioned + open/profile/find (e.g., "open profile of Raman", "profile of Rehman")
+- getAttendanceSummary   → "attendance", "present", "absent"
+- getStudentsByCourse    → "students in [course]"
+- navigate               → "open profile", "show me", "profile of" WITH a specific name/ID
 
 Examples:
-"rehab mein recently kaunsa patient discharge hua" → getMostRecentDischarge, departmentCode: rehab
-"kal hospital mein kitne patient the" → getAdmissionsByDate, departmentCode: hospital, daysBack: 1  
-"22 June ko rehab ne kitna income kiya" → getFinancialSummary, departmentCode: rehab, targetDate: "2026-06-22"
-"Adnan Haider ka profile kholo" → searchPersonByName, entityName: "Adnan Haider"
-"dental technician mein kaun kaun hai" → getStudentsByCourse, course: "Dental Technician", departmentCode: spims
-"aaj kitne staff present hain" → getAttendanceSummary, targetDate: today
-"patient ninety nine ka profile" → searchPersonByName, entityId: "99", entityType: patient
+"open the profile of last discharge patient" → tool: "getMostRecentDischarge", thinkingMessage: "Finding most recently discharged patient..."
+"open the profile of patient Raman" → tool: "searchPersonByName", entityName: "Raman", entityType: "patient", thinkingMessage: "Searching for patient Raman..."
+"how much did rehab earn yesterday" → tool: "getFinancialSummary", departmentCode: "rehab", daysBack: 1, thinkingMessage: "Calculating rehab revenue..."
+"open profile of student ninety nine" → tool: "searchPersonByName", entityId: "99", entityType: "student", thinkingMessage: "Searching for student 99..."
+"who was the latest patient admitted to hospital" → tool: "getLatestAdmission", departmentCode: "hospital", thinkingMessage: "Finding latest hospital admission..."
 `;
 
 export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
@@ -115,7 +113,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       course: parsed.course || null,
       rawTranscript: transcript,
       llmConfidence: parsed.llmConfidence || 0.5,
-      thinkingMessage: parsed.thinkingMessage || 'Data dhundh raha hoon...',
+      thinkingMessage: parsed.thinkingMessage || 'Searching...',
     };
   } catch (err) {
     console.error('[LLM Intent Parser] Error:', err);
@@ -130,7 +128,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       course: null,
       rawTranscript: transcript,
       llmConfidence: 0,
-      thinkingMessage: '',
+      thinkingMessage: 'Searching...',
     };
   }
 }

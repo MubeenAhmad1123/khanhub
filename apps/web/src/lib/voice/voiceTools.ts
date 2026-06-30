@@ -3,6 +3,7 @@
 
 import { adminDb } from '@/lib/firebaseAdmin';
 import { readHqSessionCookie } from '@/app/hq/actions/auth';
+import { resolveEntityByName } from './entityResolver';
 
 async function assertVoiceAccess() {
   const session = await readHqSessionCookie();
@@ -304,91 +305,35 @@ export async function searchPersonByName(
 ) {
   await assertVoiceAccess();
 
-  const collMap: { col: string; dept: string; type: string }[] = [];
+  const allDepts = ['rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+  const { matches } = await resolveEntityByName(
+    name,
+    entityId,
+    entityType as any,
+    department ? [department] : allDepts
+  );
 
-  if (!entityType || entityType === 'patient') {
-    collMap.push(
-      { col: 'rehab_patients', dept: 'rehab', type: 'patient' },
-      { col: 'hospital_patients', dept: 'hospital', type: 'patient' }
-    );
-  }
-  if (!entityType || entityType === 'student') {
-    collMap.push({ col: 'spims_students', dept: 'spims', type: 'student' });
-  }
-  if (!entityType || entityType === 'child') {
-    collMap.push({ col: 'welfare_children', dept: 'welfare', type: 'child' });
-  }
-  if (!entityType || entityType === 'seeker') {
-    collMap.push({ col: 'jobcenter_seekers', dept: 'job-center', type: 'seeker' });
-  }
-  if (!entityType || entityType === 'staff') {
-    collMap.push({ col: 'hq_staff', dept: 'hq', type: 'staff' });
-  }
-
-  const filtered = department
-    ? collMap.filter(c => c.dept === department)
-    : collMap;
-
-  const results: {
-    name: string; id: string; fatherName: string;
-    department: string; type: string; identifier: string;
-  }[] = [];
-
-  for (const { col, dept, type } of filtered) {
-    try {
-      let snap;
-
-      if (entityId) {
-        // Search by ID number — check inpatientNumber, rollNo, seekerNumber, employeeId
-        const idFields = ['inpatientNumber', 'rollNo', 'seekerNumber', 'employeeId'];
-        for (const field of idFields) {
-          const s = await adminDb.collection(col)
-            .where(field, '>=', entityId)
-            .where(field, '<=', entityId + '\uf8ff')
-            .limit(5)
-            .get();
-          s.docs.forEach(doc => {
-            const d = doc.data();
-            results.push({
-              name: d.name || d.displayName || 'Unknown',
-              id: doc.id,
-              fatherName: d.fatherName || '',
-              department: dept,
-              type,
-              identifier: d[field] || '',
-            });
-          });
-        }
-      } else if (name) {
-        // Search by name — Firestore range query (case-sensitive start)
-        // Capitalize first letter to match stored format
-        const nameCapitalized = name.charAt(0).toUpperCase() + name.slice(1);
-        snap = await adminDb.collection(col)
-          .orderBy('name')
-          .startAt(nameCapitalized)
-          .endAt(nameCapitalized + '\uf8ff')
-          .limit(10)
-          .get();
-
-        snap.docs.forEach(doc => {
-          const d = doc.data();
-          results.push({
-            name: d.name || d.displayName || 'Unknown',
-            id: doc.id,
-            fatherName: d.fatherName || '',
-            department: dept,
-            type,
-            identifier: d.inpatientNumber || d.rollNo || d.seekerNumber || d.employeeId || '',
-          });
-        });
-      }
-    } catch (e) {
-      console.warn(`[voiceTools] searchPersonByName skipping ${col}:`, e);
+  return matches.map(m => {
+    let type = 'patient';
+    if (m.collection.endsWith('_users') || m.collection.endsWith('_staff')) {
+      type = 'staff';
+    } else if (m.collection === 'spims_students') {
+      type = 'student';
+    } else if (m.collection === 'welfare_children') {
+      type = 'child';
+    } else if (m.collection === 'job_center_seekers') {
+      type = 'seeker';
     }
-  }
 
-  // Deduplicate by id
-  return results.filter((r, i) => results.findIndex(x => x.id === r.id) === i);
+    return {
+      id: m.id,
+      name: m.name,
+      fatherName: m.fatherName || '',
+      department: m.department,
+      type,
+      identifier: m.identifierLabel || m.id,
+    };
+  });
 }
 
 // ─── TOOL 7: Attendance summary ───────────────────────────────────────────────
