@@ -17,9 +17,11 @@ export function speak(text: string, lang: string = LANGUAGE_SETTINGS.synthesis) 
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
 
-  // Log error if speech synthesis fails to trigger
+  // Log error if speech synthesis fails to trigger (ignore normal interruption cancels)
   utterance.onerror = (e) => {
-    console.error('[speak] Speech synthesis utterance error:', e);
+    if (e.error !== 'interrupted') {
+      console.error('[speak] Speech synthesis utterance error:', e);
+    }
   };
 
   // Speak

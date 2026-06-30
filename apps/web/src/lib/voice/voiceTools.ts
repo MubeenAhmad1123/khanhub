@@ -197,6 +197,11 @@ export async function getFinancialSummary(
   await assertVoiceAccess();
   const date = targetDate || getPKTDate(daysBack || 0);
 
+  const [year, month, day] = date.split('-').map(Number);
+  // Construct start and end of that day in PKT (UTC+5) converted to UTC Dates (which Firestore handles as Timestamps)
+  const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+  const end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+
   const txCollMap: Record<string, string> = {
     rehab: 'rehab_transactions',
     spims: 'spims_transactions',
@@ -217,7 +222,8 @@ export async function getFinancialSummary(
   for (const { col, dept } of collections) {
     try {
       const snap = await adminDb.collection(col)
-        .where('date', '==', date)
+        .where('date', '>=', start)
+        .where('date', '<=', end)
         .where('status', '==', 'approved')
         .get();
 
